@@ -347,3 +347,8 @@
 
 /* ---------- Lưu ý pháp lý ---------- */
 .bds-disclaimer { margin: 40px 0 0; color: rgba(255, 255, 255, .6); font-size: .78rem; line-height: 1.6; }
+
+/* ---------- Đơn vị tư vấn ---------- */
+.bds-agency { margin: 20px 0 0; padding: 16px 0 0; border-top: 1px solid rgba(255, 255, 255, .2); list-style: none; color: rgba(255, 255, 255, .88); }
+.bds-agency li { margin: 0 0 6px; }
+.bds-agency a { color: var(--bds-accent); }

@@ -21,6 +21,19 @@ $bds_bg = bds_img_url( bds_opt( 'register_image' ), 'full' );
 						<a href="tel:<?php echo esc_attr( bds_tel( bds_opt( 'hotline' ) ) ); ?>"><?php echo esc_html( bds_opt( 'hotline' ) ); ?></a>
 					</p>
 				<?php endif; ?>
+				<?php if ( bds_opt( 'agency_name' ) || bds_opt( 'agency_address' ) || bds_opt( 'contact_email' ) ) : ?>
+					<ul class="bds-agency">
+						<?php if ( bds_opt( 'agency_name' ) ) : ?>
+							<li><strong><?php echo esc_html( bds_opt( 'agency_name' ) ); ?></strong></li>
+						<?php endif; ?>
+						<?php if ( bds_opt( 'agency_address' ) ) : ?>
+							<li><?php echo esc_html( bds_opt( 'agency_address' ) ); ?></li>
+						<?php endif; ?>
+						<?php if ( is_email( bds_opt( 'contact_email' ) ) ) : ?>
+							<li>Email: <a href="mailto:<?php echo esc_attr( bds_opt( 'contact_email' ) ); ?>"><?php echo esc_html( bds_opt( 'contact_email' ) ); ?></a></li>
+						<?php endif; ?>
+					</ul>
+				<?php endif; ?>
 			</div>
 			<div class="col large-6 medium-12 small-12">
 				<div class="bds-card">

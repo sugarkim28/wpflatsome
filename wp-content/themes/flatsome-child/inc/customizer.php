@@ -127,6 +127,9 @@ function bds_customize_register( $wp_customize ) {
 		'register_title'   => array( 'bds_register', 'text', 'Tiêu đề' ),
 		'register_text'    => array( 'bds_register', 'textarea', 'Mô tả' ),
 		'register_image'   => array( 'bds_register', 'image', 'Ảnh nền' ),
+		'agency_name'      => array( 'bds_register', 'text', 'Đơn vị tư vấn / Tổng đại lý' ),
+		'agency_address'   => array( 'bds_register', 'text', 'Địa chỉ trụ sở' ),
+		'contact_email'    => array( 'bds_register', 'email', 'Email liên hệ hiển thị trên trang' ),
 		'register_success' => array( 'bds_register', 'textarea', 'Thông báo sau khi gửi thành công' ),
 		'disclaimer'       => array( 'bds_register', 'textarea', 'Dòng lưu ý pháp lý cuối trang (để trống để ẩn)' ),
 	);
