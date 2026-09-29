@@ -10,7 +10,7 @@ defined( 'ABSPATH' ) || exit;
 if ( ! bds_opt( 'show_amenities' ) ) {
 	return;
 }
-$bds_img = absint( bds_opt( 'amenities_image' ) );
+$bds_img = bds_image_ref( 'amenities_image' );
 ?>
 <section id="tien-ich" class="bds-section">
 	<div class="container">
@@ -19,7 +19,7 @@ $bds_img = absint( bds_opt( 'amenities_image' ) );
 		</div>
 		<?php if ( $bds_img ) : ?>
 			<a class="image-lightbox lightbox-gallery bds-media bds-media--wide" href="<?php echo esc_url( bds_img_url( $bds_img, 'full' ) ); ?>">
-				<?php echo wp_get_attachment_image( $bds_img, 'full', false, array( 'loading' => 'lazy' ) ); ?>
+				<?php echo bds_img_tag( $bds_img, 'full', bds_opt( 'amenities_title' ) ); ?>
 			</a>
 		<?php endif; ?>
 		<div class="row bds-grid">

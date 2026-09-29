@@ -10,7 +10,7 @@ defined( 'ABSPATH' ) || exit;
 if ( ! bds_opt( 'show_location' ) ) {
 	return;
 }
-$bds_img = absint( bds_opt( 'location_image' ) );
+$bds_img = bds_image_ref( 'location_image' );
 $bds_map = bds_opt( 'location_map' );
 ?>
 <section id="vi-tri" class="bds-section bds-section--alt">
@@ -35,7 +35,7 @@ $bds_map = bds_opt( 'location_map' );
 			<div class="col large-7 medium-12 small-12">
 				<?php if ( $bds_img ) : ?>
 					<a class="image-lightbox lightbox-gallery bds-media" href="<?php echo esc_url( bds_img_url( $bds_img, 'full' ) ); ?>">
-						<?php echo wp_get_attachment_image( $bds_img, 'large', false, array( 'loading' => 'lazy' ) ); ?>
+						<?php echo bds_img_tag( $bds_img, 'large', bds_opt( 'location_title' ) ); ?>
 					</a>
 				<?php elseif ( $bds_map ) : ?>
 					<div class="bds-map">

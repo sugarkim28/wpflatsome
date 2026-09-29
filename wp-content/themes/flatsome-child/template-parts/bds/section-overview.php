@@ -10,7 +10,7 @@ defined( 'ABSPATH' ) || exit;
 if ( ! bds_opt( 'show_overview' ) ) {
 	return;
 }
-$bds_img = absint( bds_opt( 'overview_image' ) );
+$bds_img = bds_image_ref( 'overview_image' );
 ?>
 <section id="tong-quan" class="bds-section">
 	<span id="gioi-thieu" class="bds-anchor" aria-hidden="true"></span>
@@ -34,7 +34,7 @@ $bds_img = absint( bds_opt( 'overview_image' ) );
 			<?php if ( $bds_img ) : ?>
 				<div class="col large-6 medium-12 small-12">
 					<a class="image-lightbox lightbox-gallery bds-media" href="<?php echo esc_url( bds_img_url( $bds_img, 'full' ) ); ?>">
-						<?php echo wp_get_attachment_image( $bds_img, 'large', false, array( 'loading' => 'lazy' ) ); ?>
+						<?php echo bds_img_tag( $bds_img, 'large', bds_opt( 'hero_title' ) ); ?>
 					</a>
 				</div>
 			<?php endif; ?>

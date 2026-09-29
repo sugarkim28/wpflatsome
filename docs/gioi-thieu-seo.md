@@ -4,7 +4,7 @@ The Collection 688 (tên pháp lý: Chung cư Hòa Lân Thuận Giao) là dự �
 
 ### Vị trí kết nối Metro số 2 và Vành đai 3
 
-Nằm ngay mặt tiền Đại lộ Bình Dương, căn hộ The Collection 688 chỉ cách ga C6 tuyến Metro số 2 (Thủ Dầu Một – TP.HCM) khoảng 300m và cách đường Vành đai 3 khoảng 1,3km. Từ dự án, cư dân mất khoảng 5–10 phút để đến Lotte Mart, AEON Mall, sân golf Sông Bé và khoảng 25 phút đến sân bay Tân Sơn Nhất. Các khu công nghiệp VSIP 1, Sóng Thần, Việt Hương nằm liền kề, mang lại nguồn khách thuê ổn định là chuyên gia và kỹ sư.
+Nằm ngay mặt tiền Đại lộ Bình Dương, căn hộ The Collection 688 chỉ cách ga C6 tuyến Metro số 2 (Thủ Dầu Một – TP.HCM) khoảng 300m và cách đường Vành đai 3 khoảng 1,3km. Từ dự án, cư dân mất khoảng 10 phút để đến AEON Mall, Mega Market, sân golf Sông Bé và khoảng 30 phút đến trung tâm TP.HCM. Các khu công nghiệp VSIP 1, Sóng Thần, Việt Hương nằm liền kề, mang lại nguồn khách thuê ổn định là chuyên gia và kỹ sư.
 
 ### Quy mô giới hạn chỉ 688 sản phẩm
 

@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-$bds_bg = bds_img_url( bds_opt( 'register_image' ), 'full' );
+$bds_bg = bds_img_url( bds_image_ref( 'register_image' ), 'full' );
 ?>
 <section id="dang-ky" class="bds-section bds-register"<?php echo $bds_bg ? ' style="background-image:url(' . esc_url( $bds_bg ) . ')"' : ''; ?>>
 	<span id="nhan-bang-gia" class="bds-anchor" aria-hidden="true"></span>

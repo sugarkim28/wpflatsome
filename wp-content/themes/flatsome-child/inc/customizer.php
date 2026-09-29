@@ -180,7 +180,8 @@ function bds_customize_register( $wp_customize ) {
 	}
 	$fields['show_video']  = array( 'bds_gallery', 'checkbox', 'Hiển thị video' );
 	$fields['video_title'] = array( 'bds_gallery', 'text', 'Tiêu đề video' );
-	$fields['video_url']   = array( 'bds_gallery', 'url', 'Link YouTube' );
+	$fields['video_url']   = array( 'bds_gallery', 'url', 'Link YouTube (ưu tiên nếu có)' );
+	$fields['video_mp4']   = array( 'bds_gallery', 'url', 'Hoặc link file video .mp4 (Thư viện > tải video lên > copy link)' );
 
 	$sanitizers = array(
 		'text'     => 'sanitize_text_field',

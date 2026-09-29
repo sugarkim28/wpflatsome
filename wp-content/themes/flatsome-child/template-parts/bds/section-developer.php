@@ -10,7 +10,7 @@ defined( 'ABSPATH' ) || exit;
 if ( ! bds_opt( 'show_developer' ) ) {
 	return;
 }
-$bds_img    = absint( bds_opt( 'developer_image' ) );
+$bds_img    = bds_image_ref( 'developer_image' );
 $bds_points = bds_lines( bds_opt( 'developer_points' ) );
 ?>
 <section id="chu-dau-tu" class="bds-section">
@@ -19,7 +19,7 @@ $bds_points = bds_lines( bds_opt( 'developer_points' ) );
 			<?php if ( $bds_img ) : ?>
 				<div class="col large-5 medium-12 small-12">
 					<div class="bds-media">
-						<?php echo wp_get_attachment_image( $bds_img, 'large', false, array( 'loading' => 'lazy' ) ); ?>
+						<?php echo bds_img_tag( $bds_img, 'large', bds_opt( 'developer_title' ) ); ?>
 					</div>
 				</div>
 			<?php endif; ?>

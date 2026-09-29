@@ -3,13 +3,13 @@
    Màu lấy từ Customizer: --bds-primary, --bds-accent
    ========================================================================== */
 :root {
-	--bds-primary: #0a3d62;
-	--bds-accent: #c8a24a;
+	--bds-primary: #5a1f1a;
+	--bds-accent: #c8875f;
 	--bds-text: #1f2933;
 	--bds-muted: #5f6b7a;
 	--bds-bg-alt: #f4f6f8;
 	--bds-radius: 10px;
-	--bds-shadow: 0 10px 30px rgba(10, 30, 60, .08);
+	--bds-shadow: 0 10px 30px rgba(60, 20, 12, .08);
 }
 
 .bds-landing { background: #fff; color: var(--bds-text); }
@@ -86,7 +86,7 @@
 .bds-hero__overlay {
 	position: absolute;
 	inset: 0;
-	background: linear-gradient(100deg, rgba(5, 20, 40, .85) 0%, rgba(5, 20, 40, .55) 55%, rgba(5, 20, 40, .35) 100%);
+	background: linear-gradient(100deg, rgba(40, 12, 9, .88) 0%, rgba(40, 12, 9, .6) 55%, rgba(40, 12, 9, .35) 100%);
 }
 .bds-hero__inner,
 .bds-register__inner { position: relative; z-index: 1; width: 100%; }
@@ -365,7 +365,7 @@
 	background: rgba(255, 255, 255, .2);
 	list-style: none;
 }
-.bds-stats li { margin: 0; padding: 16px 20px; background: rgba(5, 20, 40, .55); text-align: center; }
+.bds-stats li { margin: 0; padding: 16px 20px; background: rgba(40, 12, 9, .55); text-align: center; }
 .bds-stats span { display: block; font-size: .8rem; letter-spacing: .05em; opacity: .8; text-transform: uppercase; }
 .bds-stats strong { display: block; color: var(--bds-accent); font-size: 1.5rem; line-height: 1.3; }
 
@@ -520,3 +520,9 @@
 	.admin-bar.bds-own-header .bds-nav { position: sticky; }
 }
 .bds-facts dt, .bds-facts dd { text-transform: none; letter-spacing: 0; }
+
+.bds-video video { position: absolute; inset: 0; width: 100%; height: 100%; background: #000; }
+div.bds-video { cursor: default; }
+.bds-media img { max-height: 640px; object-fit: cover; }
+.bds-plan__img img { aspect-ratio: 16 / 9; }
+.bds-section--alt { background: #faf4f0; }

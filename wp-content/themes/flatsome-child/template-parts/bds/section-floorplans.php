@@ -24,7 +24,7 @@ $bds_col = count( $bds_plans ) >= 4 ? 'large-3' : ( 3 === count( $bds_plans ) ? 
 					<div class="bds-card bds-plan">
 						<?php if ( $bds_plan['image'] ) : ?>
 							<a class="image-lightbox lightbox-gallery bds-plan__img" href="<?php echo esc_url( bds_img_url( $bds_plan['image'], 'full' ) ); ?>" title="<?php echo esc_attr( $bds_plan['title'] ); ?>">
-								<?php echo wp_get_attachment_image( $bds_plan['image'], 'medium_large', false, array( 'loading' => 'lazy' ) ); ?>
+								<?php echo bds_img_tag( $bds_plan['image'], 'medium_large', $bds_plan['title'] ); ?>
 							</a>
 						<?php endif; ?>
 						<h3><?php echo esc_html( $bds_plan['title'] ); ?></h3>

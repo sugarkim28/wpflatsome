@@ -57,9 +57,9 @@ function bds_meta_tags() {
 	$title = bds_opt( 'seo_title' ) ? bds_opt( 'seo_title' ) : wp_get_document_title();
 	$desc  = bds_opt( 'seo_description' );
 	$url   = bds_page_url();
-	$image = bds_img_url( bds_opt( 'seo_image' ), 'full' );
+	$image = bds_img_url( absint( bds_opt( 'seo_image' ) ), 'full' );
 	if ( ! $image ) {
-		$image = bds_img_url( bds_opt( 'hero_image' ), 'full' );
+		$image = bds_img_url( bds_image_ref( 'hero_image' ), 'full' );
 	}
 
 	if ( $desc ) {
@@ -125,7 +125,7 @@ function bds_structured_data() {
 	if ( absint( bds_opt( 'schema_units' ) ) ) {
 		$project['numberOfAccommodationUnits'] = absint( bds_opt( 'schema_units' ) );
 	}
-	$image = bds_img_url( bds_opt( 'hero_image' ), 'full' );
+	$image = bds_img_url( bds_image_ref( 'hero_image' ), 'full' );
 	if ( $image ) {
 		$project['image'] = $image;
 	}

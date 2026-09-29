@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-$bds_bg = bds_img_url( bds_opt( 'hero_image' ), 'full' );
+$bds_bg = bds_img_url( bds_image_ref( 'hero_image' ), 'full' );
 ?>
 <section id="trang-chu" class="bds-hero"<?php echo $bds_bg ? ' style="background-image:url(' . esc_url( $bds_bg ) . ')"' : ''; ?>>
 	<div class="bds-hero__overlay"></div>
