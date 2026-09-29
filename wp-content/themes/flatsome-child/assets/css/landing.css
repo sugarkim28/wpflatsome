@@ -577,3 +577,14 @@ div.bds-video { cursor: default; }
 @media only screen and (max-width: 48em) {
 	.bds-stat strong { font-size: 1.15rem; }
 }
+
+/* Chữ trong khung form khi nằm trên section nền tối (dark) */
+.dark .bds-card .bds-form__title { color: var(--bds-primary); }
+.dark .bds-card .bds-form__note { color: var(--bds-muted); }
+.dark .bds-card .bds-alert--success { color: #17693a; }
+.dark .bds-card .bds-alert--error { color: #a12622; }
+/* Logo trên điện thoại */
+@media only screen and (max-width: 849px) {
+	#logo img { max-height: 52px !important; width: auto; }
+	.header-main .nav > li.header-button-1 { display: none; }
+}
