@@ -88,7 +88,8 @@ function bds_customize_register( $wp_customize ) {
 	$fields = array(
 		'color_primary'    => array( 'bds_general', 'color', 'Màu chủ đạo' ),
 		'color_accent'     => array( 'bds_general', 'color', 'Màu nhấn (nút, điểm nhấn)' ),
-		'color_beige'      => array( 'bds_general', 'color', 'Màu nền mục sáng (xen kẽ)' ),
+		'color_beige'      => array( 'bds_general', 'color', 'Màu nền mục sáng (kem)' ),
+		'color_ivory'      => array( 'bds_general', 'color', 'Màu nền mục sáng (ngà)' ),
 		'hotline'          => array( 'bds_general', 'text', 'Hotline' ),
 		'zalo'             => array( 'bds_general', 'text', 'Số Zalo (để trống để ẩn)' ),
 		'messenger'        => array( 'bds_general', 'url', 'Link Messenger, vd https://m.me/tenpage (để trống để ẩn)' ),
@@ -168,6 +169,8 @@ function bds_customize_register( $wp_customize ) {
 		'developer_title'  => array( 'bds_developer', 'text', 'Tiêu đề' ),
 		'developer_text'   => array( 'bds_developer', 'textarea', 'Giới thiệu' ),
 		'developer_points' => array( 'bds_developer', 'textarea', 'Điểm nổi bật (Nhãn | Nội dung)' ),
+		'developer_slogan' => array( 'bds_developer', 'text', 'Khẩu hiệu' ),
+		'developer_fields' => array( 'bds_developer', 'textarea', 'Lĩnh vực hoạt động (Tên | Mô tả)' ),
 		'developer_image'  => array( 'bds_developer', 'image', 'Ảnh / logo chủ đầu tư' ),
 
 		'show_faq'         => array( 'bds_faq', 'checkbox', 'Hiển thị mục này' ),

@@ -682,7 +682,7 @@ div.bds-video { cursor: default; }
 
 /* Header */
 .bds-lux .header-main .nav > li > a { letter-spacing: .06em; }
-.bds-lux .stuck .header-main, .bds-lux .header-wrapper.stuck { background-color: var(--bds-primary) !important; }
+
 
 /* ==========================================================================
    Tăng chuyển đổi: nút nổi bật, uy tín, ưu đãi, kêu gọi giữa trang
@@ -827,3 +827,120 @@ div.bds-video { cursor: default; }
 	.bds-cta .bds-cta__actions > .col-inner { margin-top: 18px; }
 	.bds-cta .bds-cta__actions .button { width: 100%; margin: 0; font-size: .85rem; }
 }
+
+/* ==========================================================================
+   v3 – Phong cách SÁNG sang trọng + tiêu đề đồng nhất
+   ========================================================================== */
+.bds-lux { --bds-title: var(--bds-primary); --bds-gold: #b8914a; }
+
+/* Tiêu đề mục: 1 font, 1 cỡ, 1 màu cho mọi mục */
+.bds-lux .bds-title .section-title-main,
+.bds-lux .bds-title--light .section-title-main,
+.bds-lux .dark .bds-title .section-title-main {
+	color: var(--bds-title);
+	font-family: var(--bds-serif);
+	font-size: clamp(1.7rem, 3.2vw, 2.5rem);
+	font-weight: 700;
+	letter-spacing: .02em;
+	text-transform: uppercase;
+}
+.bds-lux .bds-kicker { color: var(--bds-accent); }
+.bds-lux .bds-title .section-title b { background: linear-gradient(90deg, transparent, var(--bds-accent)); opacity: .8; }
+.bds-lux .bds-title .section-title b:last-of-type { background: linear-gradient(90deg, var(--bds-accent), transparent); }
+
+/* Chữ thân trên nền sáng */
+.bds-lux .bds-lead { color: #4a5568; }
+
+/* Dải ưu đãi: vàng nhạt ánh kim */
+.bds-lux .bds-offers .section-bg { background: linear-gradient(90deg, #ead9b3 0%, #f7eed9 50%, #ead9b3 100%) !important; }
+.bds-lux .bds-offer span { color: #7a6132; opacity: 1; }
+.bds-lux .bds-offer strong { color: var(--bds-primary); }
+.bds-lux .bds-offers .row-divided > .col + .col:not(.large-12) { border-left-color: rgba(184, 145, 74, .45); }
+
+/* Bảng thông số trên nền ngà */
+.bds-lux .bds-facts__row { box-shadow: 0 1px 0 rgba(11, 23, 52, .04); }
+.bds-lux .bds-facts dt { background: var(--bds-primary); }
+
+/* Vị trí trên nền kem */
+.bds-lux .bds-connect li { border-left-color: var(--bds-accent); background: #fff; box-shadow: 0 8px 22px rgba(11, 23, 52, .06); }
+.bds-lux .bds-connect strong { color: var(--bds-accent); font-family: var(--bds-serif); }
+
+/* Lý do sở hữu: thẻ trắng viền vàng */
+.bds-lux .bds-reason {
+	border: 0;
+	border-top: 3px solid var(--bds-accent);
+	border-radius: 10px;
+	background: #fff;
+	box-shadow: 0 12px 30px rgba(11, 23, 52, .07);
+}
+.bds-lux .bds-reason h3 { color: var(--bds-primary); }
+.bds-lux .bds-reason p { color: #5f6b7a; }
+.bds-lux .bds-reason__num { border: 0; background: var(--bds-primary); color: #fff; }
+
+/* Chủ đầu tư */
+.bds-dev-slogan {
+	margin: -12px 0 30px;
+	color: var(--bds-accent);
+	font-family: var(--bds-serif, serif);
+	font-size: 1.25rem;
+	font-style: italic;
+}
+.bds-lux .bds-dev-point { height: 100%; background: var(--bds-beige); border-left: 3px solid var(--bds-accent); }
+.bds-lux .bds-dev-point strong { color: var(--bds-primary); font-family: var(--bds-serif); font-size: 1.15rem; font-variant-numeric: lining-nums; }
+.bds-lux .col-inner:has(> .bds-dev-point), .bds-lux .col-inner:has(> .bds-field) { height: 100%; }
+.bds-fields { margin-top: 26px; }
+.bds-field {
+	height: 100%;
+	padding: 24px 22px;
+	border-radius: 10px;
+	background: #fff;
+	box-shadow: 0 10px 28px rgba(11, 23, 52, .07);
+	text-align: center;
+	border-bottom: 3px solid var(--bds-accent);
+}
+.bds-field h3 { margin-bottom: 8px; color: var(--bds-primary); font-family: var(--bds-serif, serif); font-size: 1.2rem; text-transform: uppercase; letter-spacing: .04em; }
+.bds-field p { margin: 0; color: #5f6b7a; font-size: .92rem; line-height: 1.6; }
+
+/* Khối kêu gọi (nền ngà) */
+.bds-lux .bds-cta .section-bg { border-top: 1px solid #eadfc9; border-bottom: 1px solid #eadfc9; }
+.bds-lux .bds-cta__title { color: var(--bds-primary); }
+.bds-lux .bds-cta__text { color: #5f6b7a; }
+.bds-lux .bds-cta .bds-cta__actions .button.is-outline { border-color: var(--bds-primary); color: var(--bds-primary); }
+.bds-lux .bds-cta .bds-cta__actions .button.is-outline:hover { background: var(--bds-primary); color: #fff; }
+
+/* Thẻ giá: navy làm điểm nhấn duy nhất */
+.bds-lux .bds-price-card { box-shadow: 0 20px 50px rgba(11, 23, 52, .25); }
+.bds-lux .bds-price-card__value { color: #e8cf94; }
+
+/* Hình ảnh & video trên nền kem */
+.bds-lux .gallery-col .box-image, .bds-lux .gallery .box-image { border-radius: 8px; overflow: hidden; }
+
+/* Đăng ký – nền sáng */
+.bds-lux .bds-register-light .bds-lead { color: #4a5568; }
+.bds-lux .bds-register-light .bds-register__hotline { color: var(--bds-primary); }
+.bds-lux .bds-register-light .bds-register__hotline a { color: var(--bds-accent); font-family: var(--bds-serif); font-variant-numeric: lining-nums; }
+.bds-lux .bds-register-light .bds-agency__line { color: #4a5568; }
+.bds-lux .bds-register-light .bds-agency__line a { color: var(--bds-accent); }
+.bds-lux .bds-register-light .bds-disclaimer { color: #8a94a3; }
+.bds-lux .bds-register-light .bds-card { box-shadow: 0 20px 50px rgba(11, 23, 52, .12); }
+
+/* Header dính: nền trắng, chữ navy */
+.bds-lux .header-wrapper.stuck, .bds-lux .stuck .header-main { background-color: #fff !important; box-shadow: 0 4px 20px rgba(11, 23, 52, .08); }
+.bds-lux .stuck .header-main .nav > li > a { color: var(--bds-primary); }
+
+/* v4 – Chống chồng khối trên điện thoại */
+.bds-fs-hero { height: auto !important; }
+@media (min-width: 850px) {
+	.bds-fs-hero { min-height: 100vh; display: flex; align-items: center; }
+	.bds-fs-hero > .section-content { width: 100%; }
+}
+@media (max-width: 849px) {
+	.bds-fs-hero, .bds-fs-hero.is-full-height { height: auto !important; min-height: 0 !important; }
+	.bds-fs-hero .section-bg { height: 100% !important; }
+	.bds-lux .section { overflow: hidden; }
+	.bds-lux .section .row, .bds-lux .section .col { max-width: 100%; }
+	.bds-lux .bds-fs-hero h1, .bds-lux .bds-fs-hero .title { word-break: normal; overflow-wrap: anywhere; }
+	.bds-disclaimer { margin-top: 18px; }
+}
+.bds-lux .tab-panels > .panel:not(.active) { display: none !important; }
+.bds-lux .tab-panels { overflow: hidden; }

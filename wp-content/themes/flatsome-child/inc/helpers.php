@@ -16,8 +16,9 @@ function bds_defaults() {
 	return array(
 		// Chung.
 		'color_primary'      => '#0b1734',
-		'color_accent'       => '#c9a45c',
-		'color_beige'        => '#eae2d2',
+		'color_accent'       => '#b8914a',
+		'color_beige'        => '#f4ede1',
+		'color_ivory'        => '#fbf8f2',
 		'hotline'            => '0965 078 229',
 		'zalo'               => '0965078229',
 		'messenger'          => '',
@@ -88,9 +89,11 @@ function bds_defaults() {
 		// Chủ đầu tư.
 		'show_developer'     => 1,
 		'developer_title'    => 'Chủ đầu tư DICERA Holdings',
-		'developer_text'     => 'Công ty Cổ phần DICERA Holdings (HoSE: DC4) có hơn 30 năm hoạt động trong lĩnh vực xây dựng và đầu tư phát triển bất động sản, đồng thời là tổng thầu EPC của The Collection 688 – trực tiếp kiểm soát chất lượng và tiến độ thi công.',
-		'developer_points'   => "Kinh nghiệm | Hơn 30 năm xây dựng và phát triển dự án\nDự án tiêu biểu | Ruby Tower, Vung Tau Centre Point\nTổng thầu EPC | Tự thi công, chủ động tiến độ và chất lượng\nĐối tác | Savills quản lý vận hành, MB tài trợ vốn",
+		'developer_text'     => 'Công ty Cổ phần DICERA Holdings (mã chứng khoán HoSE: DC4) có hơn 30 năm kinh nghiệm, phát triển các giải pháp bền vững trong xây dựng, đầu tư và hạ tầng thông minh. DICERA là chủ đầu tư, đồng thời trực tiếp làm tổng thầu EPC của The Collection 688 – chủ động kiểm soát chất lượng và tiến độ thi công.',
+		'developer_points'   => "Hơn 30 năm | kinh nghiệm xây dựng & phát triển dự án\nHoSE: DC4 | doanh nghiệp niêm yết, minh bạch tài chính\nTổng thầu EPC | tự thi công, chủ động tiến độ\nDự án tiêu biểu | Ruby Tower, Vung Tau Centre Point",
 		'developer_image'    => '',
+		'developer_slogan'   => 'Kiến tạo chuẩn mực – Nâng tầm cuộc sống',
+		'developer_fields'   => "Xây lắp | Thi công công trình dân dụng, công nghiệp, chung cư và hạ tầng kỹ thuật\nĐầu tư | Khu đô thị, cao ốc văn phòng, chung cư cao cấp\nSản xuất | Cửa nhôm vách kính, cửa nhựa uPVC cao cấp, cửa thép chống cháy\nKhai khoáng | Khai thác đá xây dựng, mỏ sét, sản xuất vật liệu xây dựng",
 
 		// Câu hỏi thường gặp.
 		'show_faq'           => 1,
