@@ -23,6 +23,10 @@ function bds_defaults() {
 		'lead_email'         => 'saigonluxury229@gmail.com',
 		'popup_delay'        => 0,
 		'landing_front'      => 1,
+		'own_header'         => 1,
+		'logo'               => '',
+		'nav_items'          => "Tổng quan | #tong-quan\nVị trí | #vi-tri\nTiện ích | #tien-ich\nMặt bằng | #mat-bang\nGiá bán | #chinh-sach\nChủ đầu tư | #chu-dau-tu\nFAQ | #faq",
+		'nav_cta'            => 'Nhận bảng giá',
 
 		// SEO.
 		'seo_title'              => 'The Collection 688 Thuận Giao | Giá từ 43,688 triệu/m²',
@@ -274,4 +278,21 @@ function bds_is_landing_page() {
  */
 function bds_is_legacy_content( $content ) {
 	return false !== strpos( $content, 'tc688-' );
+}
+
+/**
+ * URL logo: logo riêng của landing, nếu trống thì dùng logo Flatsome (Tuỳ biến > Header > Logo).
+ *
+ * @return string
+ */
+function bds_logo_url() {
+	$url = bds_img_url( bds_opt( 'logo' ), 'medium' );
+	if ( $url ) {
+		return $url;
+	}
+	$flatsome = get_theme_mod( 'site_logo', '' );
+	if ( is_numeric( $flatsome ) ) {
+		return bds_img_url( $flatsome, 'medium' );
+	}
+	return ( $flatsome && false === strpos( $flatsome, '/flatsome/assets/img/logo.png' ) ) ? $flatsome : '';
 }

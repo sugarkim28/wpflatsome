@@ -75,3 +75,27 @@ function bds_front_page_template( $template ) {
 	return $template;
 }
 add_filter( 'template_include', 'bds_front_page_template', 99 );
+
+/**
+ * Thanh menu riêng của landing (thay header Flatsome trên trang landing).
+ */
+function bds_render_landing_header() {
+	if ( bds_is_landing_page() && bds_opt( 'own_header' ) ) {
+		get_template_part( 'template-parts/bds/header' );
+	}
+}
+add_action( 'flatsome_before_header', 'bds_render_landing_header' );
+
+/**
+ * Class cho body để CSS ẩn header Flatsome khi dùng thanh menu riêng.
+ *
+ * @param array $classes Class.
+ * @return array
+ */
+function bds_body_class( $classes ) {
+	if ( bds_is_landing_page() && bds_opt( 'own_header' ) ) {
+		$classes[] = 'bds-own-header';
+	}
+	return $classes;
+}
+add_filter( 'body_class', 'bds_body_class' );

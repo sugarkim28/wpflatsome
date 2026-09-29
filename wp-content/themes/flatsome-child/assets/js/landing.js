@@ -90,6 +90,30 @@
 		}
 	} );
 
+	/* ---------- Thanh menu landing ---------- */
+	var nav = document.getElementById( 'bds-nav' );
+	if ( nav ) {
+		var toggle = nav.querySelector( '.bds-nav__toggle' );
+		var setOpen = function ( open ) {
+			nav.classList.toggle( 'is-open', open );
+			toggle.setAttribute( 'aria-expanded', open ? 'true' : 'false' );
+			toggle.setAttribute( 'aria-label', open ? 'Đóng menu' : 'Mở menu' );
+		};
+		toggle.addEventListener( 'click', function () {
+			setOpen( ! nav.classList.contains( 'is-open' ) );
+		} );
+		nav.querySelectorAll( '.bds-nav__menu a' ).forEach( function ( a ) {
+			a.addEventListener( 'click', function () {
+				setOpen( false );
+			} );
+		} );
+		var onScroll = function () {
+			nav.classList.toggle( 'is-scrolled', window.scrollY > 40 );
+		};
+		window.addEventListener( 'scroll', onScroll, { passive: true } );
+		onScroll();
+	}
+
 	/* ---------- Video: chỉ nạp YouTube khi bấm ---------- */
 	document.querySelectorAll( '[data-bds-video]' ).forEach( function ( el ) {
 		el.addEventListener( 'click', function () {

@@ -92,6 +92,10 @@ function bds_customize_register( $wp_customize ) {
 		'messenger'        => array( 'bds_general', 'url', 'Link Messenger, vd https://m.me/tenpage (để trống để ẩn)' ),
 		'lead_email'       => array( 'bds_general', 'email', 'Email nhận thông báo khách hàng đăng ký' ),
 		'popup_delay'      => array( 'bds_general', 'number', 'Tự bật popup đăng ký sau N giây (0 = tắt)' ),
+		'own_header'       => array( 'bds_general', 'checkbox', 'Dùng thanh menu riêng của landing (ẩn header Flatsome trên trang landing)' ),
+		'logo'             => array( 'bds_general', 'image', 'Logo trên thanh menu (trống = dùng logo Flatsome)' ),
+		'nav_items'        => array( 'bds_general', 'textarea', 'Menu landing (Tên | #neo hoặc link), mỗi dòng một mục' ),
+		'nav_cta'          => array( 'bds_general', 'text', 'Chữ trên nút menu (trống để ẩn)' ),
 		'landing_front'    => array( 'bds_general', 'checkbox', 'Tự dùng landing cho trang chủ (không cần chọn template cho trang)' ),
 
 		'seo_title'             => array( 'bds_seo', 'text', 'Tiêu đề SEO (khoảng 50–60 ký tự). Bỏ qua nếu dùng Rank Math/Yoast' ),
