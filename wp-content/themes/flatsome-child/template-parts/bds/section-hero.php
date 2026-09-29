@@ -49,5 +49,16 @@ $bds_bg = bds_img_url( bds_opt( 'hero_image' ), 'full' );
 				</div>
 			</div>
 		</div>
+		<?php $bds_stats = array_slice( bds_lines( bds_opt( 'highlights' ) ), 0, 4 ); ?>
+		<?php if ( $bds_stats ) : ?>
+			<ul class="bds-stats">
+				<?php foreach ( $bds_stats as $bds_stat ) : ?>
+					<li>
+						<span><?php echo esc_html( $bds_stat[0] ); ?></span>
+						<strong><?php echo esc_html( $bds_stat[1] ); ?></strong>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
 	</div>
 </section>

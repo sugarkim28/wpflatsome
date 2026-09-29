@@ -352,3 +352,82 @@
 .bds-agency { margin: 20px 0 0; padding: 16px 0 0; border-top: 1px solid rgba(255, 255, 255, .2); list-style: none; color: rgba(255, 255, 255, .88); }
 .bds-agency li { margin: 0 0 6px; }
 .bds-agency a { color: var(--bds-accent); }
+
+/* ---------- Dải số liệu dưới banner ---------- */
+.bds-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+	gap: 1px;
+	margin: 40px 0 0;
+	overflow: hidden;
+	border: 1px solid rgba(255, 255, 255, .2);
+	border-radius: var(--bds-radius);
+	background: rgba(255, 255, 255, .2);
+	list-style: none;
+}
+.bds-stats li { margin: 0; padding: 16px 20px; background: rgba(5, 20, 40, .55); text-align: center; }
+.bds-stats span { display: block; font-size: .8rem; letter-spacing: .05em; opacity: .8; text-transform: uppercase; }
+.bds-stats strong { display: block; color: var(--bds-accent); font-size: 1.5rem; line-height: 1.3; }
+
+/* ---------- Lý do sở hữu ---------- */
+.bds-reason {
+	height: 100%;
+	padding: 28px;
+	border: 1px solid rgba(255, 255, 255, .15);
+	border-radius: var(--bds-radius);
+	background: rgba(255, 255, 255, .04);
+}
+.bds-reason__num {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	margin-bottom: 14px;
+	border-radius: 50%;
+	background: var(--bds-accent);
+	color: #fff;
+	font-size: 1.2rem;
+	font-weight: 800;
+}
+.bds-reason h3 { margin-bottom: 8px; color: #fff; font-size: 1.1rem; }
+.bds-reason p { margin: 0; color: rgba(255, 255, 255, .8); }
+
+/* ---------- Chủ đầu tư ---------- */
+.bds-dev-points { margin-top: 10px; }
+.bds-dev-points .col { padding-bottom: 12px; }
+.bds-dev-point { height: 100%; padding: 14px 16px; border-left: 3px solid var(--bds-accent); background: var(--bds-bg-alt); }
+.bds-dev-point strong { display: block; color: var(--bds-primary); }
+.bds-dev-point span { color: var(--bds-muted); font-size: .95rem; }
+
+/* ---------- FAQ ---------- */
+.bds-faq { max-width: 860px; }
+.bds-faq__item { margin-bottom: 12px; border-radius: var(--bds-radius); background: #fff; box-shadow: var(--bds-shadow); }
+.bds-faq__item summary {
+	position: relative;
+	padding: 18px 52px 18px 22px;
+	color: var(--bds-primary);
+	font-weight: 700;
+	list-style: none;
+	cursor: pointer;
+}
+.bds-faq__item summary::-webkit-details-marker { display: none; }
+.bds-faq__item summary::after {
+	content: "+";
+	position: absolute;
+	top: 50%;
+	right: 22px;
+	color: var(--bds-accent);
+	font-size: 1.5rem;
+	transform: translateY(-50%);
+}
+.bds-faq__item[open] summary::after { content: "−"; }
+.bds-faq__item p { margin: 0; padding: 0 22px 20px; color: var(--bds-muted); }
+
+@media only screen and (max-width: 48em) {
+	.bds-stats { grid-template-columns: repeat(2, 1fr); margin-top: 28px; }
+	.bds-stats strong { font-size: 1.2rem; }
+}
+
+.bds-connect--grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.bds-connect--grid li { margin: 0; }

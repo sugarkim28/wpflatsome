@@ -20,8 +20,9 @@ $bds_map = bds_opt( 'location_map' );
 			<p class="bds-lead"><?php echo nl2br( esc_html( bds_opt( 'location_text' ) ) ); ?></p>
 		</div>
 		<div class="row row-large align-middle">
-			<div class="col large-5 medium-12 small-12">
-				<ul class="bds-connect">
+			<?php $bds_has_media = $bds_img || $bds_map; ?>
+			<div class="col <?php echo $bds_has_media ? 'large-5' : 'large-12'; ?> medium-12 small-12">
+				<ul class="bds-connect<?php echo $bds_has_media ? '' : ' bds-connect--grid'; ?>">
 					<?php foreach ( bds_lines( bds_opt( 'location_points' ) ) as $bds_point ) : ?>
 						<li>
 							<strong><?php echo esc_html( $bds_point[0] ); ?></strong>
@@ -30,6 +31,7 @@ $bds_map = bds_opt( 'location_map' );
 					<?php endforeach; ?>
 				</ul>
 			</div>
+			<?php if ( $bds_has_media ) : ?>
 			<div class="col large-7 medium-12 small-12">
 				<?php if ( $bds_img ) : ?>
 					<a class="image-lightbox lightbox-gallery bds-media" href="<?php echo esc_url( bds_img_url( $bds_img, 'full' ) ); ?>">
@@ -41,6 +43,7 @@ $bds_map = bds_opt( 'location_map' );
 					</div>
 				<?php endif; ?>
 			</div>
+			<?php endif; ?>
 		</div>
 	</div>
 </section>

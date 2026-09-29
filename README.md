@@ -6,7 +6,7 @@ Child theme `wp-content/themes/flatsome-child` biến Flatsome 3.20.x thành lan
 
 | Thành phần | Mô tả |
 |---|---|
-| Template **Landing Page Bất động sản** | Hero + form, Tổng quan, Vị trí (ảnh hoặc Google Maps), Tiện ích, Mặt bằng, Thư viện ảnh, Video YouTube, Chính sách bán hàng, Form đăng ký cuối trang |
+| Template **Landing Page Bất động sản** | Hero + form + dải số liệu nổi bật, Tổng quan, Vị trí (ảnh hoặc Google Maps), Tiện ích, Mặt bằng, Thư viện ảnh, Video YouTube, Chính sách bán hàng, Lý do sở hữu, Chủ đầu tư, FAQ (kèm dữ liệu FAQPage cho Google), Form đăng ký cuối trang |
 | Tuỳ biến nội dung | **Giao diện → Tuỳ biến → Landing Bất động sản** – sửa chữ, ảnh, màu, hotline, bật/tắt từng mục (không cần code) |
 | Quản lý khách hàng | Menu **Khách đăng ký** trong admin: danh sách, chi tiết, nút **Xuất Excel (CSV)**; email báo khách mới |
 | Liên hệ nhanh | Nút Hotline / Zalo / Messenger nổi (desktop), thanh "Gọi ngay – Zalo – Nhận báo giá" (mobile) |
@@ -32,8 +32,10 @@ Tạo menu (Giao diện → Menu) với *Liên kết tuỳ chỉnh*, gán vào v
 | Tiện ích | `#tien-ich` |
 | Mặt bằng | `#mat-bang` |
 | Hình ảnh | `#hinh-anh` |
-| Chính sách | `#chinh-sach` |
-| Đăng ký | `#dang-ky` |
+| Giá bán | `#chinh-sach` |
+| Chủ đầu tư | `#chu-dau-tu` |
+| FAQ | `#faq` |
+| Liên hệ | `#dang-ky` |
 
 Gợi ý Flatsome: **Tuỳ biến → Header** bật *Sticky header*, header trong suốt cho Hero đẹp hơn.
 
@@ -52,7 +54,7 @@ Nội dung soạn trong trang bằng UX Builder hiện ngay dưới Hero. Có th
 
 ```
 [bds_lead_form title="Nhận bảng giá" button="Gửi ngay" source="Banner giữa"]
-[bds_section name="amenities"]   (hero, overview, location, amenities, floorplans, gallery, video, pricing, register)
+[bds_section name="amenities"]   (hero, overview, location, amenities, floorplans, gallery, video, pricing, reasons, developer, faq, register)
 [bds_hotline]
 ```
 `source` dùng để biết khách đăng ký từ form nào (hiện trong danh sách khách hàng).

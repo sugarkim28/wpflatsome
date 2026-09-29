@@ -61,6 +61,9 @@ function bds_customize_register( $wp_customize ) {
 		'bds_floorplans' => 'Mặt bằng',
 		'bds_gallery'    => 'Thư viện ảnh & Video',
 		'bds_pricing'    => 'Chính sách bán hàng',
+		'bds_reasons'    => 'Lý do sở hữu',
+		'bds_developer'  => 'Chủ đầu tư',
+		'bds_faq'        => 'Câu hỏi thường gặp (FAQ)',
 		'bds_register'   => 'Form đăng ký',
 	);
 	$priority = 10;
@@ -95,6 +98,7 @@ function bds_customize_register( $wp_customize ) {
 		'hero_subtitle'    => array( 'bds_hero', 'textarea', 'Mô tả ngắn' ),
 		'hero_price'       => array( 'bds_hero', 'text', 'Giá / Điểm nổi bật' ),
 		'hero_cta'         => array( 'bds_hero', 'text', 'Chữ trên nút kêu gọi' ),
+		'highlights'       => array( 'bds_hero', 'textarea', 'Dải số liệu nổi bật dưới banner (Nhãn | Giá trị), tối đa 4 dòng' ),
 
 		'show_overview'    => array( 'bds_overview', 'checkbox', 'Hiển thị mục này' ),
 		'overview_title'   => array( 'bds_overview', 'text', 'Tiêu đề' ),
@@ -123,6 +127,20 @@ function bds_customize_register( $wp_customize ) {
 		'show_pricing'     => array( 'bds_pricing', 'checkbox', 'Hiển thị mục này' ),
 		'pricing_title'    => array( 'bds_pricing', 'text', 'Tiêu đề' ),
 		'pricing_items'    => array( 'bds_pricing', 'textarea', 'Chính sách (Tiêu đề | Mô tả)' ),
+
+		'show_reasons'     => array( 'bds_reasons', 'checkbox', 'Hiển thị mục này' ),
+		'reasons_title'    => array( 'bds_reasons', 'text', 'Tiêu đề' ),
+		'reasons'          => array( 'bds_reasons', 'textarea', 'Danh sách lý do (Tiêu đề | Mô tả)' ),
+
+		'show_developer'   => array( 'bds_developer', 'checkbox', 'Hiển thị mục này' ),
+		'developer_title'  => array( 'bds_developer', 'text', 'Tiêu đề' ),
+		'developer_text'   => array( 'bds_developer', 'textarea', 'Giới thiệu' ),
+		'developer_points' => array( 'bds_developer', 'textarea', 'Điểm nổi bật (Nhãn | Nội dung)' ),
+		'developer_image'  => array( 'bds_developer', 'image', 'Ảnh / logo chủ đầu tư' ),
+
+		'show_faq'         => array( 'bds_faq', 'checkbox', 'Hiển thị mục này' ),
+		'faq_title'        => array( 'bds_faq', 'text', 'Tiêu đề' ),
+		'faq'              => array( 'bds_faq', 'textarea', 'Câu hỏi | Trả lời (mỗi dòng một câu)' ),
 
 		'register_title'   => array( 'bds_register', 'text', 'Tiêu đề' ),
 		'register_text'    => array( 'bds_register', 'textarea', 'Mô tả' ),

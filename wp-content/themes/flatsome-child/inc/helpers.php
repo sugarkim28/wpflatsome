@@ -25,32 +25,52 @@ function bds_defaults() {
 
 		// Hero.
 		'hero_image'         => '',
-		'hero_eyebrow'       => 'Chính thức nhận booking – Đăng ký nhu cầu chỉ 50 triệu',
+		'hero_eyebrow'       => 'Chính thức nhận booking – Chỉ 50 triệu/booking',
 		'hero_title'         => 'The Collection 688',
-		'hero_subtitle'      => 'Tọa độ Metro lý tưởng – Mặt tiền Quốc lộ 13 (Đại lộ Bình Dương). Địa chỉ: Lô 198 Quốc lộ 13, khu phố 1, phường Thuận Giao, TP.HCM. Chỉ 688 sản phẩm, bàn giao dự kiến Quý II/2029.',
+		'hero_subtitle'      => 'Căn hộ cao cấp chuẩn sống xanh mặt tiền Đại lộ Bình Dương (Quốc lộ 13) – Lô 198 Quốc lộ 13, khu phố 1, phường Thuận Giao, TP.HCM. Chỉ 300m đến ga C6 Metro số 2.',
 		'hero_price'         => 'Giá chỉ từ 43,688 triệu/m²',
 		'hero_cta'           => 'Nhận bảng giá & chính sách',
 
 		// Tổng quan.
 		'show_overview'      => 1,
 		'overview_title'     => 'Tổng quan dự án',
-		'overview_text'      => 'The Collection 688 là dự án căn hộ cao cấp mặt tiền Quốc lộ 13, chỉ 300m đến ga C6 tuyến Metro số 2 (Thủ Dầu Một – TP.HCM). Kiến trúc Streamline Moderne, định hướng tiêu chuẩn xanh EDGE, 100% căn hộ có ban công, do DICERA Holdings phát triển và Savills quản lý vận hành.',
+		'overview_text'      => 'The Collection 688 (tên pháp lý: Chung cư Hòa Lân Thuận Giao) là tổ hợp căn hộ cao cấp tại mặt tiền Đại lộ Bình Dương (Quốc lộ 13), phường Thuận Giao, TP.HCM, do DICERA Holdings (HoSE: DC4) đầu tư và làm tổng thầu EPC với tổng vốn 1.880,5 tỷ đồng. Tòa tháp cao 156,6m, kiến trúc Streamline Moderne, định hướng tiêu chuẩn xanh EDGE, 100% căn hộ có ban công – lựa chọn an cư cho chuyên gia, kỹ sư, gia đình trẻ và kênh đầu tư cho thuê gần các khu công nghiệp VSIP 1, Sóng Thần, Việt Hương.',
 		'overview_image'     => '',
-		'overview_facts'     => "Tên pháp lý | Chung cư Hòa Lân Thuận Giao\nTên thương mại | The Collection 688\nVị trí | Lô 198 Quốc lộ 13 (Đại lộ Bình Dương), khu phố 1, phường Thuận Giao, TP.HCM\nDiện tích đất | 6.138 m²\nQuy mô | 02 tầng hầm – 39 tầng nổi\nSản phẩm | 688 sản phẩm: 549 căn hộ chung cư, 133 căn hộ thương gia, 6 shophouse\nLoại căn | 1PN+ (46–54m²), 2PN (68–80m²), 3PN (85m²), căn thương gia 142–159m², Duplex, Penthouse\nBàn giao | Dự kiến Quý II/2029 – căn hộ thương gia full nội thất, căn hộ chung cư hoàn thiện cơ bản\nPhát triển & Tổng thầu EPC | Công ty CP DICERA Holdings\nQuản lý vận hành | Savills\nTổng đại lý phân phối | Công ty CP Bất động sản SG Holdings\nNgân hàng tài trợ | MB",
+		'overview_facts'     => "Tên thương mại | The Collection 688\nTên pháp lý | Chung cư Hòa Lân Thuận Giao\nChủ đầu tư & Tổng thầu EPC | Công ty CP DICERA Holdings (HoSE: DC4)\nVị trí | Lô 198 Quốc lộ 13 (Đại lộ Bình Dương), khu phố 1, phường Thuận Giao, TP.HCM\nDiện tích đất | 6.138,6 m²\nQuy mô | 01 tòa tháp, 02 tầng hầm – 39 tầng nổi, cao 156,6m\nMật độ xây dựng | 40%\nSản phẩm | 688 sản phẩm: 549 căn hộ chung cư, 133 căn hộ thương gia, 6 shophouse\nLoại căn | 1PN+ (46–54m²), 2PN (68–80m²), 3PN (85m²), căn thương gia 142–159m², Duplex, Penthouse\nTổng mức đầu tư | 1.880,5 tỷ đồng\nPháp lý | Quy hoạch 1/500, chấp thuận chủ trương đầu tư & nhà đầu tư, BCNCKT thẩm định 11/2025\nKhởi công | Tháng 12/2025\nBàn giao | Dự kiến Quý II/2029 – căn thương gia full nội thất, căn hộ chung cư hoàn thiện cơ bản\nQuản lý vận hành | Savills\nTổng đại lý phân phối | Công ty CP Bất động sản SG Holdings\nNgân hàng tài trợ | MB",
 
 		// Vị trí.
 		'show_location'      => 1,
-		'location_title'     => 'Tâm điểm hạ tầng – Chạm nhịp đô thị',
-		'location_text'      => 'Tọa lạc trên trục Đại lộ Bình Dương, The Collection 688 nằm tại điểm giao của hệ sinh thái đô thị đang ngày càng hoàn thiện – nơi giao thông, thương mại, giáo dục, y tế và kinh tế cùng hội tụ. Quốc lộ 13 được mở rộng 10–14 làn xe, lộ giới đến 60m.',
-		'location_points'    => "300m | đến ga C6 – Metro số 2 (Thủ Dầu Một – TP.HCM), khoảng 5 phút đi bộ\n1,3km | đến đường Vành đai 3\n3 phút | trường học các cấp, Bệnh viện Columbia Asia\n10 phút | BV Quốc tế Becamex, BV Quốc tế Hạnh Phúc, BV Đa khoa Thuận An\n15 phút | AEON Mall, Mega Market, sân golf Sông Bé\n30 phút | Trung tâm TP.HCM",
+		'location_title'     => 'Vị trí The Collection 688',
+		'location_text'      => 'Mặt tiền Đại lộ Bình Dương (Quốc lộ 13) – trục giao thương kết nối trung tâm TP.HCM với các đô thị công nghiệp phía Bắc. Liền kề các khu công nghiệp VSIP 1, Sóng Thần, Việt Hương, nơi tập trung đông đảo chuyên gia và kỹ sư.',
+		'location_points'    => "300m | đến ga C6 – Metro số 2 (Thủ Dầu Một – TP.HCM)\n1,3km | đến đường Vành đai 3\n5 phút | Co.opmart, Lotte Mart, chợ Lái Thiêu\n10 phút | AEON Mall, Mega Market, sân golf Sông Bé, BV Quốc tế Becamex\n15 phút | Làng Đại học Quốc gia TP.HCM\n25 phút | Bến xe Miền Đông mới, sân bay Tân Sơn Nhất",
 		'location_image'     => '',
 		'location_map'       => '',
 
 		// Tiện ích.
 		'show_amenities'     => 1,
-		'amenities_title'    => 'Top lý do sở hữu The Collection 688',
-		'amenities'          => "Tọa độ Metro lý tưởng | Chỉ 300m đến ga C6 tuyến Metro số 2, kết nối trung tâm TP.HCM dễ dàng\nHạ tầng Quốc lộ 13 | Mở rộng 10–14 làn xe, lộ giới đến 60m, gần Vành đai 3 chỉ 1,3km\nFacade khác biệt | Kiến trúc Streamline Moderne hiếm hoi tại Đông Bắc TP.HCM\nTiêu chuẩn xanh EDGE | Vật liệu sang trọng, bền vững, tiết kiệm năng lượng\n3 tầng bãi đậu & sạc ô tô | Bãi đậu thông minh, trạm sạc xe điện phục vụ cư dân\nNăng lượng mặt trời | Hệ thống điện mặt trời trên mái cho chiếu sáng công cộng và thang máy, giảm phí vận hành\nTiện ích động & tĩnh | Tầng 9: vui chơi, kết nối, vận động – Tầng 21: thư giãn, cân bằng, tái tạo năng lượng\nBộ sưu tập tiện ích doanh nhân | 4 phòng họp thương gia, co-working space trong nhà và ngoài trời\nNước uống tại vòi | Nước sạch tinh khiết tại khu tầng trệt, tầng 9 và tầng 21\n100% căn hộ có ban công | Layout vuông vức, đón nắng, đón gió, dễ bố trí nội thất\nBàn giao full nội thất | Áp dụng cho căn hộ thương gia\nPháp lý đầy đủ | Minh bạch, rõ ràng, an tâm sở hữu\nChủ đầu tư DICERA | 32 năm kinh nghiệm xây dựng và phát triển dự án\nVận hành bởi Savills | Đơn vị quản lý bất động sản hàng đầu thế giới\nChỉ 688 sản phẩm | Cộng đồng cư dân tinh hoa, giá trị gia tăng bền vững",
+		'amenities_title'    => 'Tiện ích The Collection 688',
+		'amenities'          => "Tầng 1–3 · Khối đế | 2 sảnh đón chuẩn khách sạn, sinh hoạt cộng đồng, game room, 6 shophouse, nước uống tại vòi\nTầng 9 · Tiện ích động | Hồ bơi tràn bờ người lớn & trẻ em, công viên nước mini, BBQ, Gym & 3D Golf, phòng chiếu phim, karaoke, Dance & Yoga\nTầng 21 · Tiện ích tĩnh | Co-working trong nhà và ngoài trời, 4 phòng họp thương gia, vườn thiền, Sound Bathing, Yoga ngoài trời\n3 tầng bãi đậu thông minh | Bãi đậu và trạm sạc ô tô điện dành cho cư dân\nNăng lượng mặt trời | Điện mặt trời trên mái cho chiếu sáng công cộng và thang máy, giảm phí vận hành\nTiêu chuẩn xanh EDGE | 100% căn hộ có ban công, phòng ngủ có cửa sổ, layout vuông vức, tiết kiệm điện nước",
 		'amenities_image'    => '',
+
+		// Số liệu nổi bật (dưới banner).
+		'highlights'         => "Giá chỉ từ | 43,688 triệu/m²\nBooking | 50 triệu\nChiết khấu đến | 11%\nBàn giao | Quý II/2029",
+
+		// Lý do sở hữu.
+		'show_reasons'       => 1,
+		'reasons_title'      => '6 lý do nên sở hữu The Collection 688',
+		'reasons'            => "Vị trí mặt tiền Đại lộ Bình Dương | Trục giao thương xương sống, 300m đến ga C6 Metro số 2, 1,3km đến Vành đai 3, 5–10 phút đến AEON Mall, Lotte Mart, sân golf Sông Bé\nChủ đầu tư DICERA Holdings (DC4) | Hơn 30 năm kinh nghiệm, trực tiếp làm tổng thầu EPC, dấu ấn Ruby Tower và Vung Tau Centre Point\nPháp lý minh bạch | Quy hoạch 1/500, chấp thuận chủ trương đầu tư và nhà đầu tư, báo cáo nghiên cứu khả thi đã thẩm định\nSống xanh chuẩn EDGE | Mật độ xây dựng 40%, 100% căn hộ có ban công, năng lượng mặt trời, nước uống tại vòi\nĐiểm rơi lợi nhuận 2026–2029 | Giá chỉ từ 43,688 triệu/m², thanh toán linh hoạt, hạ tầng Quốc lộ 13 và Metro số 2 hoàn thiện dần\nTiềm năng cho thuê | Liền kề KCN VSIP 1, Sóng Thần, Việt Hương – nguồn khách thuê chuyên gia, kỹ sư ổn định",
+
+		// Chủ đầu tư.
+		'show_developer'     => 1,
+		'developer_title'    => 'Chủ đầu tư DICERA Holdings',
+		'developer_text'     => 'Công ty Cổ phần DICERA Holdings (HoSE: DC4) có hơn 30 năm hoạt động trong lĩnh vực xây dựng và đầu tư phát triển bất động sản, đồng thời là tổng thầu EPC của The Collection 688 – trực tiếp kiểm soát chất lượng và tiến độ thi công.',
+		'developer_points'   => "Kinh nghiệm | Hơn 30 năm xây dựng và phát triển dự án\nDự án tiêu biểu | Ruby Tower, Vung Tau Centre Point\nTổng thầu EPC | Tự thi công, chủ động tiến độ và chất lượng\nĐối tác | Savills quản lý vận hành, MB tài trợ vốn",
+		'developer_image'    => '',
+
+		// Câu hỏi thường gặp.
+		'show_faq'           => 1,
+		'faq_title'          => 'Câu hỏi thường gặp',
+		'faq'                => "Dự án The Collection 688 nằm ở đâu? | Lô 198 Quốc lộ 13 (Đại lộ Bình Dương), khu phố 1, phường Thuận Giao, TP.HCM (khu vực Thuận Giao, TP. Thuận An cũ), cách ga C6 Metro số 2 khoảng 300m.\nChủ đầu tư dự án là ai? | Công ty Cổ phần DICERA Holdings (HoSE: DC4), đồng thời là tổng thầu EPC của dự án.\nDự án có bao nhiêu sản phẩm? | 688 sản phẩm gồm 549 căn hộ chung cư, 133 căn hộ thương gia và 6 shophouse, cùng quỹ căn Duplex và Penthouse.\nGiá bán và booking thế nào? | Giá chỉ từ 43,688 triệu/m², đăng ký nhu cầu (booking) 50 triệu đồng. Liên hệ hotline để nhận bảng giá chi tiết từng căn.\nCó những phương thức thanh toán nào? | Thanh toán chuẩn (chiết khấu 6%), ưu đãi 1, ưu đãi 2 (chiết khấu 3%), thanh toán vượt (chiết khấu đến 11%) và hỗ trợ tài chính với ngân hàng giải ngân đến 60%, ân hạn nợ gốc và hỗ trợ lãi suất 24 tháng.\nKhi nào bàn giao? | Dự kiến Quý II/2029. Căn hộ thương gia bàn giao full nội thất, căn hộ chung cư bàn giao hoàn thiện cơ bản.\nPháp lý dự án đến đâu? | Dự án đã có quy hoạch 1/500, chấp thuận chủ trương đầu tư, chấp thuận nhà đầu tư và báo cáo nghiên cứu khả thi được thẩm định tháng 11/2025.",
 
 		// Mặt bằng.
 		'show_floorplans'    => 1,
