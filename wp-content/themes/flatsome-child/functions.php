@@ -58,3 +58,20 @@ function bds_render_floating_contact() {
 	}
 }
 add_action( 'wp_footer', 'bds_render_floating_contact' );
+
+/**
+ * Trang chủ tự dùng template landing khi bật tuỳ chọn "Tự dùng landing cho trang chủ".
+ *
+ * @param string $template Đường dẫn template WordPress đã chọn.
+ * @return string
+ */
+function bds_front_page_template( $template ) {
+	if ( bds_is_forced_front() ) {
+		$landing = locate_template( 'page-templates/landing-bds.php' );
+		if ( $landing ) {
+			return $landing;
+		}
+	}
+	return $template;
+}
+add_filter( 'template_include', 'bds_front_page_template', 99 );

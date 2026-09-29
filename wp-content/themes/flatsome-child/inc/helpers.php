@@ -22,6 +22,7 @@ function bds_defaults() {
 		'messenger'          => '',
 		'lead_email'         => 'saigonluxury229@gmail.com',
 		'popup_delay'        => 0,
+		'landing_front'      => 1,
 
 		// SEO.
 		'seo_title'              => 'The Collection 688 Thuận Giao | Giá từ 43,688 triệu/m²',
@@ -186,11 +187,11 @@ function bds_tel( $phone ) {
  * @return bool
  */
 function bds_is_landing_context() {
+	if ( bds_is_landing_page() ) {
+		return true;
+	}
 	if ( ! is_singular() ) {
 		return false;
-	}
-	if ( is_page_template( 'page-templates/landing-bds.php' ) ) {
-		return true;
 	}
 	$post = get_post();
 	return $post && false !== strpos( $post->post_content, '[bds_' );
@@ -245,4 +246,32 @@ function bds_youtube_id( $url ) {
 		return $m[1];
 	}
 	return '';
+}
+
+/**
+ * Trang chủ có đang được ép hiển thị landing không (tuỳ chọn "Tự dùng landing cho trang chủ").
+ *
+ * @return bool
+ */
+function bds_is_forced_front() {
+	return is_front_page() && bds_opt( 'landing_front' );
+}
+
+/**
+ * Trang hiện tại hiển thị bằng template landing (chọn template, hoặc trang chủ được ép).
+ *
+ * @return bool
+ */
+function bds_is_landing_page() {
+	return bds_is_forced_front() || ( is_singular() && is_page_template( 'page-templates/landing-bds.php' ) );
+}
+
+/**
+ * Nội dung dựng tay cũ (bộ HTML "tc688-…") không dùng với landing – bỏ qua để khỏi vỡ giao diện.
+ *
+ * @param string $content Nội dung trang.
+ * @return bool
+ */
+function bds_is_legacy_content( $content ) {
+	return false !== strpos( $content, 'tc688-' );
 }

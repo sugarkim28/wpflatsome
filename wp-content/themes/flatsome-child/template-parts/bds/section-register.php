@@ -10,6 +10,7 @@ defined( 'ABSPATH' ) || exit;
 $bds_bg = bds_img_url( bds_opt( 'register_image' ), 'full' );
 ?>
 <section id="dang-ky" class="bds-section bds-register"<?php echo $bds_bg ? ' style="background-image:url(' . esc_url( $bds_bg ) . ')"' : ''; ?>>
+	<span id="nhan-bang-gia" class="bds-anchor" aria-hidden="true"></span>
 	<div class="bds-hero__overlay"></div>
 	<div class="container bds-register__inner">
 		<div class="row row-large align-middle">

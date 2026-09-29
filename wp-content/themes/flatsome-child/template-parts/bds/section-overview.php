@@ -13,6 +13,7 @@ if ( ! bds_opt( 'show_overview' ) ) {
 $bds_img = absint( bds_opt( 'overview_image' ) );
 ?>
 <section id="tong-quan" class="bds-section">
+	<span id="gioi-thieu" class="bds-anchor" aria-hidden="true"></span>
 	<div class="container">
 		<div class="row row-large align-middle">
 			<div class="col <?php echo $bds_img ? 'large-6' : 'large-12'; ?> medium-12 small-12">

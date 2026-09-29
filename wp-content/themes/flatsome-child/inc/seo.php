@@ -11,6 +11,15 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
+ * URL chuẩn của trang landing (trang chủ dùng địa chỉ trang chủ).
+ *
+ * @return string
+ */
+function bds_page_url() {
+	return is_front_page() ? home_url( '/' ) : get_permalink();
+}
+
+/**
  * Có plugin SEO đang chạy không.
  *
  * @return bool
@@ -21,15 +30,6 @@ function bds_has_seo_plugin() {
 		|| defined( 'SEOPRESS_VERSION' )
 		|| defined( 'AIOSEO_VERSION' )
 		|| class_exists( 'All_in_One_SEO_Pack' );
-}
-
-/**
- * Chỉ áp dụng cho trang dùng template landing.
- *
- * @return bool
- */
-function bds_is_landing_page() {
-	return is_singular() && is_page_template( 'page-templates/landing-bds.php' );
 }
 
 /**
@@ -56,7 +56,7 @@ function bds_meta_tags() {
 
 	$title = bds_opt( 'seo_title' ) ? bds_opt( 'seo_title' ) : wp_get_document_title();
 	$desc  = bds_opt( 'seo_description' );
-	$url   = get_permalink();
+	$url   = bds_page_url();
 	$image = bds_img_url( bds_opt( 'seo_image' ), 'full' );
 	if ( ! $image ) {
 		$image = bds_img_url( bds_opt( 'hero_image' ), 'full' );
@@ -99,7 +99,7 @@ function bds_structured_data() {
 		return;
 	}
 
-	$url     = get_permalink();
+	$url     = bds_page_url();
 	$phone   = bds_opt( 'hotline' );
 	$address = array_filter(
 		array(

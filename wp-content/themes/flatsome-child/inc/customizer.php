@@ -92,6 +92,7 @@ function bds_customize_register( $wp_customize ) {
 		'messenger'        => array( 'bds_general', 'url', 'Link Messenger, vd https://m.me/tenpage (để trống để ẩn)' ),
 		'lead_email'       => array( 'bds_general', 'email', 'Email nhận thông báo khách hàng đăng ký' ),
 		'popup_delay'      => array( 'bds_general', 'number', 'Tự bật popup đăng ký sau N giây (0 = tắt)' ),
+		'landing_front'    => array( 'bds_general', 'checkbox', 'Tự dùng landing cho trang chủ (không cần chọn template cho trang)' ),
 
 		'seo_title'             => array( 'bds_seo', 'text', 'Tiêu đề SEO (khoảng 50–60 ký tự). Bỏ qua nếu dùng Rank Math/Yoast' ),
 		'seo_description'       => array( 'bds_seo', 'textarea', 'Mô tả SEO (khoảng 140–160 ký tự). Bỏ qua nếu dùng Rank Math/Yoast' ),
