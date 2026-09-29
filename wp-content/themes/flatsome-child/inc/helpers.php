@@ -22,7 +22,13 @@ function bds_defaults() {
 		'zalo'               => '0965078229',
 		'messenger'          => '',
 		'lead_email'         => 'saigonluxury229@gmail.com',
-		'popup_delay'        => 0,
+		'popup_delay'        => 20,
+		'popup_title'        => 'Nhận bảng giá gốc & chính sách chiết khấu đến 12%',
+		'form_perks'         => "Bảng giá gốc & quỹ căn đẹp đợt 1 từ chủ đầu tư\nBảng tính dòng tiền, phương án vay chi tiết\nƯu tiên lịch tham quan nhà mẫu",
+		'offers'             => "Booking | 30 triệu/suất\nBooking sớm | Chiết khấu 3%\nTổng chiết khấu | Đến 12% giá trị căn\nNgân hàng MB | Ân hạn gốc, hỗ trợ lãi 24 tháng",
+		'trust_badges'       => "CĐT DICERA Holdings (HoSE: DC4)\nQuản lý vận hành Savills\nNgân hàng MB tài trợ\nPháp lý: QH 1/500, chủ trương đầu tư",
+		'cta_title'          => 'Nhận bảng giá gốc & quỹ căn đẹp đợt 1',
+		'cta_text'           => 'Để lại số điện thoại, chuyên viên sẽ gửi bảng giá, mặt bằng và bảng tính dòng tiền cho bạn sớm nhất.',
 		'landing_front'      => 1,
 		'own_header'         => 1,
 		'logo'               => '',
@@ -72,7 +78,7 @@ function bds_defaults() {
 		'amenities_image'    => '',
 
 		// Số liệu nổi bật (dưới banner).
-		'highlights'         => "Chỉ từ | 43,688 triệu/m²\nBooking | 30 triệu/suất\nBooking sớm | Chiết khấu 3%\nTổng chiết khấu | Đến 12%/TGT",
+		'highlights'         => "Giá chỉ từ | 43,688 tr/m²\nGa Metro số 2 | 300m\nQuy mô | 688 sản phẩm\nBàn giao | Quý II/2029",
 
 		// Lý do sở hữu.
 		'show_reasons'       => 1,

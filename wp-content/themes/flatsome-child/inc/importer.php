@@ -177,6 +177,11 @@ function bds_import_blocks() {
 	$blocks  = array();
 
 	// 1. Banner.
+	$trust = '';
+	foreach ( bds_lines( bds_opt( 'trust_badges' ) ) as $t ) {
+		$trust .= '<li>' . bds_tx( $t[0] ) . '</li>';
+	}
+	$trust = $trust ? '<ul class="bds-trust">' . $trust . '</ul>' : '';
 	$stats = '';
 	foreach ( array_slice( bds_lines( bds_opt( 'highlights' ) ), 0, 4 ) as $s ) {
 		$stats .= sprintf( "[col span=\"3\" span__sm=\"6\"]\n<div class=\"bds-stat\"><span>%s</span><strong>%s</strong></div>\n[/col]\n", bds_tx( $s[0] ), bds_tx( $s[1] ) );
@@ -191,12 +196,13 @@ function bds_import_blocks() {
 <h1 class="bds-hero__title">%3$s</h1>
 <p class="bds-hero__subtitle">%4$s</p>
 <p class="bds-hero__price">%5$s</p>
-[button text="%6$s" color="secondary" radius="6" link="#dang-ky"]
+[button text="%6$s" color="secondary" radius="6" size="larger" class="bds-pulse" link="#dang-ky"]
 [button text="Khám phá dự án" color="primary" radius="6" link="#tong-quan"]
 [button text="%7$s" color="white" style="outline" radius="6" icon="icon-phone" link="tel:%8$s"]
+%10$s
 [/col]
 [col span="5" span__sm="12"]
-[bds_lead_form title="Nhận bảng giá mới nhất" button="Gửi thông tin" source="Hero" card="1"]
+[bds_lead_form title="Nhận bảng giá gốc chủ đầu tư" button="Nhận bảng giá ngay" source="Hero" card="1" compact="1" perks="1"]
 [/col]
 [/row]
 [gap height="30px"]
@@ -211,7 +217,8 @@ function bds_import_blocks() {
 			bds_sc( bds_opt( 'hero_cta' ) ),
 			bds_sc( $hotline ),
 			$tel,
-			$stats
+			$stats,
+			$trust
 		),
 		'trang-chu',
 		'',
@@ -418,6 +425,7 @@ function bds_import_blocks() {
 <p class="bds-price-card__label">Giá bán chỉ từ</p>
 <p class="bds-price-card__value">%3$s</p>
 <p class="bds-price-card__note">%4$s</p>
+<p class="bds-price-card__actions">[button text="Nhận bảng giá chi tiết" color="secondary" radius="6" size="large" class="bds-pulse" link="#dang-ky"][button text="Gọi %5$s" color="white" style="outline" radius="6" size="large" link="tel:%6$s"]</p>
 </div>
 [row]
 %2$s[/row]
@@ -426,7 +434,9 @@ function bds_import_blocks() {
 			bds_sc_title( bds_opt( 'pricing_title' ) ),
 			$pol,
 			bds_tx( bds_opt( 'price_from' ) ),
-			bds_tx( bds_opt( 'price_note' ) )
+			bds_tx( bds_opt( 'price_note' ) ),
+			bds_sc( $hotline ),
+			$tel
 		),
 		'chinh-sach',
 		'Giá bán',
@@ -525,7 +535,7 @@ function bds_import_blocks() {
 <p class="bds-register__hotline">Hotline tư vấn 24/7: <a href="tel:%4$s">%5$s</a></p>
 %6$s[/col]
 [col span="6" span__sm="12"]
-[bds_lead_form button="Đăng ký tư vấn" source="Cuối trang" full="1" card="1"]
+[bds_lead_form title="Đăng ký nhận bảng giá & tư vấn" button="Nhận bảng giá ngay" source="Cuối trang" full="1" card="1" perks="1"]
 [/col]
 [/row]
 <p class="bds-disclaimer">%7$s</p>
@@ -542,10 +552,57 @@ function bds_import_blocks() {
 		'',
 	);
 
+	// Dải ưu đãi (ngay dưới banner) và khối kêu gọi giữa trang.
+	$offers = '';
+	foreach ( bds_lines( bds_opt( 'offers' ) ) as $o ) {
+		$offers .= sprintf( "[col span=\"3\" span__sm=\"6\"]\n<div class=\"bds-offer\"><span>%s</span><strong>%s</strong></div>\n[/col]\n", bds_tx( $o[0] ), bds_tx( $o[1] ) );
+	}
+	$offer_block = sprintf(
+		'[section label="Ưu đãi" bg_color="{{GOLD}}" padding="26px" class="bds-offers"]
+[row v_align="middle" col_style="divided"]
+%1$s[/row]
+[/section]',
+		$offers
+	);
+	$zalo = bds_tel( bds_opt( 'zalo' ) );
+	$cta  = sprintf(
+		'[section label="Kêu gọi" bg_color="{{NAVY}}" dark="true" padding="50px" class="bds-cta"]
+[row v_align="middle"]
+[col span="7" span__sm="12"]
+<h3 class="bds-cta__title">%1$s</h3>
+<p class="bds-cta__text">%2$s</p>
+[/col]
+[col span="5" span__sm="12" align="right"]
+[button text="Nhận bảng giá" color="secondary" radius="6" size="large" class="bds-pulse" link="#dang-ky"]
+[button text="Gọi %3$s" color="white" style="outline" radius="6" size="large" link="tel:%4$s"]%5$s
+[/col]
+[/row]
+[/section]',
+		bds_tx( bds_opt( 'cta_title' ) ),
+		bds_tx( bds_opt( 'cta_text' ) ),
+		bds_sc( $hotline ),
+		$tel,
+		$zalo ? "\n" . sprintf( '[button text="Chat Zalo" color="white" style="outline" radius="6" size="large" link="https://zalo.me/%s" target="_blank"]', $zalo ) : ''
+	);
+	$ordered = array();
+	foreach ( $blocks as $slug => $b ) {
+		$ordered[ $slug ] = $b;
+		if ( '688-banner' === $slug ) {
+			$ordered['688-uu-dai'] = array( '688 – 01b Dải ưu đãi', $offer_block, 'uu-dai', '' );
+		}
+		if ( '688-tien-ich' === $slug ) {
+			$ordered['688-cta-1'] = array( '688 – 04b Kêu gọi (sau Tiện ích)', $cta, 'cta-1', '' );
+		}
+		if ( '688-nha-mau' === $slug ) {
+			$ordered['688-cta-2'] = array( '688 – 06b Kêu gọi (sau Nhà mẫu)', $cta, 'cta-2', '' );
+		}
+	}
+	$blocks = $ordered;
+
 	foreach ( $blocks as $slug => $b ) {
 		$blocks[ $slug ][1] = str_replace(
-			array( '{{NAVY}}', '{{BEIGE}}' ),
-			array( bds_opt( 'color_primary' ), bds_opt( 'color_beige' ) ),
+			array( '{{NAVY}}', '{{BEIGE}}', '{{GOLD}}' ),
+			array( bds_opt( 'color_primary' ), bds_opt( 'color_beige' ), bds_opt( 'color_accent' ) ),
 			$b[1]
 		);
 	}
@@ -714,7 +771,7 @@ function bds_import_admin_page() {
 		<p>Bấm nút bên dưới để tự động:</p>
 		<ol>
 			<li>Nạp ảnh dự án và ảnh nhà mẫu (đóng gói trong theme) vào <strong>Thư viện</strong>.</li>
-			<li>Tạo 12 <strong>UX Block</strong> (Flatsome → UX Blocks), mỗi mục một Block, sửa bằng <strong>UX Builder</strong>.</li>
+			<li>Tạo 15 <strong>UX Block</strong> (Flatsome → UX Blocks), mỗi mục một Block, sửa bằng <strong>UX Builder</strong>.</li>
 			<li>Tạo trang chủ ghép các Block (template <em>Page - Full Width - Transparent Header - Light Text</em>) và đặt làm trang chủ.</li>
 			<li>Tạo <strong>Menu Landing 688</strong> và gán vào header; cấu hình Header Builder (menu + nút "Nhận bảng giá"), màu chủ đạo.</li>
 		</ol>

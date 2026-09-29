@@ -2,7 +2,8 @@
 /**
  * Form đăng ký nhận thông tin.
  *
- * Tham số ($args): title, button, source, full (bool – hiện thêm nhu cầu & ghi chú).
+ * Tham số ($args): title, button, source, full (bool – hiện thêm nhu cầu & ghi chú),
+ *                  compact (bool – chỉ Họ tên + SĐT), perks (bool – hiện lợi ích khi đăng ký).
  *
  * @package Flatsome_Child_BDS
  */
@@ -15,7 +16,9 @@ $bds_args = wp_parse_args(
 		'title'  => '',
 		'button' => 'Đăng ký ngay',
 		'source' => 'Form',
-		'full'   => false,
+		'full'    => false,
+		'compact' => false,
+		'perks'   => false,
 	)
 );
 
@@ -38,10 +41,27 @@ $bds_messages = array(
 	<?php if ( $bds_args['title'] ) : ?>
 		<h3 class="bds-form__title"><?php echo esc_html( $bds_args['title'] ); ?></h3>
 	<?php endif; ?>
+	<?php if ( $bds_args['perks'] && bds_lines( bds_opt( 'form_perks' ) ) ) : ?>
+		<ul class="bds-perks">
+			<?php foreach ( bds_lines( bds_opt( 'form_perks' ) ) as $bds_perk ) : ?>
+				<li><?php echo esc_html( $bds_perk[0] ); ?></li>
+			<?php endforeach; ?>
+		</ul>
+	<?php endif; ?>
 
 	<?php if ( $bds_status && isset( $bds_messages[ $bds_status ] ) ) : ?>
 		<div class="bds-alert bds-alert--<?php echo 'success' === $bds_status ? 'success' : 'error'; ?>" role="alert">
 			<?php echo esc_html( $bds_messages[ $bds_status ] ); ?>
+			<?php if ( 'success' === $bds_status ) : ?>
+				<span class="bds-alert__actions">
+					<?php if ( bds_opt( 'hotline' ) ) : ?>
+						<a class="button primary is-small" href="tel:<?php echo esc_attr( bds_tel( bds_opt( 'hotline' ) ) ); ?>">Gọi ngay <?php echo esc_html( bds_opt( 'hotline' ) ); ?></a>
+					<?php endif; ?>
+					<?php if ( bds_opt( 'zalo' ) ) : ?>
+						<a class="button secondary is-small" href="https://zalo.me/<?php echo esc_attr( bds_tel( bds_opt( 'zalo' ) ) ); ?>" target="_blank" rel="noopener">Chat Zalo</a>
+					<?php endif; ?>
+				</span>
+			<?php endif; ?>
 		</div>
 	<?php endif; ?>
 
@@ -59,8 +79,10 @@ $bds_messages = array(
 	<input id="<?php echo esc_attr( $bds_uid ); ?>-phone" type="tel" name="bds_phone" placeholder="Số điện thoại *" required
 		pattern="^(\+?84|0)[\d\s.\-]{9,13}$" title="Số điện thoại Việt Nam, ví dụ 0909 123 456" autocomplete="tel">
 
-	<label class="screen-reader-text" for="<?php echo esc_attr( $bds_uid ); ?>-email">Email</label>
-	<input id="<?php echo esc_attr( $bds_uid ); ?>-email" type="email" name="bds_email" placeholder="Email (không bắt buộc)" autocomplete="email">
+	<?php if ( ! $bds_args['compact'] ) : ?>
+		<label class="screen-reader-text" for="<?php echo esc_attr( $bds_uid ); ?>-email">Email</label>
+		<input id="<?php echo esc_attr( $bds_uid ); ?>-email" type="email" name="bds_email" placeholder="Email (không bắt buộc)" autocomplete="email">
+	<?php endif; ?>
 
 	<?php if ( $bds_args['full'] ) : ?>
 		<label class="screen-reader-text" for="<?php echo esc_attr( $bds_uid ); ?>-need">Nhu cầu</label>

@@ -683,3 +683,68 @@ div.bds-video { cursor: default; }
 /* Header */
 .bds-lux .header-main .nav > li > a { letter-spacing: .06em; }
 .bds-lux .stuck .header-main, .bds-lux .header-wrapper.stuck { background-color: var(--bds-primary) !important; }
+
+/* ==========================================================================
+   Tăng chuyển đổi: nút nổi bật, uy tín, ưu đãi, kêu gọi giữa trang
+   ========================================================================== */
+@keyframes bds-pulse {
+	0% { box-shadow: 0 0 0 0 rgba(201, 164, 92, .65); }
+	70% { box-shadow: 0 0 0 16px rgba(201, 164, 92, 0); }
+	100% { box-shadow: 0 0 0 0 rgba(201, 164, 92, 0); }
+}
+.bds-pulse { animation: bds-pulse 2s infinite; font-weight: 800; }
+@media (prefers-reduced-motion: reduce) { .bds-pulse, .bds-float__btn--phone > i { animation: none; } }
+
+/* Dải uy tín ở banner */
+.bds-trust { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 18px 0 0; padding: 0; list-style: none; }
+.bds-trust li { position: relative; margin: 0; padding-left: 22px; color: rgba(255, 255, 255, .92); font-size: .9rem; }
+.bds-trust li::before {
+	content: "✓";
+	position: absolute;
+	left: 0;
+	top: 0;
+	color: var(--bds-accent);
+	font-weight: 800;
+}
+
+/* Lợi ích trên form */
+.bds-perks { margin: -4px 0 16px; padding: 0; list-style: none; }
+.bds-perks li { position: relative; margin: 0 0 6px; padding-left: 24px; color: var(--bds-text); font-size: .92rem; line-height: 1.45; }
+.bds-perks li::before { content: "✓"; position: absolute; left: 0; top: 0; color: var(--bds-accent); font-weight: 800; }
+.bds-form button[type="submit"] { font-size: 1.02rem; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+.bds-lux .bds-form button[type="submit"] { background: var(--bds-accent); border-color: var(--bds-accent); color: var(--bds-primary); animation: bds-pulse 2.4s infinite; }
+
+/* Thông báo đã gửi + nút chốt nhanh */
+.bds-alert__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.bds-alert__actions .button { margin: 0; }
+
+/* Dải ưu đãi dưới banner */
+.bds-offers .col { padding-bottom: 0; }
+.bds-offer { padding: 6px 4px; text-align: center; color: var(--bds-primary); }
+.bds-offer span { display: block; font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: .8; }
+.bds-offer strong { display: block; font-family: var(--bds-serif, serif); font-size: 1.3rem; line-height: 1.3; }
+.bds-offers .row-divided > .col + .col:not(.large-12) { border-left-color: rgba(11, 23, 52, .25); }
+
+/* Khối kêu gọi giữa trang */
+.bds-cta .col { padding-bottom: 0; }
+.bds-cta__title { margin-bottom: 6px; color: #fff; font-family: var(--bds-serif, serif); font-size: clamp(1.4rem, 2.6vw, 2rem); }
+.bds-cta__text { margin: 0; color: rgba(255, 255, 255, .85); }
+.bds-cta .button { margin: 6px 6px 6px 0; }
+
+/* Nút trong thẻ giá */
+.bds-price-card__actions { margin: 18px 0 0; }
+.bds-price-card__actions .button { margin: 6px; }
+
+/* Popup */
+.bds-modal__box .bds-kicker { margin-bottom: 2px; }
+.bds-modal__box .bds-form__title { font-family: var(--bds-serif, serif); text-transform: none; }
+
+@media only screen and (max-width: 849px) {
+	.bds-cta { text-align: center; }
+	.bds-cta .col.large-5 { text-align: center !important; }
+	.bds-cta .button { width: 100%; margin: 6px 0; }
+	.bds-price-card__actions .button { width: 100%; margin: 6px 0; }
+	.bds-offer strong { font-size: 1.1rem; }
+	.bds-offers .row-divided > .col + .col:not(.large-12) { border-left: 0; }
+	.bds-trust li { font-size: .85rem; }
+}
