@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'BDS_VERSION', '1.2.0' );
+define( 'BDS_VERSION', '1.3.0' );
 define( 'BDS_DIR', get_stylesheet_directory() );
 define( 'BDS_URI', get_stylesheet_directory_uri() );
 
@@ -26,7 +26,7 @@ function bds_enqueue_assets() {
 		return;
 	}
 
-	wp_enqueue_style( 'bds-fonts', 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&display=swap', array(), null );
+	wp_enqueue_style( 'bds-fonts', 'https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap', array(), null );
 	wp_enqueue_style( 'bds-landing', BDS_URI . '/assets/css/landing.css', array( 'flatsome-main' ), BDS_VERSION );
 
 	$primary = bds_opt( 'color_primary' );

@@ -944,3 +944,118 @@ div.bds-video { cursor: default; }
 }
 .bds-lux .tab-panels > .panel:not(.active) { display: none !important; }
 .bds-lux .tab-panels { overflow: hidden; }
+
+/* ==========================================================================
+   v5 – Nhận diện DICERA: nền trắng, đỏ → cam, tiêu đề sans đậm
+   ========================================================================== */
+.bds-lux {
+	--bds-red: #d0161e;
+	--bds-orange: #f37021;
+	--bds-grad: linear-gradient(100deg, #d0161e 0%, #f37021 100%);
+	--bds-ink: #1f2430;
+	--bds-serif: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+	--bds-title: var(--bds-red);
+	--bds-gold: #ffb27a;
+}
+.bds-lux h1, .bds-lux h2, .bds-lux h3, .bds-lux h4 { font-family: var(--bds-serif); }
+
+/* Tiêu đề mục: Montserrat 800, 1 màu đỏ DICERA, gạch chân đỏ-cam */
+.bds-lux .bds-title .section-title-main,
+.bds-lux .bds-title--light .section-title-main,
+.bds-lux .dark .bds-title .section-title-main {
+	color: var(--bds-red);
+	font-family: var(--bds-serif);
+	font-weight: 800;
+	letter-spacing: .01em;
+	line-height: 1.2;
+}
+.bds-lux .bds-title .section-title { position: relative; padding-bottom: 14px; }
+.bds-lux .bds-title .section-title b { display: none; }
+.bds-lux .bds-title .section-title::after {
+	content: ""; position: absolute; left: 50%; bottom: 0;
+	width: 72px; height: 4px; margin-left: -36px; border-radius: 4px; background: var(--bds-grad);
+}
+.bds-lux .bds-kicker { color: var(--bds-ink); font-weight: 700; letter-spacing: .28em; }
+.bds-lux .bds-kicker::before, .bds-lux .bds-kicker::after { background: var(--bds-orange); }
+.bds-lux .bds-lead { color: #4b5160; }
+
+/* Nút: gradient đỏ-cam, chữ trắng */
+.bds-lux .button.secondary,
+.bds-lux .button.bds-btn--accent,
+.bds-lux .bds-mbar .bds-mbar__cta,
+.bds-lux .bds-form button[type="submit"],
+.bds-lux .bds-form .button {
+	border: 0; background: var(--bds-grad); color: #fff !important;
+	box-shadow: 0 10px 24px rgba(208, 22, 30, .28);
+}
+.bds-lux .button.secondary:hover, .bds-lux .bds-form button[type="submit"]:hover { filter: brightness(1.08); }
+.bds-lux .button.primary:not(.is-outline) { background: var(--bds-ink); border-color: var(--bds-ink); }
+.bds-lux .button.is-outline.primary { border-color: var(--bds-red); color: var(--bds-red); }
+.bds-lux .button.is-outline.primary:hover { background: var(--bds-red); color: #fff; }
+
+/* Hero */
+.bds-lux .bds-fs-hero .bds-eyebrow { background: var(--bds-grad); color: #fff; }
+.bds-lux .bds-hero__price, .bds-lux .bds-stat strong { color: var(--bds-gold); font-family: var(--bds-serif); font-weight: 800; }
+.bds-lux .bds-trust li::before, .bds-lux .bds-perks li::before { color: var(--bds-orange); }
+
+/* Thẻ & form */
+.bds-lux .bds-card { border-top: 0; border-radius: 12px; position: relative; overflow: hidden; }
+.bds-lux .bds-card::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 5px; background: var(--bds-grad); }
+.bds-lux .bds-form__title { color: var(--bds-ink); font-weight: 800; }
+
+/* Dải ưu đãi: gradient đỏ-cam, chữ trắng */
+.bds-lux .bds-offers .section-bg { background: var(--bds-grad) !important; }
+.bds-lux .bds-offer span { color: rgba(255, 255, 255, .85); }
+.bds-lux .bds-offer strong { color: #fff; }
+.bds-lux .bds-offers .row-divided > .col + .col:not(.large-12) { border-left-color: rgba(255, 255, 255, .35); }
+
+/* Bảng thông số */
+.bds-lux .bds-facts dt { background: var(--bds-ink); }
+.bds-lux .bds-facts__row { border-left: 3px solid var(--bds-red); }
+
+/* Vị trí, tiện ích */
+.bds-lux .bds-connect li { border-left-color: var(--bds-orange); }
+.bds-lux .bds-connect strong { color: var(--bds-red); }
+.bds-lux .bds-feature { border-radius: 12px; }
+.bds-lux .bds-feature:hover { border-color: var(--bds-orange); }
+.bds-lux .bds-feature__num { color: var(--bds-orange); font-family: var(--bds-serif); }
+.bds-lux .bds-feature h3, .bds-lux .bds-plan h3, .bds-lux .bds-policy h3 { color: var(--bds-ink); }
+.bds-lux .bds-policy { border-top-color: var(--bds-red); }
+
+/* Số thứ tự lục giác (theo biểu tượng DICERA) */
+.bds-lux .bds-reason { border-top: 3px solid var(--bds-red); }
+.bds-lux .bds-reason h3 { color: var(--bds-ink); }
+.bds-lux .bds-reason__num {
+	border-radius: 0; background: var(--bds-grad); color: #fff;
+	clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
+}
+
+/* Chủ đầu tư */
+.bds-dev-slogan { color: var(--bds-orange); font-style: normal; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+.bds-lux .bds-dev-point { background: #fff5f0; border-left-color: var(--bds-red); }
+.bds-lux .bds-dev-point strong { color: var(--bds-red); }
+.bds-field { border-bottom: 0; border-top: 4px solid var(--bds-red); }
+.bds-field h3 { color: var(--bds-red); font-weight: 800; }
+
+/* Khối kêu gọi */
+.bds-lux .bds-cta .section-bg { background: linear-gradient(120deg, #fff 0%, #fff4ee 100%) !important; border-color: #f7d9cb; }
+.bds-lux .bds-cta__title { color: var(--bds-ink); font-weight: 800; }
+.bds-lux .bds-cta .bds-cta__actions .button.is-outline { border-color: var(--bds-red); color: var(--bds-red); }
+.bds-lux .bds-cta .bds-cta__actions .button.is-outline:hover { background: var(--bds-red); color: #fff; }
+
+/* Thẻ giá */
+.bds-lux .bds-price-card { background: var(--bds-ink); border-top: 5px solid var(--bds-orange); }
+.bds-lux .bds-price-card__value { color: var(--bds-gold); font-family: var(--bds-serif); font-weight: 800; }
+
+/* FAQ, đăng ký */
+.bds-lux .accordion-title.active, .bds-lux .accordion-title:hover { color: var(--bds-red); }
+.bds-lux .accordion-title.active { border-color: var(--bds-red); }
+.bds-lux .bds-register-light .bds-register__hotline a,
+.bds-lux .bds-register-light .bds-agency__line a { color: var(--bds-red); font-family: var(--bds-serif); font-weight: 800; }
+
+/* Header */
+.bds-lux .header-main .nav > li > a:hover, .bds-lux .header-main .nav > li.active > a { color: var(--bds-red); }
+.bds-lux .header-button .button { background: var(--bds-grad); border: 0; color: #fff; }
+.bds-lux .bds-pulse { box-shadow: 0 10px 26px rgba(208, 22, 30, .35); }
+.bds-lux .bds-title .section-title { justify-content: center; text-align: center; }
+.bds-lux .bds-policy > i { border-radius: 0; background: var(--bds-grad); color: #fff; clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%); }

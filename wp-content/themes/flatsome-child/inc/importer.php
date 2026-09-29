@@ -189,7 +189,7 @@ function bds_import_blocks() {
 	$blocks['688-banner'] = array(
 		'688 – 01 Banner',
 		sprintf(
-			'[section label="Banner" bg="%1$d" bg_size="original" bg_overlay="rgba(11, 23, 52, 0.55)" dark="true" padding="140px" padding__sm="110px" class="bds-fs-hero"]
+			'[section label="Banner" bg="%1$d" bg_size="original" bg_overlay="rgba(20, 16, 18, 0.58)" dark="true" padding="140px" padding__sm="110px" class="bds-fs-hero"]
 [row v_align="middle"]
 [col span="7" span__sm="12"]
 <p class="bds-eyebrow">%2$s</p>
@@ -543,7 +543,7 @@ function bds_import_blocks() {
 	$blocks['688-dang-ky'] = array(
 		'688 – 12 Đăng ký',
 		sprintf(
-			'[section label="Đăng ký" bg="%1$d" bg_overlay="rgba(251, 248, 242, 0.93)" padding="90px" class="bds-register-light"]
+			'[section label="Đăng ký" bg="%1$d" bg_overlay="rgba(255, 255, 255, 0.94)" padding="90px" class="bds-register-light"]
 [scroll_to title="Liên hệ" link="#dang-ky" bullet="false"]
 %2$s
 [row v_align="middle"]
@@ -636,6 +636,14 @@ function bds_import_blocks() {
  * @return array Kết quả.
  */
 function bds_import_content() {
+	// Bảng màu cũ (navy/vàng) → bảng màu nhận diện DICERA; màu bạn tự chọn trong Tuỳ biến được giữ nguyên.
+	$old_palette = array( 'color_primary' => '#0b1734', 'color_accent' => '#b8914a', 'color_beige' => '#f4ede1', 'color_ivory' => '#fbf8f2' );
+	foreach ( $old_palette as $key => $old ) {
+		if ( strtolower( (string) get_theme_mod( 'bds_' . $key, '' ) ) === $old ) {
+			remove_theme_mod( 'bds_' . $key );
+		}
+	}
+
 	$ids    = get_option( 'bds_import_ids', array() );
 	$blocks = bds_import_blocks();
 	$page   = '';

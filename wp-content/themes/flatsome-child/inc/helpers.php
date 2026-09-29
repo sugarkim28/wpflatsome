@@ -15,10 +15,10 @@ defined( 'ABSPATH' ) || exit;
 function bds_defaults() {
 	return array(
 		// Chung.
-		'color_primary'      => '#0b1734',
-		'color_accent'       => '#b8914a',
-		'color_beige'        => '#f4ede1',
-		'color_ivory'        => '#fbf8f2',
+		'color_primary'      => '#1f2430',
+		'color_accent'       => '#e8411c',
+		'color_beige'        => '#f6f3ef',
+		'color_ivory'        => '#ffffff',
 		'hotline'            => '0965 078 229',
 		'zalo'               => '0965078229',
 		'messenger'          => '',
