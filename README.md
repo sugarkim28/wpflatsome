@@ -13,6 +13,20 @@ Child theme `wp-content/themes/flatsome-child` biến Flatsome 3.20.x thành lan
 | Popup đăng ký | Tự bật sau N giây (mỗi phiên 1 lần), đặt 0 để tắt |
 | Chống spam | Nonce, honeypot, giới hạn 1 lần/phút/IP, kiểm tra số điện thoại Việt Nam |
 
+## Dựng theo chuẩn Flatsome (UX Blocks + Header Builder) – khuyến nghị
+
+Sau khi cài theme: **Giao diện → Tạo landing 688 → bấm "Tạo landing 688"**. Trình tạo sẽ:
+
+1. Nạp ảnh dự án + 65 ảnh nhà mẫu (đóng gói trong theme) vào **Thư viện**.
+2. Tạo 12 **UX Block** (menu *UX Blocks*), mỗi mục 1 Block: `688 – 01 Banner` … `688 – 12 Đăng ký`, dựng bằng phần tử gốc Flatsome (Section, Row, Col, Image, Button, Tabs, Gallery, Accordion…).
+3. Tạo trang **The Collection 688** ghép các Block (`[block id="688-..."]`), template *Page - Full Width - Transparent Header - Light Text*, đặt làm trang chủ.
+4. Tạo **Menu Landing 688** (neo #tong-quan, #vi-tri…) gán vào vị trí *Primary* + *Primary Mobile*; cấu hình **Header Builder**: menu + nút "Nhận bảng giá", màu chủ đạo/nhấn, header trong suốt chữ sáng.
+
+Sửa nội dung: vào trang chủ khi đã đăng nhập → rê chuột lên mục → **Edit Block** (mở UX Builder của Block đó); hoặc *UX Blocks → 688 – …*. Đổi thứ tự/ẩn mục: sửa trang *The Collection 688* bằng UX Builder.
+Form đăng ký, nút Hotline/Zalo, SEO, lưu khách hàng vẫn do theme con xử lý (`[bds_lead_form]`).
+
+Chạy lại trình tạo sẽ **ghi đè** các Block "688 – …" theo nội dung trong Tuỳ biến. Nút *Khôi phục header Flatsome* trả header về như trước khi tạo.
+
 ## Cài đặt
 
 1. **Giao diện → Giao diện → Thêm mới → Tải lên**: cài `flatsome-3.20.11.zip` (theme cha, **không kích hoạt**).

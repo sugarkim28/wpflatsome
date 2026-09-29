@@ -1,7 +1,7 @@
 <?php
 /**
  * Shortcode dùng được trong UX Builder / trình soạn thảo:
- *  [bds_lead_form title="..." button="..." source="..."]
+ *  [bds_lead_form title="..." button="..." source="..." full="1" card="1"]
  *  [bds_section name="hero|overview|location|amenities|floorplans|modelhouse|gallery|video|pricing|reasons|developer|faq|register"]
  *  [bds_hotline]
  *
@@ -23,14 +23,18 @@ function bds_shortcode_lead_form( $atts ) {
 			'button' => 'Đăng ký ngay',
 			'source' => 'Form trang',
 			'style'  => 'light',
+			'full'   => '',
+			'card'   => '',
 		),
 		$atts,
 		'bds_lead_form'
 	);
 
+	$atts['full'] = ! empty( $atts['full'] );
 	ob_start();
 	get_template_part( 'template-parts/bds/lead-form', null, $atts );
-	return ob_get_clean();
+	$html = ob_get_clean();
+	return empty( $atts['card'] ) ? $html : '<div class="bds-card">' . $html . '</div>';
 }
 add_shortcode( 'bds_lead_form', 'bds_shortcode_lead_form' );
 

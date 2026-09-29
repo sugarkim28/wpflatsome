@@ -557,3 +557,23 @@ div.bds-video { cursor: default; }
 	.bds-tabs { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; padding-bottom: 6px; }
 	.bds-tabs__btn { flex: 0 0 auto; }
 }
+
+/* ---------- Bản dựng bằng UX Blocks (chuẩn Flatsome) ---------- */
+.bds-fs-hero .bds-hero__title { color: #fff; }
+.bds-fs-hero .bds-card { padding: 24px; }
+.bds-fs-hero .button { margin-top: 6px; }
+.bds-stats-row .col { padding-bottom: 0; }
+.bds-stat { padding: 10px 0; text-align: center; color: #fff; }
+.bds-stat span { display: block; font-size: .8rem; letter-spacing: .05em; opacity: .8; text-transform: uppercase; }
+.bds-stat strong { display: block; color: var(--bds-accent); font-size: 1.5rem; line-height: 1.3; }
+.bds-plan__title { margin: 14px 0 6px; color: var(--bds-primary); font-size: 1.1rem; text-align: center; }
+.bds-plan__desc { color: var(--bds-muted); text-align: center; }
+.bds-agency__line { margin-bottom: 6px; color: rgba(255, 255, 255, .88); }
+.bds-agency__line a { color: var(--bds-accent); }
+.dark .bds-lead { color: rgba(255, 255, 255, .88); }
+.dark .bds-card, .dark .bds-card label { color: var(--bds-text); }
+.nav-dark .header-button .button.secondary, .header-button .button.secondary { color: #fff; }
+.tabbed-content .nav-pills > li.active > a { background-color: var(--bds-primary); }
+@media only screen and (max-width: 48em) {
+	.bds-stat strong { font-size: 1.15rem; }
+}

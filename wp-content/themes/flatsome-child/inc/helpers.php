@@ -374,7 +374,12 @@ function bds_is_forced_front() {
  * @return bool
  */
 function bds_is_landing_page() {
-	return bds_is_forced_front() || ( is_singular() && is_page_template( 'page-templates/landing-bds.php' ) );
+	if ( bds_is_forced_front() || ( is_singular() && is_page_template( 'page-templates/landing-bds.php' ) ) ) {
+		return true;
+	}
+	// Trang chủ dựng bằng UX Blocks (Giao diện > Tạo landing 688).
+	$ids = get_option( 'bds_import_ids', array() );
+	return ! empty( $ids['page'] ) && is_page( (int) $ids['page'] );
 }
 
 /**
