@@ -1,0 +1,4 @@
+# Theme cha Flatsome là theme thương mại (ThemeForest) – cài từ file zip bản quyền, không đưa lên repo.
+wp-content/themes/flatsome/
+*.zip
+.DS_Store

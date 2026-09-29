@@ -1,0 +1,18 @@
+/*
+Theme Name: Flatsome Child – Bất động sản
+Description: Child theme của Flatsome dành cho landing page bất động sản: template "Landing Page Bất động sản", nội dung chỉnh trong Tuỳ biến, form đăng ký lưu khách hàng, nút Hotline/Zalo.
+Author: UX Themes
+Template: flatsome
+Version: 1.0.0
+Text Domain: flatsome-child
+*/
+
+/*************** ADD CUSTOM CSS HERE.   ***************/
+/* CSS riêng của landing nằm ở assets/css/landing.css */
+
+
+@media only screen and (max-width: 48em) {
+/*************** ADD MOBILE ONLY CSS HERE  ***************/
+
+
+}
