@@ -572,8 +572,8 @@ function bds_import_blocks() {
 <h3 class="bds-cta__title">%1$s</h3>
 <p class="bds-cta__text">%2$s</p>
 [/col]
-[col span="5" span__sm="12" align="right"]
-[button text="Nhận bảng giá" color="secondary" radius="6" size="large" class="bds-pulse" link="#dang-ky"]
+[col span="5" span__sm="12" class="bds-cta__actions"]
+[button text="Nhận bảng giá ngay" color="secondary" radius="6" size="large" class="bds-pulse" link="#dang-ky"]
 [button text="Gọi %3$s" color="white" style="outline" radius="6" size="large" link="tel:%4$s"]%5$s
 [/col]
 [/row]

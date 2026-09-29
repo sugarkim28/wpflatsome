@@ -688,11 +688,13 @@ div.bds-video { cursor: default; }
    Tăng chuyển đổi: nút nổi bật, uy tín, ưu đãi, kêu gọi giữa trang
    ========================================================================== */
 @keyframes bds-pulse {
-	0% { box-shadow: 0 0 0 0 rgba(201, 164, 92, .65); }
-	70% { box-shadow: 0 0 0 16px rgba(201, 164, 92, 0); }
-	100% { box-shadow: 0 0 0 0 rgba(201, 164, 92, 0); }
+	0%, 100% { transform: translateY(0); }
+	8% { transform: translateY(-3px); }
+	16% { transform: translateY(0); }
+	24% { transform: translateY(-2px); }
+	32% { transform: translateY(0); }
 }
-.bds-pulse { animation: bds-pulse 2s infinite; font-weight: 800; }
+.bds-pulse { animation: bds-pulse 3s ease-in-out infinite; box-shadow: 0 8px 22px rgba(201, 164, 92, .35); font-weight: 800; }
 @media (prefers-reduced-motion: reduce) { .bds-pulse, .bds-float__btn--phone > i { animation: none; } }
 
 /* Dải uy tín ở banner */
@@ -712,7 +714,7 @@ div.bds-video { cursor: default; }
 .bds-perks li { position: relative; margin: 0 0 6px; padding-left: 24px; color: var(--bds-text); font-size: .92rem; line-height: 1.45; }
 .bds-perks li::before { content: "✓"; position: absolute; left: 0; top: 0; color: var(--bds-accent); font-weight: 800; }
 .bds-form button[type="submit"] { font-size: 1.02rem; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
-.bds-lux .bds-form button[type="submit"] { background: var(--bds-accent); border-color: var(--bds-accent); color: var(--bds-primary); animation: bds-pulse 2.4s infinite; }
+.bds-lux .bds-form button[type="submit"] { background: var(--bds-accent); border-color: var(--bds-accent); color: var(--bds-primary); animation: bds-pulse 3s ease-in-out infinite; box-shadow: 0 8px 22px rgba(201, 164, 92, .35); }
 
 /* Thông báo đã gửi + nút chốt nhanh */
 .bds-alert__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -747,4 +749,81 @@ div.bds-video { cursor: default; }
 	.bds-offer strong { font-size: 1.1rem; }
 	.bds-offers .row-divided > .col + .col:not(.large-12) { border-left: 0; }
 	.bds-trust li { font-size: .85rem; }
+}
+
+
+/* ---------- Tinh chỉnh v2: chữ số thẳng hàng, thẻ tiện ích, khối kêu gọi ---------- */
+.bds-lux h1, .bds-lux h2, .bds-lux h3, .bds-lux .section-title-main,
+.bds-lux .bds-feature__num, .bds-lux .bds-stat strong, .bds-lux .bds-offer strong,
+.bds-lux .bds-price-card__value, .bds-lux .bds-reason__num, .bds-lux .bds-connect strong,
+.bds-lux .bds-hero__price, .bds-lux .bds-cta__title {
+	font-variant-numeric: lining-nums;
+	font-feature-settings: "lnum" 1;
+}
+
+/* Thẻ tiện ích: cao bằng nhau, viền vàng, số lớn mờ ở góc */
+.bds-lux .col-inner:has(> .bds-feature),
+.bds-lux .col-inner:has(> .bds-policy),
+.bds-lux .col-inner:has(> .bds-reason) { height: 100%; }
+.bds-lux .bds-feature {
+	position: relative;
+	height: 100%;
+	padding: 34px 30px 30px;
+	overflow: hidden;
+	border: 0;
+	border-top: 3px solid var(--bds-accent);
+	border-radius: 10px;
+	background: #fff;
+	box-shadow: 0 12px 34px rgba(11, 23, 52, .08);
+	transition: transform .25s ease, box-shadow .25s ease;
+}
+.bds-lux .bds-feature:hover { transform: translateY(-6px); box-shadow: 0 18px 40px rgba(11, 23, 52, .14); }
+.bds-lux .bds-feature__num {
+	position: absolute;
+	top: 10px;
+	right: 18px;
+	margin: 0;
+	color: rgba(201, 164, 92, .22);
+	font-size: 4rem;
+	font-weight: 700;
+	line-height: 1;
+}
+.bds-lux .bds-feature h3 {
+	position: relative;
+	margin: 0 0 12px;
+	padding: 0 64px 12px 0;
+	font-size: 1.2rem;
+}
+.bds-lux .bds-feature h3::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	width: 36px;
+	height: 2px;
+	background: var(--bds-accent);
+}
+.bds-lux .bds-feature p { color: #5f6b7a; font-size: .95rem; line-height: 1.65; }
+
+/* Khối kêu gọi: lưới nút gọn gàng */
+.bds-cta .bds-cta__actions > .col-inner {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
+}
+.bds-cta .bds-cta__actions .button {
+	width: 100%;
+	margin: 0;
+	padding: 0 12px;
+	line-height: 2.6em;
+	text-align: center;
+	white-space: nowrap;
+}
+.bds-cta .bds-cta__actions .button:first-child { grid-column: 1 / -1; font-size: 1.05rem; }
+.bds-cta .bds-cta__actions .button.is-outline { border-width: 1px; color: #fff; }
+.bds-cta .bds-cta__actions .button.is-outline:hover { background: #fff; color: var(--bds-primary); }
+.bds-cta__title { margin-bottom: 10px; }
+@media only screen and (max-width: 849px) {
+	.bds-cta .bds-cta__actions > .col-inner { margin-top: 18px; }
+	.bds-cta .bds-cta__actions .button { width: 100%; margin: 0; font-size: .85rem; }
 }
