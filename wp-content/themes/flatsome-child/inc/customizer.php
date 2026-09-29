@@ -128,6 +128,7 @@ function bds_customize_register( $wp_customize ) {
 		'register_text'    => array( 'bds_register', 'textarea', 'Mô tả' ),
 		'register_image'   => array( 'bds_register', 'image', 'Ảnh nền' ),
 		'register_success' => array( 'bds_register', 'textarea', 'Thông báo sau khi gửi thành công' ),
+		'disclaimer'       => array( 'bds_register', 'textarea', 'Dòng lưu ý pháp lý cuối trang (để trống để ẩn)' ),
 	);
 
 	for ( $i = 1; $i <= 4; $i++ ) {

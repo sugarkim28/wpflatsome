@@ -19,7 +19,7 @@ if ( ! bds_opt( 'show_pricing' ) || ! $bds_items ) {
 		</div>
 		<div class="row bds-grid">
 			<?php foreach ( $bds_items as $bds_item ) : ?>
-				<div class="col large-3 medium-6 small-12">
+				<div class="col large-4 medium-6 small-12">
 					<div class="bds-card bds-policy">
 						<i class="icon-checkmark" aria-hidden="true"></i>
 						<h3><?php echo esc_html( $bds_item[0] ); ?></h3>

@@ -39,5 +39,8 @@ $bds_bg = bds_img_url( bds_opt( 'register_image' ), 'full' );
 				</div>
 			</div>
 		</div>
+		<?php if ( bds_opt( 'disclaimer' ) ) : ?>
+			<p class="bds-disclaimer"><?php echo esc_html( bds_opt( 'disclaimer' ) ); ?></p>
+		<?php endif; ?>
 	</div>
 </section>

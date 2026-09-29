@@ -344,3 +344,6 @@
 	body.bds-has-mbar { padding-bottom: 54px; }
 	body.bds-has-mbar .back-to-top { bottom: 70px; }
 }
+
+/* ---------- Lưu ý pháp lý ---------- */
+.bds-disclaimer { margin: 40px 0 0; color: rgba(255, 255, 255, .6); font-size: .78rem; line-height: 1.6; }
