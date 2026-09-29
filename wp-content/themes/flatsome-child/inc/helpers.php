@@ -25,10 +25,10 @@ function bds_defaults() {
 
 		// Hero.
 		'hero_image'         => '',
-		'hero_eyebrow'       => 'Chính thức nhận booking – Chỉ 50 triệu/booking',
+		'hero_eyebrow'       => 'Chính thức nhận booking – Chỉ 30 triệu/suất – Chiết khấu 3% cho khách booking sớm',
 		'hero_title'         => 'The Collection 688',
 		'hero_subtitle'      => 'Căn hộ cao cấp chuẩn sống xanh mặt tiền Đại lộ Bình Dương (Quốc lộ 13) – Lô 198 Quốc lộ 13, khu phố 1, phường Thuận Giao, TP.HCM. Chỉ 300m đến ga C6 Metro số 2.',
-		'hero_price'         => 'Giá chỉ từ 43,688 triệu/m²',
+		'hero_price'         => 'Chỉ từ 43,688 triệu/m² – Tổng chiết khấu lên đến 12%',
 		'hero_cta'           => 'Nhận bảng giá & chính sách',
 
 		// Tổng quan.
@@ -53,12 +53,12 @@ function bds_defaults() {
 		'amenities_image'    => '',
 
 		// Số liệu nổi bật (dưới banner).
-		'highlights'         => "Giá chỉ từ | 43,688 triệu/m²\nBooking | 50 triệu\nChiết khấu đến | 11%\nBàn giao | Quý II/2029",
+		'highlights'         => "Chỉ từ | 43,688 triệu/m²\nBooking | 30 triệu/suất\nBooking sớm | Chiết khấu 3%\nTổng chiết khấu | Đến 12%/TGT",
 
 		// Lý do sở hữu.
 		'show_reasons'       => 1,
 		'reasons_title'      => '6 lý do nên sở hữu The Collection 688',
-		'reasons'            => "Vị trí mặt tiền Đại lộ Bình Dương | Trục giao thương xương sống, 300m đến ga C6 Metro số 2, 1,3km đến Vành đai 3, 5–10 phút đến AEON Mall, Lotte Mart, sân golf Sông Bé\nChủ đầu tư DICERA Holdings (DC4) | Hơn 30 năm kinh nghiệm, trực tiếp làm tổng thầu EPC, dấu ấn Ruby Tower và Vung Tau Centre Point\nPháp lý minh bạch | Quy hoạch 1/500, chấp thuận chủ trương đầu tư và nhà đầu tư, báo cáo nghiên cứu khả thi đã thẩm định\nSống xanh chuẩn EDGE | Mật độ xây dựng 40%, 100% căn hộ có ban công, năng lượng mặt trời, nước uống tại vòi\nĐiểm rơi lợi nhuận 2026–2029 | Giá chỉ từ 43,688 triệu/m², thanh toán linh hoạt, hạ tầng Quốc lộ 13 và Metro số 2 hoàn thiện dần\nTiềm năng cho thuê | Liền kề KCN VSIP 1, Sóng Thần, Việt Hương – nguồn khách thuê chuyên gia, kỹ sư ổn định",
+		'reasons'            => "Vị trí mặt tiền Đại lộ Bình Dương | Trục giao thương xương sống, 300m đến ga C6 Metro số 2, 1,3km đến Vành đai 3, 5–10 phút đến AEON Mall, Lotte Mart, sân golf Sông Bé\nChủ đầu tư DICERA Holdings (DC4) | Hơn 30 năm kinh nghiệm, trực tiếp làm tổng thầu EPC, dấu ấn Ruby Tower và Vung Tau Centre Point\nPháp lý minh bạch | Quy hoạch 1/500, chấp thuận chủ trương đầu tư và nhà đầu tư, báo cáo nghiên cứu khả thi đã thẩm định\nSống xanh chuẩn EDGE | Mật độ xây dựng 40%, 100% căn hộ có ban công, năng lượng mặt trời, nước uống tại vòi\nĐiểm rơi lợi nhuận 2026–2029 | Giá chỉ từ 43,688 triệu/m², tổng chiết khấu đến 12%, thanh toán linh hoạt, hạ tầng Quốc lộ 13 và Metro số 2 hoàn thiện dần\nTiềm năng cho thuê | Liền kề KCN VSIP 1, Sóng Thần, Việt Hương – nguồn khách thuê chuyên gia, kỹ sư ổn định",
 
 		// Chủ đầu tư.
 		'show_developer'     => 1,
@@ -70,7 +70,7 @@ function bds_defaults() {
 		// Câu hỏi thường gặp.
 		'show_faq'           => 1,
 		'faq_title'          => 'Câu hỏi thường gặp',
-		'faq'                => "Dự án The Collection 688 nằm ở đâu? | Lô 198 Quốc lộ 13 (Đại lộ Bình Dương), khu phố 1, phường Thuận Giao, TP.HCM (khu vực Thuận Giao, TP. Thuận An cũ), cách ga C6 Metro số 2 khoảng 300m.\nChủ đầu tư dự án là ai? | Công ty Cổ phần DICERA Holdings (HoSE: DC4), đồng thời là tổng thầu EPC của dự án.\nDự án có bao nhiêu sản phẩm? | 688 sản phẩm gồm 549 căn hộ chung cư, 133 căn hộ thương gia và 6 shophouse, cùng quỹ căn Duplex và Penthouse.\nGiá bán và booking thế nào? | Giá chỉ từ 43,688 triệu/m², đăng ký nhu cầu (booking) 50 triệu đồng. Liên hệ hotline để nhận bảng giá chi tiết từng căn.\nCó những phương thức thanh toán nào? | Thanh toán chuẩn (chiết khấu 6%), ưu đãi 1, ưu đãi 2 (chiết khấu 3%), thanh toán vượt (chiết khấu đến 11%) và hỗ trợ tài chính với ngân hàng giải ngân đến 60%, ân hạn nợ gốc và hỗ trợ lãi suất 24 tháng.\nKhi nào bàn giao? | Dự kiến Quý II/2029. Căn hộ thương gia bàn giao full nội thất, căn hộ chung cư bàn giao hoàn thiện cơ bản.\nPháp lý dự án đến đâu? | Dự án đã có quy hoạch 1/500, chấp thuận chủ trương đầu tư, chấp thuận nhà đầu tư và báo cáo nghiên cứu khả thi được thẩm định tháng 11/2025.",
+		'faq'                => "Dự án The Collection 688 nằm ở đâu? | Lô 198 Quốc lộ 13 (Đại lộ Bình Dương), khu phố 1, phường Thuận Giao, TP.HCM (khu vực Thuận Giao, TP. Thuận An cũ), cách ga C6 Metro số 2 khoảng 300m.\nChủ đầu tư dự án là ai? | Công ty Cổ phần DICERA Holdings (HoSE: DC4), đồng thời là tổng thầu EPC của dự án.\nDự án có bao nhiêu sản phẩm? | 688 sản phẩm gồm 549 căn hộ chung cư, 133 căn hộ thương gia và 6 shophouse, cùng quỹ căn Duplex và Penthouse.\nGiá bán và booking thế nào? | Giá chỉ từ 43,688 triệu/m². Booking 30 triệu/suất, khách hàng booking sớm được chiết khấu 3%; tổng chiết khấu lên đến 12% trên tổng giá trị căn hộ. Liên hệ hotline để nhận bảng giá chi tiết từng căn.\nCó những phương thức thanh toán nào? | Thanh toán chuẩn (chiết khấu 6%), ưu đãi 1, ưu đãi 2 (chiết khấu 3%), thanh toán vượt (chiết khấu đến 11%) và hỗ trợ tài chính với ngân hàng giải ngân đến 60%, ân hạn nợ gốc và hỗ trợ lãi suất 24 tháng.\nKhi nào bàn giao? | Dự kiến Quý II/2029. Căn hộ thương gia bàn giao full nội thất, căn hộ chung cư bàn giao hoàn thiện cơ bản.\nPháp lý dự án đến đâu? | Dự án đã có quy hoạch 1/500, chấp thuận chủ trương đầu tư, chấp thuận nhà đầu tư và báo cáo nghiên cứu khả thi được thẩm định tháng 11/2025.",
 
 		// Mặt bằng.
 		'show_floorplans'    => 1,
@@ -96,7 +96,7 @@ function bds_defaults() {
 		// Chính sách.
 		'show_pricing'       => 1,
 		'pricing_title'      => 'Phương thức thanh toán',
-		'pricing_items'      => "PTTT chuẩn – Chiết khấu 6% | Thanh toán 12 đợt theo tiến độ, 25% khi nhận bàn giao, 5% khi nhận sổ\nPTTT ưu đãi 1 (Thượng đỉnh) | Thanh toán 30% trong 5 tháng đầu, sau đó chỉ 0,25%/tháng trong 20 tháng, 60% khi nhận bàn giao\nPTTT ưu đãi 2 – Chiết khấu 3% | 50% trong 17 tháng, 45% khi nhận bàn giao, 5% khi nhận sổ\nThanh toán vượt – Chiết khấu đến 11% | Vượt 30% chiết khấu 8%, vượt 50% chiết khấu 10%, vượt 70% chiết khấu 11%\nHỗ trợ tài chính | Ngân hàng giải ngân đến 60%, ân hạn nợ gốc và hỗ trợ lãi suất 24 tháng\nThanh toán trước hạn | Chiết khấu theo dòng tiền trên cơ sở lãi suất 13%/năm",
+		'pricing_items'      => "Booking sớm – Chiết khấu 3% | Booking chỉ 30 triệu/suất, ưu tiên chọn căn đẹp\nTổng chiết khấu đến 12% | Trên tổng giá trị căn hộ khi kết hợp các chính sách ưu đãi\nPTTT chuẩn – Chiết khấu 6% | Thanh toán 12 đợt theo tiến độ, 25% khi nhận bàn giao, 5% khi nhận sổ\nPTTT ưu đãi 1 (Thượng đỉnh) | Thanh toán 30% trong 5 tháng đầu, sau đó chỉ 0,25%/tháng trong 20 tháng, 60% khi nhận bàn giao\nPTTT ưu đãi 2 – Chiết khấu 3% | 50% trong 17 tháng, 45% khi nhận bàn giao, 5% khi nhận sổ\nThanh toán vượt – Chiết khấu đến 11% | Vượt 30% chiết khấu 8%, vượt 50% chiết khấu 10%, vượt 70% chiết khấu 11%\nHỗ trợ tài chính | Ngân hàng giải ngân đến 60%, ân hạn nợ gốc và hỗ trợ lãi suất 24 tháng\nThanh toán trước hạn | Chiết khấu theo dòng tiền trên cơ sở lãi suất 13%/năm",
 
 		// Đăng ký.
 		'register_title'     => 'Đăng ký nhận thông tin',
