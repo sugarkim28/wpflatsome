@@ -162,31 +162,47 @@ function bds_lines( $text ) {
 
 /**
  * Ảnh mặc định đóng gói trong theme (assets/img/), dùng khi chưa chọn ảnh trong Tuỳ biến.
- * Khoá = tên tuỳ chọn ảnh (không có tiền tố bds_), giá trị = tên file.
+ * Khoá = tên tuỳ chọn ảnh (không có tiền tố bds_), giá trị = tên file không có đuôi.
  *
  * @return array
  */
 function bds_default_images() {
-	return array(
-		'hero_image'        => 'hero.jpg',
-		'overview_image'    => 'tong-quan.jpg',
-		'location_image'    => 'vi-tri.jpg',
-		'amenities_image'   => 'tien-ich.jpg',
-		'developer_image'   => 'chu-dau-tu.jpg',
-		'register_image'    => 'dang-ky.jpg',
-		'floorplan_1_image' => 'mat-bang-tang-11-20.jpg',
-		'floorplan_2_image' => 'mat-bang-tang-5a-8.jpg',
-		'floorplan_3_image' => 'mat-bang-3.jpg',
-		'floorplan_4_image' => 'mat-bang-4.jpg',
-		'gallery_1'         => 'thu-vien-1.jpg',
-		'gallery_2'         => 'thu-vien-2.jpg',
-		'gallery_3'         => 'thu-vien-3.jpg',
-		'gallery_4'         => 'thu-vien-4.jpg',
-		'gallery_5'         => 'thu-vien-5.jpg',
-		'gallery_6'         => 'thu-vien-6.jpg',
-		'gallery_7'         => 'thu-vien-7.jpg',
-		'gallery_8'         => 'thu-vien-8.jpg',
+	$map = array(
+		'hero_image'        => 'hero',
+		'overview_image'    => 'tong-quan',
+		'location_image'    => 'vi-tri',
+		'amenities_image'   => 'tien-ich',
+		'developer_image'   => 'chu-dau-tu',
+		'register_image'    => 'dang-ky',
+		'floorplan_1_image' => 'mat-bang-tang-11-20',
+		'floorplan_2_image' => 'mat-bang-tang-5a-8',
+		'floorplan_3_image' => 'mat-bang-3',
+		'floorplan_4_image' => 'mat-bang-4',
 	);
+	for ( $i = 1; $i <= 8; $i++ ) {
+		$map[ "gallery_{$i}" ] = "thu-vien-{$i}";
+	}
+	return $map;
+}
+
+/**
+ * Tên file ảnh mặc định (tìm theo đuôi .jpg, .webp, .png) hoặc chuỗi rỗng.
+ *
+ * @param string $key Tên tuỳ chọn ảnh.
+ * @return string
+ */
+function bds_default_image_file( $key ) {
+	$map = bds_default_images();
+	if ( ! isset( $map[ $key ] ) ) {
+		return '';
+	}
+	foreach ( array( 'jpg', 'webp', 'png' ) as $ext ) {
+		$name = $map[ $key ] . '.' . $ext;
+		if ( file_exists( BDS_DIR . '/assets/img/' . $name ) ) {
+			return $name;
+		}
+	}
+	return '';
 }
 
 /**
@@ -201,11 +217,8 @@ function bds_image_ref( $key ) {
 	if ( $id ) {
 		return $id;
 	}
-	$defaults = bds_default_images();
-	if ( isset( $defaults[ $key ] ) && file_exists( BDS_DIR . '/assets/img/' . $defaults[ $key ] ) ) {
-		return 'file:' . $defaults[ $key ];
-	}
-	return 0;
+	$file = bds_default_image_file( $key );
+	return $file ? 'file:' . $file : 0;
 }
 
 /**
