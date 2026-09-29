@@ -82,11 +82,24 @@ function bds_import_media_step( $batch = 6 ) {
 	$map   = get_option( 'bds_import_media', array() );
 	$list  = bds_import_media_list();
 	$count = 0;
+	$more  = false;
 	foreach ( $list as $key => $item ) {
 		if ( ! empty( $map[ $key ] ) && get_post( $map[ $key ] ) ) {
-			continue;
+			// Ảnh trong theme đã thay (khác dung lượng) → nạp lại, xoá bản cũ.
+			$old_file = get_attached_file( $map[ $key ] );
+			$src      = BDS_DIR . '/' . $item[0];
+			if ( ! $old_file || ! file_exists( $old_file ) || ! is_readable( $src ) || filesize( $old_file ) === filesize( $src ) ) {
+				continue;
+			}
+			if ( $count >= $batch ) {
+				$more = true;
+				break;
+			}
+			wp_delete_attachment( $map[ $key ], true );
+			$map[ $key ] = 0;
 		}
 		if ( $count >= $batch ) {
+			$more = true;
 			break;
 		}
 		$map[ $key ] = bds_import_one_image( $item[0], $item[1] );
@@ -102,6 +115,7 @@ function bds_import_media_step( $batch = 6 ) {
 	return array(
 		'done'  => $done,
 		'total' => count( $list ),
+		'more'  => $more,
 	);
 }
 
@@ -145,7 +159,7 @@ function bds_tx( $value ) {
  */
 function bds_sc_title( $text, $light = false ) {
 	return sprintf(
-		"<p class=\"bds-kicker text-center\">%1$s</p>\n[title style=\"center\" text=\"%2$s\" tag_name=\"h2\" size=\"160\" class=\"bds-title%3$s\"]",
+		'<p class="bds-kicker text-center">%1$s</p>' . "\n" . '[title style="center" text="%2$s" tag_name="h2" size="160" class="bds-title%3$s"]',
 		bds_tx( bds_opt( 'hero_title' ) ),
 		bds_sc( $text ),
 		$light ? ' bds-title--light' : ''
@@ -742,7 +756,7 @@ function bds_import_admin_page() {
 				call( 'media' ).then( function ( res ) {
 					if ( ! res.success ) { throw new Error( res.data || 'Lỗi nạp ảnh' ); }
 					line.textContent = 'Đang nạp ảnh: ' + res.data.done + '/' + res.data.total;
-					if ( res.data.done < res.data.total && res.data.progress ) { return media(); }
+					if ( ( res.data.done < res.data.total || res.data.more ) && res.data.progress ) { return media(); }
 					say( 'Đang tạo Blocks, trang chủ, menu, header…' );
 					return call( 'content' ).then( function ( r2 ) {
 						if ( ! r2.success ) { throw new Error( r2.data || 'Lỗi tạo nội dung' ); }
@@ -774,7 +788,7 @@ function bds_import_ajax() {
 	if ( 'media' === $step ) {
 		$before = bds_import_media_step( 0 );
 		$res    = bds_import_media_step( 6 );
-		$res['progress'] = $res['done'] > $before['done'];
+		$res['progress'] = $res['done'] > $before['done'] || ! empty( $res['more'] );
 		wp_send_json_success( $res );
 	}
 	if ( 'content' === $step ) {
