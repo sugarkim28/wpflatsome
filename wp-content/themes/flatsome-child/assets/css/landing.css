@@ -588,3 +588,98 @@ div.bds-video { cursor: default; }
 	#logo img { max-height: 52px !important; width: auto; }
 	.header-main .nav > li.header-button-1 { display: none; }
 }
+
+/* ==========================================================================
+   Phong cách "lux": navy – kem – vàng, tiêu đề serif (trang landing)
+   ========================================================================== */
+.bds-lux {
+	--bds-gold: #e6c77f;
+	--bds-serif: "Playfair Display", Georgia, "Times New Roman", serif;
+}
+.bds-lux h1, .bds-lux h2, .bds-lux h3,
+.bds-lux .section-title-main,
+.bds-lux .bds-hero__title,
+.bds-lux .bds-heading { font-family: var(--bds-serif); letter-spacing: .01em; }
+
+/* Dòng nhỏ phía trên tiêu đề mục */
+.bds-kicker {
+	margin: 0 0 6px;
+	color: var(--bds-accent);
+	font-size: .85rem;
+	font-weight: 700;
+	letter-spacing: .28em;
+	text-transform: uppercase;
+}
+/* Tiêu đề mục (phần tử Title của Flatsome) */
+.bds-lux .bds-title .section-title-main {
+	color: var(--bds-primary);
+	font-size: clamp(1.7rem, 3.4vw, 2.6rem);
+	font-weight: 700;
+	line-height: 1.25;
+	text-transform: uppercase;
+}
+.bds-lux .bds-title--light .section-title-main,
+.bds-lux .dark .bds-title .section-title-main { color: #fff; }
+.bds-lux .bds-title .section-title b { height: 1px; background: var(--bds-accent); opacity: .7; }
+.bds-lux .section-title-container { margin-bottom: 28px; }
+
+/* Nút */
+.bds-lux .button { border-radius: 6px; letter-spacing: .04em; }
+.bds-lux .button.secondary { background-color: var(--bds-accent); border-color: var(--bds-accent); color: var(--bds-primary); }
+.bds-lux .button.secondary:hover { filter: brightness(1.06); }
+.bds-lux .button.primary:not(.is-outline) { background-color: var(--bds-primary); border: 1px solid rgba(255, 255, 255, .35); color: #fff; }
+
+/* Banner */
+.bds-lux .bds-fs-hero .bds-eyebrow { border-radius: 4px; background: var(--bds-accent); color: var(--bds-primary); }
+.bds-lux .bds-hero__title { font-size: clamp(2.4rem, 5.6vw, 4.4rem); font-weight: 700; line-height: 1.08; }
+.bds-lux .bds-hero__price { color: var(--bds-gold); font-family: var(--bds-serif); }
+.bds-lux .bds-stat strong { color: var(--bds-gold); font-family: var(--bds-serif); }
+.bds-lux .bds-card { border-top: 4px solid var(--bds-accent); border-radius: 8px; }
+.bds-lux .bds-form__title { font-family: var(--bds-serif); text-transform: none; }
+
+/* Bảng thông số tổng quan – nhãn nền navy như bản tham chiếu */
+.bds-lux .bds-facts { border: 0; }
+.bds-lux .bds-facts__row { gap: 0; margin-bottom: 3px; padding: 0; border: 0; background: #fff; }
+.bds-lux .bds-facts dt { flex: 0 0 36%; padding: 12px 14px; background: var(--bds-primary); color: #fff; font-weight: 700; }
+.bds-lux .bds-facts dd { padding: 12px 16px; color: var(--bds-text); font-weight: 500; }
+.bds-lux .bds-heading { color: var(--bds-primary); font-size: clamp(1.7rem, 3.4vw, 2.6rem); text-transform: uppercase; }
+.bds-lux .bds-heading::after { background: var(--bds-accent); }
+
+/* Vị trí (nền navy) */
+.bds-lux .dark .bds-connect li { background: rgba(255, 255, 255, .06); border-left-color: var(--bds-accent); box-shadow: none; color: #fff; }
+.bds-lux .dark .bds-connect strong { color: var(--bds-gold); font-family: var(--bds-serif); }
+
+/* Thẻ tiện ích, chính sách, lý do, chủ đầu tư */
+.bds-lux .bds-feature { border-color: #e6ddc9; background: #fff; }
+.bds-lux .bds-feature__num { color: var(--bds-accent); font-family: var(--bds-serif); }
+.bds-lux .bds-feature h3, .bds-lux .bds-policy h3 { color: var(--bds-primary); }
+.bds-lux .bds-policy { border-top-color: var(--bds-accent); border-radius: 8px; }
+.bds-lux .bds-policy > i { background: var(--bds-primary); color: var(--bds-gold); }
+.bds-lux .bds-reason { border-color: rgba(230, 199, 127, .35); background: rgba(255, 255, 255, .03); }
+.bds-lux .bds-reason__num { background: transparent; border: 1px solid var(--bds-accent); color: var(--bds-gold); font-family: var(--bds-serif); }
+.bds-lux .bds-dev-point { background: var(--bds-beige); border-left-color: var(--bds-accent); }
+.bds-lux .bds-plan__title { font-family: var(--bds-serif); }
+
+/* Thẻ giá */
+.bds-price-card {
+	max-width: 720px;
+	margin: 0 auto 40px;
+	padding: 34px 24px;
+	border-radius: 10px;
+	background: var(--bds-primary);
+	color: #fff;
+	text-align: center;
+}
+.bds-price-card__label { margin: 0; font-size: 1.1rem; letter-spacing: .12em; text-transform: uppercase; opacity: .9; }
+.bds-price-card__value { margin: 6px 0; color: var(--bds-gold, #e6c77f); font-family: var(--bds-serif, serif); font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 700; line-height: 1.15; }
+.bds-price-card__note { margin: 0; opacity: .85; }
+
+/* Tab nhà mẫu, FAQ */
+.bds-lux .nav-pills > li > a { border: 1px solid var(--bds-accent); border-radius: 6px; color: var(--bds-primary); }
+.bds-lux .nav-pills > li.active > a { background: var(--bds-primary); border-color: var(--bds-primary); color: #fff; }
+.bds-lux .accordion-title { font-family: var(--bds-serif); font-size: 1.05rem; color: var(--bds-primary); }
+.bds-lux .accordion-title.active { color: var(--bds-accent); }
+
+/* Header */
+.bds-lux .header-main .nav > li > a { letter-spacing: .06em; }
+.bds-lux .stuck .header-main, .bds-lux .header-wrapper.stuck { background-color: var(--bds-primary) !important; }

@@ -144,7 +144,12 @@ function bds_tx( $value ) {
  * @return string
  */
 function bds_sc_title( $text, $light = false ) {
-	return sprintf( '[title style="center" text="%1$s" tag_name="h2" size="130"%2$s]', bds_sc( $text ), $light ? ' color="rgb(255,255,255)"' : '' );
+	return sprintf(
+		"<p class=\"bds-kicker text-center\">%1$s</p>\n[title style=\"center\" text=\"%2$s\" tag_name=\"h2\" size=\"160\" class=\"bds-title%3$s\"]",
+		bds_tx( bds_opt( 'hero_title' ) ),
+		bds_sc( $text ),
+		$light ? ' bds-title--light' : ''
+	);
 }
 
 /**
@@ -165,15 +170,16 @@ function bds_import_blocks() {
 	$blocks['688-banner'] = array(
 		'688 – 01 Banner',
 		sprintf(
-			'[section label="Banner" bg="%1$d" bg_size="original" bg_overlay="rgba(40, 12, 9, 0.72)" dark="true" padding="140px" padding__sm="100px" height="100vh" height__sm="0px" class="bds-fs-hero"]
+			'[section label="Banner" bg="%1$d" bg_size="original" bg_overlay="rgba(11, 23, 52, 0.55)" dark="true" padding="140px" padding__sm="100px" height="100vh" height__sm="0px" class="bds-fs-hero"]
 [row v_align="middle"]
 [col span="7" span__sm="12"]
 <p class="bds-eyebrow">%2$s</p>
 <h1 class="bds-hero__title">%3$s</h1>
 <p class="bds-hero__subtitle">%4$s</p>
 <p class="bds-hero__price">%5$s</p>
-[button text="%6$s" color="secondary" radius="99" link="#dang-ky"]
-[button text="%7$s" color="white" style="outline" radius="99" icon="icon-phone" link="tel:%8$s"]
+[button text="%6$s" color="secondary" radius="6" link="#dang-ky"]
+[button text="Khám phá dự án" color="primary" radius="6" link="#tong-quan"]
+[button text="%7$s" color="white" style="outline" radius="6" icon="icon-phone" link="tel:%8$s"]
 [/col]
 [col span="5" span__sm="12"]
 [bds_lead_form title="Nhận bảng giá mới nhất" button="Gửi thông tin" source="Hero" card="1"]
@@ -205,7 +211,7 @@ function bds_import_blocks() {
 	$blocks['688-tong-quan'] = array(
 		'688 – 02 Tổng quan',
 		sprintf(
-			'[section label="Tổng quan" padding="80px"]
+			'[section label="Tổng quan" bg_color="{{BEIGE}}" padding="90px"]
 [scroll_to title="Tổng quan" link="#tong-quan" bullet="false"]
 [row v_align="middle"]
 [col span="7" span__sm="12"]
@@ -236,7 +242,7 @@ function bds_import_blocks() {
 	$blocks['688-vi-tri'] = array(
 		'688 – 03 Vị trí',
 		sprintf(
-			'[section label="Vị trí" bg_color="rgb(250, 244, 240)" padding="80px"]
+			'[section label="Vị trí" bg_color="{{NAVY}}" dark="true" padding="90px"]
 [scroll_to title="Vị trí" link="#vi-tri" bullet="false"]
 %1$s
 <p class="bds-lead text-center">%2$s</p>
@@ -250,7 +256,7 @@ function bds_import_blocks() {
 [/col]
 [/row]
 [/section]',
-			bds_sc_title( bds_opt( 'location_title' ) ),
+			bds_sc_title( bds_opt( 'location_title' ), true ),
 			bds_tx( bds_opt( 'location_text' ) ),
 			$points,
 			bds_mid( 'location_image' )
@@ -267,7 +273,7 @@ function bds_import_blocks() {
 	$blocks['688-tien-ich'] = array(
 		'688 – 04 Tiện ích',
 		sprintf(
-			'[section label="Tiện ích" padding="80px"]
+			'[section label="Tiện ích" padding="90px"]
 [scroll_to title="Tiện ích" link="#tien-ich" bullet="false"]
 %1$s
 [ux_image id="%2$d" lightbox="true" depth="2"]
@@ -296,10 +302,10 @@ function bds_import_blocks() {
 	$blocks['688-mat-bang'] = array(
 		'688 – 05 Mặt bằng',
 		sprintf(
-			'[section label="Mặt bằng" bg_color="rgb(250, 244, 240)" padding="80px"]
+			'[section label="Mặt bằng" bg_color="{{BEIGE}}" padding="90px"]
 [scroll_to title="Mặt bằng" link="#mat-bang" bullet="false"]
 %1$s
-[row col_bg="rgb(255,255,255)" col_bg_radius="10" padding="20px 20px 10px 20px"]
+[row col_bg="rgb(255,255,255)" col_bg_radius="8" padding="18px 18px 8px 18px"]
 %2$s[/row]
 [/section]',
 			bds_sc_title( bds_opt( 'floorplans_title' ) ),
@@ -330,13 +336,13 @@ function bds_import_blocks() {
 	$blocks['688-nha-mau'] = array(
 		'688 – 06 Nhà mẫu',
 		sprintf(
-			'[section label="Nhà mẫu" padding="80px"]
+			'[section label="Nhà mẫu" padding="90px"]
 [scroll_to title="Nhà mẫu" link="#nha-mau" bullet="false"]
 %1$s
 <p class="bds-lead text-center">%2$s</p>
 [tabgroup style="pills" align="center" nav_style="normal"]
 %3$s[/tabgroup]
-<p class="text-center">[button text="Đăng ký tham quan nhà mẫu" color="secondary" radius="99" link="#dang-ky"]</p>
+<p class="text-center">[button text="Đăng ký tham quan nhà mẫu" color="secondary" radius="6" link="#dang-ky"]</p>
 [/section]',
 			bds_sc_title( bds_opt( 'modelhouse_title' ) ),
 			bds_tx( bds_opt( 'modelhouse_text' ) ),
@@ -364,7 +370,7 @@ function bds_import_blocks() {
 	$blocks['688-hinh-anh'] = array(
 		'688 – 07 Hình ảnh & Video',
 		sprintf(
-			'[section label="Hình ảnh & Video" bg_color="rgb(90, 31, 26)" dark="true" padding="80px"]
+			'[section label="Hình ảnh & Video" bg_color="{{NAVY}}" dark="true" padding="90px"]
 [scroll_to title="Hình ảnh" link="#hinh-anh" bullet="false"]
 %1$s
 [ux_gallery ids="%2$s" style="normal" columns="4" columns__sm="2" col_spacing="xsmall" image_height="75%%" image_size="medium_large"]
@@ -391,15 +397,22 @@ function bds_import_blocks() {
 	$blocks['688-chinh-sach'] = array(
 		'688 – 08 Chính sách bán hàng',
 		sprintf(
-			'[section label="Chính sách" bg_color="rgb(250, 244, 240)" padding="80px"]
+			'[section label="Chính sách" bg_color="{{BEIGE}}" padding="90px"]
 [scroll_to title="Giá bán" link="#chinh-sach" bullet="false"]
 %1$s
+<div class="bds-price-card">
+<p class="bds-price-card__label">Giá bán chỉ từ</p>
+<p class="bds-price-card__value">%3$s</p>
+<p class="bds-price-card__note">%4$s</p>
+</div>
 [row]
 %2$s[/row]
-<p class="text-center">[button text="Nhận chính sách chi tiết" color="secondary" radius="99" link="#dang-ky"]</p>
+<p class="text-center">[button text="Nhận chính sách chi tiết" color="secondary" radius="6" link="#dang-ky"]</p>
 [/section]',
 			bds_sc_title( bds_opt( 'pricing_title' ) ),
-			$pol
+			$pol,
+			bds_tx( bds_opt( 'price_from' ) ),
+			bds_tx( bds_opt( 'price_note' ) )
 		),
 		'chinh-sach',
 		'Giá bán',
@@ -413,7 +426,7 @@ function bds_import_blocks() {
 	$blocks['688-ly-do'] = array(
 		'688 – 09 Lý do sở hữu',
 		sprintf(
-			'[section label="Lý do sở hữu" bg_color="rgb(90, 31, 26)" dark="true" padding="80px"]
+			'[section label="Lý do sở hữu" bg_color="{{NAVY}}" dark="true" padding="90px"]
 %1$s
 [row]
 %2$s[/row]
@@ -433,7 +446,7 @@ function bds_import_blocks() {
 	$blocks['688-chu-dau-tu'] = array(
 		'688 – 10 Chủ đầu tư',
 		sprintf(
-			'[section label="Chủ đầu tư" padding="80px"]
+			'[section label="Chủ đầu tư" padding="90px"]
 [scroll_to title="Chủ đầu tư" link="#chu-dau-tu" bullet="false"]
 %1$s
 <p class="bds-lead text-center">%2$s</p>
@@ -459,7 +472,7 @@ function bds_import_blocks() {
 	$blocks['688-faq'] = array(
 		'688 – 11 Câu hỏi thường gặp',
 		sprintf(
-			'[section label="FAQ" bg_color="rgb(250, 244, 240)" padding="80px"]
+			'[section label="FAQ" bg_color="{{BEIGE}}" padding="90px"]
 [scroll_to title="FAQ" link="#faq" bullet="false"]
 %1$s
 [row h_align="center"]
@@ -489,7 +502,7 @@ function bds_import_blocks() {
 	$blocks['688-dang-ky'] = array(
 		'688 – 12 Đăng ký',
 		sprintf(
-			'[section label="Đăng ký" bg="%1$d" bg_overlay="rgba(40, 12, 9, 0.82)" dark="true" padding="90px"]
+			'[section label="Đăng ký" bg="%1$d" bg_overlay="rgba(11, 23, 52, 0.86)" dark="true" padding="90px"]
 [scroll_to title="Liên hệ" link="#dang-ky" bullet="false"]
 [row v_align="middle"]
 [col span="6" span__sm="12"]
@@ -515,6 +528,13 @@ function bds_import_blocks() {
 		'',
 	);
 
+	foreach ( $blocks as $slug => $b ) {
+		$blocks[ $slug ][1] = str_replace(
+			array( '{{NAVY}}', '{{BEIGE}}' ),
+			array( bds_opt( 'color_primary' ), bds_opt( 'color_beige' ) ),
+			$b[1]
+		);
+	}
 	return $blocks;
 }
 
@@ -609,12 +629,10 @@ function bds_import_content() {
 	set_theme_mod( 'header_elements_left', array() );
 	set_theme_mod( 'header_elements_right', array( 'nav', 'button-1' ) );
 	set_theme_mod( 'header_mobile_elements_left', array( 'menu-icon' ) );
-	set_theme_mod( 'header_mobile_elements_right', array( 'button-1' ) );
-	set_theme_mod( 'mobile_sidebar', array( 'nav', 'button-1' ) );
+		set_theme_mod( 'mobile_sidebar', array( 'nav', 'button-1' ) );
 	set_theme_mod( 'header_button_1', bds_opt( 'nav_cta' ) ? bds_opt( 'nav_cta' ) : 'Nhận bảng giá' );
 	set_theme_mod( 'header_button_1_link', '#dang-ky' );
-	set_theme_mod( 'header_button_1_radius', '99px' );
-	set_theme_mod( 'header_button_1_color', 'secondary' );
+		set_theme_mod( 'header_button_1_color', 'secondary' );
 	set_theme_mod( 'color_primary', bds_opt( 'color_primary' ) );
 	set_theme_mod( 'color_secondary', bds_opt( 'color_accent' ) );
 	set_theme_mod( 'nav_uppercase', 1 );
@@ -623,6 +641,15 @@ function bds_import_content() {
 	// Header đặc (khi cuộn / trang khác): nền màu chủ đạo, chữ sáng.
 	set_theme_mod( 'header_color', 'dark' );
 	set_theme_mod( 'header_bg', bds_opt( 'color_primary' ) );
+	set_theme_mod( 'type_headings_color', bds_opt( 'color_primary' ) );
+	set_theme_mod( 'color_links', bds_opt( 'color_primary' ) );
+	set_theme_mod( 'color_links_hover', bds_opt( 'color_accent' ) );
+	set_theme_mod( 'header_button_1_radius', '6px' );
+	set_theme_mod( 'header_sticky', 1 );
+	set_theme_mod( 'logo_width', 90 );
+	set_theme_mod( 'header_mobile_elements_right', array() );
+	set_theme_mod( 'html_custom_css', '' );
+	set_theme_mod( 'topbar_left', '' );
 
 	// Tắt chế độ template/menu riêng của theme con: từ giờ dùng chuẩn Flatsome.
 	set_theme_mod( 'bds_landing_front', 0 );

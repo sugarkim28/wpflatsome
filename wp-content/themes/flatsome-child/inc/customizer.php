@@ -88,6 +88,7 @@ function bds_customize_register( $wp_customize ) {
 	$fields = array(
 		'color_primary'    => array( 'bds_general', 'color', 'Màu chủ đạo' ),
 		'color_accent'     => array( 'bds_general', 'color', 'Màu nhấn (nút, điểm nhấn)' ),
+		'color_beige'      => array( 'bds_general', 'color', 'Màu nền mục sáng (xen kẽ)' ),
 		'hotline'          => array( 'bds_general', 'text', 'Hotline' ),
 		'zalo'             => array( 'bds_general', 'text', 'Số Zalo (để trống để ẩn)' ),
 		'messenger'        => array( 'bds_general', 'url', 'Link Messenger, vd https://m.me/tenpage (để trống để ẩn)' ),
@@ -149,6 +150,8 @@ function bds_customize_register( $wp_customize ) {
 
 		'show_pricing'     => array( 'bds_pricing', 'checkbox', 'Hiển thị mục này' ),
 		'pricing_title'    => array( 'bds_pricing', 'text', 'Tiêu đề' ),
+		'price_from'       => array( 'bds_pricing', 'text', 'Thẻ giá: Giá bán chỉ từ' ),
+		'price_note'       => array( 'bds_pricing', 'text', 'Thẻ giá: dòng ghi chú' ),
 		'pricing_items'    => array( 'bds_pricing', 'textarea', 'Chính sách (Tiêu đề | Mô tả)' ),
 
 		'show_reasons'     => array( 'bds_reasons', 'checkbox', 'Hiển thị mục này' ),

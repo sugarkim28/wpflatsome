@@ -15,8 +15,9 @@ defined( 'ABSPATH' ) || exit;
 function bds_defaults() {
 	return array(
 		// Chung.
-		'color_primary'      => '#5a1f1a',
-		'color_accent'       => '#c8875f',
+		'color_primary'      => '#0b1734',
+		'color_accent'       => '#c9a45c',
+		'color_beige'        => '#eae2d2',
 		'hotline'            => '0965 078 229',
 		'zalo'               => '0965078229',
 		'messenger'          => '',
@@ -89,6 +90,10 @@ function bds_defaults() {
 		'show_faq'           => 1,
 		'faq_title'          => 'Câu hỏi thường gặp',
 		'faq'                => "Dự án The Collection 688 nằm ở đâu? | Lô 198 Quốc lộ 13 (Đại lộ Bình Dương), khu phố 1, phường Thuận Giao, TP.HCM (khu vực Thuận Giao, TP. Thuận An cũ), cách ga C6 Metro số 2 khoảng 300m.\nChủ đầu tư dự án là ai? | Công ty Cổ phần DICERA Holdings (HoSE: DC4), đồng thời là tổng thầu EPC của dự án.\nDự án có bao nhiêu sản phẩm? | 688 sản phẩm gồm 549 căn hộ chung cư (1PN+, 2PN, 3PN, Duplex, Penthouse), 133 căn hộ thương gia (có căn 2PN, 3PN sân vườn) và 6 shophouse.\nGiá bán và booking thế nào? | Giá chỉ từ 43,688 triệu/m². Booking 30 triệu/suất, khách hàng booking sớm được chiết khấu 3%; tổng chiết khấu lên đến 12% trên tổng giá trị căn hộ. Liên hệ hotline để nhận bảng giá chi tiết từng căn.\nCó những phương thức thanh toán nào? | Thanh toán chuẩn (chiết khấu 6%), Quốc tế (chiết khấu 3%), Thượng đỉnh (chỉ 0,25%/tháng), thanh toán vượt (chiết khấu đến 11%) và hỗ trợ tài chính với ngân hàng giải ngân đến 60%, ân hạn nợ gốc và hỗ trợ lãi suất 24 tháng.\nKhi nào bàn giao? | Dự kiến Quý II/2029. Căn hộ thương gia bàn giao full nội thất, căn hộ chung cư bàn giao hoàn thiện cơ bản.\nPháp lý dự án đến đâu? | Dự án đã có quy hoạch 1/500, chấp thuận chủ trương đầu tư, chấp thuận nhà đầu tư và báo cáo nghiên cứu khả thi được thẩm định tháng 11/2025.",
+
+		// Thẻ giá (mục Chính sách).
+		'price_from'         => '43,688 triệu/m²',
+		'price_note'         => 'Booking 30 triệu/suất · Chiết khấu 3% khi booking sớm · Tổng chiết khấu đến 12%',
 
 		// Mặt bằng.
 		'show_floorplans'    => 1,
