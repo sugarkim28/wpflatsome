@@ -8,6 +8,8 @@
  * @package Flatsome_Child_BDS
  */
 
+defined( 'ABSPATH' ) || exit;
+
 get_header();
 ?>
 <div id="content" class="bds-landing" role="main">
