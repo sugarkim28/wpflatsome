@@ -25,7 +25,7 @@ function bds_defaults() {
 		'landing_front'      => 1,
 		'own_header'         => 1,
 		'logo'               => '',
-		'nav_items'          => "Tổng quan | #tong-quan\nVị trí | #vi-tri\nTiện ích | #tien-ich\nMặt bằng | #mat-bang\nGiá bán | #chinh-sach\nChủ đầu tư | #chu-dau-tu\nFAQ | #faq",
+		'nav_items'          => "Tổng quan | #tong-quan\nVị trí | #vi-tri\nTiện ích | #tien-ich\nMặt bằng | #mat-bang\nNhà mẫu | #nha-mau\nGiá bán | #chinh-sach\nChủ đầu tư | #chu-dau-tu\nFAQ | #faq",
 		'nav_cta'            => 'Nhận bảng giá',
 
 		// SEO.
@@ -101,6 +101,11 @@ function bds_defaults() {
 		'floorplan_3_desc'   => '',
 		'floorplan_4_title'  => '',
 		'floorplan_4_desc'   => '',
+
+		// Nhà mẫu.
+		'show_modelhouse'    => 1,
+		'modelhouse_title'   => 'Nhà mẫu The Collection 688',
+		'modelhouse_text'    => 'Hình ảnh nhà mẫu các loại căn 1PN+, 2PN, 3PN – thiết kế tối ưu công năng, đón nắng và gió tự nhiên.',
 
 		// Thư viện ảnh.
 		'show_gallery'       => 1,
@@ -412,4 +417,50 @@ function bds_video_mp4_url() {
 	}
 	$file = '/uploads/bds-688/the-collection-688.mp4';
 	return file_exists( WP_CONTENT_DIR . $file ) ? content_url( $file ) : '';
+}
+
+/**
+ * Nhà mẫu: các nhóm ảnh trong assets/nha-mau/<nhóm>/NN.jpg (+ NN-thumb.jpg).
+ * Thêm/bớt ảnh chỉ cần chép file vào thư mục tương ứng.
+ *
+ * @return array[] Mỗi nhóm: array( 'slug', 'label', 'images' => array( array( 'full', 'thumb' ) ) ).
+ */
+function bds_modelhouse_groups() {
+	$labels = array(
+		'1pn-op1' => '1PN+ · Phương án 1',
+		'1pn-op2' => '1PN+ · Phương án 2',
+		'1pn-op3' => '1PN+ · Phương án 3',
+		'2pn'     => '2PN',
+		'3pn'     => '3PN',
+	);
+	$groups = array();
+	foreach ( $labels as $slug => $label ) {
+		$dir   = BDS_DIR . '/assets/nha-mau/' . $slug;
+		$files = glob( $dir . '/*.{jpg,jpeg,png,webp}', GLOB_BRACE );
+		if ( ! $files ) {
+			continue;
+		}
+		sort( $files );
+		$images = array();
+		foreach ( $files as $file ) {
+			$name = basename( $file );
+			if ( false !== strpos( $name, '-thumb.' ) ) {
+				continue;
+			}
+			$thumb    = preg_replace( '/(\.[a-z]+)$/i', '-thumb$1', $name );
+			$base     = BDS_URI . '/assets/nha-mau/' . $slug . '/';
+			$images[] = array(
+				'full'  => $base . rawurlencode( $name ),
+				'thumb' => $base . rawurlencode( file_exists( $dir . '/' . $thumb ) ? $thumb : $name ),
+			);
+		}
+		if ( $images ) {
+			$groups[] = array(
+				'slug'   => $slug,
+				'label'  => $label,
+				'images' => $images,
+			);
+		}
+	}
+	return $groups;
 }

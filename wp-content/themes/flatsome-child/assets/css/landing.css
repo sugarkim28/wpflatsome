@@ -464,9 +464,12 @@
 .bds-nav__toggle { display: none; }
 .bds-own-header .bds-hero { padding-top: 130px; }
 
-@media only screen and (max-width: 1100px) {
+@media only screen and (max-width: 1439px) {
 	.bds-nav__menu .bds-nav__phone { display: none; }
-	.bds-nav__menu { gap: 16px; }
+}
+@media only screen and (max-width: 1100px) {
+	.bds-nav__menu { gap: 14px; }
+	.bds-nav__menu a { font-size: .8rem; }
 }
 
 @media only screen and (max-width: 849px) {
@@ -526,3 +529,31 @@ div.bds-video { cursor: default; }
 .bds-media img { max-height: 640px; object-fit: cover; }
 .bds-plan__img img { aspect-ratio: 16 / 9; }
 .bds-section--alt { background: #faf4f0; }
+
+/* ---------- Nhà mẫu ---------- */
+.bds-tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 0 0 28px; }
+.bds-tabs__btn {
+	margin: 0;
+	padding: 10px 20px;
+	border: 1px solid var(--bds-accent);
+	border-radius: 999px;
+	background: #fff;
+	color: var(--bds-primary);
+	font-size: .9rem;
+	font-weight: 700;
+	line-height: 1.4;
+	text-transform: none;
+	cursor: pointer;
+}
+.bds-tabs__btn:hover { background: #faf4f0; }
+.bds-tabs__btn.is-active { border-color: var(--bds-primary); background: var(--bds-primary); color: #fff; }
+.bds-mh-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 30px; }
+.bds-mh-grid__item { display: block; overflow: hidden; border-radius: 8px; }
+.bds-mh-grid__item.is-cover { grid-column: span 2; grid-row: span 2; }
+.bds-mh-grid__item img { width: 100%; height: 100%; aspect-ratio: 4 / 3; object-fit: cover; transition: transform .5s ease; }
+.bds-mh-grid__item:hover img { transform: scale(1.05); }
+@media only screen and (max-width: 849px) {
+	.bds-mh-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+	.bds-tabs { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; padding-bottom: 6px; }
+	.bds-tabs__btn { flex: 0 0 auto; }
+}

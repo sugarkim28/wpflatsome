@@ -2,7 +2,7 @@
 /**
  * Shortcode dùng được trong UX Builder / trình soạn thảo:
  *  [bds_lead_form title="..." button="..." source="..."]
- *  [bds_section name="hero|overview|location|amenities|floorplans|gallery|video|pricing|reasons|developer|faq|register"]
+ *  [bds_section name="hero|overview|location|amenities|floorplans|modelhouse|gallery|video|pricing|reasons|developer|faq|register"]
  *  [bds_hotline]
  *
  * @package Flatsome_Child_BDS
@@ -42,7 +42,7 @@ add_shortcode( 'bds_lead_form', 'bds_shortcode_lead_form' );
  */
 function bds_shortcode_section( $atts ) {
 	$atts    = shortcode_atts( array( 'name' => '' ), $atts, 'bds_section' );
-	$allowed = array( 'hero', 'overview', 'location', 'amenities', 'floorplans', 'gallery', 'video', 'pricing', 'reasons', 'developer', 'faq', 'register' );
+	$allowed = array( 'hero', 'overview', 'location', 'amenities', 'floorplans', 'modelhouse', 'gallery', 'video', 'pricing', 'reasons', 'developer', 'faq', 'register' );
 	if ( ! in_array( $atts['name'], $allowed, true ) ) {
 		return '';
 	}

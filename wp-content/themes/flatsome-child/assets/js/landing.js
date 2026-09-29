@@ -114,6 +114,24 @@
 		onScroll();
 	}
 
+	/* ---------- Tab nhà mẫu ---------- */
+	document.querySelectorAll( '.bds-tabs' ).forEach( function ( tabs ) {
+		var buttons = tabs.querySelectorAll( '.bds-tabs__btn' );
+		buttons.forEach( function ( btn ) {
+			btn.addEventListener( 'click', function () {
+				buttons.forEach( function ( b ) {
+					var on = b === btn;
+					b.classList.toggle( 'is-active', on );
+					b.setAttribute( 'aria-selected', on ? 'true' : 'false' );
+					var panel = document.getElementById( b.getAttribute( 'aria-controls' ) );
+					if ( panel ) {
+						panel.hidden = ! on;
+					}
+				} );
+			} );
+		} );
+	} );
+
 	/* ---------- Video: chỉ nạp YouTube khi bấm ---------- */
 	document.querySelectorAll( '[data-bds-video]' ).forEach( function ( el ) {
 		el.addEventListener( 'click', function () {

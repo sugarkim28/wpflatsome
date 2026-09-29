@@ -30,7 +30,7 @@ get_header();
 		endwhile;
 	}
 
-	foreach ( array( 'overview', 'location', 'amenities', 'floorplans', 'gallery', 'video', 'pricing', 'reasons', 'developer', 'faq', 'register' ) as $bds_section ) {
+	foreach ( array( 'overview', 'location', 'amenities', 'floorplans', 'modelhouse', 'gallery', 'video', 'pricing', 'reasons', 'developer', 'faq', 'register' ) as $bds_section ) {
 		get_template_part( 'template-parts/bds/section', $bds_section );
 	}
 	?>

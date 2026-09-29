@@ -60,6 +60,7 @@ function bds_customize_register( $wp_customize ) {
 		'bds_location'   => 'Vị trí',
 		'bds_amenities'  => 'Tiện ích',
 		'bds_floorplans' => 'Mặt bằng',
+		'bds_modelhouse' => 'Nhà mẫu',
 		'bds_gallery'    => 'Thư viện ảnh & Video',
 		'bds_pricing'    => 'Chính sách bán hàng',
 		'bds_reasons'    => 'Lý do sở hữu',
@@ -138,6 +139,10 @@ function bds_customize_register( $wp_customize ) {
 
 		'show_floorplans'  => array( 'bds_floorplans', 'checkbox', 'Hiển thị mục này' ),
 		'floorplans_title' => array( 'bds_floorplans', 'text', 'Tiêu đề' ),
+
+		'show_modelhouse'  => array( 'bds_modelhouse', 'checkbox', 'Hiển thị mục Nhà mẫu (ảnh lấy từ thư mục assets/nha-mau của theme)' ),
+		'modelhouse_title' => array( 'bds_modelhouse', 'text', 'Tiêu đề' ),
+		'modelhouse_text'  => array( 'bds_modelhouse', 'textarea', 'Mô tả' ),
 
 		'show_gallery'     => array( 'bds_gallery', 'checkbox', 'Hiển thị thư viện ảnh' ),
 		'gallery_title'    => array( 'bds_gallery', 'text', 'Tiêu đề thư viện ảnh' ),
