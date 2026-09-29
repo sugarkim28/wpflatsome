@@ -1059,3 +1059,93 @@ div.bds-video { cursor: default; }
 .bds-lux .bds-pulse { box-shadow: 0 10px 26px rgba(208, 22, 30, .35); }
 .bds-lux .bds-title .section-title { justify-content: center; text-align: center; }
 .bds-lux .bds-policy > i { border-radius: 0; background: var(--bds-grad); color: #fff; clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%); }
+
+/* ==========================================================================
+   v6 – Xanh navy (như web mẫu) + tiêu đề vàng kim nổi
+   ========================================================================== */
+.bds-lux {
+	--bds-navy: #0d1b3e;
+	--bds-red: var(--bds-navy);               /* các viền/điểm nhấn v5 chuyển sang navy */
+	--bds-orange: #d4a437;
+	--bds-ink: #0d1b3e;
+	--bds-gold: #f0c96a;
+	--bds-grad: linear-gradient(135deg, #f6dc8c 0%, #d4a437 50%, #b07f1c 100%);
+	--bds-gold-text: linear-gradient(180deg, #e2b857 0%, #b8862b 55%, #8c6112 100%);
+	--bds-gold-text-dark: linear-gradient(180deg, #fff1bf 0%, #f0c96a 45%, #c9962b 100%);
+}
+
+/* Tiêu đề vàng kim nổi – dùng chung mọi mục */
+.bds-lux .bds-title .section-title-main,
+.bds-lux .bds-title--light .section-title-main,
+.bds-lux .dark .bds-title .section-title-main {
+	color: #b8862b;
+	background: var(--bds-gold-text);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	filter: drop-shadow(0 1px 0 rgba(255, 255, 255, .7)) drop-shadow(0 3px 4px rgba(13, 27, 62, .18));
+}
+.bds-lux .dark .bds-title .section-title-main,
+.bds-lux .bds-navy .bds-title .section-title-main,
+.bds-lux .bds-fs-hero .bds-hero__title {
+	background: var(--bds-gold-text-dark);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .45));
+}
+.bds-lux .bds-title .section-title::after { background: var(--bds-grad); }
+.bds-lux .bds-kicker { color: var(--bds-navy); }
+.bds-lux .dark .bds-kicker, .bds-lux .bds-navy .bds-kicker { color: rgba(255, 255, 255, .8); }
+.bds-lux .bds-navy .bds-lead, .bds-lux .dark .bds-lead { color: rgba(255, 255, 255, .78); }
+
+/* Nút vàng kim, chữ navy (như web mẫu) */
+.bds-lux .button.secondary,
+.bds-lux .button.bds-btn--accent,
+.bds-lux .bds-mbar .bds-mbar__cta,
+.bds-lux .bds-form button[type="submit"],
+.bds-lux .bds-form .button,
+.bds-lux .header-button .button {
+	background: var(--bds-grad); color: var(--bds-navy) !important; font-weight: 800;
+	box-shadow: 0 10px 24px rgba(176, 127, 28, .32);
+}
+.bds-lux .bds-pulse { box-shadow: 0 10px 26px rgba(176, 127, 28, .4); }
+.bds-lux .button.primary:not(.is-outline) { background: var(--bds-navy); border-color: var(--bds-navy); color: #fff; }
+
+/* Hero */
+.bds-lux .bds-fs-hero .bds-eyebrow { color: var(--bds-navy); }
+.bds-lux .bds-hero__price, .bds-lux .bds-stat strong { color: var(--bds-gold); }
+
+/* Dải ưu đãi: nền navy, chữ vàng */
+.bds-lux .bds-offers .section-bg { background: linear-gradient(90deg, #0a1633, #13285a 50%, #0a1633) !important; }
+.bds-lux .bds-offer span { color: rgba(255, 255, 255, .75); }
+.bds-lux .bds-offer strong { color: var(--bds-gold); }
+.bds-lux .bds-offers .row-divided > .col + .col:not(.large-12) { border-left-color: rgba(240, 201, 106, .35); }
+.bds-lux .bds-offers { border-bottom: 3px solid #d4a437; }
+
+/* Khối kêu gọi: nền navy */
+.bds-lux .bds-cta.bds-navy .section-bg { background: linear-gradient(120deg, #0a1633 0%, #16306a 100%) !important; border: 0; }
+.bds-lux .bds-cta.bds-navy .bds-cta__title { color: var(--bds-gold); }
+.bds-lux .bds-cta.bds-navy .bds-cta__text { color: rgba(255, 255, 255, .8); }
+.bds-lux .bds-cta.bds-navy .bds-cta__actions .button.is-outline { border-color: rgba(255, 255, 255, .8); color: #fff; }
+.bds-lux .bds-cta.bds-navy .bds-cta__actions .button.is-outline:hover { background: #fff; color: var(--bds-navy); }
+
+/* 6 lý do: nền navy, thẻ trắng viền vàng */
+.bds-lux .bds-navy .bds-reason { border-top-color: #d4a437; }
+.bds-lux .bds-navy .bds-reason h3 { color: var(--bds-navy); }
+.bds-lux .bds-reason__num, .bds-lux .bds-policy > i { background: var(--bds-grad); color: var(--bds-navy); font-weight: 800; }
+
+/* Chủ đầu tư */
+.bds-dev-slogan { color: #b8862b; }
+.bds-lux .bds-dev-point { background: #f8f4ea; border-left-color: #d4a437; }
+.bds-lux .bds-dev-point strong, .bds-field h3 { color: var(--bds-navy); }
+.bds-field { border-top-color: #d4a437; }
+
+/* Thẻ giá, form, đăng ký */
+.bds-lux .bds-price-card { background: linear-gradient(135deg, #0a1633, #16306a); border-top-color: #d4a437; }
+.bds-lux .bds-card::before { background: var(--bds-grad); }
+.bds-lux .bds-facts__row { border-left-color: #d4a437; }
+.bds-lux .bds-register-light .bds-register__hotline a,
+.bds-lux .bds-register-light .bds-agency__line a { color: #b07f1c; }
+.bds-lux .header-main .nav > li > a:hover, .bds-lux .header-main .nav > li.active > a { color: #b07f1c; }
+.bds-lux .accordion-title.active, .bds-lux .accordion-title:hover { color: #b07f1c; border-color: #d4a437; }

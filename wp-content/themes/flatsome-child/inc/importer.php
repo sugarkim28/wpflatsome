@@ -189,7 +189,7 @@ function bds_import_blocks() {
 	$blocks['688-banner'] = array(
 		'688 – 01 Banner',
 		sprintf(
-			'[section label="Banner" bg="%1$d" bg_size="original" bg_overlay="rgba(20, 16, 18, 0.58)" dark="true" padding="140px" padding__sm="110px" class="bds-fs-hero"]
+			'[section label="Banner" bg="%1$d" bg_size="original" bg_overlay="rgba(8, 18, 45, 0.6)" dark="true" padding="140px" padding__sm="110px" class="bds-fs-hero"]
 [row v_align="middle"]
 [col span="7" span__sm="12"]
 <p class="bds-eyebrow">%2$s</p>
@@ -450,7 +450,7 @@ function bds_import_blocks() {
 	$blocks['688-ly-do'] = array(
 		'688 – 09 Lý do sở hữu',
 		sprintf(
-			'[section label="Lý do sở hữu" bg_color="{{BEIGE}}" padding="90px"]
+			'[section label="Lý do sở hữu" bg_color="{{NAVY}}" dark="true" padding="90px" class="bds-navy"]
 %1$s
 [row]
 %2$s[/row]
@@ -579,7 +579,7 @@ function bds_import_blocks() {
 		$offers .= sprintf( "[col span=\"3\" span__sm=\"6\"]\n<div class=\"bds-offer\"><span>%s</span><strong>%s</strong></div>\n[/col]\n", bds_tx( $o[0] ), bds_tx( $o[1] ) );
 	}
 	$offer_block = sprintf(
-		'[section label="Ưu đãi" bg_color="{{GOLD}}" padding="26px" class="bds-offers"]
+		'[section label="Ưu đãi" bg_color="{{NAVY}}" dark="true" padding="26px" class="bds-offers"]
 [row v_align="middle" col_style="divided"]
 %1$s[/row]
 [/section]',
@@ -587,7 +587,7 @@ function bds_import_blocks() {
 	);
 	$zalo = bds_tel( bds_opt( 'zalo' ) );
 	$cta  = sprintf(
-		'[section label="Kêu gọi" bg_color="{{IVORY}}" padding="50px" class="bds-cta"]
+		'[section label="Kêu gọi" bg_color="{{NAVY}}" dark="true" padding="50px" class="bds-cta bds-navy"]
 [row v_align="middle"]
 [col span="7" span__sm="12"]
 <h3 class="bds-cta__title">%1$s</h3>
@@ -636,10 +636,15 @@ function bds_import_blocks() {
  * @return array Kết quả.
  */
 function bds_import_content() {
-	// Bảng màu cũ (navy/vàng) → bảng màu nhận diện DICERA; màu bạn tự chọn trong Tuỳ biến được giữ nguyên.
-	$old_palette = array( 'color_primary' => '#0b1734', 'color_accent' => '#b8914a', 'color_beige' => '#f4ede1', 'color_ivory' => '#fbf8f2' );
-	foreach ( $old_palette as $key => $old ) {
-		if ( strtolower( (string) get_theme_mod( 'bds_' . $key, '' ) ) === $old ) {
+	// Bảng màu mặc định cũ → bảng màu hiện tại (navy + vàng kim); màu bạn tự chọn trong Tuỳ biến được giữ nguyên.
+	$old_palette = array(
+		'color_primary' => array( '#0b1734', '#1f2430' ),
+		'color_accent'  => array( '#b8914a', '#e8411c' ),
+		'color_beige'   => array( '#f4ede1', '#f6f3ef' ),
+		'color_ivory'   => array( '#fbf8f2' ),
+	);
+	foreach ( $old_palette as $key => $olds ) {
+		if ( in_array( strtolower( (string) get_theme_mod( 'bds_' . $key, '' ) ), $olds, true ) ) {
 			remove_theme_mod( 'bds_' . $key );
 		}
 	}

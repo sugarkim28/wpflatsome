@@ -15,9 +15,9 @@ defined( 'ABSPATH' ) || exit;
 function bds_defaults() {
 	return array(
 		// Chung.
-		'color_primary'      => '#1f2430',
-		'color_accent'       => '#e8411c',
-		'color_beige'        => '#f6f3ef',
+		'color_primary'      => '#0d1b3e',
+		'color_accent'       => '#d4a437',
+		'color_beige'        => '#f3ede3',
 		'color_ivory'        => '#ffffff',
 		'hotline'            => '0965 078 229',
 		'zalo'               => '0965078229',
