@@ -23,6 +23,19 @@ function bds_defaults() {
 		'lead_email'         => 'saigonluxury229@gmail.com',
 		'popup_delay'        => 0,
 
+		// SEO.
+		'seo_title'              => 'The Collection 688 Thuận Giao | Giá từ 43,688 triệu/m²',
+		'seo_description'        => 'The Collection 688 mặt tiền QL13, Thuận Giao, cách ga Metro số 2 chỉ 300m. Giá từ 43,688 triệu/m², booking 30 triệu, chiết khấu đến 12%. Hotline 0965 078 229.',
+		'seo_image'              => '',
+		'schema_enable'          => 1,
+		'schema_alt_name'        => 'Chung cư Hòa Lân Thuận Giao',
+		'schema_street'          => 'Lô 198 Quốc lộ 13, khu phố 1',
+		'schema_locality'        => 'Phường Thuận Giao',
+		'schema_region'          => 'TP. Hồ Chí Minh',
+		'schema_units'           => 688,
+		'schema_agency_name'     => 'Công ty Cổ phần Bất động sản SG Holdings',
+		'schema_agency_address'  => 'Số 45 Hoàng Việt, Phường 4, Quận Tân Bình, TP. Hồ Chí Minh',
+
 		// Hero.
 		'hero_image'         => '',
 		'hero_eyebrow'       => 'Chính thức nhận booking – Chỉ 30 triệu/suất – Chiết khấu 3% cho khách booking sớm',

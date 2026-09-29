@@ -54,6 +54,7 @@ function bds_customize_register( $wp_customize ) {
 
 	$sections = array(
 		'bds_general'    => 'Cài đặt chung & liên hệ',
+		'bds_seo'        => 'SEO & chia sẻ mạng xã hội',
 		'bds_hero'       => 'Banner đầu trang (Hero)',
 		'bds_overview'   => 'Tổng quan dự án',
 		'bds_location'   => 'Vị trí',
@@ -91,6 +92,18 @@ function bds_customize_register( $wp_customize ) {
 		'messenger'        => array( 'bds_general', 'url', 'Link Messenger, vd https://m.me/tenpage (để trống để ẩn)' ),
 		'lead_email'       => array( 'bds_general', 'email', 'Email nhận thông báo khách hàng đăng ký' ),
 		'popup_delay'      => array( 'bds_general', 'number', 'Tự bật popup đăng ký sau N giây (0 = tắt)' ),
+
+		'seo_title'             => array( 'bds_seo', 'text', 'Tiêu đề SEO (khoảng 50–60 ký tự). Bỏ qua nếu dùng Rank Math/Yoast' ),
+		'seo_description'       => array( 'bds_seo', 'textarea', 'Mô tả SEO (khoảng 140–160 ký tự). Bỏ qua nếu dùng Rank Math/Yoast' ),
+		'seo_image'             => array( 'bds_seo', 'image', 'Ảnh khi chia sẻ Facebook/Zalo (1200×630). Trống = dùng ảnh banner' ),
+		'schema_enable'         => array( 'bds_seo', 'checkbox', 'Bật dữ liệu cấu trúc dự án (schema.org)' ),
+		'schema_alt_name'       => array( 'bds_seo', 'text', 'Tên khác của dự án (tên pháp lý)' ),
+		'schema_street'         => array( 'bds_seo', 'text', 'Địa chỉ dự án – số nhà, đường' ),
+		'schema_locality'       => array( 'bds_seo', 'text', 'Địa chỉ dự án – phường/xã' ),
+		'schema_region'         => array( 'bds_seo', 'text', 'Địa chỉ dự án – tỉnh/thành phố' ),
+		'schema_units'          => array( 'bds_seo', 'number', 'Tổng số sản phẩm' ),
+		'schema_agency_name'    => array( 'bds_seo', 'text', 'Tên đơn vị phân phối' ),
+		'schema_agency_address' => array( 'bds_seo', 'text', 'Địa chỉ đơn vị phân phối' ),
 
 		'hero_image'       => array( 'bds_hero', 'image', 'Ảnh nền (khuyến nghị 1920×1080)' ),
 		'hero_eyebrow'     => array( 'bds_hero', 'text', 'Dòng nhỏ phía trên tiêu đề' ),

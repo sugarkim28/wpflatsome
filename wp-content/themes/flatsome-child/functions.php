@@ -15,6 +15,7 @@ require_once BDS_DIR . '/inc/helpers.php';
 require_once BDS_DIR . '/inc/customizer.php';
 require_once BDS_DIR . '/inc/leads.php';
 require_once BDS_DIR . '/inc/shortcodes.php';
+require_once BDS_DIR . '/inc/seo.php';
 
 /**
  * Assets cho landing page. Chỉ nạp ở trang dùng template landing hoặc trang có shortcode bds_*.
