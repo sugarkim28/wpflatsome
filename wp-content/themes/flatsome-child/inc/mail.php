@@ -58,6 +58,33 @@ function bds_smtp_phpmailer( $mailer ) {
 	// Gmail chỉ cho gửi "From" chính tài khoản đăng nhập.
 	$mailer->setFrom( $s['user'], $s['from_name'] ? $s['from_name'] : get_bloginfo( 'name' ), false );
 	$mailer->Sender = $s['user']; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+	if ( ! empty( $GLOBALS['bds_smtp_debug'] ) ) {
+		$mailer->SMTPDebug   = 2; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+		$mailer->Debugoutput = 'bds_smtp_debug_collect'; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+	}
+}
+
+/**
+ * Gom phản hồi của máy chủ SMTP khi gửi thử. Chỉ giữ dòng máy chủ trả lời (không chứa mật khẩu).
+ *
+ * @param string $line Dòng debug.
+ */
+function bds_smtp_debug_collect( $line ) {
+	$line = trim( (string) $line );
+	if ( 0 === stripos( $line, 'SERVER -> CLIENT:' ) || 0 === stripos( $line, 'SMTP ERROR' ) || 0 === stripos( $line, 'SMTP connect' ) || false !== stripos( $line, 'Connection' ) ) {
+		$GLOBALS['bds_smtp_log'][] = substr( $line, 0, 300 );
+	}
+}
+
+/**
+ * Hiện mật khẩu đã lưu dạng che: số ký tự + 2 ký tự cuối.
+ *
+ * @param string $pass Mật khẩu.
+ * @return string
+ */
+function bds_mask_pass( $pass ) {
+	$len = strlen( $pass );
+	return $len ? sprintf( '%d ký tự, kết thúc bằng "…%s"', $len, substr( $pass, -2 ) ) : 'chưa lưu';
 }
 add_action( 'phpmailer_init', 'bds_smtp_phpmailer', 99 );
 
@@ -113,6 +140,18 @@ function bds_mail_admin_page() {
 			<div class="notice notice-warning inline"><p><strong>Lỗi gửi mail gần nhất</strong> (<?php echo esc_html( wp_date( 'd/m/Y H:i', $err['time'] ) ); ?>): <code><?php echo esc_html( $err['message'] ); ?></code></p></div>
 		<?php endif; ?>
 
+		<?php $log = get_option( 'bds_smtp_last_log' ); ?>
+		<?php if ( 'fail' === $msg && $log ) : ?>
+			<p><strong>Phản hồi của máy chủ mail khi gửi thử:</strong></p>
+			<pre style="background:#fff;border:1px solid #ccd0d4;padding:10px;white-space:pre-wrap;max-width:900px"><?php echo esc_html( implode( "\n", (array) $log ) ); ?></pre>
+			<p class="description">"535 … Username and Password not accepted" = sai Gmail hoặc sai mật khẩu ứng dụng · "534 … Application-specific password required" = đang dùng mật khẩu Gmail thường ·
+				Không kết nối được / timeout = host chặn cổng, thử 587 + TLS.</p>
+		<?php endif; ?>
+		<?php if ( bds_smtp_enabled() ) : ?>
+			<p>Đang lưu: Gmail <code><?php echo esc_html( $s['user'] ); ?></code> · mật khẩu ứng dụng <code><?php echo esc_html( bds_mask_pass( $s['pass'] ) ); ?></code>
+				(mật khẩu ứng dụng đúng luôn là <strong>16 ký tự chữ thường</strong>).</p>
+		<?php endif; ?>
+
 		<h2>Gửi qua Gmail (khuyên dùng)</h2>
 		<ol>
 			<li>Đăng nhập Gmail sẽ dùng để gửi → bật <strong>Xác minh 2 bước</strong> tại <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">myaccount.google.com/security</a>.</li>
@@ -125,9 +164,9 @@ function bds_mail_admin_page() {
 			<?php wp_nonce_field( 'bds_smtp_save' ); ?>
 			<table class="form-table" role="presentation">
 				<tr><th><label for="bds-smtp-user">Gmail gửi đi</label></th>
-					<td><input id="bds-smtp-user" name="user" type="email" class="regular-text" value="<?php echo esc_attr( $s['user'] ); ?>" placeholder="vd: saigonluxury229@gmail.com"></td></tr>
+					<td><input id="bds-smtp-user" name="user" type="email" class="regular-text" autocomplete="off" value="<?php echo esc_attr( $s['user'] ); ?>" placeholder="vd: saigonluxury229@gmail.com"></td></tr>
 				<tr><th><label for="bds-smtp-pass">Mật khẩu ứng dụng</label></th>
-					<td><input id="bds-smtp-pass" name="pass" type="password" class="regular-text" value="" autocomplete="new-password" placeholder="<?php echo $s['pass'] ? '•••••••• (đã lưu – để trống nếu không đổi)' : '16 ký tự, không phải mật khẩu Gmail'; ?>">
+					<td><input id="bds-smtp-pass" name="pass" type="text" class="regular-text" value="" autocomplete="off" spellcheck="false" style="-webkit-text-security:disc" onfocus="this.style.webkitTextSecurity='none'" placeholder="<?php echo $s['pass'] ? '•••••••• (đã lưu – để trống nếu không đổi)' : '16 ký tự, không phải mật khẩu Gmail'; ?>">
 						<?php if ( $s['pass'] ) : ?><label><input type="checkbox" name="clear_pass" value="1"> Xoá mật khẩu đã lưu</label><?php endif; ?></td></tr>
 				<tr><th><label for="bds-smtp-name">Tên người gửi</label></th>
 					<td><input id="bds-smtp-name" name="from_name" type="text" class="regular-text" value="<?php echo esc_attr( $s['from_name'] ); ?>" placeholder="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>"></td></tr>
@@ -193,11 +232,14 @@ function bds_smtp_test() {
 	}
 	check_admin_referer( 'bds_smtp_test' );
 	delete_option( 'bds_mail_last_error' );
+	$GLOBALS['bds_smtp_debug'] = true;
+	$GLOBALS['bds_smtp_log']   = array();
 	$ok = wp_mail(
 		bds_opt( 'lead_email' ),
 		'[' . get_bloginfo( 'name' ) . '] Email thử – thông báo khách đăng ký',
 		"Nếu bạn nhận được email này thì thông báo khách đăng ký đã hoạt động.\n\n" . home_url( '/' )
 	);
+	update_option( 'bds_smtp_last_log', array_slice( (array) $GLOBALS['bds_smtp_log'], -14 ), false );
 	wp_safe_redirect( admin_url( 'edit.php?post_type=bds_lead&page=bds-mail&bds_mail=' . ( $ok ? 'sent' : 'fail' ) ) );
 	exit;
 }
