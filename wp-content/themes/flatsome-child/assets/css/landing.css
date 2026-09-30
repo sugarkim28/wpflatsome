@@ -1282,3 +1282,11 @@ div.bds-video { cursor: default; }
 @media (max-width: 849px) {
 	.bds-lux .row.row-xsmall[class*="large-columns-"] { padding: 0 10px; }
 }
+
+/* v8.2 – Mặt bằng: 2 ảnh cùng khung, thẻ cao bằng nhau; nút sau khi gửi form */
+.bds-plans > .col > .col-inner { height: 100%; }
+.bds-plan-img .img-inner { aspect-ratio: 16 / 9; background: #fff; }
+.bds-plan-img .img-inner img { width: 100%; height: 100%; object-fit: contain; }
+.bds-alert__actions.bds-callbtns { margin-top: 12px; }
+.bds-alert .bds-callbtn { box-shadow: 0 4px 12px rgba(0, 0, 0, .1); }
+.bds-alert .bds-callbtn__txt strong { font-size: 1rem; }

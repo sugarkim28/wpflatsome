@@ -314,7 +314,7 @@ function bds_import_blocks() {
 	$plans = '';
 	foreach ( array( 1, 2 ) as $n ) {
 		$plans .= sprintf(
-			"[col span=\"6\" span__sm=\"12\"]\n[ux_image id=\"%d\" lightbox=\"true\"]\n<h3 class=\"bds-plan__title\">%s</h3>\n<p class=\"bds-plan__desc\">%s</p>\n[/col]\n",
+			"[col span=\"6\" span__sm=\"12\"]\n[ux_image id=\"%d\" lightbox=\"true\" class=\"bds-plan-img\"]\n<h3 class=\"bds-plan__title\">%s</h3>\n<p class=\"bds-plan__desc\">%s</p>\n[/col]\n",
 			bds_mid( "floorplan_{$n}_image" ),
 			bds_tx( bds_opt( "floorplan_{$n}_title" ) ),
 			bds_tx( bds_opt( "floorplan_{$n}_desc" ) )
@@ -326,7 +326,7 @@ function bds_import_blocks() {
 			'[section label="Mặt bằng" bg_color="{{BEIGE}}" padding="90px"]
 [scroll_to title="Mặt bằng" link="#mat-bang" bullet="false"]
 %1$s
-[row col_bg="rgb(255,255,255)" col_bg_radius="8" padding="18px 18px 8px 18px"]
+[row col_bg="rgb(255,255,255)" col_bg_radius="8" padding="18px 18px 8px 18px" class="bds-plans"]
 %2$s[/row]
 [/section]',
 			bds_sc_title( bds_opt( 'floorplans_title' ) ),
@@ -553,7 +553,7 @@ function bds_import_blocks() {
 <p class="bds-register__hotline">Hotline tư vấn 24/7: <a href="tel:%4$s">%5$s</a></p>
 %6$s[/col]
 [col span="6" span__sm="12"]
-[bds_lead_form title="Đăng ký nhận bảng giá & tư vấn" button="Nhận bảng giá ngay" source="Cuối trang" full="1" card="1" perks="1"]
+[bds_lead_form title="Đăng ký nhận bảng giá & tư vấn" button="Nhận bảng giá ngay" source="Cuối trang" card="1" perks="1"]
 [/col]
 [/row]
 [row]

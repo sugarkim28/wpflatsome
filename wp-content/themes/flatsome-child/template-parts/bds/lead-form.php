@@ -53,14 +53,7 @@ $bds_messages = array(
 		<div class="bds-alert bds-alert--<?php echo 'success' === $bds_status ? 'success' : 'error'; ?>" role="alert">
 			<?php echo esc_html( $bds_messages[ $bds_status ] ); ?>
 			<?php if ( 'success' === $bds_status ) : ?>
-				<span class="bds-alert__actions">
-					<?php if ( bds_opt( 'hotline' ) ) : ?>
-						<a class="button primary is-small" href="tel:<?php echo esc_attr( bds_tel( bds_opt( 'hotline' ) ) ); ?>">Gọi ngay <?php echo esc_html( bds_opt( 'hotline' ) ); ?></a>
-					<?php endif; ?>
-					<?php if ( bds_opt( 'zalo' ) ) : ?>
-						<a class="button secondary is-small" href="https://zalo.me/<?php echo esc_attr( bds_tel( bds_opt( 'zalo' ) ) ); ?>" target="_blank" rel="noopener">Chat Zalo</a>
-					<?php endif; ?>
-				</span>
+				<div class="bds-callbtns bds-alert__actions"><?php echo bds_call_buttons_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- đã escape trong hàm. ?></div>
 			<?php endif; ?>
 		</div>
 	<?php endif; ?>
