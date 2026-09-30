@@ -7,13 +7,14 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'BDS_VERSION', '1.6.3' );
+define( 'BDS_VERSION', '1.7.0' );
 define( 'BDS_DIR', get_stylesheet_directory() );
 define( 'BDS_URI', get_stylesheet_directory_uri() );
 
 require_once BDS_DIR . '/inc/helpers.php';
 require_once BDS_DIR . '/inc/customizer.php';
 require_once BDS_DIR . '/inc/leads.php';
+require_once BDS_DIR . '/inc/mail.php';
 require_once BDS_DIR . '/inc/shortcodes.php';
 require_once BDS_DIR . '/inc/seo.php';
 require_once BDS_DIR . '/inc/importer.php';

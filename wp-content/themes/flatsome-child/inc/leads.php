@@ -174,7 +174,14 @@ function bds_handle_lead_submit() {
 		if ( is_email( $email ) ) {
 			$headers[] = 'Reply-To: ' . $name . ' <' . $email . '>';
 		}
-		wp_mail( $to, '[' . get_bloginfo( 'name' ) . '] Khách hàng mới: ' . $name . ' – ' . $phone, implode( "\n", $lines ), $headers );
+		$lines = array_filter(
+			$lines,
+			function ( $l ) {
+				return '' === $l || ! preg_match( '/: $/', $l );
+			}
+		);
+		$sent  = wp_mail( $to, '[' . get_bloginfo( 'name' ) . '] Khách hàng mới: ' . $name . ' – ' . $phone, implode( "\n", $lines ), $headers );
+		update_post_meta( $post_id, '_bds_mail', $sent ? 'ok' : 'fail' );
 	}
 
 	/**
@@ -202,8 +209,8 @@ function bds_lead_columns( $cols ) {
 		'title'       => 'Khách hàng',
 		'bds_phone'   => 'Điện thoại',
 		'bds_email'   => 'Email',
-		'bds_need'    => 'Nhu cầu',
-		'bds_message' => 'Ghi chú',
+		'bds_source'  => 'Đăng ký từ',
+		'bds_mail'    => 'Email báo',
 		'date'        => 'Thời gian',
 	);
 }
@@ -231,6 +238,19 @@ function bds_lead_column_content( $col, $post_id ) {
 			break;
 		case 'bds_message':
 			echo esc_html( wp_trim_words( get_post_meta( $post_id, '_bds_message', true ), 15 ) );
+			break;
+		case 'bds_source':
+			echo esc_html( get_post_meta( $post_id, '_bds_source', true ) );
+			break;
+		case 'bds_mail':
+			$mail = get_post_meta( $post_id, '_bds_mail', true );
+			if ( 'ok' === $mail ) {
+				echo '<span style="color:#00a32a">✔ Đã gửi</span>';
+			} elseif ( 'fail' === $mail ) {
+				echo '<a style="color:#b32d2e" href="' . esc_url( admin_url( 'edit.php?post_type=bds_lead&page=bds-mail' ) ) . '">✖ Lỗi gửi</a>';
+			} else {
+				echo '—';
+			}
 			break;
 	}
 }
