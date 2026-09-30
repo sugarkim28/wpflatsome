@@ -183,6 +183,7 @@ function bds_customize_register( $wp_customize ) {
 		'agency_name'      => array( 'bds_register', 'text', 'Đơn vị tư vấn / Tổng đại lý' ),
 		'agency_address'   => array( 'bds_register', 'text', 'Địa chỉ trụ sở' ),
 		'contact_email'    => array( 'bds_register', 'email', 'Email liên hệ hiển thị trên trang' ),
+		'contact_address'  => array( 'bds_register', 'text', 'Địa chỉ dự án (hiện trong popup liên hệ)' ),
 		'register_success' => array( 'bds_register', 'textarea', 'Thông báo sau khi gửi thành công' ),
 		'disclaimer'       => array( 'bds_register', 'textarea', 'Dòng lưu ý pháp lý cuối trang (để trống để ẩn)' ),
 	);

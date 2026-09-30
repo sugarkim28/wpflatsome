@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'BDS_VERSION', '1.5.0' );
+define( 'BDS_VERSION', '1.6.0' );
 define( 'BDS_DIR', get_stylesheet_directory() );
 define( 'BDS_URI', get_stylesheet_directory_uri() );
 

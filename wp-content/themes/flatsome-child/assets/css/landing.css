@@ -1197,3 +1197,81 @@ div.bds-video { cursor: default; }
 .bds-lux .bds-feature { border-top: 3px solid #d49a1f; }
 .bds-lux .bds-feature__num { color: #d49a1f; }
 .bds-lux .bds-hero__price, .bds-lux .bds-stat strong, .bds-lux .bds-offer strong, .bds-lux .bds-price-card__value { color: #ffd66b; }
+
+/* ==========================================================================
+   v8 – Nút Hotline/Zalo có số + icon nhấp nháy; popup liên hệ 2 cột
+   ========================================================================== */
+.bds-callbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.bds-callbtns--center { max-width: 520px; margin: 14px auto 0; }
+.bds-callbtn {
+	display: flex; align-items: center; gap: 12px; min-width: 0;
+	padding: 10px 14px; border-radius: 10px;
+	background: #fff; color: #0d1b3e !important; text-align: left;
+	box-shadow: 0 8px 22px rgba(0, 0, 0, .18); transition: transform .2s;
+}
+.bds-callbtn:hover { transform: translateY(-2px); }
+.bds-callbtn__txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.bds-callbtn__txt small { color: #6b7280; font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.bds-callbtn__txt strong { font-size: 1.12rem; font-weight: 800; white-space: nowrap; font-variant-numeric: lining-nums; }
+.bds-callbtn--phone .bds-callbtn__txt strong { color: #e02424; }
+.bds-callbtn--zalo .bds-callbtn__txt strong { color: #0068ff; }
+.bds-ring {
+	position: relative; flex: 0 0 42px; width: 42px; height: 42px; border-radius: 50%;
+	display: inline-flex; align-items: center; justify-content: center; color: #fff;
+}
+.bds-callbtn--phone .bds-ring { background: #e02424; --ring: 224, 36, 36; }
+.bds-callbtn--zalo .bds-ring { background: #0068ff; --ring: 0, 104, 255; }
+.bds-ring svg { width: 20px; height: 20px; fill: currentColor; animation: bds-shake 1.2s ease-in-out infinite; }
+.bds-ring b { font-size: 11px; font-weight: 800; animation: bds-shake 1.2s ease-in-out infinite; }
+.bds-ring::before, .bds-ring::after {
+	content: ""; position: absolute; inset: 0; border-radius: 50%;
+	background: rgba(var(--ring), .45); animation: bds-ripple 1.6s ease-out infinite; z-index: -1;
+}
+.bds-ring::after { animation-delay: .8s; }
+.bds-ring { z-index: 0; isolation: isolate; }
+@keyframes bds-ripple { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(1.9); opacity: 0; } }
+@keyframes bds-shake {
+	0%, 50%, 100% { transform: rotate(0); }
+	10%, 30% { transform: rotate(-18deg); }
+	20%, 40% { transform: rotate(18deg); }
+}
+@media (prefers-reduced-motion: reduce) { .bds-ring svg, .bds-ring b, .bds-ring::before, .bds-ring::after { animation: none; } }
+@media (max-width: 549px) {
+	.bds-callbtns { grid-template-columns: 1fr; }
+}
+.bds-lux .bds-cta .bds-cta__actions > .col-inner { display: block; }
+.bds-lux .bds-cta .bds-cta__actions .button { width: 100%; margin: 0; }
+
+/* Popup liên hệ 2 cột */
+.bds-modal__box--split {
+	display: grid; grid-template-columns: 5fr 6fr; max-width: 760px; padding: 0;
+	border-top: 0; border-radius: 14px; overflow: hidden auto;
+}
+.bds-modal__info { padding: 36px 26px; background: #fff; text-align: center; }
+.bds-modal__logo {
+	display: inline-flex; width: 150px; height: 150px; margin-bottom: 14px; padding: 8px;
+	border: 1px solid #eee; border-radius: 50%; box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
+}
+.bds-modal__logo img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.bds-modal__label { margin: 0 0 12px; color: #0d1b3e; font-weight: 600; }
+.bds-contact-list { margin: 0; padding: 0; list-style: none; text-align: left; }
+.bds-contact-list li { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 12px; color: #33384a; font-size: .93rem; line-height: 1.5; }
+.bds-contact-list svg { flex: 0 0 18px; width: 18px; height: 18px; margin-top: 2px; fill: #0d1b3e; }
+.bds-contact-list a { color: #1d5fa8; font-weight: 600; word-break: break-word; }
+.bds-zalo-ico { flex: 0 0 auto; padding: 1px 4px; border-radius: 4px; background: #0068ff; color: #fff; font-size: 10px; line-height: 16px; margin-top: 2px; }
+.bds-modal__form { padding: 36px 28px 26px; background: #fbf7ec; }
+.bds-lux .bds-modal__form .bds-form__title,
+.bds-modal__form .bds-form__title { margin-bottom: 18px; color: #0d1b3e; font-family: inherit; font-size: 1.05rem; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
+.bds-modal__form input, .bds-modal__form select, .bds-modal__form textarea {
+	height: 50px; margin-bottom: 16px; border: 1px solid #8a5a44; border-radius: 6px; background: #fff; box-shadow: none;
+}
+.bds-modal__form input:focus { border-color: #d49a1f; box-shadow: 0 0 0 3px rgba(212, 154, 31, .2); }
+.bds-modal__form .bds-form button[type="submit"] { height: 52px; border-radius: 6px; font-size: 1.05rem; text-transform: uppercase; }
+.bds-modal__form .bds-form__note { color: #8a7a5e; }
+.bds-modal__close { z-index: 2; }
+@media (max-width: 649px) {
+	.bds-modal__box--split { grid-template-columns: 1fr; max-width: 420px; }
+	.bds-modal__info { padding: 22px 20px 6px; }
+	.bds-modal__logo { width: 96px; height: 96px; margin-bottom: 8px; }
+	.bds-modal__form { padding: 22px 20px 20px; }
+}

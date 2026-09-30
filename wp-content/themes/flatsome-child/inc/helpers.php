@@ -24,7 +24,7 @@ function bds_defaults() {
 		'messenger'          => '',
 		'lead_email'         => 'saigonluxury229@gmail.com',
 		'popup_delay'        => 20,
-		'popup_title'        => 'Nhận bảng giá gốc & chính sách chiết khấu đến 12%',
+		'popup_title'        => 'Đăng ký nhận bảng giá | Ưu đãi',
 		'form_perks'         => "Bảng giá gốc & quỹ căn đẹp đợt 1 từ chủ đầu tư\nBảng tính dòng tiền, phương án vay chi tiết\nƯu tiên lịch tham quan nhà mẫu",
 		'offers'             => "Booking | 30 triệu/suất\nBooking sớm | Chiết khấu 3%\nTổng chiết khấu | Đến 12% giá trị căn\nNgân hàng MB | Ân hạn gốc, hỗ trợ lãi 24 tháng",
 		'trust_badges'       => "CĐT DICERA Holdings (HoSE: DC4)\nQuản lý vận hành Savills\nNgân hàng MB tài trợ\nPháp lý: QH 1/500, chủ trương đầu tư",
@@ -143,6 +143,7 @@ function bds_defaults() {
 		'agency_name'        => 'Tổng đại lý: Công ty Cổ phần Bất động sản SG Holdings',
 		'agency_address'     => 'Trụ sở: Số 45 Hoàng Việt, Phường 4, Quận Tân Bình, TP. Hồ Chí Minh',
 		'contact_email'      => 'saigonluxury229@gmail.com',
+		'contact_address'    => 'Mặt tiền Đại lộ Bình Dương (Quốc lộ 13), Lô 198, khu phố 1, P. Thuận Giao, TP.HCM',
 		'disclaimer'         => 'Lưu ý: Hình ảnh, sơ đồ và thông tin trên trang chỉ nhằm mục đích minh họa, không có tính chất cam kết pháp lý. Khách hàng vui lòng căn cứ vào các tài liệu giao dịch chính thức. Thông tin sản phẩm có thể thay đổi theo chấp thuận hoặc yêu cầu của cơ quan nhà nước có thẩm quyền.',
 		'register_success'   => 'Cảm ơn Quý khách! Chuyên viên tư vấn sẽ liên hệ trong thời gian sớm nhất.',
 	);
@@ -482,4 +483,31 @@ function bds_modelhouse_groups() {
 		}
 	}
 	return $groups;
+}
+
+/**
+ * Cặp nút Hotline / Zalo có số điện thoại và icon rung nhấp nháy (dùng trong khối kêu gọi, thẻ giá).
+ * Lưu ý: không chứa ký tự % vì được ghép vào chuỗi định dạng của importer.
+ *
+ * @return string
+ */
+function bds_call_buttons_html() {
+	$hotline = bds_opt( 'hotline' );
+	$zalo    = bds_tel( bds_opt( 'zalo' ) );
+	$html    = '';
+	if ( $hotline ) {
+		$html .= sprintf(
+			'<a class="bds-callbtn bds-callbtn--phone" href="tel:%1$s"><span class="bds-ring"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg></span><span class="bds-callbtn__txt"><small>Hotline 24/7</small><strong>%2$s</strong></span></a>',
+			esc_attr( bds_tel( $hotline ) ),
+			esc_html( $hotline )
+		);
+	}
+	if ( $zalo ) {
+		$html .= sprintf(
+			'<a class="bds-callbtn bds-callbtn--zalo" href="https://zalo.me/%1$s" target="_blank" rel="noopener"><span class="bds-ring"><b>Zalo</b></span><span class="bds-callbtn__txt"><small>Chat Zalo</small><strong>%2$s</strong></span></a>',
+			esc_attr( $zalo ),
+			esc_html( $hotline && bds_tel( $hotline ) === $zalo ? $hotline : $zalo )
+		);
+	}
+	return $html;
 }

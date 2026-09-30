@@ -425,7 +425,8 @@ function bds_import_blocks() {
 <p class="bds-price-card__label">Giá bán chỉ từ</p>
 <p class="bds-price-card__value">%3$s</p>
 <p class="bds-price-card__note">%4$s</p>
-<p class="bds-price-card__actions">[button text="Nhận bảng giá chi tiết" color="secondary" radius="6" size="large" class="bds-pulse" link="#dang-ky"][button text="Gọi %5$s" color="white" style="outline" radius="6" size="large" link="tel:%6$s"]</p>
+<p class="bds-price-card__actions">[button text="Nhận bảng giá chi tiết" color="secondary" radius="6" size="large" class="bds-pulse" link="#dang-ky"]</p>
+<div class="bds-callbtns bds-callbtns--center">' . bds_call_buttons_html() . '</div>
 </div>
 [row]
 %2$s[/row]
@@ -595,7 +596,7 @@ function bds_import_blocks() {
 [/col]
 [col span="5" span__sm="12" class="bds-cta__actions"]
 [button text="Nhận bảng giá ngay" color="secondary" radius="6" size="large" class="bds-pulse" link="#dang-ky"]
-[button text="Gọi %3$s" color="primary" style="outline" radius="6" size="large" link="tel:%4$s"]%5$s
+<div class="bds-callbtns">%5$s</div>
 [/col]
 [/row]
 [/section]',
@@ -603,7 +604,7 @@ function bds_import_blocks() {
 		bds_tx( bds_opt( 'cta_text' ) ),
 		bds_sc( $hotline ),
 		$tel,
-		$zalo ? "\n" . sprintf( '[button text="Chat Zalo" color="primary" style="outline" radius="6" size="large" link="https://zalo.me/%s" target="_blank"]', $zalo ) : ''
+		bds_call_buttons_html()
 	);
 	$ordered = array();
 	foreach ( $blocks as $slug => $b ) {
