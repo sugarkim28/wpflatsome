@@ -759,6 +759,7 @@ function bds_import_content() {
 	set_theme_mod( 'header_mobile_elements_right', array() );
 	set_theme_mod( 'html_custom_css', '' );
 	set_theme_mod( 'topbar_left', '' );
+	bds_import_clean_legacy_scripts();
 
 	// Tắt chế độ template/menu riêng của theme con: từ giờ dùng chuẩn Flatsome.
 	set_theme_mod( 'bds_landing_front', 0 );
@@ -772,9 +773,49 @@ function bds_import_content() {
 }
 
 /**
+ * Dọn đoạn mã cũ dán trong Flatsome → Advanced → Global Settings (Header/Footer Scripts) nếu nó
+ * nạp thêm jQuery từ CDN hoặc chứa menu nổi/nút liên hệ kiểu cũ (box_fixRight, float-contact):
+ * đoạn này làm hỏng JS của Flatsome và chèn nút chết (tel: trống, m.me/demo). Bản gốc được sao lưu.
+ *
+ * @return string[] Các ô đã dọn.
+ */
+function bds_import_clean_legacy_scripts() {
+	$keys    = array( 'html_scripts_header', 'html_scripts_footer', 'html_scripts_after_body', 'html_scripts_before_body' );
+	$backup  = get_option( 'bds_import_scripts_backup', array() );
+	$cleaned = array();
+	foreach ( $keys as $k ) {
+		remove_filter( 'theme_mod_' . $k, 'bds_strip_extra_jquery' );
+		$v = get_theme_mod( $k, '' );
+		if ( ! is_string( $v ) || '' === trim( $v ) ) {
+			continue;
+		}
+		if ( preg_match( '#cdnjs\.cloudflare\.com/ajax/libs/jquery|code\.jquery\.com|box_fixRight|float-contact#i', $v ) ) {
+			if ( ! isset( $backup[ $k ] ) ) {
+				$backup[ $k ] = $v;
+			}
+			set_theme_mod( $k, '' );
+			$cleaned[] = $k;
+		}
+		add_filter( 'theme_mod_' . $k, 'bds_strip_extra_jquery' );
+	}
+	if ( $cleaned ) {
+		update_option( 'bds_import_scripts_backup', $backup, false );
+	}
+	return $cleaned;
+}
+
+/**
  * Khôi phục cấu hình header Flatsome như trước khi chạy trình tạo.
  */
 function bds_import_restore_header() {
+	$scripts = get_option( 'bds_import_scripts_backup' );
+	if ( is_array( $scripts ) ) {
+		foreach ( $scripts as $k => $v ) {
+			set_theme_mod( $k, $v );
+		}
+		delete_option( 'bds_import_scripts_backup' );
+	}
+
 	$backup = get_option( 'bds_import_header_backup' );
 	if ( ! is_array( $backup ) ) {
 		return;
@@ -824,7 +865,11 @@ function bds_import_admin_page() {
 			<p>Đã tạo: <a href="<?php echo esc_url( get_permalink( $ids['page'] ) ); ?>" target="_blank">Xem trang</a> ·
 				<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=blocks' ) ); ?>">Danh sách UX Blocks</a> ·
 				<a href="<?php echo esc_url( admin_url( 'nav-menus.php' ) ); ?>">Sửa menu</a></p>
-			<?php if ( get_option( 'bds_import_header_backup' ) ) : ?>
+			<?php if ( get_option( 'bds_import_scripts_backup' ) ) : ?>
+				<p><em>Đoạn mã cũ trong Flatsome → Advanced → Global Settings (nạp jQuery CDN / menu nổi kiểu cũ) đã được gỡ vì làm lỗi trang và đã sao lưu.
+					Nếu trong đó có mã Google Analytics / Facebook Pixel, hãy dán lại riêng các mã đó.</em></p>
+			<?php endif; ?>
+			<?php if ( get_option( 'bds_import_header_backup' ) || get_option( 'bds_import_scripts_backup' ) ) : ?>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="bds_import_restore">
 					<?php wp_nonce_field( 'bds_import_restore' ); ?>

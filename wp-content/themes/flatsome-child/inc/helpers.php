@@ -413,15 +413,105 @@ function bds_is_legacy_content( $content ) {
  * @return string
  */
 function bds_logo_url() {
-	$url = bds_img_url( absint( bds_opt( 'logo' ) ), 'medium' );
-	if ( $url ) {
-		return $url;
+	$id = absint( bds_opt( 'logo' ) );
+	if ( $id && bds_attachment_exists( $id ) ) {
+		return bds_img_url( $id, 'medium' );
 	}
 	$flatsome = get_theme_mod( 'site_logo', '' );
 	if ( is_numeric( $flatsome ) ) {
-		return bds_img_url( $flatsome, 'medium' );
+		return bds_attachment_exists( $flatsome ) ? bds_img_url( $flatsome, 'medium' ) : bds_fallback_logo_url();
 	}
 	return ( $flatsome && false === strpos( $flatsome, '/flatsome/assets/img/logo.png' ) ) ? $flatsome : '';
+}
+
+/**
+ * Logo dự phòng đóng gói trong theme (dùng khi file logo trên host bị mất, ví dụ sau khi chuyển site).
+ *
+ * @return string
+ */
+function bds_fallback_logo_url() {
+	return get_stylesheet_directory_uri() . '/assets/img/logo.webp';
+}
+
+/**
+ * File đính kèm còn tồn tại trên ổ đĩa không.
+ *
+ * @param int $id ID ảnh.
+ * @return bool
+ */
+function bds_attachment_exists( $id ) {
+	$file = get_attached_file( absint( $id ) );
+	return $file && file_exists( $file );
+}
+
+/**
+ * URL nằm trong thư mục uploads của site nhưng file không còn trên ổ đĩa.
+ *
+ * @param string $url URL ảnh.
+ * @return bool
+ */
+function bds_upload_url_missing( $url ) {
+	if ( ! is_string( $url ) || '' === $url || is_numeric( $url ) ) {
+		return false;
+	}
+	$uploads = wp_get_upload_dir();
+	$base    = preg_replace( '#^https?:#', '', $uploads['baseurl'] );
+	$path    = preg_replace( '#^https?:#', '', strtok( $url, '?' ) );
+	if ( 0 !== strpos( $path, $base ) ) {
+		return false;
+	}
+	return ! file_exists( $uploads['basedir'] . substr( $path, strlen( $base ) ) );
+}
+
+/**
+ * Logo Flatsome trỏ tới file đã mất → thay bằng logo trong theme.
+ *
+ * @param mixed $value Giá trị theme_mod.
+ * @return mixed
+ */
+function bds_fix_missing_logo( $value ) {
+	if ( is_admin() ) {
+		return $value;
+	}
+	if ( is_numeric( $value ) && $value && ! bds_attachment_exists( $value ) ) {
+		return bds_fallback_logo_url();
+	}
+	return bds_upload_url_missing( $value ) ? bds_fallback_logo_url() : $value;
+}
+add_filter( 'theme_mod_site_logo', 'bds_fix_missing_logo' );
+add_filter( 'theme_mod_site_logo_sticky', 'bds_fix_missing_logo' );
+add_filter( 'theme_mod_site_logo_dark', 'bds_fix_missing_logo' );
+
+/**
+ * Favicon (Site Icon) bị mất file → dùng logo trong theme.
+ *
+ * @param string $url URL icon.
+ * @return string
+ */
+function bds_fix_missing_site_icon( $url ) {
+	$id = (int) get_option( 'site_icon' );
+	if ( $url && $id && ! bds_attachment_exists( $id ) ) {
+		return bds_fallback_logo_url();
+	}
+	return $url;
+}
+add_filter( 'get_site_icon_url', 'bds_fix_missing_site_icon' );
+
+/**
+ * Chặn jQuery nạp thêm từ CDN trong ô "Scripts" của Flatsome: nó ghi đè jQuery của WordPress
+ * làm hỏng menu, lightbox, tab của Flatsome (lỗi "$ is not a function").
+ *
+ * @param mixed $html Nội dung ô script.
+ * @return mixed
+ */
+function bds_strip_extra_jquery( $html ) {
+	if ( ! is_string( $html ) || is_admin() || false === stripos( $html, 'jquery' ) ) {
+		return $html;
+	}
+	return preg_replace( '#<script\b[^>]*\bsrc=["\'][^"\']*/jquery(?:[.-][\d.]+)?(?:\.min)?\.js[^"\']*["\'][^>]*>\s*</script>#i', '', $html );
+}
+foreach ( array( 'html_scripts_header', 'html_scripts_footer', 'html_scripts_after_body', 'html_scripts_before_body' ) as $bds_mod ) {
+	add_filter( 'theme_mod_' . $bds_mod, 'bds_strip_extra_jquery' );
 }
 
 /**
@@ -511,3 +601,30 @@ function bds_call_buttons_html() {
 	}
 	return $html;
 }
+
+/**
+ * Sau khi chuyển site, Flatsome (Kirki) vẫn nhớ đường dẫn font Google đã tải về máy cũ
+ * (wp-content/fonts/...) dù file không còn → font lỗi 404. Gỡ các mục trỏ tới file đã mất
+ * để Flatsome tải lại (hoặc dùng thẳng Google Fonts nếu host không tải được). Kiểm tra tối đa 1 lần/giờ.
+ */
+function bds_prune_missing_local_fonts() {
+	if ( get_transient( 'bds_fonts_checked' ) ) {
+		return;
+	}
+	set_transient( 'bds_fonts_checked', 1, HOUR_IN_SECONDS );
+	$stored = get_option( 'kirki_downloaded_font_files' );
+	if ( ! is_array( $stored ) || ! $stored ) {
+		return;
+	}
+	$kept = array_filter(
+		$stored,
+		function ( $path ) {
+			return is_string( $path ) && file_exists( $path );
+		}
+	);
+	if ( count( $kept ) !== count( $stored ) ) {
+		update_option( 'kirki_downloaded_font_files', $kept );
+		delete_transient( 'kirki_remote_url_contents' );
+	}
+}
+add_action( 'init', 'bds_prune_missing_local_fonts', 1 );
