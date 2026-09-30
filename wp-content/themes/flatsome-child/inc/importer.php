@@ -263,7 +263,7 @@ function bds_import_blocks() {
 	$blocks['688-vi-tri'] = array(
 		'688 – 03 Vị trí',
 		sprintf(
-			'[section label="Vị trí" bg_color="{{BEIGE}}" padding="90px"]
+			'[section label="Vị trí" bg_color="{{NAVY}}" dark="true" padding="90px" class="bds-navy"]
 [scroll_to title="Vị trí" link="#vi-tri" bullet="false"]
 %1$s
 <p class="bds-lead text-center">%2$s</p>
@@ -391,7 +391,7 @@ function bds_import_blocks() {
 	$blocks['688-hinh-anh'] = array(
 		'688 – 07 Hình ảnh & Video',
 		sprintf(
-			'[section label="Hình ảnh & Video" bg_color="{{BEIGE}}" padding="90px"]
+			'[section label="Hình ảnh & Video" bg_color="{{NAVY}}" dark="true" padding="90px" class="bds-navy"]
 [scroll_to title="Hình ảnh" link="#hinh-anh" bullet="false"]
 %1$s
 [ux_gallery ids="%2$s" style="normal" columns="4" columns__sm="2" col_spacing="xsmall" image_height="75%%" image_size="medium_large"]
@@ -744,11 +744,11 @@ function bds_import_content() {
 	set_theme_mod( 'header_height', 80 );
 	set_theme_mod( 'topbar_show', 0 );
 	// Header đặc (khi cuộn / trang khác): nền màu chủ đạo, chữ sáng.
-	// Phong cách sáng: header dính nền trắng, chữ navy (trên banner vẫn trong suốt chữ sáng).
-	set_theme_mod( 'header_color', 'light' );
-	set_theme_mod( 'header_bg', '#ffffff' );
-	set_theme_mod( 'type_nav_color', bds_opt( 'color_primary' ) );
-	set_theme_mod( 'type_nav_color_hover', bds_opt( 'color_accent' ) );
+	// Header navy, chữ vàng kim (như web mẫu, nổi bật hơn).
+	set_theme_mod( 'header_color', 'dark' );
+	set_theme_mod( 'header_bg', bds_opt( 'color_primary' ) );
+	set_theme_mod( 'type_nav_color', '#f0c96a' );
+	set_theme_mod( 'type_nav_color_hover', '#ffffff' );
 	set_theme_mod( 'type_headings_color', bds_opt( 'color_primary' ) );
 	set_theme_mod( 'color_links', bds_opt( 'color_primary' ) );
 	set_theme_mod( 'color_links_hover', bds_opt( 'color_accent' ) );

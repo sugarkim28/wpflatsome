@@ -1149,3 +1149,51 @@ div.bds-video { cursor: default; }
 .bds-lux .bds-register-light .bds-agency__line a { color: #b07f1c; }
 .bds-lux .header-main .nav > li > a:hover, .bds-lux .header-main .nav > li.active > a { color: #b07f1c; }
 .bds-lux .accordion-title.active, .bds-lux .accordion-title:hover { color: #b07f1c; border-color: #d4a437; }
+
+/* ==========================================================================
+   v7 – Tương phản mạnh: xen kẽ nền navy, vàng kim rực, header navy
+   ========================================================================== */
+.bds-lux {
+	--bds-grad: linear-gradient(135deg, #ffe7a3 0%, #f2c14e 35%, #d49a1f 70%, #a8740f 100%);
+	--bds-gold-text: linear-gradient(180deg, #e9b93c 0%, #c58a12 50%, #8f5c05 100%);
+	--bds-gold-text-dark: linear-gradient(180deg, #fff6d0 0%, #ffd66b 40%, #e5a82a 75%, #c98a14 100%);
+}
+.bds-lux .bds-title .section-title-main { font-size: clamp(1.9rem, 3.6vw, 2.8rem); }
+.bds-lux .bds-title .section-title-main {
+	filter: drop-shadow(0 1px 0 #fff) drop-shadow(0 4px 6px rgba(143, 92, 5, .28));
+}
+.bds-lux .bds-navy .bds-title .section-title-main,
+.bds-lux .dark .bds-title .section-title-main,
+.bds-lux .bds-fs-hero .bds-hero__title {
+	filter: drop-shadow(0 0 18px rgba(255, 196, 70, .35)) drop-shadow(0 3px 4px rgba(0, 0, 0, .5));
+}
+.bds-lux .bds-title .section-title::after { width: 110px; height: 4px; margin-left: -55px; box-shadow: 0 0 12px rgba(242, 193, 78, .6); }
+
+/* Nền navy có ánh sáng nhẹ để không bị phẳng */
+.bds-lux .bds-navy .section-bg {
+	background: radial-gradient(ellipse at 20% 0%, rgba(242, 193, 78, .14), transparent 55%),
+		radial-gradient(ellipse at 90% 100%, rgba(40, 80, 170, .45), transparent 60%),
+		#0b1838 !important;
+}
+.bds-lux .bds-navy { border-top: 1px solid rgba(242, 193, 78, .35); border-bottom: 1px solid rgba(242, 193, 78, .35); }
+
+/* Vị trí trên nền navy */
+.bds-lux .bds-navy .bds-connect li { background: rgba(255, 255, 255, .06); border-left-color: #f2c14e; box-shadow: none; color: rgba(255, 255, 255, .88); }
+.bds-lux .bds-navy .bds-connect strong { color: #ffd66b; }
+.bds-lux .bds-navy .bds-connect span, .bds-lux .bds-navy .bds-connect p { color: rgba(255, 255, 255, .85); }
+.bds-lux .bds-navy .img-inner, .bds-lux .bds-navy .gallery .box-image { box-shadow: 0 0 0 1px rgba(242, 193, 78, .45), 0 18px 40px rgba(0, 0, 0, .35); }
+
+/* Header navy, chữ vàng */
+.bds-lux .header-wrapper.stuck, .bds-lux .stuck .header-main,
+.bds-lux .header-main { background-color: #0b1838 !important; }
+.bds-lux .transparent .header-wrapper:not(.stuck) .header-main { background-color: transparent !important; }
+.bds-lux .header-main .nav > li > a, .bds-lux .stuck .header-main .nav > li > a { color: #f2c14e; font-weight: 700; }
+.bds-lux .header-main .nav > li > a:hover, .bds-lux .header-main .nav > li.active > a { color: #fff; }
+.bds-lux .header-main .icon-menu, .bds-lux .header-main .nav-icon a { color: #f2c14e; }
+.bds-lux .header-wrapper { border-bottom: 2px solid #d49a1f; }
+
+/* Điểm nhấn trên nền sáng rõ hơn */
+.bds-lux .bds-kicker { color: #a8740f; }
+.bds-lux .bds-feature { border-top: 3px solid #d49a1f; }
+.bds-lux .bds-feature__num { color: #d49a1f; }
+.bds-lux .bds-hero__price, .bds-lux .bds-stat strong, .bds-lux .bds-offer strong, .bds-lux .bds-price-card__value { color: #ffd66b; }
