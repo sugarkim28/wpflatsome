@@ -1275,3 +1275,10 @@ div.bds-video { cursor: default; }
 	.bds-modal__logo { width: 96px; height: 96px; margin-bottom: 8px; }
 	.bds-modal__form { padding: 22px 20px 20px; }
 }
+
+/* v8.1 – Gallery gọn trên điện thoại, đoạn mô tả có lề */
+.bds-lux .gallery-box .box-text { display: none; }
+.bds-lux .section-content > .bds-lead { max-width: 980px; margin-left: auto; margin-right: auto; padding: 0 15px; }
+@media (max-width: 849px) {
+	.bds-lux .row.row-xsmall[class*="large-columns-"] { padding: 0 10px; }
+}
