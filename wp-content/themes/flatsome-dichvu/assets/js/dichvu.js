@@ -4,10 +4,73 @@
 ( function () {
 	'use strict';
 
-	// Nút "Nhận báo giá" / "#dang-ky": nếu trang không có form thì chuyển sang trang Liên hệ.
+	var popup = document.getElementById( 'sgd-popup' );
+	var lastFocus = null;
+
+	function openPopup() {
+		if ( ! popup || ! popup.hidden ) {
+			return;
+		}
+		lastFocus = document.activeElement;
+		popup.hidden = false;
+		document.documentElement.classList.add( 'sgd-noscroll' );
+		var first = popup.querySelector( 'input[name="sgd_name"]' );
+		if ( first ) {
+			first.focus( { preventScroll: true } );
+		}
+		try {
+			sessionStorage.setItem( 'sgdPopup', '1' );
+		} catch ( e ) {}
+	}
+
+	function closePopup() {
+		if ( ! popup || popup.hidden ) {
+			return;
+		}
+		popup.hidden = true;
+		document.documentElement.classList.remove( 'sgd-noscroll' );
+		if ( lastFocus && lastFocus.focus ) {
+			lastFocus.focus();
+		}
+	}
+
+	if ( popup ) {
+		popup.addEventListener( 'click', function ( e ) {
+			if ( e.target === popup || e.target.closest( '.sgd-popup__close' ) ) {
+				closePopup();
+			}
+		} );
+		document.addEventListener( 'keydown', function ( e ) {
+			if ( 'Escape' === e.key ) {
+				closePopup();
+			}
+		} );
+		// Có thông báo kết quả gửi form popup → mở lại để khách thấy.
+		if ( /[?&]sgd_form=popup\b/.test( location.search ) ) {
+			openPopup();
+		} else {
+			var delay = parseInt( popup.getAttribute( 'data-delay' ), 10 ) || 0;
+			var seen = false;
+			try {
+				seen = !! sessionStorage.getItem( 'sgdPopup' );
+			} catch ( e ) {}
+			if ( delay > 0 && ! seen ) {
+				setTimeout( openPopup, delay * 1000 );
+			}
+		}
+	}
+
+	// Liên kết "#dang-ky": trang có form thì cuộn tới; không có thì mở popup (hoặc sang trang Liên hệ).
 	if ( ! document.getElementById( 'dang-ky' ) ) {
-		document.querySelectorAll( 'a[href="#dang-ky"]' ).forEach( function ( a ) {
-			a.setAttribute( 'href', '/lien-he/#dang-ky' );
+		document.querySelectorAll( 'a[href="#dang-ky"], .sgd-menu-cta > a' ).forEach( function ( a ) {
+			if ( popup ) {
+				a.addEventListener( 'click', function ( e ) {
+					e.preventDefault();
+					openPopup();
+				} );
+			} else {
+				a.setAttribute( 'href', '/lien-he/#dang-ky' );
+			}
 		} );
 	}
 

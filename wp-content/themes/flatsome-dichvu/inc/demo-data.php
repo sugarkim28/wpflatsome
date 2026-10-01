@@ -37,9 +37,10 @@ return array(
 			'includes'  => "Tư vấn loại hình, tên công ty, vốn điều lệ, ngành nghề phù hợp\nKiểm tra trùng tên trên hệ thống đăng ký doanh nghiệp\nSoạn điều lệ và toàn bộ hồ sơ đăng ký\nNộp hồ sơ online, theo dõi và xử lý bổ sung\nKhắc con dấu, thông báo mẫu dấu (nếu có)\nGiao giấy chứng nhận đăng ký doanh nghiệp tận nơi",
 			'documents' => "Bản sao CCCD/hộ chiếu còn hiệu lực của chủ sở hữu/các thành viên góp vốn\nTên công ty dự kiến (2–3 phương án)\nĐịa chỉ trụ sở chính (có địa chỉ rõ ràng, không đặt tại căn hộ chung cư dùng để ở)\nVốn điều lệ và tỷ lệ góp vốn của từng thành viên\nNgành nghề dự kiến kinh doanh",
 			'process'   => $sgd_p_tl,
-			'packages'  => "Cơ bản | 1.000.000đ | Giấy chứng nhận đăng ký doanh nghiệp; Con dấu tròn doanh nghiệp; Soạn điều lệ, hồ sơ; Nộp hồ sơ, nhận kết quả; Giao tận nơi |
-Tiêu chuẩn | 2.500.000đ | Toàn bộ gói Cơ bản; Chữ ký số (token) 1 năm; Khai thuế ban đầu; Bảng hiệu công ty (mica); Tư vấn thuế, hóa đơn | *
-Trọn gói | 5.000.000đ | Toàn bộ gói Tiêu chuẩn; Hóa đơn điện tử 300 số; Mở tài khoản ngân hàng; Miễn phí kế toán quý đầu |",
+			'packages'  => "Khởi nghiệp | 1.000.000đ | Thời gian 3 – 5 ngày làm việc; Giấy phép kinh doanh + mã số thuế; Con dấu tròn công ty; Công bố thông tin thành lập | | |
+Cơ bản | 1.900.000đ | Thời gian 5 – 7 ngày làm việc; Toàn bộ gói Khởi nghiệp; Khai thuế ban đầu tại cơ quan thuế; Bảng hiệu công ty; Thông báo tài khoản ngân hàng | | 300.000đ | 1.400.000đ (khi dùng dịch vụ kế toán)
+Trọn gói | 4.500.000đ | Thời gian 7 – 10 ngày làm việc; Toàn bộ gói Cơ bản; Chữ ký số 1 năm; Hóa đơn điện tử 300 số | * | 500.000đ | 3.900.000đ (khi dùng dịch vụ kế toán)
+VIP | 6.500.000đ | Thời gian 7 – 10 ngày làm việc; Toàn bộ gói Trọn gói; Chữ ký số 3 năm; Dấu tên giám đốc; Hỗ trợ mở tài khoản ngân hàng | | 800.000đ | 5.800.000đ (khi dùng dịch vụ kế toán)",
 			'faq'       => "Thành lập công ty TNHH cần vốn tối thiểu bao nhiêu? | Với đa số ngành nghề, pháp luật không quy định vốn tối thiểu. Tuy nhiên vốn điều lệ nên phù hợp quy mô hoạt động; một số ngành nghề kinh doanh có điều kiện có yêu cầu vốn pháp định riêng.\nCông ty TNHH một thành viên và hai thành viên khác nhau thế nào? | Công ty TNHH một thành viên do một cá nhân hoặc tổ chức làm chủ sở hữu; công ty TNHH hai thành viên trở lên có từ 2 đến 50 thành viên góp vốn. Cả hai đều chịu trách nhiệm trong phạm vi vốn điều lệ.\nBao lâu phải góp đủ vốn điều lệ? | Thành viên phải góp đủ phần vốn đã cam kết trong thời hạn 90 ngày kể từ ngày được cấp giấy chứng nhận đăng ký doanh nghiệp (không kể thời gian vận chuyển, nhập khẩu tài sản góp vốn, làm thủ tục chuyển quyền sở hữu tài sản).\nTôi có phải đến cơ quan nhà nước không? | Không. Hồ sơ được nộp online, chúng tôi giao giấy chứng nhận và con dấu tận nơi.\nSau khi có giấy phép cần làm gì tiếp? | Treo bảng hiệu, mở tài khoản ngân hàng, đăng ký chữ ký số và hóa đơn điện tử, kê khai thuế ban đầu, góp vốn đúng hạn. Gói Trọn gói đã bao gồm các việc này.",
 			'content'   => array(
 				'Công ty TNHH phù hợp với ai?' => 'Công ty trách nhiệm hữu hạn là loại hình được lựa chọn nhiều nhất khi khởi nghiệp vì chủ sở hữu chỉ chịu trách nhiệm trong phạm vi vốn đã góp, cơ cấu quản lý gọn và dễ kiểm soát. Loại hình này phù hợp với doanh nghiệp gia đình, nhóm bạn cùng góp vốn hoặc cá nhân muốn kinh doanh chuyên nghiệp, xuất hóa đơn cho khách hàng là doanh nghiệp.',
@@ -331,7 +332,17 @@ Theo hồ sơ | Liên hệ | Trên 500 chứng từ/năm; Sản xuất, xây d�
 		array(
 			'slug'      => 'ke-toan-tron-goi',
 			'short'     => 'Kế toán doanh nghiệp',
-			'price_table'=> "## Bảng giá dịch vụ kế toán thuế trọn gói (tính theo quý)\nSố hóa đơn/quý | Dịch vụ – tư vấn | Thương mại | Xây dựng – sản xuất\nKhông có hóa đơn | 1.500.000đ | 1.500.000đ | 2.100.000đ\nDưới 10 | 2.400.000đ | 2.400.000đ | 3.300.000đ\nDưới 16 | 2.700.000đ | 2.700.000đ | 3.600.000đ\nDưới 31 | 3.600.000đ | 3.600.000đ | 4.800.000đ\nDưới 46 | 4.500.000đ | 4.500.000đ | 6.000.000đ\nTừ 46 trở lên | Báo giá theo số hóa đơn thực tế\n* Phí áp dụng cho 1 quý (3 tháng), chưa gồm thuế GTGT. Đã bao gồm báo cáo tài chính và quyết toán thuế cuối năm.\n* Doanh nghiệp xuất nhập khẩu (có tờ khai hải quan): cộng thêm theo số tờ khai – liên hệ để được báo giá.",
+			'price_table'=> "## Bảng giá dịch vụ kế toán thuế trọn gói (tính theo quý)\nSố hóa đơn/quý | Dịch vụ – tư vấn | Thương mại | Xây dựng – sản xuất\nKhông có hóa đơn | 1.500.000đ | 1.500.000đ | 2.100.000đ\nDưới 10 | 2.400.000đ | 2.400.000đ | 3.300.000đ\nDưới 16 | 2.700.000đ | 2.700.000đ | 3.600.000đ\nDưới 31 | 3.600.000đ | 3.600.000đ | 4.800.000đ\nDưới 46 | 4.500.000đ | 4.500.000đ | 6.000.000đ\nTừ 46 trở lên | Báo giá theo số hóa đơn thực tế\n* Phí áp dụng cho 1 quý (3 tháng), chưa gồm thuế GTGT. Đã bao gồm báo cáo tài chính và quyết toán thuế cuối năm.\n* Doanh nghiệp xuất nhập khẩu (có tờ khai hải quan): cộng thêm theo số tờ khai – liên hệ để được báo giá.
+## Phí khởi tạo & phí phát sinh
+Nhóm | Hạng mục | Chi phí | Ghi chú
+Khởi tạo ban đầu | Khai thuế ban đầu | 500.000đ | Miễn phí khi ký hợp đồng từ 6 tháng
+ | Phát hành hóa đơn lần đầu | 500.000đ | 
+ | Thông báo tài khoản ngân hàng | 200.000đ | 
+Phát sinh | Khai bổ sung, điều chỉnh | 20% phí tháng | Khi phát sinh điều chỉnh
+ | Giải trình quyết toán với cơ quan thuế | 2.000.000đ/năm | Miễn phí nếu không phát sinh
+Lao động – BHXH | Đăng ký lao động, BHXH lần đầu | 1.500.000đ | Từ 5 lao động trở xuống
+ | Báo tăng / giảm lao động | 300.000đ/lần | 
+* Bảng phí mẫu – chỉnh theo chính sách thật của công ty.",
 			'group'     => 'ke-toan',
 			'title'     => 'Kế toán trọn gói cho doanh nghiệp',
 			'excerpt'   => 'Dịch vụ kế toán thuế trọn gói theo tháng: kê khai thuế, sổ sách kế toán, báo cáo tài chính, quyết toán thuế năm. Chi phí cố định, tiết kiệm hơn thuê kế toán nội bộ.',
@@ -347,6 +358,7 @@ Theo hồ sơ | Liên hệ | Trên 500 chứng từ/năm; Sản xuất, xây d�
 			'faq'       => "Dịch vụ kế toán trọn gói có hợp pháp không? | Có. Doanh nghiệp được thuê dịch vụ kế toán của tổ chức, cá nhân đủ điều kiện kinh doanh dịch vụ kế toán theo Luật Kế toán. Hợp đồng và trách nhiệm được quy định rõ ràng.\nChi phí có tăng khi số hóa đơn tăng không? | Phí được tính theo số lượng chứng từ trung bình mỗi tháng. Khi quy mô thay đổi, chúng tôi báo trước và điều chỉnh theo bảng giá công khai.\nSố liệu có được bảo mật không? | Có. Hợp đồng có điều khoản bảo mật; nhân sự chỉ tiếp cận dữ liệu cần thiết cho công việc.\nTôi có thể theo dõi tình hình thuế không? | Có. Hằng tháng/quý chúng tôi gửi báo cáo số thuế phải nộp, doanh thu – chi phí và các lưu ý cho chủ doanh nghiệp.",
 			'content'   => array(
 				'Vì sao doanh nghiệp nhỏ nên thuê kế toán dịch vụ?' => 'Với doanh nghiệp vừa và nhỏ, khối lượng chứng từ thường chưa đủ để duy trì một kế toán toàn thời gian, trong khi yêu cầu chuyên môn về thuế lại cao. Dịch vụ kế toán trọn gói giúp tiết kiệm chi phí lương, bảo hiểm, phần mềm; đồng thời được một đội ngũ có kinh nghiệm theo dõi, giảm rủi ro sai sót.',
+				'So sánh kế toán dịch vụ và kế toán nội bộ' => '<table><tr><td>Tiêu chí</td><td>Kế toán dịch vụ trọn gói</td><td>Thuê kế toán nội bộ</td></tr><tr><td>Chi phí</td><td>Từ 500.000đ/tháng, tính theo khối lượng chứng từ</td><td>Lương, bảo hiểm, phúc lợi và chi phí quản lý hằng tháng</td></tr><tr><td>Phạm vi</td><td>Kê khai thuế, sổ sách, báo cáo tài chính, quyết toán</td><td>Thu chi, kho, lương, quản trị nội bộ và các việc được giao</td></tr><tr><td>Tính liên tục</td><td>Không gián đoạn khi thay đổi nhân sự</td><td>Có thể gián đoạn khi kế toán nghỉ việc</td></tr><tr><td>Trách nhiệm</td><td>Theo hợp đồng dịch vụ, có cam kết bảo mật</td><td>Doanh nghiệp tự quản lý, chịu trách nhiệm chính</td></tr><tr><td>Phù hợp</td><td>Doanh nghiệp nhỏ, vừa, mới thành lập</td><td>Doanh nghiệp quy mô lớn, cần kiểm soát nội bộ chặt chẽ</td></tr></table>',
 				'Cam kết của chúng tôi' => 'Nộp tờ khai đúng hạn; nếu bị phạt do lỗi của chúng tôi, chúng tôi chịu toàn bộ tiền phạt. Báo cáo minh bạch, giải thích số liệu dễ hiểu cho chủ doanh nghiệp. Bàn giao đầy đủ sổ sách khi kết thúc hợp đồng.',
 			),
 		),

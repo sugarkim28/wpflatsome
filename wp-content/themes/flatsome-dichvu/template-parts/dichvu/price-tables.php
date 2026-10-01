@@ -36,15 +36,34 @@ $sgd_tables = sgd_price_tables( $sgd_id );
 				</tr></thead>
 			<?php endif; ?>
 			<tbody>
-				<?php foreach ( $sgd_t['rows'] as $sgd_r ) : ?>
+				<?php
+				// Ô đầu để trống → gộp với ô phía trên (rowspan), dùng cho bảng chia theo nhóm.
+				$sgd_spans = array();
+				$sgd_last  = -1;
+				foreach ( $sgd_t['rows'] as $sgd_k => $sgd_r ) {
+					if ( '' === $sgd_r[0] && $sgd_last >= 0 ) {
+						++$sgd_spans[ $sgd_last ];
+						$sgd_spans[ $sgd_k ] = 0;
+					} else {
+						$sgd_spans[ $sgd_k ] = 1;
+						$sgd_last            = $sgd_k;
+					}
+				}
+				?>
+				<?php foreach ( $sgd_t['rows'] as $sgd_k => $sgd_r ) : ?>
 					<tr>
 						<?php foreach ( $sgd_r as $sgd_i => $sgd_cell ) : ?>
+							<?php
+							if ( 0 === $sgd_i && 0 === $sgd_spans[ $sgd_k ] ) {
+								continue;
+							}
+							?>
 							<?php
 							// Dòng ít ô hơn số cột: ô cuối trải hết phần còn lại.
 							$sgd_span = ( count( $sgd_r ) - 1 === $sgd_i && count( $sgd_r ) < $sgd_cols ) ? $sgd_cols - $sgd_i : 1;
 							?>
 							<?php if ( 0 === $sgd_i ) : ?>
-								<th scope="row"><?php echo esc_html( $sgd_cell ); ?></th>
+								<th scope="row"<?php echo $sgd_spans[ $sgd_k ] > 1 ? ' rowspan="' . esc_attr( $sgd_spans[ $sgd_k ] ) . '"' : ''; ?>><?php echo esc_html( $sgd_cell ); ?></th>
 							<?php else : ?>
 								<td<?php echo $sgd_span > 1 ? ' colspan="' . esc_attr( $sgd_span ) . '"' : ''; ?>><?php echo esc_html( $sgd_cell ); ?></td>
 							<?php endif; ?>

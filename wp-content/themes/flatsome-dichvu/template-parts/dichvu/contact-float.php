@@ -28,3 +28,23 @@ $sgd_msg  = $sgd_msg ? 'https://m.me/' . rawurlencode( preg_replace( '#^.*(?:m\.
 		<a href="#dang-ky" class="sgd-mbar__cta"><?php echo sgd_icon( 'doc' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><span>Nhận báo giá</span></a>
 	<?php endif; ?>
 </nav>
+<div class="sgd-popup" id="sgd-popup" role="dialog" aria-modal="true" aria-labelledby="sgd-popup-title" hidden data-delay="<?php echo esc_attr( absint( sgd_opt( 'popup_delay' ) ) ); ?>">
+	<div class="sgd-popup__box">
+		<button type="button" class="sgd-popup__close" aria-label="Đóng">&times;</button>
+		<p class="sgd-popup__title" id="sgd-popup-title"><?php echo esc_html( sgd_opt( 'popup_title' ) ); ?></p>
+		<p class="sgd-popup__sub"><?php echo esc_html( sgd_opt( 'popup_sub' ) ); ?></p>
+		<?php
+		get_template_part(
+			'template-parts/dichvu/lead-form',
+			null,
+			array(
+				'title'   => '',
+				'button'  => 'Gửi yêu cầu ngay',
+				'source'  => 'Popup',
+				'service' => is_singular( 'dich_vu' ) ? get_the_ID() : 0,
+				'perks'   => false,
+			)
+		);
+		?>
+	</div>
+</div>

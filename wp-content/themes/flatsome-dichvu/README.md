@@ -4,6 +4,8 @@ Theme con của **Flatsome** cho công ty dịch vụ doanh nghiệp: thành l�
 
 Giao diện theo phong cách trang tin dịch vụ (tham khảo bố cục ketoananpha.vn, không dùng logo/ảnh/nội dung của họ): chữ Nunito, xanh `#2a4d9f` + cam `#fd6c2b`, header nền xám nhạt (logo + hotline theo khu vực, menu chữ in hoa ở thanh dưới), trang chủ dạng lưới banner + khối chuyên mục có cột phải, trang dịch vụ dạng bài viết (mục lục khung cam, bảng chi phí, bảng giá ma trận, nút *Gọi ngay* theo miền, cột phải *Dịch vụ liên quan / Tham khảo thêm*), footer liệt kê văn phòng/chi nhánh, thanh 3 nút Gọi – Zalo – Messenger trên điện thoại.
 
+Bổ sung theo bố cục timsen.vn: thanh trên cùng màu xanh (khẩu hiệu, *Gửi yêu cầu tư vấn*, hotline, Facebook/YouTube), nút menu nổi bật *Tư vấn miễn phí*, khối giới thiệu, lưới *Dịch vụ của chúng tôi* (icon giữa), dải kêu gọi nền xanh, 4 gói thành lập có *Tiết kiệm* và *Còn … khi dùng dịch vụ kế toán*, khối *Tại sao nên chọn* (số liệu + danh sách tích), quy trình 4 bước nhiều màu, lưới *Có gì mới?*, form lớn cuối trang, popup form tự mở (viền cam nét đứt), footer nền xanh đậm 4 cột.
+
 ## Cài đặt
 
 1. Tải thư mục `flatsome-dichvu` lên `wp-content/themes/` (cần theme cha **Flatsome**, không kích hoạt theme cha).
@@ -12,10 +14,12 @@ Giao diện theo phong cách trang tin dịch vụ (tham khảo bố cục ketoa
    - *Hotline theo khu vực* – mỗi dòng `Nhãn | Số` (vd `Miền Nam | 0900 000 000`) → hiện ở header và khối *Gọi ngay*.
    - *Messenger* – tên trang Facebook → nút Messenger nổi + trên thanh điện thoại.
    - *Văn phòng / chi nhánh* – mỗi dòng `Tên | Địa chỉ | Điện thoại (nhiều số cách dấu phẩy) | Email` → footer.
+   - *Câu khẩu hiệu trên thanh trên cùng*, *Facebook*, *YouTube* → thanh trên cùng.
+   - Mục *Form tư vấn*: *Popup form tự mở sau N giây* (mặc định 25, mỗi phiên 1 lần, 0 = tắt), tiêu đề và dòng phụ của popup. Liên kết `#dang-ky` (vd nút menu *Tư vấn miễn phí*) ở trang không có form sẽ mở popup.
 4. **Giao diện → Tạo site mẫu** → bấm **Tạo site mẫu** (dựng 5 nhóm, 20 dịch vụ, trang chủ, bảng giá, giới thiệu, liên hệ, kiến thức, menu, footer, header).
 5. **Khách đăng ký → Cài đặt email**: nhập Gmail + mật khẩu ứng dụng → *Gửi email thử*.
 6. **Tuỳ biến → Header → Logo**: tải logo (chưa có logo thì hiện tên công ty dạng chữ).
-7. **Header**: trình tạo đặt phần tử *HTML 3* (nội dung `[sgd_hotlines style="header"]`) bên phải logo và menu ở *Header Bottom*. Nếu bản Flatsome của bạn đặt tên phần tử khác, vào **Flatsome → Header Builder** kéo một phần tử HTML vào bên phải logo và dán shortcode trên.
+7. **Header**: thanh trên cùng dùng phần tử *HTML* (trái, `[sgd_topbar side="left"]`) và *HTML 2* (phải, `[sgd_topbar side="right"]`); trình tạo đặt phần tử *HTML 3* (nội dung `[sgd_hotlines style="header"]`) bên phải logo và menu ở *Header Bottom*. Nếu bản Flatsome của bạn đặt tên phần tử khác, vào **Flatsome → Header Builder** kéo một phần tử HTML vào bên phải logo và dán shortcode trên.
 8. **Sửa giá**: giá trong dữ liệu mẫu chỉ để minh hoạ (mức tham khảo thị trường). Vào **Dịch vụ** → sửa từng dịch vụ → ô *Giá hiển thị* và *Bảng giá*. Đọc lại nội dung, FAQ và quy định trước khi chạy quảng cáo.
 
 ## Cấu trúc website
@@ -46,7 +50,9 @@ Nhóm & dịch vụ mẫu:
 - **Thông tin dịch vụ** (hộp bên dưới):
   - *Tên ngắn trên banner*, *Giá hiển thị*, *Thời gian hoàn thành*, *Icon*. Chưa có ảnh đại diện thì theme tự vẽ banner (tên ngắn + giá); có ảnh đại diện thì dùng ảnh.
   - *Chi phí trọn gói*: mỗi dòng `Khoản | Số tiền`; dòng bắt đầu bằng "Tổng" được tô đậm.
-  - *Bảng giá dạng bảng*: dòng `## Tiêu đề` mở bảng, dòng kế là tiêu đề cột, các dòng sau `Ô 1 | Ô 2 | …` (dòng ít ô hơn thì ô cuối tự trải hết hàng), dòng `* ...` là ghi chú.
+  - *Bảng giá dạng bảng*: dòng `## Tiêu đề` mở bảng, dòng kế là tiêu đề cột, các dòng sau `Ô 1 | Ô 2 | …` (dòng ít ô hơn thì ô cuối tự trải hết hàng; để trống ô đầu `  | …` thì gộp với ô nhóm phía trên), dòng `* ...` là ghi chú.
+  - *Các gói*: `Tên | Giá | ý 1; ý 2 | * | Tiết kiệm | Giá ưu đãi (ghi chú)` – vd `Cơ bản | 1.900.000đ | … | | 300.000đ | 1.400.000đ (khi dùng dịch vụ kế toán)`.
+  - Trong *Nội dung* có thể chèn bảng (bảng so sánh…): hàng đầu tự tô nền xanh; *Tiêu đề 3* hiện màu đỏ.
   - *Công việc chúng tôi thực hiện*, *Hồ sơ khách hàng cần chuẩn bị*: mỗi dòng 1 ý.
   - *Quy trình*: mỗi dòng `Bước | Mô tả`.
   - *Bảng giá*: mỗi dòng `Tên gói | Giá | ý 1; ý 2; ý 3 | *` (dấu `*` ở cột cuối = gói nổi bật). Bấm *Chọn gói này* trên web sẽ tự ghi tên gói vào form.
@@ -61,11 +67,13 @@ Nhóm & dịch vụ mẫu:
 [sgd_featured ids="slug1,slug2,slug3,slug4"]           – lưới banner 1 lớn + 3 (trống = 4 dịch vụ nổi bật)
 [sgd_htab text="Tiêu đề" link="/dich-vu/"]             – tiêu đề khối dạng thẻ
 [sgd_group_block group="ke-toan" number="5"]           – khối chuyên mục: 1 dịch vụ lớn + danh sách
-[sgd_posts number="5" category=""]                     – bài viết kiểu tạp chí
 [sgd_hotlines style="pills|header" title="Gọi ngay"]   – hotline theo khu vực
 [sgd_branches]                                         – văn phòng / chi nhánh
 [sgd_sidebar form="1"]                                 – cột phải (form, dịch vụ nổi bật, bài viết)
-[sgd_groups columns="4" services="4"]                  – các nhóm dịch vụ kèm dịch vụ con
+[sgd_groups columns="3" services="3" style="card|simple"] – các nhóm dịch vụ kèm dịch vụ con
+[sgd_title text="Có gì mới?" sub=""]                   – tiêu đề giữa, kẻ ngang hai bên
+[sgd_posts number="4" style="magazine|grid|links"]     – bài viết
+[sgd_topbar side="left|right"]                         – nội dung thanh trên cùng
 [sgd_services number="6" columns="3" featured="1" group="dich-vu-thue" layout="grid|list|mini"]
 [sgd_pricing service="ke-toan-tron-goi" show="all|table|packages"] – chi phí, bảng giá, các gói của 1 dịch vụ
 [sgd_price_table group="ke-toan"]                      – bảng phí tóm tắt

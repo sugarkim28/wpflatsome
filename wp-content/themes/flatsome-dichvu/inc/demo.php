@@ -175,7 +175,8 @@ function sgd_demo_build() {
 	foreach ( $data['services'] as $i => $s ) {
 		$content = '';
 		foreach ( $s['content'] as $h => $p ) {
-			$content .= '<h2>' . esc_html( $h ) . "</h2>\n<p>" . esc_html( $p ) . "</p>\n";
+			// Đoạn bắt đầu bằng "<" là HTML soạn sẵn (bảng so sánh…), giữ nguyên.
+			$content .= '<h2>' . esc_html( $h ) . "</h2>\n" . ( 0 === strpos( $p, '<' ) ? $p : '<p>' . esc_html( $p ) . '</p>' ) . "\n";
 		}
 		$id = sgd_demo_post(
 			array(
@@ -280,7 +281,7 @@ function sgd_demo_build() {
 	if ( $block && ! is_wp_error( $block ) ) {
 		set_theme_mod( 'footer_block', 'footer-website' );
 	}
-	set_theme_mod( 'footer_left_text', '© [ux_current_year] <strong>' . esc_html( sgd_opt( 'company_full' ) ) . '</strong> giữ bản quyền nội dung trên website này.' );
+	set_theme_mod( 'footer_left_text', 'Copyright [ux_current_year] © <strong>' . esc_html( sgd_opt( 'company_full' ) ) . '</strong>. All rights reserved.' );
 	set_theme_mod( 'footer_right_text', '' );
 
 	// 6. Menu.
@@ -305,10 +306,10 @@ function sgd_demo_build() {
 		return wp_update_nav_menu_item( $menu_id, 0, $item );
 	};
 	$short = array(
-		'thanh-lap-doanh-nghiep' => 'Dịch vụ thành lập',
+		'thanh-lap-doanh-nghiep' => 'Thành lập',
 		'thay-doi-giay-phep'     => 'Thay đổi GPKD',
-		'dich-vu-thue'           => 'Dịch vụ thuế',
-		'ke-toan'                => 'Dịch vụ kế toán',
+		'dich-vu-thue'           => 'Thuế',
+		'ke-toan'                => 'Kế toán',
 		'dich-vu-khac'           => 'Dịch vụ khác',
 	);
 	$add( 'Giới thiệu', get_permalink( $about ) );
@@ -321,6 +322,7 @@ function sgd_demo_build() {
 		}
 	}
 	$add( 'Bảng giá', get_permalink( $pricing ) );
+	$add( 'Tư vấn miễn phí', '#dang-ky', 0, array( 'menu-item-url' => '#dang-ky', 'menu-item-type' => 'custom', 'menu-item-classes' => 'sgd-menu-cta' ) );
 	$add( 'Kiến thức', get_permalink( $news ) );
 	$add( 'Liên hệ', get_permalink( $contact ) );
 	$loc                   = get_theme_mod( 'nav_menu_locations', array() );
@@ -353,7 +355,14 @@ function sgd_demo_build() {
 	set_theme_mod( 'type_nav_bottom_color_hover', sgd_opt( 'color_primary' ) );
 	set_theme_mod( 'header_sticky', 1 );
 	set_theme_mod( 'sticky_style', 'jump' );
-	set_theme_mod( 'topbar_show', 0 );
+	set_theme_mod( 'topbar_show', 1 );
+	set_theme_mod( 'topbar_bg', '#1059a8' );
+	set_theme_mod( 'topbar_color', 'dark' );
+	set_theme_mod( 'topbar_elements_left', array( 'html' ) );
+	set_theme_mod( 'topbar_elements_center', array() );
+	set_theme_mod( 'topbar_elements_right', array( 'html-2' ) );
+	set_theme_mod( 'topbar_left', '[sgd_topbar side="left"]' );
+	set_theme_mod( 'topbar_right', '[sgd_topbar side="right"]' );
 	set_theme_mod( 'header_button_1', 'Hotline ' . $hot );
 	set_theme_mod( 'header_button_1_link', 'tel:' . sgd_tel( $hot ) );
 	set_theme_mod( 'color_primary', sgd_opt( 'color_primary' ) );
@@ -388,14 +397,82 @@ function sgd_demo_home_content() {
 [/col]
 [/row]
 [/section]
-[section label="Số liệu" bg_color="#ffffff" padding="10px"]
+[section label="Giới thiệu" bg_color="#ffffff" padding="30px" class="sgd-intro"]
 [row]
 [col span="12"]
-<div class="sgd-stats"><div class="sgd-stat"><strong>3–5</strong><span>ngày có giấy phép</span></div><div class="sgd-stat"><strong>250K</strong><span>phí thành lập công ty</span></div><div class="sgd-stat"><strong>500K</strong><span>kế toán trọn gói/tháng</span></div><div class="sgd-stat"><strong>0đ</strong><span>phí tư vấn – không phát sinh</span></div></div>
+<p class="sgd-intro__h">Giúp bạn <b>thành lập và quản lý công ty</b> dễ dàng, hiệu quả!</p>
+<div class="sgd-intro__line"></div>
+<h3>Vì sao doanh nghiệp chọn ' . $company . '?</h3>
+<p><strong>' . $company . '</strong> cung cấp trọn gói dịch vụ pháp lý – thuế – kế toán cho doanh nghiệp vừa và nhỏ: từ <strong>thành lập công ty</strong>, <strong>thay đổi giấy phép kinh doanh</strong> đến <strong>kê khai thuế, kế toán trọn gói</strong> và quyết toán cuối năm. Báo giá rõ ràng, làm hồ sơ online, giao nhận tận nơi. <em>(Đoạn giới thiệu mẫu – thay bằng số năm kinh nghiệm, số khách hàng, chứng nhận thật của công ty.)</em></p>
 [/col]
 [/row]
 [/section]
-[section label="Chuyên mục dịch vụ" bg_color="#ffffff" padding="30px"]
+[section label="Dịch vụ" bg_color="#ffffff" padding="20px"]
+[row]
+[col span="12"]
+[sgd_title text="Dịch vụ của chúng tôi"]
+[sgd_groups columns="3" services="3" style="simple"]
+[/col]
+[/row]
+[/section]
+[section label="Kêu gọi" bg_color="#1059a8" dark="true" padding="44px" class="sgd-band"]
+[row]
+[col span="12"]
+<p class="sgd-band__text">Hỗ trợ hoàn tất thủ tục thành lập công ty và kế toán của bạn nhanh chóng, dễ dàng hơn – với các gói dịch vụ chi phí hợp lý.</p>
+<div class="sgd-band__btns"><a href="#dang-ky">Đăng ký ngay</a><a href="/bang-gia/">Xem bảng giá</a></div>
+[/col]
+[/row]
+[/section]
+[section label="Gói thành lập" bg_color="#ffffff" padding="50px"]
+[row]
+[col span="12"]
+[sgd_title text="Lựa chọn gói dịch vụ phù hợp" sub="Gói thành lập công ty trọn gói – giá ưu đãi hơn khi dùng kèm dịch vụ kế toán"]
+[sgd_pricing service="thanh-lap-cong-ty-tnhh" show="packages"]
+[/col]
+[/row]
+[/section]
+[section label="Bảng giá kế toán" bg_color="#f8f9fa" padding="44px"]
+[row]
+[col span="12"]
+[sgd_htab text="Bảng giá dịch vụ kế toán thuế trọn gói" link="/dich-vu/ke-toan-tron-goi/" more="Xem chi tiết"]
+[sgd_pricing service="ke-toan-tron-goi" show="table"]
+[sgd_hotlines title="Gọi ngay để được báo giá"]
+[/col]
+[/row]
+[/section]
+[section label="Vì sao chọn" bg_color="#ffffff" padding="50px"]
+[row]
+[col span="12"]
+<div class="sgd-whybox">
+<div class="sgd-whybox__panel"><div class="sgd-stats"><div class="sgd-stat"><strong>3–5</strong><span>ngày có giấy phép</span></div><div class="sgd-stat"><strong>250K</strong><span>phí dịch vụ thành lập</span></div><div class="sgd-stat"><strong>500K</strong><span>kế toán trọn gói/tháng</span></div><div class="sgd-stat"><strong>0đ</strong><span>phí tư vấn</span></div></div></div>
+<div>
+<h2>Tại sao nên chọn <b>' . $company . '</b>?</h2>
+<ul class="sgd-whylist">
+<li><strong>Chuyên nghiệp – tận tâm</strong><span>Chuyên viên pháp lý, kế toán giàu kinh nghiệm, mỗi khách hàng có người phụ trách riêng.</span></li>
+<li><strong>Tiết kiệm chi phí &amp; thời gian</strong><span>Giá trọn gói, làm hồ sơ online, giao nhận tận nơi.</span></li>
+<li><strong>Hỗ trợ nhanh qua Zalo</strong><span>Giải đáp trong giờ hành chính, cập nhật tiến độ hồ sơ thường xuyên.</span></li>
+<li><strong>Bảo mật – an toàn</strong><span>Cam kết bảo mật thông tin, số liệu của doanh nghiệp theo hợp đồng.</span></li>
+<li><strong>Đồng hành lâu dài</strong><span>Sau thành lập tiếp tục hỗ trợ thuế, kế toán, thay đổi giấy phép.</span></li>
+</ul>
+</div>
+</div>
+[/col]
+[/row]
+[/section]
+[section label="Quy trình" bg_color="#f2f6fb" padding="50px"]
+[row]
+[col span="12"]
+[sgd_title text="Quy trình làm việc"]
+[sgd_steps layout="row"]
+Tiếp nhận thông tin | Lắng nghe nhu cầu, tư vấn quy định và báo giá trọn gói miễn phí
+Tiến hành xử lý | Soạn hồ sơ theo quy trình chuẩn, gửi khách ký tại nhà hoặc ký số
+Cập nhật tiến độ | Nộp hồ sơ, theo dõi và báo tiến độ qua Zalo cho khách hàng
+Bàn giao hồ sơ | Giao giấy phép, con dấu, hồ sơ lưu trữ tận nơi và hướng dẫn việc tiếp theo
+[/sgd_steps]
+[/col]
+[/row]
+[/section]
+[section label="Chuyên mục dịch vụ" bg_color="#ffffff" padding="44px"]
 [row]
 [col span="8" span__sm="12"]
 [sgd_group_block group="thanh-lap-doanh-nghiep" number="5"]
@@ -408,48 +485,25 @@ function sgd_demo_home_content() {
 [sgd_htab text="Bảng giá nhanh" link="/bang-gia/" more=""]
 [sgd_services number="8" featured="1" layout="mini"]
 [gap height="26px"]
-[sgd_htab text="Tư vấn miễn phí" more=""]
-<div id="dang-ky"></div>
-[sgd_lead_form source="Trang chủ" perks="1" title=""]
-[gap height="26px"]
 [sgd_htab text="Chia sẻ kinh nghiệm" link="/tin-tuc/" more=""]
 [sgd_posts number="4"]
 [/col]
 [/row]
 [/section]
-[section label="Bảng giá kế toán" bg_color="#f8f9fa" padding="40px"]
+[section label="Có gì mới" bg_color="#ffffff" padding="20px"]
 [row]
 [col span="12"]
-[sgd_htab text="Bảng giá thành lập công ty TNHH" link="/dich-vu/thanh-lap-cong-ty-tnhh/" more="Xem chi tiết"]
-[sgd_pricing service="thanh-lap-cong-ty-tnhh"]
-[gap height="20px"]
-[sgd_htab text="Bảng giá dịch vụ kế toán thuế trọn gói" link="/dich-vu/ke-toan-tron-goi/" more="Xem chi tiết"]
-[sgd_pricing service="ke-toan-tron-goi" show="table"]
-[sgd_hotlines title="Gọi ngay để được báo giá"]
+[sgd_title text="Có gì mới?"]
+[sgd_posts number="4" style="grid" columns="4"]
 [/col]
 [/row]
 [/section]
-[section label="Vì sao chọn" bg_color="#ffffff" padding="40px"]
+[section label="Đăng ký" bg_color="#eef3fb" padding="50px"]
+<div id="dang-ky"></div>
 [row]
 [col span="12"]
-[sgd_htab text="Vì sao chọn ' . esc_attr( sgd_opt( 'company' ) ) . '"]
-[/col]
-[/row]
-[row]
-[col span="3" span__sm="6"]<div class="sgd-why">[sgd_icon name="wallet"]<h3>Giá trọn gói</h3><p>Báo giá công khai, ghi rõ trong hợp đồng, không phát sinh.</p></div>[/col]
-[col span="3" span__sm="6"]<div class="sgd-why">[sgd_icon name="clock"]<h3>Nhanh – đúng hẹn</h3><p>Hồ sơ soạn trong ngày, có giấy phép sau 3 – 5 ngày làm việc.</p></div>[/col]
-[col span="3" span__sm="6"]<div class="sgd-why">[sgd_icon name="pin"]<h3>Giao nhận tận nơi</h3><p>Trình ký và bàn giao kết quả tận nhà, miễn phí.</p></div>[/col]
-[col span="3" span__sm="6"]<div class="sgd-why">[sgd_icon name="users"]<h3>Chuyên viên riêng</h3><p>Mỗi khách hàng có chuyên viên phụ trách, hỗ trợ qua Zalo.</p></div>[/col]
-[/row]
-[row]
-[col span="12"]
-[sgd_htab text="Quy trình làm việc"]
-[sgd_steps layout="row"]
-Tư vấn miễn phí | Gọi hotline hoặc để lại thông tin, chuyên viên tư vấn và báo giá trọn gói
-Soạn hồ sơ | Chúng tôi soạn toàn bộ hồ sơ, gửi bạn ký tại nhà hoặc ký số
-Nộp &amp; theo dõi | Nộp hồ sơ tới cơ quan nhà nước, cập nhật tiến độ qua Zalo
-Bàn giao kết quả | Giao giấy phép, con dấu, hồ sơ tận nơi và hướng dẫn việc tiếp theo
-[/sgd_steps]
+[sgd_title text="Bắt đầu từ một cuộc trò chuyện nhỏ" sub="Để lại yêu cầu bên dưới – chuyên viên sẽ gọi lại tư vấn miễn phí"]
+<div class="sgd-bigform">[sgd_lead_form source="Trang chủ" perks="0" title="" button="Gửi yêu cầu"]</div>
 [/col]
 [/row]
 [/section]';
@@ -560,26 +614,42 @@ function sgd_demo_contact_content() {
  * @return string
  */
 function sgd_demo_footer_content( $groups, $pages ) {
-	$p = '';
+	$g = '';
 	foreach ( $groups as $tid ) {
 		$t = get_term( $tid, 'nhom_dich_vu' );
 		if ( $t && ! is_wp_error( $t ) ) {
-			$p .= '<li><a href="' . esc_url( get_term_link( $t ) ) . '">' . esc_html( $t->name ) . '</a></li>';
+			$g .= '<li><a href="' . esc_url( get_term_link( $t ) ) . '">' . esc_html( $t->name ) . '</a></li>';
 		}
 	}
-	foreach ( array( 'pricing' => 'Bảng giá', 'about' => 'Giới thiệu', 'news' => 'Kiến thức', 'contact' => 'Liên hệ' ) as $k => $label ) {
+	$p = '';
+	foreach ( array( 'pricing' => 'Bảng giá dịch vụ', 'about' => 'Giới thiệu', 'news' => 'Kiến thức', 'contact' => 'Liên hệ' ) as $k => $label ) {
 		if ( ! empty( $pages[ $k ] ) ) {
 			$p .= '<li><a href="' . esc_url( get_permalink( $pages[ $k ] ) ) . '">' . esc_html( $label ) . '</a></li>';
 		}
 	}
-	return '[section bg_color="#ffffff" padding="10px" class="sgd-footer"]
+	return '[section bg_color="#0f2c55" dark="true" padding="44px" class="sgd-footer--dark"]
+[row]
+[col span="4" span__sm="12"]
+<p class="sgd-footer__logo">[sgd_company field="company"]</p>
+<h3>[sgd_company field="company_full"]</h3>
+<p>[sgd_company field="address"]<br>Hotline: [sgd_company field="hotline"]<br>Email: [sgd_company field="email"]<br>MST: [sgd_company field="tax_code"]<br>Giờ làm việc: [sgd_company field="working_hours"]</p>
+[/col]
+[col span="3" span__sm="6"]
+<p class="sgd-footer__h">Dịch vụ</p>
+<ul><li><a href="/dich-vu/">Tất cả dịch vụ</a></li>' . $g . '</ul>
+[/col]
+[col span="2" span__sm="6"]
+<p class="sgd-footer__h">Thông tin</p>
+<ul>' . $p . '</ul>
+[/col]
+[col span="3" span__sm="12"]
+<p class="sgd-footer__h">Tin nổi bật</p>
+[sgd_posts number="4" style="links"]
+[/col]
+[/row]
 [row]
 [col span="12"]
-<div class="sgd-footer__brand"><span>[sgd_icon name="building"]</span></div>
-<p class="sgd-footer__name">[sgd_company field="company_full"]</p>
-<p class="sgd-footer__tag">[sgd_company field="tagline"] · MST: [sgd_company field="tax_code"] · [sgd_company field="working_hours"]</p>
 [sgd_branches]
-<ul class="sgd-footer__links">' . $p . '</ul>
 [/col]
 [/row]
 [/section]';

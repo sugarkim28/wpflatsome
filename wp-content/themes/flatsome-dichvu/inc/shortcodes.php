@@ -4,7 +4,10 @@
  *  [sgd_featured ids="slug1,slug2,slug3,slug4"]  – lưới banner nổi bật (1 lớn + 3), trống = 4 dịch vụ nổi bật
  *  [sgd_htab text="" link=""]                   – tiêu đề khối dạng thẻ
  *  [sgd_group_block group="slug" number="5"]    – khối chuyên mục: 1 dịch vụ lớn + danh sách
- *  [sgd_posts number="5" category=""]            – bài viết kiểu tạp chí
+ *  [sgd_posts number="5" category="" style="magazine|grid|links" columns="4"] – bài viết
+ *  [sgd_title text="" sub=""]                    – tiêu đề giữa, kẻ ngang hai bên
+ *  [sgd_topbar side="left|right"]                – nội dung thanh trên cùng (Flatsome Top Bar)
+ *  [sgd_groups style="card|simple"]              – simple: icon giữa, tiêu đề in hoa, 3 dòng dịch vụ
  *  [sgd_services number="6" columns="3" featured="1" group="thanh-lap-doanh-nghiep" layout="grid|list|mini" tag="h3"]
  *  [sgd_hotlines style="pills|header"]           – hotline theo khu vực
  *  [sgd_branches]                                – văn phòng / chi nhánh
@@ -221,7 +224,7 @@ add_shortcode( 'sgd_group_block', 'sgd_sc_group_block' );
  * @return string
  */
 function sgd_sc_posts( $atts ) {
-	$a     = shortcode_atts( array( 'number' => 5, 'category' => '' ), $atts, 'sgd_posts' );
+	$a     = shortcode_atts( array( 'number' => 5, 'category' => '', 'style' => 'magazine', 'columns' => 4 ), $atts, 'sgd_posts' );
 	$posts = get_posts(
 		array(
 			'post_type'           => 'post',
@@ -233,6 +236,23 @@ function sgd_sc_posts( $atts ) {
 	);
 	if ( ! $posts ) {
 		return '';
+	}
+	if ( 'links' === $a['style'] ) {
+		$out = '<ul class="sgd-plinks">';
+		foreach ( $posts as $p ) {
+			$out .= '<li><a href="' . esc_url( get_permalink( $p ) ) . '">' . esc_html( get_the_title( $p ) ) . '</a></li>';
+		}
+		return $out . '</ul>';
+	}
+	if ( 'grid' === $a['style'] ) {
+		$out = '<div class="sgd-pgrid sgd-grid sgd-grid--' . absint( $a['columns'] ) . '">';
+		foreach ( $posts as $p ) {
+			$link  = esc_url( get_permalink( $p ) );
+			$thumb = has_post_thumbnail( $p ) ? get_the_post_thumbnail( $p, 'medium_large', array( 'loading' => 'lazy' ) ) : '<span class="sgd-post__noimg">' . sgd_icon( 'doc' ) . '</span>';
+			$out  .= '<article class="sgd-pcard"><a class="sgd-pcard__img" href="' . $link . '" tabindex="-1" aria-hidden="true">' . $thumb . '</a>'
+				. '<h3 class="sgd-pcard__title"><a href="' . $link . '">' . esc_html( get_the_title( $p ) ) . '</a></h3></article>';
+		}
+		return $out . '</div>';
 	}
 	$out = '<div class="sgd-gblock sgd-posts">';
 	foreach ( $posts as $i => $p ) {
@@ -321,7 +341,7 @@ add_shortcode( 'sgd_sidebar', 'sgd_sc_sidebar' );
  * @return string
  */
 function sgd_sc_groups( $atts ) {
-	$a     = shortcode_atts( array( 'columns' => 4, 'services' => 4 ), $atts, 'sgd_groups' );
+	$a     = shortcode_atts( array( 'columns' => 4, 'services' => 4, 'style' => 'card' ), $atts, 'sgd_groups' );
 	$terms = get_terms( array( 'taxonomy' => 'nhom_dich_vu', 'hide_empty' => false, 'parent' => 0, 'orderby' => 'name' ) );
 	if ( ! $terms || is_wp_error( $terms ) ) {
 		return '';
@@ -332,7 +352,7 @@ function sgd_sc_groups( $atts ) {
 			return (int) get_term_meta( $x->term_id, '_sgd_order', true ) - (int) get_term_meta( $y->term_id, '_sgd_order', true );
 		}
 	);
-	$out = '<div class="sgd-groups sgd-grid sgd-grid--' . absint( $a['columns'] ) . '">';
+	$out = '<div class="sgd-groups sgd-groups--' . esc_attr( sanitize_key( $a['style'] ) ) . ' sgd-grid sgd-grid--' . absint( $a['columns'] ) . '">';
 	foreach ( $terms as $t ) {
 		$link  = get_term_link( $t );
 		$posts = get_posts(
@@ -509,3 +529,40 @@ function sgd_sc_price_table( $atts ) {
 	return $out . '</tbody></table></div>';
 }
 add_shortcode( 'sgd_price_table', 'sgd_sc_price_table' );
+
+/**
+ * Tiêu đề giữa trang có kẻ ngang hai bên (+ dòng phụ).
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function sgd_sc_title( $atts ) {
+	$a   = shortcode_atts( array( 'text' => '', 'sub' => '', 'tag' => 'h2' ), $atts, 'sgd_title' );
+	$tag = in_array( $a['tag'], array( 'h1', 'h2', 'h3' ), true ) ? $a['tag'] : 'h2';
+	return '<div class="sgd-ltitle"><' . $tag . ' class="sgd-ltitle__text"><span>' . esc_html( $a['text'] ) . '</span></' . $tag . '>'
+		. ( $a['sub'] ? '<p class="sgd-ltitle__sub">' . esc_html( $a['sub'] ) . '</p>' : '' ) . '</div>';
+}
+add_shortcode( 'sgd_title', 'sgd_sc_title' );
+
+/**
+ * Nội dung thanh trên cùng: trái = khẩu hiệu; phải = gửi yêu cầu + hotline + mạng xã hội.
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function sgd_sc_topbar( $atts ) {
+	$a = shortcode_atts( array( 'side' => 'left' ), $atts, 'sgd_topbar' );
+	if ( 'left' === $a['side'] ) {
+		return '<span class="sgd-topbar__slogan">' . esc_html( sgd_opt( 'topbar_text' ) ) . '</span>';
+	}
+	$out  = '<span class="sgd-topbar">';
+	$out .= '<a href="#dang-ky" class="sgd-topbar__req">' . sgd_icon( 'mail' ) . ' Gửi yêu cầu tư vấn</a>';
+	$out .= '<a href="tel:' . esc_attr( sgd_tel( sgd_opt( 'hotline' ) ) ) . '" class="sgd-topbar__hot">Hotline hỗ trợ: <strong>' . esc_html( sgd_opt( 'hotline' ) ) . '</strong></a>';
+	foreach ( array( 'facebook' => 'f', 'youtube' => '▶' ) as $k => $label ) {
+		if ( sgd_opt( $k ) ) {
+			$out .= '<a class="sgd-topbar__soc" href="' . esc_url( sgd_opt( $k ) ) . '" target="_blank" rel="noopener" aria-label="' . esc_attr( ucfirst( $k ) ) . '">' . esc_html( $label ) . '</a>';
+		}
+	}
+	return $out . '</span>';
+}
+add_shortcode( 'sgd_topbar', 'sgd_sc_topbar' );
