@@ -1,7 +1,7 @@
 <?php
 /**
  * Trang chi tiết dịch vụ – bố cục dạng bài viết (cột nội dung + cột phải):
- * Breadcrumb → H1 → giá/thời gian → banner → đoạn mở đầu → mục lục → chi phí & bảng giá → Gọi ngay →
+ * Breadcrumb → H1 → ngày cập nhật, người kiểm duyệt → đoạn mở đầu → ô tóm tắt (phí, thời gian, nút) → mục lục → chi phí & bảng giá → Gọi ngay →
  * công việc thực hiện → hồ sơ cần chuẩn bị → quy trình → nội dung (H2) → FAQ → dịch vụ cùng nhóm.
  *
  * @package Flatsome_Dichvu
@@ -47,20 +47,32 @@ while ( have_posts() ) :
 			<div class="col large-8 sgd-single__main">
 				<?php sgd_breadcrumbs(); ?>
 				<h1 class="sgd-single__title"><?php the_title(); ?></h1>
-				<ul class="sgd-single__facts">
-					<?php if ( sgd_meta( 'price' ) ) : ?>
-						<li><?php echo sgd_icon( 'wallet' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> Phí dịch vụ: <strong><?php echo esc_html( sgd_meta( 'price' ) ); ?></strong></li>
+				<p class="sgd-byline">
+					Cập nhật <time datetime="<?php echo esc_attr( get_the_modified_date( 'c' ) ); ?>"><?php echo esc_html( get_the_modified_date( 'd/m/Y' ) ); ?></time>
+					<?php if ( sgd_opt( 'expert' ) ) : ?>
+						· Kiểm duyệt nội dung: <strong><?php echo esc_html( trim( sgd_opt( 'expert_title' ) . ' ' . sgd_opt( 'expert' ) ) ); ?></strong>
 					<?php endif; ?>
-					<?php if ( sgd_meta( 'duration' ) ) : ?>
-						<li><?php echo sgd_icon( 'clock' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> Thời gian: <strong><?php echo esc_html( sgd_meta( 'duration' ) ); ?></strong></li>
-					<?php endif; ?>
-					<li><?php echo sgd_icon( 'shield' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> <strong>Cam kết không phát sinh</strong></li>
-				</ul>
-
-				<?php get_template_part( 'template-parts/dichvu/banner', null, array( 'id' => $sgd_id, 'size' => 'lg' ) ); ?>
-
+				</p>
 				<?php if ( $sgd_intro ) : ?>
 					<p class="sgd-single__intro"><?php echo esc_html( wp_strip_all_tags( $sgd_intro ) ); ?></p>
+				<?php endif; ?>
+
+				<div class="sgd-summary">
+					<dl class="sgd-summary__facts">
+						<div><dt><?php echo sgd_icon( 'wallet' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> Phí dịch vụ</dt><dd class="is-price"><?php echo esc_html( sgd_meta( 'price' ) ? sgd_meta( 'price' ) : 'Liên hệ' ); ?></dd></div>
+						<?php if ( sgd_meta( 'duration' ) ) : ?>
+							<div><dt><?php echo sgd_icon( 'clock' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> Thời gian</dt><dd><?php echo esc_html( sgd_meta( 'duration' ) ); ?></dd></div>
+						<?php endif; ?>
+						<div><dt><?php echo sgd_icon( 'shield' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> Cam kết</dt><dd>Trọn gói, không phát sinh</dd></div>
+					</dl>
+					<p class="sgd-summary__btns">
+						<a class="button sgd-btn" href="#dang-ky">Nhận báo giá</a>
+						<a class="button sgd-btn is-outline" href="tel:<?php echo esc_attr( sgd_tel( sgd_opt( 'hotline' ) ) ); ?>"><?php echo sgd_icon( 'phone' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> <?php echo esc_html( sgd_opt( 'hotline' ) ); ?></a>
+					</p>
+				</div>
+
+				<?php if ( has_post_thumbnail() ) : ?>
+					<figure class="sgd-single__img"><?php the_post_thumbnail( 'large', array( 'alt' => esc_attr( get_the_title() ), 'fetchpriority' => 'high' ) ); ?></figure>
 				<?php endif; ?>
 
 				<?php if ( count( $sgd_toc ) >= 2 ) : ?>

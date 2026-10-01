@@ -305,58 +305,55 @@ function sgd_demo_build() {
 		}
 		return wp_update_nav_menu_item( $menu_id, 0, $item );
 	};
-	$short = array(
-		'thanh-lap-doanh-nghiep' => 'Thành lập',
-		'thay-doi-giay-phep'     => 'Thay đổi GPKD',
-		'dich-vu-thue'           => 'Thuế',
-		'ke-toan'                => 'Kế toán',
-		'dich-vu-khac'           => 'Dịch vụ khác',
-	);
-	$add( 'Giới thiệu', get_permalink( $about ) );
-	foreach ( $groups as $slug => $tid ) {
-		$parent = $add( isset( $short[ $slug ] ) ? $short[ $slug ] : get_term( $tid )->name, '', 0, array( 'menu-item-object' => 'nhom_dich_vu', 'menu-item-object-id' => $tid, 'menu-item-type' => 'taxonomy' ) );
+	// Menu gọn 1 hàng (giống timsen.vn), nhưng giữ liên kết nhóm dịch vụ trên menu chính để
+	// Google hiểu cấu trúc site (anchor text đúng từ khoá – điểm mạnh của ketoananpha.vn).
+	$service_links = function ( $slugs, $parent ) use ( $data, $services, $add ) {
 		foreach ( $data['services'] as $s ) {
-			if ( $s['group'] === $slug && isset( $services[ $s['slug'] ] ) ) {
+			if ( in_array( $s['group'], (array) $slugs, true ) && isset( $services[ $s['slug'] ] ) ) {
 				$add( $s['title'], '', $parent, array( 'menu-item-object' => 'dich_vu', 'menu-item-object-id' => $services[ $s['slug'] ], 'menu-item-type' => 'post_type' ) );
 			}
 		}
-	}
+	};
+	$tax_item = function ( $slug, $label ) use ( $groups, $add ) {
+		return $add( $label, '', 0, array( 'menu-item-object' => 'nhom_dich_vu', 'menu-item-object-id' => $groups[ $slug ], 'menu-item-type' => 'taxonomy' ) );
+	};
+	$service_links( 'thanh-lap-doanh-nghiep', $tax_item( 'thanh-lap-doanh-nghiep', 'Thành lập công ty' ) );
+	$service_links( 'thay-doi-giay-phep', $tax_item( 'thay-doi-giay-phep', 'Thay đổi GPKD' ) );
+	$service_links( array( 'ke-toan', 'dich-vu-thue' ), $add( 'Kế toán & Thuế', get_post_type_archive_link( 'dich_vu' ) ) );
+	$service_links( 'dich-vu-khac', $tax_item( 'dich-vu-khac', 'Dịch vụ khác' ) );
 	$add( 'Bảng giá', get_permalink( $pricing ) );
-	$add( 'Tư vấn miễn phí', '#dang-ky', 0, array( 'menu-item-url' => '#dang-ky', 'menu-item-type' => 'custom', 'menu-item-classes' => 'sgd-menu-cta' ) );
 	$add( 'Kiến thức', get_permalink( $news ) );
-	$add( 'Liên hệ', get_permalink( $contact ) );
+	$about_parent = $add( 'Liên hệ', get_permalink( $contact ) );
+	$add( 'Giới thiệu', get_permalink( $about ), $about_parent );
+	$add( 'Nhận báo giá', '#dang-ky', 0, array( 'menu-item-url' => '#dang-ky', 'menu-item-type' => 'custom', 'menu-item-classes' => 'sgd-menu-cta' ) );
 	$loc                   = get_theme_mod( 'nav_menu_locations', array() );
 	$loc['primary']        = $menu_id;
 	$loc['primary_mobile'] = $menu_id;
 	set_theme_mod( 'nav_menu_locations', $loc );
 
-	// 7. Header Flatsome: logo trái + hotline theo khu vực bên phải, menu ở thanh dưới (nền xám nhạt).
+	// 7. Header Flatsome: thanh trên cùng (khẩu hiệu – hotline) + 1 hàng chính: logo trái, menu, nút "Nhận báo giá".
 	$hot = sgd_opt( 'hotline' );
 	set_theme_mod( 'header_elements_left', array() );
-	set_theme_mod( 'header_elements_right', array( 'html-3' ) );
-	set_theme_mod( 'top_right_text', '[sgd_hotlines style="header"]' );
-	set_theme_mod( 'header_bottom_elements_left', array( 'nav' ) );
+	set_theme_mod( 'header_elements_right', array( 'nav' ) );
+	set_theme_mod( 'header_bottom_elements_left', array() );
 	set_theme_mod( 'header_bottom_elements_center', array() );
 	set_theme_mod( 'header_bottom_elements_right', array() );
 	set_theme_mod( 'header_mobile_elements_left', array() );
-	set_theme_mod( 'header_mobile_elements_right', array( 'menu-icon' ) );
-	set_theme_mod( 'mobile_sidebar', array( 'nav', 'html-3' ) );
-	set_theme_mod( 'header_height', 110 );
-	set_theme_mod( 'header_height_mobile', 70 );
-	set_theme_mod( 'logo_width', 240 );
-	set_theme_mod( 'header_bg', '#f8f9fa' );
+	set_theme_mod( 'header_mobile_elements_right', array( 'html-3', 'menu-icon' ) );
+	set_theme_mod( 'top_right_text', '[sgd_hotlines style="compact"]' );
+	set_theme_mod( 'mobile_sidebar', array( 'nav' ) );
+	set_theme_mod( 'header_height', 76 );
+	set_theme_mod( 'header_height_mobile', 64 );
+	set_theme_mod( 'logo_width', 200 );
+	set_theme_mod( 'header_bg', '#ffffff' );
 	set_theme_mod( 'header_color', 'light' );
-	set_theme_mod( 'header_bottom_height', 48 );
-	set_theme_mod( 'nav_position_bg', '#f8f9fa' );
-	set_theme_mod( 'nav_position_color', 'light' );
-	set_theme_mod( 'nav_uppercase_bottom', 1 );
-	set_theme_mod( 'nav_style_bottom', '' );
-	set_theme_mod( 'type_nav_bottom_color', '#212529' );
-	set_theme_mod( 'type_nav_bottom_color_hover', sgd_opt( 'color_primary' ) );
+	set_theme_mod( 'nav_uppercase', 0 );
+	set_theme_mod( 'type_nav_color', '#1d2939' );
+	set_theme_mod( 'type_nav_color_hover', sgd_opt( 'color_primary' ) );
 	set_theme_mod( 'header_sticky', 1 );
 	set_theme_mod( 'sticky_style', 'jump' );
 	set_theme_mod( 'topbar_show', 1 );
-	set_theme_mod( 'topbar_bg', '#1059a8' );
+	set_theme_mod( 'topbar_bg', '#0b2a5b' );
 	set_theme_mod( 'topbar_color', 'dark' );
 	set_theme_mod( 'topbar_elements_left', array( 'html' ) );
 	set_theme_mod( 'topbar_elements_center', array() );
@@ -390,120 +387,115 @@ function sgd_demo_build() {
  */
 function sgd_demo_home_content() {
 	$company = esc_html( sgd_opt( 'company' ) );
-	return '[section label="Dịch vụ nổi bật" bg_color="#ffffff" padding="18px" padding__sm="12px"]
+	// Bố cục hiện đại, chuẩn SEO: 1 H1 duy nhất ở banner; mỗi khối 1 H2; thẻ dịch vụ H3.
+	return '[section label="Đầu trang (H1)" bg_color="#f5f8ff" padding="56px" padding__sm="28px" class="sgd-heroband"]
 [row]
 [col span="12"]
-[sgd_featured ids="ke-toan-tron-goi,thanh-lap-cong-ty-tnhh,dang-ky-ho-kinh-doanh,thay-doi-dia-chi-cong-ty"]
+[sgd_hero title="Dịch vụ thành lập công ty, thuế &amp; kế toán" highlight="trọn gói – không phát sinh"]
 [/col]
 [/row]
 [/section]
-[section label="Giới thiệu" bg_color="#ffffff" padding="30px" class="sgd-intro"]
+[section label="Số liệu" bg_color="#ffffff" padding="0px"]
 [row]
 [col span="12"]
-<p class="sgd-intro__h">Giúp bạn <b>thành lập và quản lý công ty</b> dễ dàng, hiệu quả!</p>
-<div class="sgd-intro__line"></div>
-<h3>Vì sao doanh nghiệp chọn ' . $company . '?</h3>
-<p><strong>' . $company . '</strong> cung cấp trọn gói dịch vụ pháp lý – thuế – kế toán cho doanh nghiệp vừa và nhỏ: từ <strong>thành lập công ty</strong>, <strong>thay đổi giấy phép kinh doanh</strong> đến <strong>kê khai thuế, kế toán trọn gói</strong> và quyết toán cuối năm. Báo giá rõ ràng, làm hồ sơ online, giao nhận tận nơi. <em>(Đoạn giới thiệu mẫu – thay bằng số năm kinh nghiệm, số khách hàng, chứng nhận thật của công ty.)</em></p>
+<div class="sgd-stats"><div class="sgd-stat"><strong>3–5</strong><span>ngày có giấy phép</span></div><div class="sgd-stat"><strong>250K</strong><span>phí dịch vụ thành lập</span></div><div class="sgd-stat"><strong>500K</strong><span>kế toán trọn gói/tháng</span></div><div class="sgd-stat"><strong>0đ</strong><span>phí tư vấn</span></div></div>
 [/col]
 [/row]
 [/section]
-[section label="Dịch vụ" bg_color="#ffffff" padding="20px"]
+[section label="Dịch vụ nổi bật" bg_color="#ffffff" padding="64px"]
 [row]
 [col span="12"]
-[sgd_title text="Dịch vụ của chúng tôi"]
-[sgd_groups columns="3" services="3" style="simple"]
+[sgd_title text="Dịch vụ được chọn nhiều nhất" sub="Báo giá trọn gói, ghi rõ thời gian hoàn thành – bấm vào từng dịch vụ để xem chi phí chi tiết, hồ sơ cần chuẩn bị và quy trình."]
+[sgd_services number="6" featured="1" layout="feature" columns="3"]
 [/col]
 [/row]
 [/section]
-[section label="Kêu gọi" bg_color="#1059a8" dark="true" padding="44px" class="sgd-band"]
+[section label="Tất cả dịch vụ" bg_color="#f7f9fc" padding="56px"]
 [row]
 [col span="12"]
-<p class="sgd-band__text">Hỗ trợ hoàn tất thủ tục thành lập công ty và kế toán của bạn nhanh chóng, dễ dàng hơn – với các gói dịch vụ chi phí hợp lý.</p>
-<div class="sgd-band__btns"><a href="#dang-ky">Đăng ký ngay</a><a href="/bang-gia/">Xem bảng giá</a></div>
+[sgd_title text="Tất cả dịch vụ doanh nghiệp"]
+[sgd_groups columns="3" services="4" style="simple"]
 [/col]
 [/row]
 [/section]
-[section label="Gói thành lập" bg_color="#ffffff" padding="50px"]
+[section label="Kêu gọi" bg_color="#0b2a5b" dark="true" padding="44px" class="sgd-band"]
 [row]
 [col span="12"]
-[sgd_title text="Lựa chọn gói dịch vụ phù hợp" sub="Gói thành lập công ty trọn gói – giá ưu đãi hơn khi dùng kèm dịch vụ kế toán"]
+<p class="sgd-band__text">Chưa chắc nên chọn loại hình hay gói nào? Gọi cho chúng tôi – tư vấn miễn phí, báo giá trọn gói trong 15 phút.</p>
+<div class="sgd-band__btns"><a href="#dang-ky">Nhận báo giá</a><a href="/bang-gia/">Xem bảng giá</a></div>
+[/col]
+[/row]
+[/section]
+[section label="Gói thành lập" bg_color="#ffffff" padding="64px"]
+[row]
+[col span="12"]
+[sgd_title text="Bảng giá thành lập công ty trọn gói" sub="Giá ưu đãi hơn khi dùng kèm dịch vụ kế toán"]
 [sgd_pricing service="thanh-lap-cong-ty-tnhh" show="packages"]
 [/col]
 [/row]
 [/section]
-[section label="Bảng giá kế toán" bg_color="#f8f9fa" padding="44px"]
+[section label="Bảng giá kế toán" bg_color="#f7f9fc" padding="64px"]
 [row]
 [col span="12"]
-[sgd_htab text="Bảng giá dịch vụ kế toán thuế trọn gói" link="/dich-vu/ke-toan-tron-goi/" more="Xem chi tiết"]
+[sgd_title text="Bảng giá kế toán thuế trọn gói" sub="Tính theo ngành nghề và số hóa đơn mỗi quý – minh bạch, không phát sinh."]
 [sgd_pricing service="ke-toan-tron-goi" show="table"]
 [sgd_hotlines title="Gọi ngay để được báo giá"]
 [/col]
 [/row]
 [/section]
-[section label="Vì sao chọn" bg_color="#ffffff" padding="50px"]
+[section label="Vì sao chọn" bg_color="#ffffff" padding="64px"]
 [row]
 [col span="12"]
 <div class="sgd-whybox">
-<div class="sgd-whybox__panel"><div class="sgd-stats"><div class="sgd-stat"><strong>3–5</strong><span>ngày có giấy phép</span></div><div class="sgd-stat"><strong>250K</strong><span>phí dịch vụ thành lập</span></div><div class="sgd-stat"><strong>500K</strong><span>kế toán trọn gói/tháng</span></div><div class="sgd-stat"><strong>0đ</strong><span>phí tư vấn</span></div></div></div>
+<div class="sgd-whybox__panel"><div class="sgd-stats"><div class="sgd-stat"><strong>1:1</strong><span>chuyên viên riêng</span></div><div class="sgd-stat"><strong>100%</strong><span>hồ sơ nộp online</span></div><div class="sgd-stat"><strong>15′</strong><span>phản hồi yêu cầu</span></div><div class="sgd-stat"><strong>0đ</strong><span>phát sinh ngoài báo giá</span></div></div></div>
 <div>
-<h2>Tại sao nên chọn <b>' . $company . '</b>?</h2>
+<h2>Vì sao chọn <b>' . $company . '</b>?</h2>
 <ul class="sgd-whylist">
-<li><strong>Chuyên nghiệp – tận tâm</strong><span>Chuyên viên pháp lý, kế toán giàu kinh nghiệm, mỗi khách hàng có người phụ trách riêng.</span></li>
-<li><strong>Tiết kiệm chi phí &amp; thời gian</strong><span>Giá trọn gói, làm hồ sơ online, giao nhận tận nơi.</span></li>
-<li><strong>Hỗ trợ nhanh qua Zalo</strong><span>Giải đáp trong giờ hành chính, cập nhật tiến độ hồ sơ thường xuyên.</span></li>
-<li><strong>Bảo mật – an toàn</strong><span>Cam kết bảo mật thông tin, số liệu của doanh nghiệp theo hợp đồng.</span></li>
-<li><strong>Đồng hành lâu dài</strong><span>Sau thành lập tiếp tục hỗ trợ thuế, kế toán, thay đổi giấy phép.</span></li>
+<li><strong>Giá trọn gói, công khai</strong><span>Phí dịch vụ và lệ phí nhà nước ghi rõ trong báo giá, hợp đồng.</span></li>
+<li><strong>Nhanh – đúng hẹn</strong><span>Hồ sơ kiểm tra kỹ trước khi nộp, hạn chế bị yêu cầu bổ sung.</span></li>
+<li><strong>Chuyên viên riêng</strong><span>Một người phụ trách, cập nhật tiến độ qua Zalo.</span></li>
+<li><strong>Bảo mật thông tin</strong><span>Cam kết bảo mật giấy tờ, số liệu doanh nghiệp theo hợp đồng.</span></li>
 </ul>
 </div>
 </div>
-[/col]
-[/row]
-[/section]
-[section label="Quy trình" bg_color="#f2f6fb" padding="50px"]
-[row]
-[col span="12"]
-[sgd_title text="Quy trình làm việc"]
+[gap height="40px"]
+[sgd_title text="Quy trình làm việc 4 bước"]
 [sgd_steps layout="row"]
 Tiếp nhận thông tin | Lắng nghe nhu cầu, tư vấn quy định và báo giá trọn gói miễn phí
-Tiến hành xử lý | Soạn hồ sơ theo quy trình chuẩn, gửi khách ký tại nhà hoặc ký số
-Cập nhật tiến độ | Nộp hồ sơ, theo dõi và báo tiến độ qua Zalo cho khách hàng
-Bàn giao hồ sơ | Giao giấy phép, con dấu, hồ sơ lưu trữ tận nơi và hướng dẫn việc tiếp theo
+Soạn hồ sơ | Soạn hồ sơ theo quy trình chuẩn, gửi khách ký tại nhà hoặc ký số
+Nộp &amp; theo dõi | Nộp hồ sơ, theo dõi và báo tiến độ qua Zalo
+Bàn giao kết quả | Giao giấy phép, con dấu, hồ sơ tận nơi và hướng dẫn việc tiếp theo
 [/sgd_steps]
 [/col]
 [/row]
 [/section]
-[section label="Chuyên mục dịch vụ" bg_color="#ffffff" padding="44px"]
-[row]
-[col span="8" span__sm="12"]
-[sgd_group_block group="thanh-lap-doanh-nghiep" number="5"]
-[sgd_group_block group="ke-toan" number="4" title="Dịch vụ kế toán"]
-[sgd_group_block group="thay-doi-giay-phep" number="5" title="Thay đổi giấy phép kinh doanh"]
-[sgd_group_block group="dich-vu-thue" number="4"]
-[sgd_group_block group="dich-vu-khac" number="4"]
-[/col]
-[col span="4" span__sm="12"]
-[sgd_htab text="Bảng giá nhanh" link="/bang-gia/" more=""]
-[sgd_services number="8" featured="1" layout="mini"]
-[gap height="26px"]
-[sgd_htab text="Chia sẻ kinh nghiệm" link="/tin-tuc/" more=""]
-[sgd_posts number="4"]
+[section label="Hỏi đáp (FAQ)" bg_color="#f7f9fc" padding="64px"]
+[row h_align="center"]
+[col span="9" span__sm="12"]
+[sgd_title text="Câu hỏi thường gặp"]
+[sgd_faq]
+Thành lập công ty mất bao lâu? | Cơ quan đăng ký kinh doanh giải quyết trong 3 ngày làm việc kể từ khi nhận hồ sơ hợp lệ. Tính cả soạn hồ sơ, khắc dấu và giao nhận, thường mất 3 – 5 ngày làm việc.
+Thành lập công ty cần vốn tối thiểu bao nhiêu? | Với đa số ngành nghề, pháp luật không quy định vốn tối thiểu. Vốn điều lệ nên phù hợp quy mô kinh doanh và phải góp đủ trong 90 ngày kể từ ngày được cấp giấy chứng nhận.
+Tôi có phải đến cơ quan nhà nước không? | Không. Hồ sơ được nộp online, bạn ký hồ sơ tại nhà và nhận giấy phép, con dấu tận nơi.
+Doanh nghiệp chưa có doanh thu có cần làm báo cáo thuế không? | Có. Doanh nghiệp vẫn phải nộp tờ khai thuế định kỳ và báo cáo tài chính năm dù chưa phát sinh doanh thu; chậm nộp sẽ bị phạt.
+Phí dịch vụ đã gồm lệ phí nhà nước chưa? | Báo giá ghi rõ phí dịch vụ và lệ phí nhà nước (nếu có). Chúng tôi không thu thêm ngoài báo giá đã thống nhất.
+[/sgd_faq]
 [/col]
 [/row]
 [/section]
-[section label="Có gì mới" bg_color="#ffffff" padding="20px"]
+[section label="Kiến thức" bg_color="#ffffff" padding="56px"]
 [row]
 [col span="12"]
-[sgd_title text="Có gì mới?"]
+[sgd_title text="Kiến thức doanh nghiệp mới nhất"]
 [sgd_posts number="4" style="grid" columns="4"]
 [/col]
 [/row]
 [/section]
-[section label="Đăng ký" bg_color="#eef3fb" padding="50px"]
-<div id="dang-ky"></div>
+[section label="Kêu gọi cuối trang" bg_color="#eef3ff" padding="56px"]
 [row]
 [col span="12"]
-[sgd_title text="Bắt đầu từ một cuộc trò chuyện nhỏ" sub="Để lại yêu cầu bên dưới – chuyên viên sẽ gọi lại tư vấn miễn phí"]
-<div class="sgd-bigform">[sgd_lead_form source="Trang chủ" perks="0" title="" button="Gửi yêu cầu"]</div>
+[sgd_title text="Bắt đầu từ một cuộc trò chuyện nhỏ" sub="Để lại yêu cầu – chuyên viên sẽ gọi lại tư vấn miễn phí"]
+<div class="sgd-bigform">[sgd_lead_form source="Trang chủ – cuối trang" perks="0" title="" button="Gửi yêu cầu"]</div>
 [/col]
 [/row]
 [/section]';

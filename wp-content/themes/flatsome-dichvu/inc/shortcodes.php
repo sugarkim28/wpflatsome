@@ -5,11 +5,13 @@
  *  [sgd_htab text="" link=""]                   – tiêu đề khối dạng thẻ
  *  [sgd_group_block group="slug" number="5"]    – khối chuyên mục: 1 dịch vụ lớn + danh sách
  *  [sgd_posts number="5" category="" style="magazine|grid|links" columns="4"] – bài viết
+ *  [sgd_hero title="" highlight="" sub=""]          – banner đầu trang chủ: H1 duy nhất + form + dịch vụ phổ biến
+ *  [sgd_faq]Câu hỏi | Trả lời (mỗi dòng)[/sgd_faq] – hỏi đáp + dữ liệu FAQPage cho Google
  *  [sgd_title text="" sub=""]                    – tiêu đề giữa, kẻ ngang hai bên
  *  [sgd_topbar side="left|right"]                – nội dung thanh trên cùng (Flatsome Top Bar)
  *  [sgd_groups style="card|simple"]              – simple: icon giữa, tiêu đề in hoa, 3 dòng dịch vụ
  *  [sgd_services number="6" columns="3" featured="1" group="thanh-lap-doanh-nghiep" layout="grid|list|mini" tag="h3"]
- *  [sgd_hotlines style="pills|header"]           – hotline theo khu vực
+ *  [sgd_hotlines style="pills|header|compact"]   – hotline theo khu vực / 1 số gọn
  *  [sgd_branches]                                – văn phòng / chi nhánh
  *  [sgd_sidebar form="1"]                        – cột phải
  *  [sgd_groups columns="4" services="4"]        – các nhóm dịch vụ kèm dịch vụ con
@@ -137,7 +139,7 @@ function sgd_sc_services( $atts ) {
 	if ( ! $posts ) {
 		return '';
 	}
-	$cls = 'grid' === $a['layout'] ? 'sgd-grid sgd-grid--' . absint( $a['columns'] ) : 'sgd-stack';
+	$cls = in_array( $a['layout'], array( 'grid', 'feature' ), true ) ? 'sgd-grid sgd-grid--' . absint( $a['columns'] ) : 'sgd-stack';
 	return '<div class="' . esc_attr( $cls ) . '">' . sgd_render_cards( $posts, $a['layout'], $a['tag'] ) . '</div>';
 }
 add_shortcode( 'sgd_services', 'sgd_sc_services' );
@@ -283,6 +285,10 @@ add_shortcode( 'sgd_posts', 'sgd_sc_posts' );
  */
 function sgd_sc_hotlines( $atts ) {
 	$a = shortcode_atts( array( 'style' => 'pills', 'title' => '' ), $atts, 'sgd_hotlines' );
+	if ( 'compact' === $a['style'] ) {
+		$h = sgd_opt( 'hotline' );
+		return '<a class="sgd-hcall" href="tel:' . esc_attr( sgd_tel( $h ) ) . '">' . sgd_icon( 'phone' ) . '<span><small>Hotline tư vấn</small><strong>' . esc_html( $h ) . '</strong></span></a>';
+	}
 	if ( 'header' === $a['style'] ) {
 		$out = '<div class="sgd-hhot">';
 		foreach ( sgd_hotlines() as $l ) {
@@ -566,3 +572,83 @@ function sgd_sc_topbar( $atts ) {
 	return $out . '</span>';
 }
 add_shortcode( 'sgd_topbar', 'sgd_sc_topbar' );
+
+/**
+ * Banner đầu trang chủ: H1 duy nhất của trang, lợi ích, nút gọi/báo giá, dịch vụ phổ biến kèm giá,
+ * form tư vấn ngay màn hình đầu (không dùng slider – nhẹ, LCP nhanh, không nhảy bố cục).
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function sgd_sc_hero( $atts ) {
+	$a = shortcode_atts(
+		array(
+			'title'     => 'Dịch vụ thành lập công ty, thuế & kế toán',
+			'highlight' => 'trọn gói – không phát sinh',
+			'sub'       => sgd_opt( 'archive_intro' ),
+			'points'    => "Có giấy phép sau 3 – 5 ngày làm việc\nKế toán trọn gói từ 500.000đ/tháng\nLàm hồ sơ online, giao kết quả tận nơi",
+		),
+		$atts,
+		'sgd_hero'
+	);
+	$popular = sgd_query_services( array( 'number' => 6, 'featured' => '1', 'group' => '', 'exclude' => '' ) );
+	ob_start();
+	?>
+	<div class="sgd-hero">
+		<div class="sgd-hero__text">
+			<p class="sgd-hero__kicker"><?php echo esc_html( sgd_opt( 'topbar_text' ) ? sgd_opt( 'topbar_text' ) : sgd_opt( 'company' ) ); ?></p>
+			<h1 class="sgd-hero__title"><?php echo esc_html( $a['title'] ); ?> <span><?php echo esc_html( $a['highlight'] ); ?></span></h1>
+			<?php if ( $a['sub'] ) : ?>
+				<p class="sgd-hero__sub"><?php echo esc_html( sgd_clip( $a['sub'], 220 ) ); ?></p>
+			<?php endif; ?>
+			<ul class="sgd-check sgd-hero__points">
+				<?php foreach ( sgd_list( str_replace( array( '<br />', '<br>', '\n' ), "\n", $a['points'] ) ) as $pt ) : ?>
+					<li><?php echo esc_html( $pt ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+			<p class="sgd-hero__btns">
+				<a class="button sgd-btn" href="#dang-ky">Nhận báo giá miễn phí</a>
+				<a class="button sgd-btn is-outline" href="tel:<?php echo esc_attr( sgd_tel( sgd_opt( 'hotline' ) ) ); ?>"><?php echo sgd_icon( 'phone' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> <?php echo esc_html( sgd_opt( 'hotline' ) ); ?></a>
+			</p>
+			<?php if ( $popular ) : ?>
+				<p class="sgd-hero__poplabel">Dịch vụ được chọn nhiều:</p>
+				<ul class="sgd-hero__pop">
+					<?php foreach ( $popular as $p ) : ?>
+						<li><a href="<?php echo esc_url( get_permalink( $p ) ); ?>"><?php echo esc_html( sgd_short_title( $p->ID ) ); ?><?php echo sgd_meta( 'price', $p->ID ) ? ' <b>' . esc_html( sgd_meta( 'price', $p->ID ) ) . '</b>' : ''; ?></a></li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endif; ?>
+		</div>
+		<div class="sgd-hero__form" id="dang-ky">
+			<?php get_template_part( 'template-parts/dichvu/lead-form', null, array( 'title' => sgd_opt( 'form_title' ), 'source' => 'Trang chủ – đầu trang', 'perks' => false, 'note' => false, 'button' => 'Nhận tư vấn ngay' ) ); ?>
+		</div>
+	</div>
+	<?php
+	return ob_get_clean();
+}
+add_shortcode( 'sgd_hero', 'sgd_sc_hero' );
+
+/**
+ * Hỏi đáp (mỗi dòng "Câu hỏi | Trả lời") + gom dữ liệu FAQPage.
+ *
+ * @param array  $atts    Thuộc tính.
+ * @param string $content Nội dung.
+ * @return string
+ */
+function sgd_sc_faq( $atts, $content = '' ) {
+	$text  = str_ireplace( array( '<br>', '<br/>', '<br />', '</p>' ), "\n", (string) $content );
+	$items = sgd_lines( wp_strip_all_tags( $text ) );
+	if ( ! $items ) {
+		return '';
+	}
+	$out = '<div class="sgd-faq">';
+	foreach ( $items as $i => $f ) {
+		if ( '' === $f[1] ) {
+			continue;
+		}
+		sgd_collect_faq( $f[0], $f[1] );
+		$out .= '<details' . ( 0 === $i ? ' open' : '' ) . '><summary><h3>' . esc_html( $f[0] ) . '</h3></summary><p>' . esc_html( $f[1] ) . '</p></details>';
+	}
+	return $out . '</div>';
+}
+add_shortcode( 'sgd_faq', 'sgd_sc_faq' );

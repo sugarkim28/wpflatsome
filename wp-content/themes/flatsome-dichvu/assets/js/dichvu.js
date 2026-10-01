@@ -54,7 +54,9 @@
 			try {
 				seen = !! sessionStorage.getItem( 'sgdPopup' );
 			} catch ( e ) {}
-			if ( delay > 0 && ! seen ) {
+			// Chỉ tự mở trên màn hình lớn: popup tự bật trên điện thoại bị Google coi là quảng cáo xen ngang.
+			var desktop = window.matchMedia && window.matchMedia( '(min-width: 850px)' ).matches;
+			if ( delay > 0 && ! seen && desktop ) {
 				setTimeout( openPopup, delay * 1000 );
 			}
 		}

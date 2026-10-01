@@ -6,6 +6,36 @@ Giao diện theo phong cách trang tin dịch vụ (tham khảo bố cục ketoa
 
 Bổ sung theo bố cục timsen.vn: thanh trên cùng màu xanh (khẩu hiệu, *Gửi yêu cầu tư vấn*, hotline, Facebook/YouTube), nút menu nổi bật *Tư vấn miễn phí*, khối giới thiệu, lưới *Dịch vụ của chúng tôi* (icon giữa), dải kêu gọi nền xanh, 4 gói thành lập có *Tiết kiệm* và *Còn … khi dùng dịch vụ kế toán*, khối *Tại sao nên chọn* (số liệu + danh sách tích), quy trình 4 bước nhiều màu, lưới *Có gì mới?*, form lớn cuối trang, popup form tự mở (viền cam nét đứt), footer nền xanh đậm 4 cột.
 
+## Thiết kế hiện đại & chuẩn SEO (bản 0.3)
+
+Tổng hợp từ việc đo đạc 2 website tham khảo (trang chủ + trang dịch vụ, khổ điện thoại):
+
+| Tiêu chí | ketoananpha.vn | timsen.vn | Theme này |
+|---|---|---|---|
+| H1 trang chủ | không có | 3 thẻ H1 | **1 H1** ở banner đầu trang |
+| Meta description | trang dịch vụ 412 ký tự (bị cắt) | 128–154 ký tự | tự cắt ≤ 155 ký tự (khi không dùng plugin SEO) |
+| Title | 58–59 ký tự, có giá | 59–74 ký tự, có giá | tự thêm giá: *Tên dịch vụ – Từ 250.000đ \| Thương hiệu* |
+| Schema | ProfessionalService, FAQ | WebSite, Breadcrumb, LocalBusiness | WebSite, ProfessionalService + **OfferCatalog** (giá từng dịch vụ), Service + Offer, FAQPage (trang chủ & dịch vụ), BreadcrumbList, CollectionPage, WebPage + **reviewedBy** |
+| Nhảy bố cục (CLS) | 0.368 (banner ảnh) | 0 | ~0: banner dịch vụ vẽ bằng CSS, không slider |
+| JavaScript | 47 KB | 165 KB, 54 request | ~4 KB, tải trì hoãn (defer) |
+| Popup | không | tự bật ngay | chỉ tự mở trên máy tính sau 30 giây (popup che màn hình điện thoại bị Google hạ điểm) |
+| E-E-A-T (YMYL: pháp lý, thuế) | ngày đăng | ISO, số năm | *Cập nhật dd/mm/yyyy · Kiểm duyệt nội dung: Luật sư …* + schema reviewedBy |
+
+Giữ lại điểm mạnh bán hàng của cả hai: giá ngay trong tiêu đề, bảng chi phí tách phí dịch vụ/lệ phí, bảng giá ma trận, 4 gói có *tiết kiệm* và *giá khi dùng kèm kế toán*, hotline theo miền, cột phải dịch vụ liên quan, menu chứa liên kết nhóm dịch vụ.
+
+Giao diện: 1 hàng header (logo – menu – nút *Nhận báo giá*), banner đầu trang có form ngay màn hình đầu, thẻ dịch vụ dạng icon, bo góc 14px, bóng nhẹ, chữ thường (không in hoa toàn bộ), phông *Be Vietnam Pro* (thiết kế cho tiếng Việt, 4 độ đậm, preconnect).
+
+Trang chủ (thứ tự): Banner H1 + form → dải số liệu → 6 dịch vụ nổi bật → tất cả dịch vụ theo nhóm → dải kêu gọi → 4 gói thành lập → bảng giá kế toán + Gọi ngay → vì sao chọn + quy trình → hỏi đáp (FAQPage) → kiến thức mới → form cuối trang.
+
+### Việc cần làm để đạt chuẩn SEO
+
+1. **Tuỳ biến → Website dịch vụ**: nhập *Người kiểm duyệt nội dung* + *Chức danh* (luật sư, đại lý thuế, kế toán trưởng…) – quan trọng với nội dung pháp lý, thuế.
+2. **Logo**: tải logo (dùng cho og:image khi chia sẻ Facebook/Zalo và schema).
+3. **Ảnh đại diện dịch vụ** (tuỳ chọn): ngang 16:9, WebP < 150 KB, tên file có từ khoá, theme tự gán alt = tên dịch vụ.
+4. **Rank Math** (khuyên dùng): theme tự nhường tiêu đề/mô tả/OG/Organization/Breadcrumb cho Rank Math. Đặt tiêu đề *Dịch vụ*: `%title% – %customfield(_sgd_price)% | %sitename%`, Schema của *Dịch vụ* = *None* (theme đã xuất Service + Offer + FAQ); sitemap bật Dịch vụ, Nhóm dịch vụ, Trang, Bài viết.
+5. **Nội dung**: mỗi dịch vụ 800–1.500 chữ, chia H2/H3, có bảng giá, hồ sơ, quy trình, FAQ; liên kết sang 2–3 dịch vụ liên quan và bài viết hướng dẫn.
+6. **Google Business Profile** cùng tên – địa chỉ – số điện thoại với website (NAP thống nhất); khai báo đủ chi nhánh ở *Văn phòng / chi nhánh*.
+
 ## Cài đặt
 
 1. Tải thư mục `flatsome-dichvu` lên `wp-content/themes/` (cần theme cha **Flatsome**, không kích hoạt theme cha).

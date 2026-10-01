@@ -135,12 +135,98 @@ function sgd_fallback_meta() {
 	} elseif ( is_front_page() ) {
 		$desc = sgd_opt( 'company' ) . ' – ' . sgd_opt( 'tagline' ) . '. ' . sgd_opt( 'archive_intro' );
 	}
-	$desc = trim( wp_strip_all_tags( (string) $desc ) );
+	$desc = sgd_clip( wp_strip_all_tags( (string) $desc ), 155 );
 	if ( $desc ) {
-		echo '<meta name="description" content="' . esc_attr( wp_trim_words( $desc, 32, '…' ) ) . "\">\n";
+		echo '<meta name="description" content="' . esc_attr( $desc ) . "\">\n";
 	}
+
+	// Open Graph / Twitter (chia sẻ Facebook, Zalo) – plugin SEO đã lo thì bỏ qua.
+	$url   = is_singular() ? get_permalink() : ( is_tax() ? get_term_link( get_queried_object() ) : ( is_post_type_archive( 'dich_vu' ) ? get_post_type_archive_link( 'dich_vu' ) : home_url( '/' ) ) );
+	$image = is_singular() && has_post_thumbnail() ? get_the_post_thumbnail_url( get_the_ID(), 'large' ) : '';
+	if ( ! $image ) {
+		$logo  = get_theme_mod( 'site_logo' );
+		$image = $logo ? ( is_numeric( $logo ) ? wp_get_attachment_image_url( $logo, 'full' ) : $logo ) : '';
+	}
+	$tags = array(
+		'og:locale'      => 'vi_VN',
+		'og:type'        => is_singular( array( 'post' ) ) ? 'article' : 'website',
+		'og:site_name'   => get_bloginfo( 'name' ),
+		'og:title'       => wp_get_document_title(),
+		'og:description' => $desc,
+		'og:url'         => is_wp_error( $url ) ? '' : $url,
+		'og:image'       => $image,
+	);
+	foreach ( array_filter( $tags ) as $k => $v ) {
+		echo '<meta property="' . esc_attr( $k ) . '" content="' . esc_attr( $v ) . "\">\n";
+	}
+	echo '<meta name="twitter:card" content="' . ( $image ? 'summary_large_image' : 'summary' ) . "\">\n";
 }
 add_action( 'wp_head', 'sgd_fallback_meta', 1 );
+
+/**
+ * Cắt chuỗi theo ký tự, không cắt giữa từ.
+ *
+ * @param string $text Chuỗi.
+ * @param int    $max  Số ký tự tối đa.
+ * @return string
+ */
+function sgd_clip( $text, $max = 155 ) {
+	$text = trim( preg_replace( '/\s+/u', ' ', (string) $text ) );
+	if ( mb_strlen( $text ) <= $max ) {
+		return $text;
+	}
+	$cut = mb_substr( $text, 0, $max - 1 );
+	$sp  = mb_strrpos( $cut, ' ' );
+	return rtrim( $sp ? mb_substr( $cut, 0, $sp ) : $cut, ' ,.;:–-' ) . '…';
+}
+
+/**
+ * Tiêu đề trang dịch vụ khi không có plugin SEO: "Tên dịch vụ – Giá từ … | Thương hiệu"
+ * (giá trong tiêu đề tăng tỉ lệ nhấp trên Google – cả hai website tham khảo đều làm vậy).
+ *
+ * @param array $parts Các phần tiêu đề.
+ * @return array
+ */
+function sgd_title_parts( $parts ) {
+	if ( sgd_has_seo_plugin() || ! is_singular( 'dich_vu' ) ) {
+		return $parts;
+	}
+	$price = sgd_meta( 'price', get_queried_object_id() );
+	if ( $price && sgd_price_number( $price ) && ! preg_match( '/\d{3}/', $parts['title'] ) ) {
+		$parts['title'] .= ' – ' . ( preg_match( '/^(từ|chỉ)\b/iu', $price ) ? $price : 'Giá ' . $price );
+	}
+	return $parts;
+}
+add_filter( 'document_title_parts', 'sgd_title_parts' );
+
+/**
+ * Gom câu hỏi từ [sgd_faq] trên trang để in FAQPage ở cuối trang.
+ *
+ * @param string $q Câu hỏi.
+ * @param string $a Trả lời.
+ */
+function sgd_collect_faq( $q, $a ) {
+	$GLOBALS['sgd_faq_items'][] = array( wp_strip_all_tags( $q ), wp_strip_all_tags( $a ) );
+}
+
+/**
+ * In FAQPage cho các câu hỏi gom được (trang chủ, trang thường).
+ */
+function sgd_faq_schema_footer() {
+	if ( empty( $GLOBALS['sgd_faq_items'] ) || is_singular( 'dich_vu' ) ) {
+		return;
+	}
+	$q = array();
+	foreach ( $GLOBALS['sgd_faq_items'] as $f ) {
+		$q[] = array(
+			'@type'          => 'Question',
+			'name'           => $f[0],
+			'acceptedAnswer' => array( '@type' => 'Answer', 'text' => $f[1] ),
+		);
+	}
+	echo '<script type="application/ld+json">' . wp_json_encode( array( '@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => $q ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) . "</script>\n";
+}
+add_action( 'wp_footer', 'sgd_faq_schema_footer', 5 );
 
 /**
  * Đổi "1.500.000đ", "1,5 triệu" → số (VND) cho schema Offer. Không đọc được → 0.
@@ -191,6 +277,27 @@ function sgd_org_schema() {
 	if ( $same ) {
 		$org['sameAs'] = $same;
 	}
+	// Danh mục dịch vụ kèm giá (OfferCatalog) – giúp Google hiểu doanh nghiệp bán gì.
+	$items = array();
+	foreach ( get_posts( array( 'post_type' => 'dich_vu', 'posts_per_page' => 30, 'orderby' => array( 'menu_order' => 'ASC' ), 'no_found_rows' => true ) ) as $p ) {
+		$offer = array(
+			'@type'       => 'Offer',
+			'itemOffered' => array( '@type' => 'Service', 'name' => get_the_title( $p ), 'url' => get_permalink( $p ) ),
+		);
+		$n = sgd_price_number( sgd_meta( 'price', $p->ID ) );
+		if ( $n ) {
+			$offer['price']         = $n;
+			$offer['priceCurrency'] = 'VND';
+		}
+		$items[] = $offer;
+	}
+	$prices = array_filter( array_map( function ( $o ) { return isset( $o['price'] ) ? $o['price'] : 0; }, $items ) );
+	if ( $prices ) {
+		$org['priceRange'] = number_format( min( $prices ), 0, ',', '.' ) . 'đ – ' . number_format( max( $prices ), 0, ',', '.' ) . 'đ';
+	}
+	if ( $items ) {
+		$org['hasOfferCatalog'] = array( '@type' => 'OfferCatalog', 'name' => 'Dịch vụ', 'itemListElement' => $items );
+	}
 	return $org;
 }
 
@@ -199,6 +306,16 @@ function sgd_org_schema() {
  */
 function sgd_schema() {
 	$graph = array();
+	if ( ! defined( 'RANK_MATH_VERSION' ) && is_front_page() ) {
+		$graph[] = array(
+			'@type'      => 'WebSite',
+			'@id'        => home_url( '/#website' ),
+			'url'        => home_url( '/' ),
+			'name'       => get_bloginfo( 'name' ),
+			'inLanguage' => 'vi',
+			'publisher'  => array( '@id' => home_url( '/#business' ) ),
+		);
+	}
 	if ( ! defined( 'RANK_MATH_VERSION' ) && ( is_front_page() || is_page() ) ) {
 		$graph[] = sgd_org_schema();
 	}
@@ -221,6 +338,18 @@ function sgd_schema() {
 		);
 		if ( $group ) {
 			$service['serviceType'] = $group->name;
+		}
+		if ( sgd_opt( 'expert' ) ) {
+			$graph[] = array(
+				'@type'        => 'WebPage',
+				'@id'          => get_permalink() . '#webpage',
+				'url'          => get_permalink(),
+				'name'         => get_the_title(),
+				'inLanguage'   => 'vi',
+				'dateModified' => get_the_modified_date( 'c' ),
+				'reviewedBy'   => array( '@type' => 'Person', 'name' => sgd_opt( 'expert' ), 'jobTitle' => sgd_opt( 'expert_title' ) ),
+				'mainEntity'   => array( '@id' => get_permalink() . '#dich-vu' ),
+			);
 		}
 		if ( has_post_thumbnail() ) {
 			$service['image'] = get_the_post_thumbnail_url( get_the_ID(), 'full' );

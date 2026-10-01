@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SGD_VERSION', '0.1.0' );
+define( 'SGD_VERSION', '0.3.0' );
 define( 'SGD_DIR', get_stylesheet_directory() );
 define( 'SGD_URI', get_stylesheet_directory_uri() );
 
@@ -23,15 +23,32 @@ require_once SGD_DIR . '/inc/demo.php';
  * CSS/JS giao diện.
  */
 function sgd_enqueue_assets() {
-	wp_enqueue_style( 'sgd-fonts', 'https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&subset=vietnamese&display=swap', array(), null );
+	// Be Vietnam Pro: phông thiết kế riêng cho tiếng Việt, 4 độ đậm (ít tải hơn), display=swap tránh chữ trắng khi tải.
+	wp_enqueue_style( 'sgd-fonts', 'https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700;800&display=swap', array(), null );
 	wp_enqueue_style( 'sgd-main', SGD_URI . '/assets/css/dichvu.css', array( 'flatsome-main' ), SGD_VERSION );
 	wp_add_inline_style(
 		'sgd-main',
 		sprintf( ':root{--sgd-primary:%s;--sgd-accent:%s;}', esc_html( sgd_opt( 'color_primary' ) ), esc_html( sgd_opt( 'color_accent' ) ) )
 	);
-	wp_enqueue_script( 'sgd-main', SGD_URI . '/assets/js/dichvu.js', array(), SGD_VERSION, true );
+	wp_enqueue_script( 'sgd-main', SGD_URI . '/assets/js/dichvu.js', array(), SGD_VERSION, array( 'in_footer' => true, 'strategy' => 'defer' ) );
 }
 add_action( 'wp_enqueue_scripts', 'sgd_enqueue_assets', 120 );
+
+/**
+ * Kết nối sớm tới máy chủ phông chữ (tải chữ nhanh hơn, cải thiện LCP).
+ *
+ * @param array  $urls          URL.
+ * @param string $relation_type Loại.
+ * @return array
+ */
+function sgd_resource_hints( $urls, $relation_type ) {
+	if ( 'preconnect' === $relation_type ) {
+		$urls[] = 'https://fonts.googleapis.com';
+		$urls[] = array( 'href' => 'https://fonts.gstatic.com', 'crossorigin' );
+	}
+	return $urls;
+}
+add_filter( 'wp_resource_hints', 'sgd_resource_hints', 10, 2 );
 
 /**
  * Nút liên hệ nổi + thanh liên hệ dưới cùng trên điện thoại.
