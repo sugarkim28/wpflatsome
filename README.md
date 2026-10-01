@@ -1,5 +1,9 @@
 # Landing page Bất động sản trên Flatsome
 
+> **Website dịch vụ doanh nghiệp** (thành lập công ty, thay đổi giấy phép, thuế, kế toán): xem theme [`wp-content/themes/flatsome-dichvu`](wp-content/themes/flatsome-dichvu/README.md).
+>
+> **Website tổng hợp dự án BĐS**: xem theme [`wp-content/themes/flatsome-portal`](wp-content/themes/flatsome-portal/README.md).
+
 Child theme `wp-content/themes/flatsome-child` biến Flatsome 3.20.x thành landing page dự án bất động sản.
 
 ## Có gì
