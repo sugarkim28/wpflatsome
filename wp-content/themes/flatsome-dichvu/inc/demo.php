@@ -257,11 +257,13 @@ function sgd_demo_build() {
 
 	// 4. Trang.
 	$blank   = array( '_wp_page_template' => 'page-blank.php' );
-	$home    = sgd_demo_post( array( 'post_type' => 'page', 'post_name' => 'trang-chu', 'post_title' => 'Trang chủ', 'post_content' => sgd_demo_home_content() ), $blank );
 	$pricing = sgd_demo_post( array( 'post_type' => 'page', 'post_name' => 'bang-gia', 'post_title' => 'Bảng giá dịch vụ', 'post_content' => sgd_demo_pricing_content( $data['groups'] ) ), $blank );
 	$about   = sgd_demo_post( array( 'post_type' => 'page', 'post_name' => 'gioi-thieu', 'post_title' => 'Giới thiệu', 'post_content' => sgd_demo_about_content() ), $blank );
 	$contact = sgd_demo_post( array( 'post_type' => 'page', 'post_name' => 'lien-he', 'post_title' => 'Liên hệ', 'post_content' => sgd_demo_contact_content() ), $blank );
 	$news    = sgd_demo_post( array( 'post_type' => 'page', 'post_name' => 'tin-tuc', 'post_title' => 'Kiến thức', 'post_content' => '' ) );
+	// Trang chủ tạo sau cùng để liên kết tới các trang khác dùng đúng đường dẫn của site
+	// (máy chủ nginx chưa cấu hình rewrite sẽ có dạng /index.php/bang-gia/).
+	$home    = sgd_demo_post( array( 'post_type' => 'page', 'post_name' => 'trang-chu', 'post_title' => 'Trang chủ', 'post_content' => sgd_demo_home_content() ), $blank );
 	update_option( 'show_on_front', 'page' );
 	update_option( 'page_on_front', $home );
 	update_option( 'page_for_posts', $news );
@@ -344,7 +346,7 @@ function sgd_demo_build() {
 	set_theme_mod( 'mobile_sidebar', array( 'nav' ) );
 	set_theme_mod( 'header_height', 76 );
 	set_theme_mod( 'header_height_mobile', 64 );
-	set_theme_mod( 'logo_width', 200 );
+	set_theme_mod( 'logo_width', 230 );
 	set_theme_mod( 'header_bg', '#ffffff' );
 	set_theme_mod( 'header_color', 'light' );
 	set_theme_mod( 'nav_uppercase', 0 );
@@ -372,7 +374,7 @@ function sgd_demo_build() {
 	set_theme_mod( 'footer_2_columns', 0 );
 	set_theme_mod( 'default_title', 0 );
 	if ( ! get_theme_mod( 'site_logo' ) || false !== strpos( (string) get_theme_mod( 'site_logo' ), '/flatsome/assets/img/logo.png' ) ) {
-		set_theme_mod( 'site_logo', '' ); // Chưa có logo → hiện tên công ty dạng chữ.
+		set_theme_mod( 'site_logo', '' ); // Chưa tải logo → dùng logo SVG Tin Học 119 có sẵn trong theme.
 	}
 	update_option( 'blogname', sgd_opt( 'company' ) );
 	update_option( 'blogdescription', sgd_opt( 'tagline' ) );
@@ -422,7 +424,7 @@ function sgd_demo_home_content() {
 [row]
 [col span="12"]
 <p class="sgd-band__text">Chưa chắc nên chọn loại hình hay gói nào? Gọi cho chúng tôi – tư vấn miễn phí, báo giá trọn gói trong 15 phút.</p>
-<div class="sgd-band__btns"><a href="#dang-ky">Nhận báo giá</a><a href="/bang-gia/">Xem bảng giá</a></div>
+<div class="sgd-band__btns"><a href="#dang-ky">Nhận báo giá</a><a href="' . esc_url( sgd_demo_url( 'bang-gia' ) ) . '">Xem bảng giá</a></div>
 [/col]
 [/row]
 [/section]
@@ -622,13 +624,13 @@ function sgd_demo_footer_content( $groups, $pages ) {
 	return '[section bg_color="#0f2c55" dark="true" padding="44px" class="sgd-footer--dark"]
 [row]
 [col span="4" span__sm="12"]
-<p class="sgd-footer__logo">[sgd_company field="company"]</p>
+<img class="sgd-footer__brandlogo" src="' . esc_url( SGD_URI . '/assets/img/logo-119-white.svg' ) . '" alt="' . esc_attr( sgd_opt( 'company' ) ) . '" width="260" height="52" loading="lazy">
 <h3>[sgd_company field="company_full"]</h3>
 <p>[sgd_company field="address"]<br>Hotline: [sgd_company field="hotline"]<br>Email: [sgd_company field="email"]<br>MST: [sgd_company field="tax_code"]<br>Giờ làm việc: [sgd_company field="working_hours"]</p>
 [/col]
 [col span="3" span__sm="6"]
 <p class="sgd-footer__h">Dịch vụ</p>
-<ul><li><a href="/dich-vu/">Tất cả dịch vụ</a></li>' . $g . '</ul>
+<ul><li><a href="' . esc_url( get_post_type_archive_link( 'dich_vu' ) ) . '">Tất cả dịch vụ</a></li>' . $g . '</ul>
 [/col]
 [col span="2" span__sm="6"]
 <p class="sgd-footer__h">Thông tin</p>
@@ -645,4 +647,15 @@ function sgd_demo_footer_content( $groups, $pages ) {
 [/col]
 [/row]
 [/section]';
+}
+
+/**
+ * Đường dẫn trang theo slug, đúng cấu trúc đường dẫn hiện tại của site (kể cả dạng /index.php/…).
+ *
+ * @param string $slug Slug trang.
+ * @return string
+ */
+function sgd_demo_url( $slug ) {
+	$p = get_page_by_path( $slug );
+	return $p ? get_permalink( $p ) : home_url( '/' );
 }

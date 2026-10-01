@@ -71,7 +71,7 @@
 					openPopup();
 				} );
 			} else {
-				a.setAttribute( 'href', '/lien-he/#dang-ky' );
+				a.setAttribute( 'href', window.sgdContactUrl || '#dang-ky' );
 			}
 		} );
 	}

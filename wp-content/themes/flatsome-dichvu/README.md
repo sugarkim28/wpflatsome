@@ -36,6 +36,12 @@ Trang chủ (thứ tự): Banner H1 + form → dải số liệu → 6 dịch v�
 5. **Nội dung**: mỗi dịch vụ 800–1.500 chữ, chia H2/H3, có bảng giá, hồ sơ, quy trình, FAQ; liên kết sang 2–3 dịch vụ liên quan và bài viết hướng dẫn.
 6. **Google Business Profile** cùng tên – địa chỉ – số điện thoại với website (NAP thống nhất); khai báo đủ chi nhánh ở *Văn phòng / chi nhánh*.
 
+## Thương hiệu Tin Học 119 & máy chủ nginx
+
+- Logo SVG có sẵn: `assets/img/logo-119.svg` (header), `logo-119-white.svg` (footer nền tối), `icon-119.svg` (favicon). Theme tự dùng khi chưa tải logo; tải logo PNG thật ở **Tuỳ biến → Header → Logo** để ảnh chia sẻ Facebook/Zalo và Google hiển thị chuẩn (2 nền tảng này không đọc SVG).
+- Màu mặc định: xanh `#123fb8`, đỏ `#e10b17` (nút, giá), nền tối `#0b1f5c`; khẩu hiệu *Uy tín tạo niềm tin*; hotline/Zalo 0914 108 322.
+- **Máy chủ nginx**: nếu đường dẫn có dạng `/index.php/dich-vu/...` là nginx chưa có quy tắc rewrite của WordPress. Thêm vào khối `server` của site: `location / { try_files $uri $uri/ /index.php?$args; }` rồi vào **Cài đặt → Đường dẫn tĩnh** chọn *Tên bài viết* để có đường dẫn gọn (tốt cho SEO). Theme không dùng đường dẫn cứng nên chạy được cả hai dạng.
+
 ## Cài đặt
 
 1. Tải thư mục `flatsome-dichvu` lên `wp-content/themes/` (cần theme cha **Flatsome**, không kích hoạt theme cha).

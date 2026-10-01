@@ -24,10 +24,11 @@ $sgd_tables = sgd_price_tables( $sgd_id );
 <?php foreach ( $sgd_tables as $sgd_t ) : ?>
 	<?php $sgd_cols = max( count( $sgd_t['head'] ), $sgd_t['rows'] ? max( array_map( 'count', $sgd_t['rows'] ) ) : 0 ); ?>
 	<div class="sgd-mtable">
+		<?php if ( $sgd_t['title'] ) : ?>
+			<p class="sgd-mtable__title"><?php echo esc_html( $sgd_t['title'] ); ?></p>
+		<?php endif; ?>
+		<div class="sgd-mtable__scroll">
 		<table>
-			<?php if ( $sgd_t['title'] ) : ?>
-				<caption><?php echo esc_html( $sgd_t['title'] ); ?></caption>
-			<?php endif; ?>
 			<?php if ( $sgd_t['head'] ) : ?>
 				<thead><tr>
 					<?php foreach ( $sgd_t['head'] as $sgd_h ) : ?>
@@ -72,6 +73,7 @@ $sgd_tables = sgd_price_tables( $sgd_id );
 				<?php endforeach; ?>
 			</tbody>
 		</table>
+		</div>
 		<?php foreach ( $sgd_t['notes'] as $sgd_n ) : ?>
 			<p class="sgd-mtable__note">(*) <?php echo esc_html( $sgd_n ); ?></p>
 		<?php endforeach; ?>

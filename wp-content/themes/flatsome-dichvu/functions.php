@@ -31,6 +31,8 @@ function sgd_enqueue_assets() {
 		sprintf( ':root{--sgd-primary:%s;--sgd-accent:%s;}', esc_html( sgd_opt( 'color_primary' ) ), esc_html( sgd_opt( 'color_accent' ) ) )
 	);
 	wp_enqueue_script( 'sgd-main', SGD_URI . '/assets/js/dichvu.js', array(), SGD_VERSION, array( 'in_footer' => true, 'strategy' => 'defer' ) );
+	$sgd_contact = get_page_by_path( 'lien-he' );
+	wp_add_inline_script( 'sgd-main', 'window.sgdContactUrl=' . wp_json_encode( ( $sgd_contact ? get_permalink( $sgd_contact ) : home_url( '/' ) ) . '#dang-ky' ) . ';', 'before' );
 }
 add_action( 'wp_enqueue_scripts', 'sgd_enqueue_assets', 120 );
 
@@ -69,3 +71,24 @@ function sgd_body_class( $classes ) {
 	return $classes;
 }
 add_filter( 'body_class', 'sgd_body_class' );
+
+/**
+ * Logo mặc định Tin Học 119 (SVG trong theme) khi chưa tải logo ở Tuỳ biến → Header → Logo.
+ *
+ * @param mixed $logo Logo đã lưu (ID ảnh hoặc URL).
+ * @return mixed
+ */
+function sgd_default_logo( $logo ) {
+	return $logo ? $logo : SGD_URI . '/assets/img/logo-119.svg';
+}
+add_filter( 'theme_mod_site_logo', 'sgd_default_logo' );
+
+/**
+ * Biểu tượng trang (favicon) mặc định khi chưa đặt Biểu tượng trang web trong WordPress.
+ */
+function sgd_default_favicon() {
+	if ( ! has_site_icon() ) {
+		echo '<link rel="icon" type="image/svg+xml" href="' . esc_url( SGD_URI . '/assets/img/icon-119.svg' ) . "\">\n";
+	}
+}
+add_action( 'wp_head', 'sgd_default_favicon', 2 );

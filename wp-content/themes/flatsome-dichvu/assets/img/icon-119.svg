@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="140" viewBox="0 0 300 140" role="img" aria-label="119">
+  <defs>
+    <linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff2a1a"/><stop offset="1" stop-color="#c4000c"/></linearGradient>
+    <linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a6bff"/><stop offset="1" stop-color="#0b2fb0"/></linearGradient>
+  </defs>
+  <g transform="skewX(-14) translate(30 0)">
+    <path fill="url(#r)" d="M14 44 L52 22 H80 V118 H50 V54 L14 64 Z"/>
+    <path fill="url(#r)" d="M84 44 L122 22 H150 V118 H120 V54 L84 64 Z"/>
+    <path fill="url(#b)" fill-rule="evenodd" d="M182 22 H230 Q262 22 262 52 V56 Q262 86 230 86 H182 Q154 86 154 56 V52 Q154 22 182 22 Z M190 44 Q182 44 182 51 Q182 58 190 58 H222 Q230 58 230 51 Q230 44 222 44 Z"/>
+    <path fill="url(#r)" d="M262 66 V84 Q262 118 222 118 H146 Q152 98 182 94 H226 Q246 94 250 80 Z"/>
+  </g>
+</svg>
