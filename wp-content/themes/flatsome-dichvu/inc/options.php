@@ -24,10 +24,13 @@ function sgd_defaults() {
 		'address'        => 'Số ... đường ..., Phường ..., TP. Hồ Chí Minh',
 		'tax_code'       => '',
 		'working_hours'  => '8:00 – 17:30, Thứ 2 – Thứ 7',
+		'hotlines'       => '',
+		'messenger'      => '',
+		'branches'       => '',
 		'facebook'       => '',
 		'youtube'        => '',
-		'color_primary'  => '#0b3d6e',
-		'color_accent'   => '#f59e0b',
+		'color_primary'  => '#2a4d9f',
+		'color_accent'   => '#fd6c2b',
 		'archive_title'  => 'Dịch vụ doanh nghiệp trọn gói',
 		'archive_intro'  => 'Thành lập công ty, thay đổi giấy phép kinh doanh, kê khai thuế và kế toán trọn gói cho doanh nghiệp vừa và nhỏ. Báo giá rõ ràng, không phát sinh, làm hồ sơ online – khách hàng không cần đi lại.',
 		'archive_bottom' => '',
@@ -82,6 +85,39 @@ function sgd_lines( $text, $min = 2 ) {
 }
 
 /**
+ * Hotline theo khu vực: [[nhãn, số], ...]. Không khai báo → [[ 'Hotline', hotline chính ]].
+ *
+ * @return array
+ */
+function sgd_hotlines() {
+	$out = array();
+	foreach ( sgd_lines( sgd_opt( 'hotlines' ) ) as $l ) {
+		if ( '' !== $l[1] ) {
+			$out[] = array( $l[0], $l[1] );
+		} elseif ( preg_match( '/\d{6,}/', sgd_tel( $l[0] ) ) ) {
+			$out[] = array( 'Hotline', $l[0] );
+		}
+	}
+	if ( ! $out && sgd_opt( 'hotline' ) ) {
+		$out[] = array( 'Hotline', sgd_opt( 'hotline' ) );
+	}
+	return $out;
+}
+
+/**
+ * Văn phòng / chi nhánh: [[tên, địa chỉ, điện thoại, email], ...]. Không khai báo → trụ sở chính.
+ *
+ * @return array
+ */
+function sgd_branches() {
+	$out = sgd_lines( sgd_opt( 'branches' ), 4 );
+	if ( ! $out ) {
+		$out[] = array( 'Trụ sở chính', sgd_opt( 'address' ), sgd_opt( 'hotline' ), sgd_opt( 'email' ) );
+	}
+	return $out;
+}
+
+/**
  * Customizer.
  *
  * @param WP_Customize_Manager $wp_customize Manager.
@@ -108,6 +144,9 @@ function sgd_customize_register( $wp_customize ) {
 		'email'          => array( 'sgd_company', 'email', 'Email liên hệ (hiển thị) – trống = email quản trị' ),
 		'lead_email'     => array( 'sgd_company', 'email', 'Email nhận thông báo khách mới – trống = email quản trị' ),
 		'working_hours'  => array( 'sgd_company', 'text', 'Giờ làm việc' ),
+		'hotlines'       => array( 'sgd_company', 'textarea', 'Hotline theo khu vực – mỗi dòng: Nhãn | Số (vd: Miền Nam | 0900 000 000). Trống = dùng Hotline chính' ),
+		'messenger'      => array( 'sgd_company', 'text', 'Messenger – tên trang Facebook (vd: tencongty) để hiện nút chat' ),
+		'branches'       => array( 'sgd_company', 'textarea', 'Văn phòng / chi nhánh ở footer – mỗi dòng: Tên | Địa chỉ | Điện thoại | Email' ),
 		'facebook'       => array( 'sgd_company', 'url', 'Facebook' ),
 		'youtube'        => array( 'sgd_company', 'url', 'YouTube' ),
 		'archive_title'  => array( 'sgd_listing', 'text', 'Tiêu đề H1 trang /dich-vu/' ),

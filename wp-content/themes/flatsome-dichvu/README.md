@@ -2,24 +2,30 @@
 
 Theme con của **Flatsome** cho công ty dịch vụ doanh nghiệp: thành lập công ty, thay đổi giấy phép kinh doanh, dịch vụ thuế, kế toán trọn gói.
 
+Giao diện theo phong cách trang tin dịch vụ (tham khảo bố cục ketoananpha.vn, không dùng logo/ảnh/nội dung của họ): chữ Nunito, xanh `#2a4d9f` + cam `#fd6c2b`, header nền xám nhạt (logo + hotline theo khu vực, menu chữ in hoa ở thanh dưới), trang chủ dạng lưới banner + khối chuyên mục có cột phải, trang dịch vụ dạng bài viết (mục lục khung cam, bảng chi phí, bảng giá ma trận, nút *Gọi ngay* theo miền, cột phải *Dịch vụ liên quan / Tham khảo thêm*), footer liệt kê văn phòng/chi nhánh, thanh 3 nút Gọi – Zalo – Messenger trên điện thoại.
+
 ## Cài đặt
 
 1. Tải thư mục `flatsome-dichvu` lên `wp-content/themes/` (cần theme cha **Flatsome**, không kích hoạt theme cha).
 2. **Giao diện → Giao diện** → kích hoạt *Flatsome Dịch vụ – Thành lập công ty, Thuế, Kế toán*.
-3. **Giao diện → Tuỳ biến → Website dịch vụ**: tên công ty, tên pháp nhân, MST, hotline, Zalo, email, địa chỉ, giờ làm việc, màu.
-4. **Giao diện → Tạo site mẫu** → bấm **Tạo site mẫu** (dựng 4 nhóm dịch vụ, 16 dịch vụ, trang chủ, bảng giá, giới thiệu, liên hệ, tin tức, menu, footer, header).
+3. **Giao diện → Tuỳ biến → Website dịch vụ**: tên công ty, tên pháp nhân, MST, hotline, Zalo, email, địa chỉ, giờ làm việc, màu, và:
+   - *Hotline theo khu vực* – mỗi dòng `Nhãn | Số` (vd `Miền Nam | 0900 000 000`) → hiện ở header và khối *Gọi ngay*.
+   - *Messenger* – tên trang Facebook → nút Messenger nổi + trên thanh điện thoại.
+   - *Văn phòng / chi nhánh* – mỗi dòng `Tên | Địa chỉ | Điện thoại (nhiều số cách dấu phẩy) | Email` → footer.
+4. **Giao diện → Tạo site mẫu** → bấm **Tạo site mẫu** (dựng 5 nhóm, 20 dịch vụ, trang chủ, bảng giá, giới thiệu, liên hệ, kiến thức, menu, footer, header).
 5. **Khách đăng ký → Cài đặt email**: nhập Gmail + mật khẩu ứng dụng → *Gửi email thử*.
 6. **Tuỳ biến → Header → Logo**: tải logo (chưa có logo thì hiện tên công ty dạng chữ).
-7. **Sửa giá**: giá trong dữ liệu mẫu chỉ để minh hoạ. Vào **Dịch vụ** → sửa từng dịch vụ → ô *Giá hiển thị* và *Bảng giá*. Đọc lại nội dung, FAQ và quy định trước khi chạy quảng cáo.
+7. **Header**: trình tạo đặt phần tử *HTML 3* (nội dung `[sgd_hotlines style="header"]`) bên phải logo và menu ở *Header Bottom*. Nếu bản Flatsome của bạn đặt tên phần tử khác, vào **Flatsome → Header Builder** kéo một phần tử HTML vào bên phải logo và dán shortcode trên.
+8. **Sửa giá**: giá trong dữ liệu mẫu chỉ để minh hoạ (mức tham khảo thị trường). Vào **Dịch vụ** → sửa từng dịch vụ → ô *Giá hiển thị* và *Bảng giá*. Đọc lại nội dung, FAQ và quy định trước khi chạy quảng cáo.
 
 ## Cấu trúc website
 
 | Trang | URL | Nội dung |
 |---|---|---|
-| Trang chủ | `/` | Banner + form, 4 nhóm dịch vụ, dịch vụ nổi bật, bảng giá (tab), quy trình 4 bước, lý do chọn, FAQ, tin tức, form |
+| Trang chủ | `/` | Lưới banner 4 dịch vụ chủ lực, dải số liệu, khối chuyên mục (1 dịch vụ lớn + danh sách) cho từng nhóm, cột phải (bảng giá nhanh, form, bài viết), bảng giá thành lập + bảng giá kế toán, Gọi ngay, lý do chọn, quy trình |
 | Tất cả dịch vụ | `/dich-vu/` | H1, giới thiệu, nút chuyển nhóm, lưới dịch vụ, nội dung SEO cuối trang, form |
 | Nhóm dịch vụ | `/nhom-dich-vu/thanh-lap-doanh-nghiep/` … | Mô tả nhóm (150–300 chữ) + các dịch vụ trong nhóm |
-| Chi tiết dịch vụ | `/dich-vu/thanh-lap-cong-ty-tnhh/` | H1, phí, thời gian, mục lục, **bảng giá theo gói**, công việc thực hiện, hồ sơ cần chuẩn bị, quy trình, nội dung, FAQ, dịch vụ liên quan, form gắn dịch vụ |
+| Chi tiết dịch vụ | `/dich-vu/thanh-lap-cong-ty-tnhh/` | H1, phí, thời gian, banner, đoạn mở đầu, mục lục, **chi phí trọn gói**, **bảng giá ma trận**, **các gói**, Gọi ngay, công việc thực hiện, hồ sơ cần chuẩn bị, quy trình, nội dung, FAQ; cột phải: form, dịch vụ liên quan, tham khảo thêm; cuối trang: cùng chuyên mục |
 | Bảng giá | `/bang-gia/` | Bảng phí tóm tắt theo nhóm (tự cập nhật khi sửa giá dịch vụ) |
 | Giới thiệu, Liên hệ, Tin tức | `/gioi-thieu/`, `/lien-he/`, `/tin-tuc/` | Trang UX Builder |
 
@@ -28,7 +34,8 @@ Nhóm & dịch vụ mẫu:
 - **Thành lập doanh nghiệp**: công ty TNHH, công ty cổ phần, hộ kinh doanh, chi nhánh/VPĐD/địa điểm kinh doanh, công ty vốn nước ngoài.
 - **Thay đổi giấy phép kinh doanh**: địa chỉ trụ sở; tên công ty, người đại diện; vốn điều lệ, thành viên/cổ đông; ngành nghề; tạm ngừng/giải thể.
 - **Dịch vụ thuế**: khai thuế ban đầu, báo cáo thuế tháng/quý, quyết toán thuế & BCTC, hoàn thuế/giải trình.
-- **Dịch vụ kế toán**: kế toán trọn gói, rà soát – làm lại sổ sách.
+- **Dịch vụ kế toán**: kế toán trọn gói (bảng giá theo ngành × số hóa đơn/quý), rà soát – làm lại sổ sách, kế toán hộ kinh doanh.
+- **Dịch vụ khác**: bảo hiểm xã hội, chữ ký số – hóa đơn điện tử, đăng ký nhãn hiệu.
 
 ## Thêm / sửa một dịch vụ
 
@@ -37,7 +44,9 @@ Nhóm & dịch vụ mẫu:
 - **Tiêu đề** = tên dịch vụ (thành H1), **Tóm tắt (Excerpt)** 1–2 câu = mô tả trên Google.
 - **Nội dung**: viết thêm bằng *Tiêu đề 2 (H2)* – tự vào mục lục.
 - **Thông tin dịch vụ** (hộp bên dưới):
-  - *Giá hiển thị*, *Thời gian hoàn thành*, *Icon*.
+  - *Tên ngắn trên banner*, *Giá hiển thị*, *Thời gian hoàn thành*, *Icon*. Chưa có ảnh đại diện thì theme tự vẽ banner (tên ngắn + giá); có ảnh đại diện thì dùng ảnh.
+  - *Chi phí trọn gói*: mỗi dòng `Khoản | Số tiền`; dòng bắt đầu bằng "Tổng" được tô đậm.
+  - *Bảng giá dạng bảng*: dòng `## Tiêu đề` mở bảng, dòng kế là tiêu đề cột, các dòng sau `Ô 1 | Ô 2 | …` (dòng ít ô hơn thì ô cuối tự trải hết hàng), dòng `* ...` là ghi chú.
   - *Công việc chúng tôi thực hiện*, *Hồ sơ khách hàng cần chuẩn bị*: mỗi dòng 1 ý.
   - *Quy trình*: mỗi dòng `Bước | Mô tả`.
   - *Bảng giá*: mỗi dòng `Tên gói | Giá | ý 1; ý 2; ý 3 | *` (dấu `*` ở cột cuối = gói nổi bật). Bấm *Chọn gói này* trên web sẽ tự ghi tên gói vào form.
@@ -49,15 +58,22 @@ Nhóm & dịch vụ mẫu:
 ## Shortcode cho UX Builder
 
 ```
+[sgd_featured ids="slug1,slug2,slug3,slug4"]           – lưới banner 1 lớn + 3 (trống = 4 dịch vụ nổi bật)
+[sgd_htab text="Tiêu đề" link="/dich-vu/"]             – tiêu đề khối dạng thẻ
+[sgd_group_block group="ke-toan" number="5"]           – khối chuyên mục: 1 dịch vụ lớn + danh sách
+[sgd_posts number="5" category=""]                     – bài viết kiểu tạp chí
+[sgd_hotlines style="pills|header" title="Gọi ngay"]   – hotline theo khu vực
+[sgd_branches]                                         – văn phòng / chi nhánh
+[sgd_sidebar form="1"]                                 – cột phải (form, dịch vụ nổi bật, bài viết)
 [sgd_groups columns="4" services="4"]                  – các nhóm dịch vụ kèm dịch vụ con
-[sgd_services number="6" columns="3" featured="1" group="dich-vu-thue"]
-[sgd_pricing service="thanh-lap-cong-ty-tnhh"]        – bảng giá theo gói của 1 dịch vụ
+[sgd_services number="6" columns="3" featured="1" group="dich-vu-thue" layout="grid|list|mini"]
+[sgd_pricing service="ke-toan-tron-goi" show="all|table|packages"] – chi phí, bảng giá, các gói của 1 dịch vụ
 [sgd_price_table group="ke-toan"]                      – bảng phí tóm tắt
 [sgd_steps layout="row"]Bước | Mô tả (mỗi dòng 1 bước)[/sgd_steps]
 [sgd_lead_form title="" source="Trang chủ" service="slug-hoac-ID" perks="1" note="1"]
 [sgd_call_buttons]
 [sgd_company field="company|company_full|hotline|zalo|email|address|tax_code|working_hours"]
-[sgd_icon name="building|edit|tax|calculator|stamp|chart|shield|doc|clock|users|wallet|globe"]
+[sgd_icon name="building|edit|tax|calculator|stamp|chart|shield|doc|clock|users|wallet|globe|pin|phone|mail|trademark"]
 ```
 
 Nút hoặc liên kết trỏ tới `#dang-ky` sẽ cuộn xuống form. Trang nào không có form thì nút tự chuyển sang `/lien-he/#dang-ky`.

@@ -23,7 +23,7 @@ require_once SGD_DIR . '/inc/demo.php';
  * CSS/JS giao diện.
  */
 function sgd_enqueue_assets() {
-	wp_enqueue_style( 'sgd-fonts', 'https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@600;700;800&display=swap', array(), null );
+	wp_enqueue_style( 'sgd-fonts', 'https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&subset=vietnamese&display=swap', array(), null );
 	wp_enqueue_style( 'sgd-main', SGD_URI . '/assets/css/dichvu.css', array( 'flatsome-main' ), SGD_VERSION );
 	wp_add_inline_style(
 		'sgd-main',

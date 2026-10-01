@@ -27,6 +27,10 @@ function sgd_icons() {
 		'clock'      => array( 'Nhanh', '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>' ),
 		'users'      => array( 'Đội ngũ', '<circle cx="9" cy="8" r="3.5"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M22 21a7 7 0 0 0-4-6.3"/>' ),
 		'wallet'     => array( 'Chi phí', '<path d="M3 7a2 2 0 0 1 2-2h13v4"/><path d="M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2z"/><circle cx="16" cy="14.5" r="1.2"/>' ),
+		'pin'        => array( 'Địa chỉ', '<path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.6"/>' ),
+		'phone'      => array( 'Điện thoại', '<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2z"/>' ),
+		'mail'       => array( 'Email', '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>' ),
+		'trademark'  => array( 'Nhãn hiệu', '<circle cx="12" cy="12" r="9"/><path d="M8 9h4M10 9v6M13.5 15V9l1.75 3L17 9v6"/>' ),
 		'globe'      => array( 'Nước ngoài', '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>' ),
 	);
 }
@@ -50,10 +54,13 @@ function sgd_icon( $name ) {
  */
 function sgd_service_fields() {
 	return array(
+		'short'      => array( 'Tên ngắn trên banner (vd: THÀNH LẬP CÔNG TY TNHH)', 'text', 'Thành lập công ty TNHH' ),
 		'subtitle'   => array( 'Mô tả ngắn dưới tiêu đề', 'text', 'Trọn gói từ A–Z, có giấy phép sau 3 ngày làm việc' ),
 		'price'      => array( 'Giá hiển thị', 'text', 'Từ 1.000.000đ' ),
 		'duration'   => array( 'Thời gian hoàn thành', 'text', '3 – 5 ngày làm việc' ),
 		'icon'       => array( 'Icon', 'icon', '' ),
+		'costs'      => array( 'Chi phí trọn gói – mỗi dòng: Khoản | Số tiền (dòng bắt đầu bằng "Tổng" được in đậm)', 'textarea', "Phí dịch vụ | 250.000đ\nLệ phí nhà nước | Theo quy định\nTổng chi phí trọn gói | 1.000.000đ" ),
+		'price_table' => array( 'Bảng giá dạng bảng – dòng "## Tiêu đề" mở bảng mới, dòng kế tiếp là tiêu đề cột, các dòng sau: Ô 1 | Ô 2 | …; dòng bắt đầu "* " là ghi chú', 'textarea', "## Bảng giá kế toán trọn gói (theo quý)\nSố hóa đơn/quý | Dịch vụ | Thương mại\nKhông có hóa đơn | 1.500.000đ | 1.500.000đ\n* Giá chưa gồm VAT" ),
 		'includes'   => array( 'Công việc chúng tôi thực hiện – mỗi dòng 1 ý', 'textarea', "Tư vấn loại hình, vốn, ngành nghề\nSoạn và nộp hồ sơ online" ),
 		'documents'  => array( 'Hồ sơ khách hàng cần chuẩn bị – mỗi dòng 1 ý', 'textarea', "CCCD của thành viên/cổ đông\nĐịa chỉ trụ sở" ),
 		'process'    => array( 'Quy trình – mỗi dòng: Bước | Mô tả', 'textarea', "Tiếp nhận yêu cầu | Tư vấn miễn phí, báo giá trọn gói\nSoạn hồ sơ | ..." ),
@@ -408,4 +415,60 @@ function sgd_related_services( $id, $count = 3 ) {
 		$found = array_merge( $found, get_posts( $args ) );
 	}
 	return $found;
+}
+
+/**
+ * Bảng giá dạng bảng: [ ['title'=>, 'head'=>[], 'rows'=>[[]], 'notes'=>[]], ... ].
+ *
+ * @param int|null $id ID dịch vụ.
+ * @return array
+ */
+function sgd_price_tables( $id = null ) {
+	$tables = array();
+	$cur    = null;
+	foreach ( preg_split( '/\r\n|\r|\n/', sgd_meta( 'price_table', $id ) ) as $line ) {
+		$line = trim( $line );
+		if ( '' === $line ) {
+			continue;
+		}
+		if ( 0 === strpos( $line, '##' ) ) {
+			if ( $cur ) {
+				$tables[] = $cur;
+			}
+			$cur = array( 'title' => trim( ltrim( $line, '#' ) ), 'head' => array(), 'rows' => array(), 'notes' => array() );
+			continue;
+		}
+		if ( ! $cur ) {
+			$cur = array( 'title' => '', 'head' => array(), 'rows' => array(), 'notes' => array() );
+		}
+		if ( 0 === strpos( $line, '* ' ) ) {
+			$cur['notes'][] = trim( substr( $line, 2 ) );
+		} elseif ( ! $cur['head'] ) {
+			$cur['head'] = array_map( 'trim', explode( '|', $line ) );
+		} else {
+			$cur['rows'][] = array_map( 'trim', explode( '|', $line ) );
+		}
+	}
+	if ( $cur ) {
+		$tables[] = $cur;
+	}
+	return array_values(
+		array_filter(
+			$tables,
+			function ( $t ) {
+				return $t['head'] || $t['rows'];
+			}
+		)
+	);
+}
+
+/**
+ * Tên ngắn hiển thị trên banner dịch vụ.
+ *
+ * @param int|null $id ID.
+ * @return string
+ */
+function sgd_short_title( $id = null ) {
+	$s = sgd_meta( 'short', $id );
+	return $s ? $s : get_the_title( $id ? $id : get_the_ID() );
 }

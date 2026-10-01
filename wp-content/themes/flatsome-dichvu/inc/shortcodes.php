@@ -1,9 +1,16 @@
 <?php
 /**
  * Shortcode dùng trong UX Builder:
- *  [sgd_services number="6" columns="3" featured="1" group="thanh-lap-doanh-nghiep" tag="h3"]
+ *  [sgd_featured ids="slug1,slug2,slug3,slug4"]  – lưới banner nổi bật (1 lớn + 3), trống = 4 dịch vụ nổi bật
+ *  [sgd_htab text="" link=""]                   – tiêu đề khối dạng thẻ
+ *  [sgd_group_block group="slug" number="5"]    – khối chuyên mục: 1 dịch vụ lớn + danh sách
+ *  [sgd_posts number="5" category=""]            – bài viết kiểu tạp chí
+ *  [sgd_services number="6" columns="3" featured="1" group="thanh-lap-doanh-nghiep" layout="grid|list|mini" tag="h3"]
+ *  [sgd_hotlines style="pills|header"]           – hotline theo khu vực
+ *  [sgd_branches]                                – văn phòng / chi nhánh
+ *  [sgd_sidebar form="1"]                        – cột phải
  *  [sgd_groups columns="4" services="4"]        – các nhóm dịch vụ kèm dịch vụ con
- *  [sgd_pricing service="slug-hoac-ID"]         – bảng giá theo gói của 1 dịch vụ
+ *  [sgd_pricing service="slug-hoac-ID" show="all|table|packages"] – chi phí, bảng giá, các gói của 1 dịch vụ
  *  [sgd_steps layout="row"]Bước | Mô tả (mỗi dòng 1 bước)[/sgd_steps]
  *  [sgd_price_table group="slug"]               – bảng phí tóm tắt: dịch vụ | phí | thời gian
  *  [sgd_lead_form title="" button="" source="" service="" perks="1" note="1"]
@@ -57,56 +64,255 @@ function sgd_find_service( $ref ) {
 }
 
 /**
- * Lưới dịch vụ.
+ * Lấy danh sách dịch vụ theo tham số shortcode (featured rỗng thì lấy dịch vụ thường).
+ *
+ * @param array $a number, featured, group, exclude.
+ * @return WP_Post[]
+ */
+function sgd_query_services( $a ) {
+	$args = array(
+		'post_type'      => 'dich_vu',
+		'posts_per_page' => max( 1, min( 24, absint( $a['number'] ) ) ),
+		'orderby'        => array( 'menu_order' => 'ASC', 'date' => 'DESC' ),
+		'no_found_rows'  => true,
+		'post__not_in'   => array_filter( array_map( 'absint', explode( ',', (string) $a['exclude'] ) ) ),
+	);
+	if ( ! empty( $a['group'] ) ) {
+		$args['tax_query'] = array( array( 'taxonomy' => 'nhom_dich_vu', 'field' => 'slug', 'terms' => array_map( 'trim', explode( ',', $a['group'] ) ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+	}
+	if ( ! empty( $a['featured'] ) ) {
+		$f = $args;
+		$f['meta_query'] = array( array( 'key' => '_sgd_featured', 'value' => '1' ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+		$posts = get_posts( $f );
+		if ( $posts ) {
+			return $posts;
+		}
+	}
+	return get_posts( $args );
+}
+
+/**
+ * In danh sách thẻ dịch vụ.
+ *
+ * @param WP_Post[] $posts  Dịch vụ.
+ * @param string    $layout grid|list|mini.
+ * @param string    $tag    Thẻ tiêu đề.
+ * @return string
+ */
+function sgd_render_cards( $posts, $layout = 'grid', $tag = 'h3' ) {
+	global $post;
+	ob_start();
+	foreach ( $posts as $post ) : // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		setup_postdata( $post );
+		get_template_part( 'template-parts/dichvu/card', null, array( 'tag' => $tag, 'layout' => $layout ) );
+	endforeach;
+	wp_reset_postdata();
+	return ob_get_clean();
+}
+
+/**
+ * Lưới / danh sách dịch vụ.
  *
  * @param array $atts Thuộc tính.
  * @return string
  */
 function sgd_sc_services( $atts ) {
-	$a    = shortcode_atts(
+	$a     = shortcode_atts(
 		array(
 			'number'   => 6,
 			'columns'  => 3,
 			'featured' => '',
 			'group'    => '',
 			'exclude'  => '',
+			'layout'   => 'grid',
 			'tag'      => 'h3',
 		),
 		$atts,
 		'sgd_services'
 	);
-	$args = array(
-		'post_type'      => 'dich_vu',
-		'posts_per_page' => max( 1, min( 24, absint( $a['number'] ) ) ),
-		'orderby'        => array( 'menu_order' => 'ASC', 'date' => 'DESC' ),
-		'no_found_rows'  => true,
-		'post__not_in'   => array_filter( array_map( 'absint', explode( ',', $a['exclude'] ) ) ),
-	);
-	if ( $a['featured'] ) {
-		$args['meta_query'] = array( array( 'key' => '_sgd_featured', 'value' => '1' ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-	}
-	if ( $a['group'] ) {
-		$args['tax_query'] = array( array( 'taxonomy' => 'nhom_dich_vu', 'field' => 'slug', 'terms' => array_map( 'trim', explode( ',', $a['group'] ) ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
-	}
-	$q = new WP_Query( $args );
-	if ( ! $q->have_posts() && $a['featured'] ) {
-		unset( $args['meta_query'] );
-		$q = new WP_Query( $args );
-	}
-	if ( ! $q->have_posts() ) {
+	$posts = sgd_query_services( $a );
+	if ( ! $posts ) {
 		return '';
 	}
-	ob_start();
-	echo '<div class="sgd-grid sgd-grid--' . absint( $a['columns'] ) . '">';
-	while ( $q->have_posts() ) {
-		$q->the_post();
-		get_template_part( 'template-parts/dichvu/card', null, array( 'tag' => $a['tag'] ) );
-	}
-	echo '</div>';
-	wp_reset_postdata();
-	return ob_get_clean();
+	$cls = 'grid' === $a['layout'] ? 'sgd-grid sgd-grid--' . absint( $a['columns'] ) : 'sgd-stack';
+	return '<div class="' . esc_attr( $cls ) . '">' . sgd_render_cards( $posts, $a['layout'], $a['tag'] ) . '</div>';
 }
 add_shortcode( 'sgd_services', 'sgd_sc_services' );
+
+/**
+ * Lưới banner nổi bật kiểu tạp chí: 1 ô lớn bên trái, 1 ô ngang + 2 ô nhỏ bên phải.
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function sgd_sc_featured( $atts ) {
+	$a     = shortcode_atts( array( 'ids' => '', 'group' => '' ), $atts, 'sgd_featured' );
+	$posts = array();
+	if ( $a['ids'] ) {
+		foreach ( explode( ',', $a['ids'] ) as $ref ) {
+			$id = sgd_find_service( trim( $ref ) );
+			if ( $id ) {
+				$posts[] = get_post( $id );
+			}
+		}
+	} else {
+		$posts = sgd_query_services( array( 'number' => 4, 'featured' => '1', 'group' => $a['group'], 'exclude' => '' ) );
+	}
+	$posts = array_slice( $posts, 0, 4 );
+	if ( ! $posts ) {
+		return '';
+	}
+	$sizes = array( 'lg', 'md', 'sm', 'sm' );
+	ob_start();
+	echo '<div class="sgd-mosaic sgd-mosaic--' . count( $posts ) . '">';
+	foreach ( $posts as $i => $p ) {
+		get_template_part( 'template-parts/dichvu/banner', null, array( 'id' => $p->ID, 'size' => $sizes[ $i ], 'caption' => true, 'tag' => 'h2' ) );
+	}
+	echo '</div>';
+	return ob_get_clean();
+}
+add_shortcode( 'sgd_featured', 'sgd_sc_featured' );
+
+/**
+ * Tiêu đề khối dạng thẻ (nền xanh nhạt + gạch chân).
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function sgd_sc_htab( $atts ) {
+	$a    = shortcode_atts( array( 'text' => '', 'link' => '', 'tag' => 'h2', 'more' => 'Xem tất cả' ), $atts, 'sgd_htab' );
+	$tag  = in_array( $a['tag'], array( 'h2', 'h3', 'p' ), true ) ? $a['tag'] : 'h2';
+	$text = esc_html( $a['text'] );
+	$out  = '<' . $tag . ' class="sgd-htab"><span>' . ( $a['link'] ? '<a href="' . esc_url( $a['link'] ) . '">' . $text . '</a>' : $text ) . '</span>';
+	if ( $a['link'] && $a['more'] ) {
+		$out .= '<a class="sgd-htab__more" href="' . esc_url( $a['link'] ) . '">' . esc_html( $a['more'] ) . ' »</a>';
+	}
+	return $out . '</' . $tag . '>';
+}
+add_shortcode( 'sgd_htab', 'sgd_sc_htab' );
+
+/**
+ * Khối chuyên mục kiểu tạp chí: tiêu đề thẻ + 1 dịch vụ lớn bên trái + danh sách bên phải.
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function sgd_sc_group_block( $atts ) {
+	$a    = shortcode_atts( array( 'group' => '', 'number' => 5, 'title' => '' ), $atts, 'sgd_group_block' );
+	$term = $a['group'] ? get_term_by( 'slug', $a['group'], 'nhom_dich_vu' ) : null;
+	if ( ! $term ) {
+		return '';
+	}
+	$posts = sgd_query_services( array( 'number' => $a['number'], 'group' => $a['group'], 'featured' => '', 'exclude' => '' ) );
+	if ( ! $posts ) {
+		return '';
+	}
+	$out  = sgd_sc_htab( array( 'text' => $a['title'] ? $a['title'] : $term->name, 'link' => get_term_link( $term ) ) );
+	$out .= '<div class="sgd-gblock"><div class="sgd-gblock__main">' . sgd_render_cards( array_slice( $posts, 0, 1 ), 'grid', 'h3' ) . '</div>';
+	$out .= '<div class="sgd-gblock__list sgd-stack">' . sgd_render_cards( array_slice( $posts, 1 ), 'list', 'h3' ) . '</div></div>';
+	return $out;
+}
+add_shortcode( 'sgd_group_block', 'sgd_sc_group_block' );
+
+/**
+ * Bài viết kiểu tạp chí: 1 bài lớn + danh sách có ảnh nhỏ.
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function sgd_sc_posts( $atts ) {
+	$a     = shortcode_atts( array( 'number' => 5, 'category' => '' ), $atts, 'sgd_posts' );
+	$posts = get_posts(
+		array(
+			'post_type'           => 'post',
+			'posts_per_page'      => max( 1, min( 12, absint( $a['number'] ) ) ),
+			'category_name'       => sanitize_title( $a['category'] ),
+			'ignore_sticky_posts' => true,
+			'no_found_rows'       => true,
+		)
+	);
+	if ( ! $posts ) {
+		return '';
+	}
+	$out = '<div class="sgd-gblock sgd-posts">';
+	foreach ( $posts as $i => $p ) {
+		if ( 1 === $i ) {
+			$out .= '<div class="sgd-gblock__list sgd-stack">';
+		}
+		$thumb = has_post_thumbnail( $p ) ? get_the_post_thumbnail( $p, 0 === $i ? 'medium_large' : 'thumbnail', array( 'loading' => 'lazy' ) ) : '<span class="sgd-post__noimg">' . sgd_icon( 'doc' ) . '</span>';
+		$link  = esc_url( get_permalink( $p ) );
+		$out  .= '<article class="sgd-post' . ( 0 === $i ? ' sgd-post--lead sgd-gblock__main' : '' ) . '">'
+			. '<a class="sgd-post__img" href="' . $link . '" tabindex="-1" aria-hidden="true">' . $thumb . '</a>'
+			. '<div><h3 class="sgd-post__title"><a href="' . $link . '">' . esc_html( get_the_title( $p ) ) . '</a></h3>'
+			. '<p class="sgd-post__date">' . esc_html( get_the_date( 'd/m/Y', $p ) ) . '</p>'
+			. ( 0 === $i ? '<p class="sgd-post__excerpt">' . esc_html( wp_trim_words( get_the_excerpt( $p ), 30, '…' ) ) . '</p>' : '' )
+			. '</div></article>';
+	}
+	if ( count( $posts ) > 1 ) {
+		$out .= '</div>';
+	}
+	return $out . '</div>';
+}
+add_shortcode( 'sgd_posts', 'sgd_sc_posts' );
+
+/**
+ * Hotline theo khu vực. style="pills" (giữa bài) | "header" (đầu trang).
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function sgd_sc_hotlines( $atts ) {
+	$a = shortcode_atts( array( 'style' => 'pills', 'title' => '' ), $atts, 'sgd_hotlines' );
+	if ( 'header' === $a['style'] ) {
+		$out = '<div class="sgd-hhot">';
+		foreach ( sgd_hotlines() as $l ) {
+			$out .= '<a href="tel:' . esc_attr( sgd_tel( $l[1] ) ) . '"><small>' . esc_html( $l[0] ) . '</small><strong>' . esc_html( $l[1] ) . '</strong></a>';
+		}
+		return $out . '</div>';
+	}
+	ob_start();
+	get_template_part( 'template-parts/dichvu/call-now', null, $a['title'] ? array( 'title' => $a['title'] ) : array() );
+	return ob_get_clean();
+}
+add_shortcode( 'sgd_hotlines', 'sgd_sc_hotlines' );
+
+/**
+ * Văn phòng / chi nhánh (footer).
+ *
+ * @return string
+ */
+function sgd_sc_branches() {
+	$out = '<div class="sgd-branches">';
+	foreach ( sgd_branches() as $b ) {
+		$out .= '<div class="sgd-branch"><p class="sgd-branch__name">' . esc_html( $b[0] ) . '</p>';
+		if ( $b[1] ) {
+			$out .= '<p class="sgd-branch__row">' . sgd_icon( 'pin' ) . '<span>' . esc_html( $b[1] ) . '</span></p>';
+		}
+		if ( $b[3] ) {
+			$out .= '<p class="sgd-branch__row">' . sgd_icon( 'mail' ) . '<a href="mailto:' . esc_attr( $b[3] ) . '">' . esc_html( $b[3] ) . '</a></p>';
+		}
+		foreach ( array_filter( array_map( 'trim', explode( ',', $b[2] ) ) ) as $tel ) {
+			$out .= '<p class="sgd-branch__row sgd-branch__tel">' . sgd_icon( 'phone' ) . '<a href="tel:' . esc_attr( sgd_tel( $tel ) ) . '">' . esc_html( $tel ) . '</a></p>';
+		}
+		$out .= '</div>';
+	}
+	return $out . '</div>';
+}
+add_shortcode( 'sgd_branches', 'sgd_sc_branches' );
+
+/**
+ * Cột phải (form + dịch vụ nổi bật + bài viết) để đặt trong UX Builder.
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function sgd_sc_sidebar( $atts ) {
+	$a = shortcode_atts( array( 'form' => '1' ), $atts, 'sgd_sidebar' );
+	ob_start();
+	get_template_part( 'template-parts/dichvu/sidebar', null, array( 'form' => '1' === (string) $a['form'] ) );
+	return ob_get_clean();
+}
+add_shortcode( 'sgd_sidebar', 'sgd_sc_sidebar' );
 
 /**
  * Các nhóm dịch vụ (Thành lập – Thay đổi – Thuế – Kế toán) kèm vài dịch vụ con.
@@ -164,13 +370,18 @@ add_shortcode( 'sgd_groups', 'sgd_sc_groups' );
  * @return string
  */
 function sgd_sc_pricing( $atts ) {
-	$a  = shortcode_atts( array( 'service' => '' ), $atts, 'sgd_pricing' );
+	$a  = shortcode_atts( array( 'service' => '', 'show' => 'all' ), $atts, 'sgd_pricing' );
 	$id = $a['service'] ? sgd_find_service( $a['service'] ) : ( is_singular( 'dich_vu' ) ? get_the_ID() : 0 );
 	if ( ! $id ) {
 		return '';
 	}
 	ob_start();
-	get_template_part( 'template-parts/dichvu/packages', null, array( 'id' => $id ) );
+	if ( 'packages' !== $a['show'] ) {
+		get_template_part( 'template-parts/dichvu/price-tables', null, array( 'id' => $id ) );
+	}
+	if ( 'table' !== $a['show'] ) {
+		get_template_part( 'template-parts/dichvu/packages', null, array( 'id' => $id ) );
+	}
 	return ob_get_clean();
 }
 add_shortcode( 'sgd_pricing', 'sgd_sc_pricing' );
