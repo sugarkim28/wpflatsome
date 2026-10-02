@@ -299,7 +299,10 @@ function sgd_group_edit_fields( $term ) {
 			<p class="description">Để trống = "Dịch vụ " + tên nhóm. Mô tả nhóm (150–300 chữ) hiện ở đầu trang nhóm.</p></td></tr>
 	<tr class="form-field"><th><label for="sgd-group-image">Ảnh đại diện nhóm (tuỳ chọn)</label></th>
 		<td><input id="sgd-group-image" name="sgd_image" type="url" value="<?php echo esc_attr( get_term_meta( $term->term_id, '_sgd_image', true ) ); ?>" placeholder="https://…/anh-nhom.jpg">
-			<p class="description">Dán đường dẫn ảnh từ Thư viện Media (ngang, khoảng 1100×700). Hiện ở khối nhóm dịch vụ trang chủ; để trống = khung màu thương hiệu.</p></td></tr>
+			<p class="description">Dán đường dẫn ảnh từ Thư viện Media (ngang, khoảng 1100×700). Hiện đầu bài viết của nhóm; để trống = khung màu thương hiệu.</p></td></tr>
+	<tr class="form-field"><th><label for="sgd_article">Bài viết của nhóm</label></th>
+		<td><?php wp_editor( (string) get_term_meta( $term->term_id, '_sgd_article', true ), 'sgd_article', array( 'textarea_rows' => 18, 'media_buttons' => true ) ); ?>
+			<p class="description">Bài viết chuẩn SEO hiện ở trang nhóm (dưới danh sách dịch vụ), dùng tiêu đề H2/H3 để tự tạo mục lục. Để trống = dùng bài mẫu có sẵn của theme.</p></td></tr>
 	<?php
 }
 add_action( 'nhom_dich_vu_edit_form_fields', 'sgd_group_edit_fields' );
@@ -318,6 +321,7 @@ function sgd_group_save( $term_id ) {
 	update_term_meta( $term_id, '_sgd_order', isset( $_POST['sgd_order'] ) ? (int) $_POST['sgd_order'] : 0 );
 	update_term_meta( $term_id, '_sgd_h1', isset( $_POST['sgd_h1'] ) ? sanitize_text_field( wp_unslash( $_POST['sgd_h1'] ) ) : '' );
 	update_term_meta( $term_id, '_sgd_image', isset( $_POST['sgd_image'] ) ? esc_url_raw( wp_unslash( $_POST['sgd_image'] ) ) : '' );
+	update_term_meta( $term_id, '_sgd_article', isset( $_POST['sgd_article'] ) ? wp_kses_post( wp_unslash( $_POST['sgd_article'] ) ) : '' );
 }
 add_action( 'edited_nhom_dich_vu', 'sgd_group_save' );
 
@@ -568,4 +572,23 @@ function sgd_related_posts_for_service( $id, $count = 3 ) {
 		);
 	}
 	return $found;
+}
+
+/**
+ * Bài viết của nhóm dịch vụ: bài đã nhập ở trang sửa nhóm, trống thì dùng bài mẫu của theme.
+ *
+ * @param WP_Term $term Nhóm.
+ * @return string HTML.
+ */
+function sgd_group_article( $term ) {
+	$html = (string) get_term_meta( $term->term_id, '_sgd_article', true );
+	if ( '' === trim( wp_strip_all_tags( $html ) ) ) {
+		static $defaults = null;
+		if ( null === $defaults ) {
+			$defaults = require SGD_DIR . '/inc/demo-articles.php';
+		}
+		$html = isset( $defaults[ $term->slug ] ) ? $defaults[ $term->slug ] : '';
+	}
+	$html = str_replace( '{company}', esc_html( sgd_opt( 'company' ) ), $html );
+	return $html ? do_shortcode( wpautop( $html ) ) : '';
 }

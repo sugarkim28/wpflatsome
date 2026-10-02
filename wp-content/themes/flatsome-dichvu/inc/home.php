@@ -126,16 +126,19 @@ add_shortcode( 'sgd_groupnav', 'sgd_sc_groupnav' );
  *
  * @return string
  */
-function sgd_sc_catalog() {
+function sgd_sc_catalog( $atts = array() ) {
+	$a    = shortcode_atts( array( 'limit' => 0, 'compact' => '0' ), $atts, 'sgd_catalog' );
+	$cmp  = '1' === (string) $a['compact'];
 	$tabs = array();
 	foreach ( sgd_sorted_groups() as $t ) {
-		$posts = sgd_group_services( $t );
+		$all   = sgd_group_services( $t );
+		$posts = (int) $a['limit'] > 0 ? array_slice( $all, 0, (int) $a['limit'] ) : $all;
 		if ( ! $posts ) {
 			continue;
 		}
-		$label = '<span class="sgd-ico-wrap">' . sgd_icon( get_term_meta( $t->term_id, '_sgd_icon', true ) ) . '</span><span>' . esc_html( $t->name ) . '<small>' . count( $posts ) . ' dịch vụ</small></span>';
+		$label = '<span class="sgd-ico-wrap">' . sgd_icon( get_term_meta( $t->term_id, '_sgd_icon', true ) ) . '</span><span>' . esc_html( $t->name ) . '<small>' . count( $all ) . ' dịch vụ' . ( $cmp && sgd_min_price_label( $all ) ? ' · ' . esc_html( sgd_min_price_label( $all ) ) : '' ) . '</small></span>';
 		$body  = '<div class="sgd-cat__head"><h3 class="sgd-cat__title">' . esc_html( $t->name ) . '</h3>';
-		if ( $t->description ) {
+		if ( $t->description && ! $cmp ) {
 			$body .= '<p class="sgd-cat__desc">' . esc_html( sgd_clip( wp_strip_all_tags( $t->description ), 190 ) ) . '</p>';
 		}
 		$body .= '</div><ul class="sgd-cat__list">';
@@ -144,15 +147,15 @@ function sgd_sc_catalog() {
 			$time  = sgd_meta( 'duration', $p->ID );
 			$body .= '<li class="sgd-cat__row"><a href="' . esc_url( get_permalink( $p ) ) . '">'
 				. '<span class="sgd-cat__name"><strong>' . esc_html( get_the_title( $p ) ) . '</strong>'
-				. ( sgd_meta( 'subtitle', $p->ID ) ? '<small>' . esc_html( sgd_clip( sgd_meta( 'subtitle', $p->ID ), 90 ) ) . '</small>' : '' ) . '</span>'
+				. ( ! $cmp && sgd_meta( 'subtitle', $p->ID ) ? '<small>' . esc_html( sgd_clip( sgd_meta( 'subtitle', $p->ID ), 90 ) ) . '</small>' : '' ) . '</span>'
 				. '<span class="sgd-cat__time">' . ( $time ? sgd_icon( 'clock' ) . ' ' . esc_html( $time ) : '' ) . '</span>'
 				. '<span class="sgd-cat__price">' . esc_html( $price ? $price : 'Liên hệ' ) . '</span>'
 				. '<span class="sgd-cat__go" aria-hidden="true">›</span></a></li>';
 		}
-		$body  .= '</ul><a class="sgd-cat__more" href="' . esc_url( get_term_link( $t ) ) . '">Xem tất cả dịch vụ ' . esc_html( mb_strtolower( $t->name ) ) . ' →</a>';
+		$body  .= '</ul><a class="sgd-cat__more" href="' . esc_url( get_term_link( $t ) ) . '">' . ( count( $all ) > count( $posts ) ? 'Xem tất cả ' . count( $all ) . ' dịch vụ' : 'Tìm hiểu dịch vụ' ) . ' ' . esc_html( mb_strtolower( $t->name ) ) . ' →</a>';
 		$tabs[] = array( $label, $body );
 	}
-	return $tabs ? sgd_tabset( 'sgd-cat', $tabs, 'side' ) : '';
+	return $tabs ? '<div class="sgd-catalog' . ( $cmp ? ' is-compact' : '' ) . '">' . sgd_tabset( 'sgd-cat', $tabs, 'side' ) . '</div>' : '';
 }
 add_shortcode( 'sgd_catalog', 'sgd_sc_catalog' );
 
@@ -356,9 +359,10 @@ add_shortcode( 'sgd_contact_list', 'sgd_sc_contact_list' );
  * @param WP_Term[] $terms   Nhóm.
  * @param int       $count   Số bài.
  * @param int[]     $exclude Bài đã dùng.
+ * @param bool      $fill    Thiếu thì bù bằng bài mới nhất.
  * @return WP_Post[]
  */
-function sgd_group_posts( $terms, $count = 3, $exclude = array() ) {
+function sgd_group_posts( $terms, $count = 3, $exclude = array(), $fill = true ) {
 	$found = array();
 	$keys  = array();
 	foreach ( $terms as $t ) {
@@ -377,6 +381,20 @@ function sgd_group_posts( $terms, $count = 3, $exclude = array() ) {
 				array(
 					'post_type'           => 'post',
 					's'                   => $k,
+					'posts_per_page'      => $count - count( $found ),
+					'post__not_in'        => array_merge( $exclude, wp_list_pluck( $found, 'ID' ) ),
+					'ignore_sticky_posts' => true,
+					'no_found_rows'       => true,
+				)
+			)
+		);
+	}
+	if ( $fill && count( $found ) < $count ) {
+		$found = array_merge(
+			$found,
+			get_posts(
+				array(
+					'post_type'           => 'post',
 					'posts_per_page'      => $count - count( $found ),
 					'post__not_in'        => array_merge( $exclude, wp_list_pluck( $found, 'ID' ) ),
 					'ignore_sticky_posts' => true,

@@ -1261,3 +1261,28 @@ body.sgd { background: #fff; font-size: 16px; -webkit-font-smoothing: antialiase
 .sgd .sgd-commit--float .sgd-commit__ico { flex-basis: 52px; width: 52px; height: 52px; border-radius: 14px; font-size: 26px; }
 .sgd .sgd-commit--float li:nth-child(even) .sgd-commit__ico { background: #eaf0ff; color: var(--sgd-primary); }
 @media (max-width: 549px) { .sgd .sgd-commit--float { margin-top: -40px; } .sgd .sgd-commit--float li { align-items: flex-start; padding: 14px 12px; } .sgd .sgd-commit--float .sgd-commit__ico { width: 40px; height: 40px; flex-basis: 40px; font-size: 20px; } }
+
+/* ==========================================================================
+   v8 – trang nhóm dạng bài viết (kiểu tanthanhthinh.com) + bảng giá trang chủ gọn
+   ========================================================================== */
+.sgd-group__visual { position: relative; display: flex; flex-direction: column; justify-content: center; gap: 8px; min-height: 250px; margin: 0 0 26px; overflow: hidden; padding: 30px 32px 64px; border-radius: 18px; background: radial-gradient(420px 260px at 100% 0%, rgba(225, 11, 23, .45), transparent 70%), linear-gradient(135deg, var(--sgd-navy), var(--sgd-primary)); color: #fff; }
+.sgd-group__visual::before { content: ""; position: absolute; right: -70px; top: -70px; width: 260px; height: 260px; border: 34px solid rgba(255, 255, 255, .06); border-radius: 50%; }
+.sgd-group__visual.has-img { min-height: 0; padding: 0; background: var(--sgd-navy); }
+.sgd-group__visual.has-img img { display: block; width: 100%; height: auto; aspect-ratio: 11 / 5.6; object-fit: cover; }
+.sgd-gpage__list { margin: 0 0 26px; padding: 20px 22px 8px; border: 1px solid var(--sgd-line); border-radius: 16px; background: #fff; box-shadow: var(--sgd-card-shadow); }
+.sgd .sgd-gpage__list-title { margin: 0 0 6px; color: var(--sgd-ink); font-size: 1.15rem; font-weight: 800; }
+.sgd-gpage__list .sgd-cat__row a { grid-template-columns: minmax(0, 1fr) 160px 130px 16px; padding: 12px 4px; }
+.sgd-group-page .sgd-toc { margin-top: 0; }
+.sgd-group-page .sgd-related { margin-top: 30px; padding: 0; background: none; }
+@media (max-width: 549px) { .sgd-group__visual { min-height: 190px; padding: 22px 20px 58px; } .sgd-gpage__list { padding: 14px 14px 4px; } }
+
+/* Trang chủ: danh mục gọn (tối đa 4 dịch vụ/nhóm, không mô tả) */
+.sgd-catalog.is-compact .sgd-cat__head { margin-bottom: 4px; }
+.sgd-catalog.is-compact .sgd-cat__row a { padding: 12px 6px; }
+.sgd-catalog.is-compact .sgd-tabset--side .sgd-tabset__panels { padding: 20px 24px; }
+.sgd-catalog.is-compact .sgd-tabset__nav button[aria-selected="false"] small { color: var(--sgd-muted); }
+.sgd-catalog.is-compact .sgd-cat__more { display: inline-block; margin-top: 6px; }
+
+.sgd .sgd-gpage__list .sgd-cat__list { margin: 0; padding: 0; list-style: none; }
+.sgd .sgd-gpage__list .sgd-cat__row { margin: 0; }
+@media (max-width: 849px) { .sgd-gpage__list .sgd-cat__row a { grid-template-columns: minmax(0, 1fr) auto; } }

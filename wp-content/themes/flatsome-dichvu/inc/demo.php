@@ -330,7 +330,7 @@ function sgd_demo_build() {
 	};
 	$service_links( 'thanh-lap-doanh-nghiep', $tax_item( 'thanh-lap-doanh-nghiep', 'Thành lập công ty' ) );
 	$service_links( 'thay-doi-giay-phep', $tax_item( 'thay-doi-giay-phep', 'Thay đổi GPKD' ) );
-	$service_links( array( 'ke-toan', 'dich-vu-thue' ), $add( 'Kế toán & Thuế', get_post_type_archive_link( 'dich_vu' ) ) );
+	$service_links( array( 'ke-toan', 'dich-vu-thue' ), $tax_item( 'ke-toan', 'Kế toán & Thuế' ) );
 	$service_links( 'dich-vu-khac', $tax_item( 'dich-vu-khac', 'Dịch vụ khác' ) );
 	$add( 'Bảng giá', get_permalink( $pricing ) );
 	$add( 'Kiến thức', get_permalink( $news ) );
@@ -410,7 +410,8 @@ function sgd_demo_home_content() {
 	// Bố cục 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh.com theo hành trình ra quyết định của khách:
 	// Nhu cầu → Giá → Tin cậy → Gói → Giải đáp → Hành động. Mỗi khối 1 việc, không lặp nội dung, 1 H1 duy nhất.
 	// 1 Banner + form → 2 Cam kết (thẻ nổi trên mép banner) → 3 Dịch vụ & bảng giá (tab nhóm = nơi chọn nhu cầu, không lặp ô nhóm)
-	// → 4 Về công ty + số liệu → 5 Quy trình → 6 Bảng giá trọn gói (tab) → 7 Chuyên viên (nếu có) → 8 Hỏi đáp + form → 9 Tin tức + đối tác → 10 Gọi ngay.
+	// → 4 Về công ty + số liệu → 5 Quy trình → 6 Chuyên viên (nếu có) → 7 Hỏi đáp + form → 8 Tin tức + đối tác → 9 Gọi ngay.
+	// Bảng giá chỉ 1 chỗ, dạng gọn (tối đa 4 dịch vụ/nhóm); bảng gói chi tiết nằm ở trang dịch vụ và trang Bảng giá.
 	return '[section label="1. Banner (H1) + form" bg_color="#0b2a5b" padding="56px" padding__sm="28px" class="sgd-heroband"]
 [row]
 [col span="12"]
@@ -428,8 +429,8 @@ function sgd_demo_home_content() {
 [section label="3. Dịch vụ &amp; bảng giá" bg_color="#ffffff" padding="64px" padding__sm="40px"]
 [row]
 [col span="12"]
-[sgd_title text="Dịch vụ &amp; bảng giá" sub="Chọn nhóm dịch vụ để xem từng thủ tục, phí trọn gói và thời gian hoàn thành." class="is-lined"]
-[sgd_catalog]
+[sgd_title text="Dịch vụ &amp; bảng giá" sub="Chọn nhóm dịch vụ – xem nhanh phí trọn gói và thời gian; bảng giá từng gói nằm trong trang chi tiết." class="is-lined"]
+[sgd_catalog limit="4" compact="1"]
 [/col]
 [/row]
 [/section]
@@ -453,22 +454,14 @@ Bàn giao kết quả | Giao giấy phép, con dấu, hồ sơ tận nơi và h�
 [/col]
 [/row]
 [/section]
-[section label="6. Bảng giá trọn gói" bg_color="#ffffff" padding="72px" padding__sm="44px"]
-[row]
-[col span="12"]
-[sgd_title text="Bảng giá trọn gói" sub="Giá công khai – ưu đãi hơn khi dùng kèm dịch vụ kế toán." class="is-lined"]
-[sgd_pricetabs items="thanh-lap-cong-ty-tnhh:packages:Thành lập công ty,ke-toan-tron-goi:table:Kế toán thuế trọn gói,thay-doi-dia-chi-cong-ty:all:Thay đổi giấy phép"]
-[/col]
-[/row]
-[/section]
-[section label="7. Chuyên viên tư vấn (Tuỳ biến → Thông tin công ty; trống = ẩn)" bg_color="#ffffff" padding="64px" padding__sm="40px" class="sgd-team-sec"]
+[section label="6. Chuyên viên tư vấn (Tuỳ biến → Thông tin công ty; trống = ẩn)" bg_color="#ffffff" padding="64px" padding__sm="40px" class="sgd-team-sec"]
 [row]
 [col span="12"]
 [sgd_team]
 [/col]
 [/row]
 [/section]
-[section label="8. Hỏi đáp + tư vấn" bg_color="#f4f7fc" padding="72px" padding__sm="44px"]
+[section label="7. Hỏi đáp + tư vấn" bg_color="#f4f7fc" padding="72px" padding__sm="44px"]
 [row]
 [col span="7" span__sm="12"]
 [sgd_title text="Câu hỏi thường gặp" class="is-left"]
@@ -485,7 +478,7 @@ Phí dịch vụ đã gồm lệ phí nhà nước chưa? | Báo giá ghi rõ ph
 [/col]
 [/row]
 [/section]
-[section label="9. Tin tức + đối tác" bg_color="#ffffff" padding="64px" padding__sm="40px"]
+[section label="8. Tin tức + đối tác" bg_color="#ffffff" padding="64px" padding__sm="40px"]
 [row]
 [col span="12"]
 [sgd_title text="Tin tức – kiến thức doanh nghiệp" class="is-lined"]
@@ -495,7 +488,7 @@ Phí dịch vụ đã gồm lệ phí nhà nước chưa? | Báo giá ghi rõ ph
 [/col]
 [/row]
 [/section]
-[section label="10. Gọi ngay" bg_color="#ffffff" padding="0px"]
+[section label="9. Gọi ngay" bg_color="#ffffff" padding="0px"]
 [row]
 [col span="12"]
 [sgd_cta_strip]

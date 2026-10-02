@@ -44,6 +44,12 @@ Trang chủ (bản 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh
 - Màu mặc định: xanh `#123fb8`, đỏ `#e10b17` (nút, giá), nền tối `#0b1f5c`; khẩu hiệu *Uy tín tạo niềm tin*; hotline/Zalo 0914 108 322.
 - **Máy chủ nginx**: nếu đường dẫn có dạng `/index.php/dich-vu/...` là nginx chưa có quy tắc rewrite của WordPress. Thêm vào khối `server` của site: `location / { try_files $uri $uri/ /index.php?$args; }` rồi vào **Cài đặt → Đường dẫn tĩnh** chọn *Tên bài viết* để có đường dẫn gọn (tốt cho SEO). Theme không dùng đường dẫn cứng nên chạy được cả hai dạng.
 
+## Trang nhóm dịch vụ (bản 0.8)
+
+Mỗi mục lớn trên menu (Thành lập công ty, Thay đổi GPKD, Kế toán & Thuế, Dịch vụ khác…) mở trang nhóm dạng bài viết chuyên mục như tanthanhthinh.com: dải tiêu đề (H1) → ảnh nhóm → danh sách dịch vụ gọn (tên – thời gian – giá) → mục lục "Nội dung chính" → bài viết của nhóm (H2/H3) → Gọi ngay → Bài viết liên quan. Sửa bài ở *Dịch vụ → Nhóm dịch vụ → sửa nhóm → Bài viết của nhóm* (trống = bài mẫu trong `inc/demo-articles.php`). Ảnh nhóm: ô "Ảnh đại diện nhóm".
+
+Trang chủ chỉ còn 1 khối giá dạng gọn `[sgd_catalog limit="4" compact="1"]` (tối đa 4 dịch vụ/nhóm, không mô tả); bảng gói chi tiết nằm ở trang dịch vụ và trang Bảng giá.
+
 ## Trang Kiến thức (blog)
 
 Theme có giao diện blog riêng (`home.php`, `archive.php`, `search.php`, `single.php`) thay mẫu blog mặc định của Flatsome: không còn widget tiếng Anh, có thẻ bài viết kèm ảnh, chuyên mục, ô tìm kiếm tiếng Việt, form tư vấn, dịch vụ nổi bật. Bài viết hiện ngày cập nhật, thời gian đọc, người kiểm duyệt, mục lục tự động, khối kêu gọi cuối bài, bài liên quan; dữ liệu BlogPosting + BreadcrumbList cho Google; tắt bình luận (tránh spam). Nên đặt **ảnh đại diện** 16:9 cho mỗi bài.
