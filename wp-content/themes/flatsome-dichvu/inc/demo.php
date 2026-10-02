@@ -409,8 +409,8 @@ function sgd_demo_home_content() {
 	$company = esc_html( sgd_opt( 'company' ) );
 	// Bố cục 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh.com theo hành trình ra quyết định của khách:
 	// Nhu cầu → Giá → Tin cậy → Gói → Giải đáp → Hành động. Mỗi khối 1 việc, không lặp nội dung, 1 H1 duy nhất.
-	// 1 Banner + form → 2 Chọn nhu cầu → 3 Dịch vụ & bảng giá (tab) → 4 Về công ty + số liệu → 5 Quy trình + cam kết
-	// → 6 Bảng giá trọn gói (tab) → 7 Chuyên viên (nếu có) → 8 Hỏi đáp + form → 9 Tin tức + đối tác → 10 Gọi ngay.
+	// 1 Banner + form → 2 Cam kết (thẻ nổi trên mép banner) → 3 Dịch vụ & bảng giá (tab nhóm = nơi chọn nhu cầu, không lặp ô nhóm)
+	// → 4 Về công ty + số liệu → 5 Quy trình → 6 Bảng giá trọn gói (tab) → 7 Chuyên viên (nếu có) → 8 Hỏi đáp + form → 9 Tin tức + đối tác → 10 Gọi ngay.
 	return '[section label="1. Banner (H1) + form" bg_color="#0b2a5b" padding="56px" padding__sm="28px" class="sgd-heroband"]
 [row]
 [col span="12"]
@@ -418,10 +418,10 @@ function sgd_demo_home_content() {
 [/col]
 [/row]
 [/section]
-[section label="2. Bạn cần hỗ trợ việc gì?" bg_color="#ffffff" padding="0px" class="sgd-gnav-sec"]
+[section label="2. Cam kết" bg_color="#ffffff" padding="0px" class="sgd-gnav-sec"]
 [row]
 [col span="12"]
-[sgd_groupnav]
+[sgd_commit style="float"]
 [/col]
 [/row]
 [/section]
@@ -440,7 +440,7 @@ function sgd_demo_home_content() {
 [/col]
 [/row]
 [/section]
-[section label="5. Quy trình + cam kết" bg_color="#0b2a5b" dark="true" padding="72px" padding__sm="44px" class="sgd-navyband"]
+[section label="5. Quy trình làm việc" bg_color="#0b2a5b" dark="true" padding="72px" padding__sm="44px" class="sgd-navyband"]
 [row]
 [col span="12"]
 [sgd_title text="Quy trình làm việc 4 bước" sub="Minh bạch từng khâu – khách hàng nắm được tiến độ hồ sơ mọi lúc qua Zalo." class="is-light"]
@@ -450,9 +450,6 @@ Soạn hồ sơ | Soạn hồ sơ theo quy trình chuẩn, gửi khách ký tạ
 Nộp &amp; theo dõi | Nộp hồ sơ, theo dõi và báo tiến độ qua Zalo
 Bàn giao kết quả | Giao giấy phép, con dấu, hồ sơ tận nơi và hướng dẫn việc tiếp theo
 [/sgd_steps]
-[gap height="36px"]
-<p class="sgd-commit__head">Cam kết của ' . $company . '</p>
-[sgd_commit]
 [/col]
 [/row]
 [/section]

@@ -279,6 +279,7 @@ add_shortcode( 'sgd_about', 'sgd_sc_about' );
  * @return string
  */
 function sgd_sc_commit( $atts, $content = '' ) {
+	$a     = shortcode_atts( array( 'style' => '' ), $atts, 'sgd_commit' );
 	$text  = trim( wp_strip_all_tags( str_ireplace( array( '<br>', '<br/>', '<br />', '</p>' ), "\n", (string) $content ) ) );
 	$items = $text ? sgd_lines( $text, 3 ) : array(
 		array( 'wallet', 'Đúng giá', 'Báo giá trọn gói, không thu thêm ngoài hợp đồng' ),
@@ -286,7 +287,7 @@ function sgd_sc_commit( $atts, $content = '' ) {
 		array( 'shield', 'Bảo mật', 'Giữ kín giấy tờ, số liệu của doanh nghiệp' ),
 		array( 'users', 'Đồng hành', 'Hỗ trợ miễn phí các câu hỏi sau dịch vụ' ),
 	);
-	$out = '<ul class="sgd-commit">';
+	$out = '<ul class="sgd-commit' . ( 'float' === $a['style'] ? ' sgd-commit--float' : '' ) . '">';
 	foreach ( $items as $it ) {
 		$out .= '<li><span class="sgd-commit__ico">' . sgd_icon( sanitize_key( $it[0] ) ) . '</span><span><strong>' . esc_html( $it[1] ) . '</strong>' . esc_html( $it[2] ) . '</span></li>';
 	}
