@@ -44,6 +44,21 @@ function sgd_breadcrumb_trail() {
 		$trail[] = array( get_the_title(), get_permalink() );
 	} elseif ( is_post_type_archive( 'dich_vu' ) ) {
 		$trail[] = $archive;
+	} elseif ( is_singular( 'post' ) || is_home() || is_category() || is_tag() || is_search() ) {
+		$blog_id = (int) get_option( 'page_for_posts' );
+		$blog    = array( $blog_id ? get_the_title( $blog_id ) : 'Kiến thức', $blog_id ? get_permalink( $blog_id ) : home_url( '/' ) );
+		$trail[] = $blog;
+		if ( is_singular( 'post' ) ) {
+			$cats = get_the_category();
+			if ( $cats ) {
+				$trail[] = array( $cats[0]->name, get_category_link( $cats[0] ) );
+			}
+			$trail[] = array( get_the_title(), get_permalink() );
+		} elseif ( is_category() || is_tag() ) {
+			$trail[] = array( single_term_title( '', false ), get_term_link( get_queried_object() ) );
+		} elseif ( is_search() ) {
+			$trail[] = array( 'Tìm kiếm', home_url( '/?s=' . rawurlencode( get_search_query() ) ) );
+		}
 	} elseif ( is_tax( 'nhom_dich_vu' ) ) {
 		$term    = get_queried_object();
 		$trail[] = $archive;
@@ -132,6 +147,10 @@ function sgd_fallback_meta() {
 		$desc = term_description();
 	} elseif ( is_post_type_archive( 'dich_vu' ) ) {
 		$desc = sgd_opt( 'archive_intro' );
+	} elseif ( is_singular( 'post' ) ) {
+		$desc = has_excerpt() ? get_the_excerpt() : wp_strip_all_tags( get_post_field( 'post_content', get_the_ID() ) );
+	} elseif ( is_home() || is_category() || is_tag() ) {
+		$desc = is_home() ? sgd_opt( 'blog_intro' ) : term_description();
 	} elseif ( is_front_page() ) {
 		$desc = sgd_opt( 'company' ) . ' – ' . sgd_opt( 'tagline' ) . '. ' . sgd_opt( 'archive_intro' );
 	}
@@ -419,7 +438,27 @@ function sgd_schema() {
 		}
 	}
 
-	if ( ( is_singular( 'dich_vu' ) || sgd_is_listing() ) && ! sgd_rank_math_breadcrumbs() ) {
+	if ( is_singular( 'post' ) && ! sgd_has_seo_plugin() ) {
+		$article = array(
+			'@type'            => 'BlogPosting',
+			'@id'              => get_permalink() . '#article',
+			'headline'         => get_the_title(),
+			'url'              => get_permalink(),
+			'mainEntityOfPage' => get_permalink(),
+			'datePublished'    => get_the_date( 'c' ),
+			'dateModified'     => get_the_modified_date( 'c' ),
+			'inLanguage'       => 'vi',
+			'author'           => sgd_opt( 'expert' ) ? array( '@type' => 'Person', 'name' => sgd_opt( 'expert' ), 'jobTitle' => sgd_opt( 'expert_title' ) ) : array( '@type' => 'Organization', 'name' => sgd_opt( 'company' ), 'url' => home_url( '/' ) ),
+			'publisher'        => array( '@id' => home_url( '/#business' ), '@type' => 'Organization', 'name' => sgd_opt( 'company' ), 'logo' => array( '@type' => 'ImageObject', 'url' => get_theme_mod( 'site_logo' ) && ! is_numeric( get_theme_mod( 'site_logo' ) ) ? get_theme_mod( 'site_logo' ) : wp_get_attachment_image_url( (int) get_theme_mod( 'site_logo' ), 'full' ) ) ),
+			'description'      => sgd_clip( has_excerpt() ? get_the_excerpt() : wp_strip_all_tags( get_post_field( 'post_content', get_the_ID() ) ), 160 ),
+		);
+		if ( has_post_thumbnail() ) {
+			$article['image'] = get_the_post_thumbnail_url( get_the_ID(), 'full' );
+		}
+		$graph[] = $article;
+	}
+
+	if ( ( is_singular( array( 'dich_vu', 'post' ) ) || sgd_is_listing() || is_home() || is_category() || is_tag() ) && ! sgd_rank_math_breadcrumbs() && ! ( is_singular( 'post' ) && sgd_has_seo_plugin() ) ) {
 		$list = array();
 		foreach ( sgd_breadcrumb_trail() as $i => $t ) {
 			$list[] = array(

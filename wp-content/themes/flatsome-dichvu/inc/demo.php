@@ -255,6 +255,15 @@ function sgd_demo_build() {
 		);
 	}
 
+	// Xoá nội dung mặc định của WordPress (bài "Hello world!", "Sample Page", bình luận mẫu) nếu chưa bị sửa.
+	foreach ( array( array( 'hello-world', 'post' ), array( 'sample-page', 'page' ) ) as $d ) {
+		$old = get_page_by_path( $d[0], OBJECT, $d[1] );
+		if ( $old && $old->post_modified_gmt === $old->post_date_gmt ) {
+			wp_delete_post( $old->ID, true );
+		}
+	}
+	update_option( 'posts_per_page', 9 );
+
 	// 4. Trang.
 	$blank   = array( '_wp_page_template' => 'page-blank.php' );
 	$pricing = sgd_demo_post( array( 'post_type' => 'page', 'post_name' => 'bang-gia', 'post_title' => 'Bảng giá dịch vụ', 'post_content' => sgd_demo_pricing_content( $data['groups'] ) ), $blank );
@@ -415,8 +424,8 @@ function sgd_demo_home_content() {
 [section label="Tất cả dịch vụ" bg_color="#f7f9fc" padding="56px"]
 [row]
 [col span="12"]
-[sgd_title text="Tất cả dịch vụ doanh nghiệp"]
-[sgd_groups columns="3" services="4" style="simple"]
+[sgd_title text="Tất cả dịch vụ doanh nghiệp" sub="Chọn dịch vụ để xem chi phí trọn gói, hồ sơ cần chuẩn bị và thời gian hoàn thành."]
+[sgd_groups services="0" style="hub"]
 [/col]
 [/row]
 [/section]

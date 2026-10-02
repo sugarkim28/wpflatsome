@@ -9,7 +9,7 @@
  *  [sgd_faq]Câu hỏi | Trả lời (mỗi dòng)[/sgd_faq] – hỏi đáp + dữ liệu FAQPage cho Google
  *  [sgd_title text="" sub=""]                    – tiêu đề giữa, kẻ ngang hai bên
  *  [sgd_topbar side="left|right"]                – nội dung thanh trên cùng (Flatsome Top Bar)
- *  [sgd_groups style="card|simple"]              – simple: icon giữa, tiêu đề in hoa, 3 dòng dịch vụ
+ *  [sgd_groups style="card|simple|hub"]          – hub: thẻ nhóm + danh sách dịch vụ kèm giá (trang chủ)
  *  [sgd_services number="6" columns="3" featured="1" group="thanh-lap-doanh-nghiep" layout="grid|list|mini" tag="h3"]
  *  [sgd_hotlines style="pills|header|compact"]   – hotline theo khu vực / 1 số gọn
  *  [sgd_branches]                                – văn phòng / chi nhánh
@@ -358,6 +358,9 @@ function sgd_sc_groups( $atts ) {
 			return (int) get_term_meta( $x->term_id, '_sgd_order', true ) - (int) get_term_meta( $y->term_id, '_sgd_order', true );
 		}
 	);
+	if ( 'hub' === $a['style'] ) {
+		return sgd_groups_hub( $terms, absint( $a['services'] ) );
+	}
 	$out = '<div class="sgd-groups sgd-groups--' . esc_attr( sanitize_key( $a['style'] ) ) . ' sgd-grid sgd-grid--' . absint( $a['columns'] ) . '">';
 	foreach ( $terms as $t ) {
 		$link  = get_term_link( $t );
@@ -388,6 +391,45 @@ function sgd_sc_groups( $atts ) {
 	return $out . '</div>';
 }
 add_shortcode( 'sgd_groups', 'sgd_sc_groups' );
+
+/**
+ * Danh mục dịch vụ dạng thẻ (style="hub"): mỗi nhóm 1 thẻ – icon, tên nhóm, số dịch vụ,
+ * danh sách dịch vụ kèm giá, liên kết xem cả nhóm. Lưới 3 cột, đọc theo hàng ngang.
+ *
+ * @param WP_Term[] $terms Nhóm dịch vụ (đã sắp xếp).
+ * @param int       $limit Số dịch vụ tối đa mỗi nhóm (0 = tất cả).
+ * @return string
+ */
+function sgd_groups_hub( $terms, $limit = 0 ) {
+	$out = '<div class="sgd-hub">';
+	foreach ( $terms as $i => $t ) {
+		$posts = get_posts(
+			array(
+				'post_type'      => 'dich_vu',
+				'posts_per_page' => $limit ? $limit : 30,
+				'orderby'        => array( 'menu_order' => 'ASC', 'date' => 'DESC' ),
+				'tax_query'      => array( array( 'taxonomy' => 'nhom_dich_vu', 'terms' => $t->term_id ) ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+				'no_found_rows'  => true,
+			)
+		);
+		if ( ! $posts ) {
+			continue;
+		}
+		$link = get_term_link( $t );
+		$out .= '<section class="sgd-hub__card sgd-hub__card--' . ( $i % 2 ? 'red' : 'blue' ) . '">';
+		$out .= '<header class="sgd-hub__head"><span class="sgd-hub__icon">' . sgd_icon( get_term_meta( $t->term_id, '_sgd_icon', true ) ) . '</span>';
+		$out .= '<div><h3 class="sgd-hub__title"><a href="' . esc_url( $link ) . '">' . esc_html( $t->name ) . '</a></h3>';
+		$out .= '<p class="sgd-hub__count">' . count( $posts ) . ' dịch vụ</p></div></header>';
+		$out .= '<ul class="sgd-hub__list">';
+		foreach ( $posts as $p ) {
+			$price = sgd_meta( 'price', $p->ID );
+			$out  .= '<li><a href="' . esc_url( get_permalink( $p ) ) . '"><span>' . esc_html( get_the_title( $p ) ) . '</span>'
+				. ( $price ? '<b>' . esc_html( $price ) . '</b>' : '' ) . '</a></li>';
+		}
+		$out .= '</ul><a class="sgd-hub__more" href="' . esc_url( $link ) . '">Xem nhóm ' . esc_html( mb_strtolower( $t->name ) ) . ' →</a></section>';
+	}
+	return $out . '</div>';
+}
 
 /**
  * Bảng giá của 1 dịch vụ.

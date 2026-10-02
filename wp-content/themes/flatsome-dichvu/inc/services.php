@@ -27,6 +27,7 @@ function sgd_icons() {
 		'clock'      => array( 'Nhanh', '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>' ),
 		'users'      => array( 'Đội ngũ', '<circle cx="9" cy="8" r="3.5"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M22 21a7 7 0 0 0-4-6.3"/>' ),
 		'wallet'     => array( 'Chi phí', '<path d="M3 7a2 2 0 0 1 2-2h13v4"/><path d="M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2z"/><circle cx="16" cy="14.5" r="1.2"/>' ),
+		'search'     => array( 'Tìm kiếm', '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/>' ),
 		'pin'        => array( 'Địa chỉ', '<path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.6"/>' ),
 		'phone'      => array( 'Điện thoại', '<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2z"/>' ),
 		'mail'       => array( 'Email', '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>' ),
@@ -474,3 +475,47 @@ function sgd_short_title( $id = null ) {
 	$s = sgd_meta( 'short', $id );
 	return $s ? $s : get_the_title( $id ? $id : get_the_ID() );
 }
+
+/**
+ * Thời gian đọc ước tính (phút) – khoảng 220 chữ/phút.
+ *
+ * @param int|null $id ID bài.
+ * @return int
+ */
+function sgd_reading_time( $id = null ) {
+	$words = count( preg_split( '/\s+/u', trim( wp_strip_all_tags( get_post_field( 'post_content', $id ? $id : get_the_ID() ) ) ) ) );
+	return max( 1, (int) round( $words / 220 ) );
+}
+
+/**
+ * Tiêu đề H1 trang danh sách bài viết.
+ *
+ * @return string
+ */
+function sgd_blog_title() {
+	if ( is_search() ) {
+		return 'Kết quả tìm kiếm: ' . get_search_query();
+	}
+	if ( is_category() || is_tag() ) {
+		return single_term_title( '', false );
+	}
+	if ( is_author() ) {
+		return 'Bài viết của ' . get_the_author();
+	}
+	if ( is_date() ) {
+		return 'Bài viết ' . get_the_date( is_year() ? 'Y' : 'm/Y' );
+	}
+	$page = get_option( 'page_for_posts' );
+	return $page ? get_the_title( $page ) : 'Kiến thức doanh nghiệp';
+}
+
+/**
+ * Tắt bình luận cho bài viết (giao diện riêng không hiện; tránh spam liên kết).
+ *
+ * @return bool
+ */
+function sgd_close_comments() {
+	return false;
+}
+add_filter( 'comments_open', 'sgd_close_comments' );
+add_filter( 'pings_open', 'sgd_close_comments' );

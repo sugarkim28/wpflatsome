@@ -10,10 +10,19 @@ defined( 'ABSPATH' ) || exit;
 
 $sgd_sid  = isset( $args['service'] ) ? absint( $args['service'] ) : 0;
 $sgd_form = ! isset( $args['form'] ) || $args['form'];
+$sgd_srch = ! empty( $args['search'] );
 $sgd_rel  = $sgd_sid ? sgd_related_services( $sgd_sid, 8 ) : get_posts( array( 'post_type' => 'dich_vu', 'posts_per_page' => 8, 'orderby' => array( 'menu_order' => 'ASC' ), 'meta_key' => '_sgd_featured', 'meta_value' => '1', 'no_found_rows' => true ) ); // phpcs:ignore WordPress.DB.SlowDBQuery
 $sgd_news = get_posts( array( 'post_type' => 'post', 'posts_per_page' => 5, 'no_found_rows' => true, 'ignore_sticky_posts' => true ) );
 ?>
 <div class="sgd-side">
+	<?php if ( $sgd_srch ) : ?>
+		<form class="sgd-search" role="search" method="get" action="<?php echo esc_url( home_url( '/' ) ); ?>">
+			<label class="screen-reader-text" for="sgd-s">Tìm bài viết</label>
+			<input id="sgd-s" type="search" name="s" value="<?php echo esc_attr( get_search_query() ); ?>" placeholder="Tìm thủ tục, mẫu hồ sơ, thuế…">
+			<input type="hidden" name="post_type" value="post">
+			<button type="submit" aria-label="Tìm kiếm"><?php echo sgd_icon( 'search' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></button>
+		</form>
+	<?php endif; ?>
 	<?php if ( $sgd_form ) : ?>
 		<div class="sgd-wbox sgd-wbox--form" id="dang-ky">
 			<p class="sgd-wbox__title">Nhận tư vấn miễn phí</p>
@@ -49,7 +58,7 @@ $sgd_news = get_posts( array( 'post_type' => 'post', 'posts_per_page' => 5, 'no_
 
 	<?php if ( $sgd_news ) : ?>
 		<div class="sgd-wbox">
-			<p class="sgd-wbox__title">Tham khảo thêm</p>
+			<p class="sgd-wbox__title"><?php echo is_singular( 'post' ) || is_home() || is_archive() || is_search() ? 'Bài viết mới' : 'Tham khảo thêm'; ?></p>
 			<ul class="sgd-wbox__posts">
 				<?php foreach ( $sgd_news as $sgd_i => $sgd_p ) : ?>
 					<li<?php echo 0 === $sgd_i ? ' class="is-first"' : ''; ?>>
