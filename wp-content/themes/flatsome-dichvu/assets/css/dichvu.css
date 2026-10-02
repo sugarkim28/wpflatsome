@@ -1166,3 +1166,39 @@ body.sgd { background: #fff; font-size: 16px; -webkit-font-smoothing: antialiase
 @media (prefers-reduced-motion: reduce) { .sgd-ticker__run { animation: none; } .sgd-ticker__track { overflow-x: auto; } }
 @media (max-width: 549px) { .sgd-ticker__date { display: none; } }
 @media (max-width: 549px) { .sgd-gsec__bar span:first-child { display: none; } .sgd-gsec__bar { justify-content: flex-end; } }
+
+/* ==========================================================================
+   v7 – tổng hợp: trang chủ ngắn gọn trên điện thoại (vuốt ngang thay vì xếp chồng)
+   ========================================================================== */
+@media (max-width: 849px) { .sgd-ticker { display: none; } }
+@media (max-width: 549px) {
+	/* Gói giá: vuốt ngang, thấy mép thẻ kế tiếp để biết còn nội dung */
+	.sgd .sgd-tabset--row .sgd-pricing, .sgd .sgd-blog__grid--4 { display: grid; grid-auto-flow: column; grid-auto-columns: 82%; grid-template-columns: none; gap: 14px; overflow-x: auto; margin-right: -15px; padding: 10px 15px 14px 2px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+	.sgd .sgd-tabset--row .sgd-pricing > *, .sgd .sgd-blog__grid--4 > * { scroll-snap-align: start; }
+	.sgd .sgd-plan.is-hot { transform: none; }
+	/* Quy trình + cam kết: lưới 2 cột gọn */
+	.sgd .sgd-steps--row { grid-template-columns: 1fr 1fr; gap: 10px; }
+	.sgd .sgd-steps--row .sgd-step { padding: 14px 10px; }
+	.sgd .sgd-steps--row .sgd-step__num { width: 38px; height: 38px; flex-basis: 38px; font-size: 1rem; }
+	.sgd .sgd-steps--row .sgd-step__desc { font-size: .82rem; line-height: 1.45; }
+	.sgd .sgd-commit { grid-template-columns: 1fr 1fr; gap: 10px; }
+	.sgd .sgd-commit li { flex-direction: column; gap: 8px; padding: 14px 12px; font-size: .82rem; }
+	/* Danh mục: bỏ dòng mô tả phụ, giữ tên – thời gian – giá */
+	.sgd-cat__name small, .sgd-cat__desc { display: none; }
+	/* Giới thiệu: thẻ thương hiệu gọn */
+	.sgd-about__brand img, .sgd-about__slogan { display: none; }
+	.sgd-about__brand { padding: 6px 18px 18px; }
+	.sgd-about__stats { border-top: 0; }
+	.sgd-about__lead { font-size: .97rem; }
+}
+@media (max-width: 549px) {
+	.sgd .sgd-team { grid-template-columns: 1fr 1fr; gap: 22px 10px; }
+	.sgd-team__photo { width: 92px; height: 92px; font-size: 1.8rem; }
+	.sgd-team__role { font-size: .8rem; }
+	/* Form cạnh hỏi đáp trùng form đầu trang + thanh "Nhận báo giá" cố định → ẩn trên điện thoại */
+	.sgd .sgd-sticky-form { display: none; }
+}
+@media (max-width: 549px) {
+	.sgd-tabset--row .sgd-tabset__nav { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; margin: 0 -15px 18px; padding: 4px 15px 8px; scroll-snap-type: x mandatory; }
+	.sgd .sgd-tabset--row .sgd-tabset__nav button { flex: 0 0 auto; scroll-snap-align: start; white-space: nowrap; }
+}

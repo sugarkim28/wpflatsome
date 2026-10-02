@@ -643,11 +643,12 @@ function sgd_sc_hero( $atts ) {
 			'highlight' => 'trọn gói – không phát sinh',
 			'sub'       => sgd_opt( 'archive_intro' ),
 			'points'    => "Có giấy phép sau 3 – 5 ngày làm việc\nKế toán trọn gói từ 500.000đ/tháng\nLàm hồ sơ online, giao kết quả tận nơi",
+			'popular'   => '1',
 		),
 		$atts,
 		'sgd_hero'
 	);
-	$popular = sgd_query_services( array( 'number' => 6, 'featured' => '1', 'group' => '', 'exclude' => '' ) );
+	$popular = '1' === (string) $a['popular'] ? sgd_query_services( array( 'number' => 6, 'featured' => '1', 'group' => '', 'exclude' => '' ) ) : array();
 	ob_start();
 	?>
 	<div class="sgd-hero">
