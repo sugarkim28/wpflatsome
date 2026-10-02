@@ -13,6 +13,12 @@
  *  [sgd_pagehead title sub]          – dải tiêu đề trang (breadcrumb + H1) dùng chung mọi trang
  *  [sgd_contact_list]                – thông tin liên hệ có icon, bỏ dòng trống (footer, trang liên hệ)
  *
+ * Bản 0.6 (tham khảo bố cục tanthanhthinh.com):
+ *  [sgd_group_section group="slug,slug" title="" flip="0"] – khối 1 nhóm: ảnh + giới thiệu + danh sách dịch vụ có giá + bài viết của nhóm
+ *  [sgd_team]                        – chuyên viên tư vấn (ảnh tròn, chức danh, điện thoại)
+ *  [sgd_partners]                    – logo đối tác / khách hàng tiêu biểu
+ *  Dải "Tin mới" dưới menu (hook flatsome_after_header)
+ *
  * Tab: nội dung mọi tab đều có sẵn trong HTML (Google đọc được), tab chưa chọn ẩn bằng
  * thuộc tính hidden ngay từ máy chủ nên không nhảy bố cục khi tải trang.
  *
@@ -328,6 +334,7 @@ function sgd_sc_contact_list() {
 		array( 'phone', sgd_opt( 'hotline' ), 'tel:' . sgd_tel( sgd_opt( 'hotline' ) ) ),
 		array( 'mail', sgd_opt( 'email' ), 'mailto:' . sgd_opt( 'email' ) ),
 		array( 'doc', sgd_opt( 'tax_code' ) ? 'MST: ' . sgd_opt( 'tax_code' ) : '', '' ),
+		array( 'stamp', sgd_opt( 'founded' ) ? 'Ngày thành lập: ' . sgd_opt( 'founded' ) : '', '' ),
 		array( 'clock', sgd_opt( 'working_hours' ), '' ),
 	);
 	$out = '<ul class="sgd-clist">';
@@ -341,3 +348,180 @@ function sgd_sc_contact_list() {
 	return $out . '</ul>';
 }
 add_shortcode( 'sgd_contact_list', 'sgd_sc_contact_list' );
+
+/**
+ * Bài viết liên quan tới 1 hoặc nhiều nhóm dịch vụ (tìm theo tên nhóm và tên ngắn dịch vụ), bù bằng bài mới.
+ *
+ * @param WP_Term[] $terms   Nhóm.
+ * @param int       $count   Số bài.
+ * @param int[]     $exclude Bài đã dùng.
+ * @return WP_Post[]
+ */
+function sgd_group_posts( $terms, $count = 3, $exclude = array() ) {
+	$found = array();
+	$keys  = array();
+	foreach ( $terms as $t ) {
+		$keys[] = preg_replace( '/^Dịch vụ\s+/u', '', $t->name );
+		foreach ( sgd_group_services( $t ) as $p ) {
+			$keys[] = sgd_meta( 'short', $p->ID ) ? sgd_meta( 'short', $p->ID ) : $p->post_title;
+		}
+	}
+	foreach ( array_unique( array_filter( $keys ) ) as $k ) {
+		if ( count( $found ) >= $count ) {
+			break;
+		}
+		$found = array_merge(
+			$found,
+			get_posts(
+				array(
+					'post_type'           => 'post',
+					's'                   => $k,
+					'posts_per_page'      => $count - count( $found ),
+					'post__not_in'        => array_merge( $exclude, wp_list_pluck( $found, 'ID' ) ),
+					'ignore_sticky_posts' => true,
+					'no_found_rows'       => true,
+				)
+			)
+		);
+	}
+	return $found;
+}
+
+/**
+ * Khối 1 nhóm dịch vụ (kiểu tanthanhthinh.com): tiêu đề kẻ ngang, ảnh/khung thương hiệu + giới thiệu + danh sách dịch vụ kèm giá,
+ * bên dưới là bài viết của nhóm.
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function sgd_sc_group_section( $atts ) {
+	static $used = array();
+	$a     = shortcode_atts( array( 'group' => '', 'title' => '', 'text' => '', 'posts' => 3, 'flip' => '0' ), $atts, 'sgd_group_section' );
+	$terms = array();
+	foreach ( array_filter( array_map( 'trim', explode( ',', $a['group'] ) ) ) as $slug ) {
+		$t = get_term_by( 'slug', $slug, 'nhom_dich_vu' );
+		if ( $t && ! is_wp_error( $t ) ) {
+			$terms[] = $t;
+		}
+	}
+	if ( ! $terms ) {
+		return '';
+	}
+	$main     = $terms[0];
+	$services = array();
+	foreach ( $terms as $t ) {
+		$services = array_merge( $services, sgd_group_services( $t ) );
+	}
+	$title = $a['title'] ? $a['title'] : $main->name;
+	$text  = $a['text'] ? $a['text'] : wp_strip_all_tags( $main->description );
+	$img   = get_term_meta( $main->term_id, '_sgd_image', true );
+	$price = sgd_min_price_label( $services );
+
+	$visual = $img
+		? '<img src="' . esc_url( $img ) . '" alt="' . esc_attr( $title ) . '" loading="lazy" width="1100" height="700">'
+		: '<span class="sgd-gsec__ico">' . sgd_icon( get_term_meta( $main->term_id, '_sgd_icon', true ) ) . '</span><span class="sgd-gsec__vtitle">' . esc_html( $title ) . '</span>'
+			. '<span class="sgd-gsec__vmeta">' . count( $services ) . ' dịch vụ' . ( $price ? ' · <b>' . esc_html( $price ) . '</b>' : '' ) . '</span>';
+	$out  = '<div class="sgd-gsec' . ( '1' === (string) $a['flip'] ? ' is-flip' : '' ) . '">';
+	$out .= '<div class="sgd-ltitle is-lined"><h2 class="sgd-ltitle__text"><span>' . esc_html( $title ) . '</span></h2></div>';
+	$out .= '<div class="sgd-gsec__body"><a class="sgd-gsec__visual' . ( $img ? ' has-img' : '' ) . '" href="' . esc_url( get_term_link( $main ) ) . '">' . $visual
+		. '<span class="sgd-gsec__bar"><span>' . esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) ) . '</span><span>' . sgd_icon( 'phone' ) . ' Hotline: ' . esc_html( sgd_opt( 'hotline' ) ) . '</span></span></a>';
+	$out .= '<div class="sgd-gsec__text">' . ( $text ? '<p class="sgd-gsec__desc">' . esc_html( sgd_clip( $text, 260 ) ) . '</p>' : '' ) . '<ul class="sgd-gsec__list">';
+	foreach ( array_slice( $services, 0, 7 ) as $p ) {
+		$pr   = sgd_meta( 'price', $p->ID );
+		$out .= '<li><a href="' . esc_url( get_permalink( $p ) ) . '"><span>' . esc_html( get_the_title( $p ) ) . '</span>' . ( $pr ? '<b>' . esc_html( $pr ) . '</b>' : '' ) . '</a></li>';
+	}
+	$out .= '</ul><p class="sgd-gsec__btns"><a class="button sgd-btn" href="#dang-ky">Nhận báo giá</a><a class="sgd-gsec__more" href="' . esc_url( get_term_link( $main ) ) . '">Xem tất cả ' . count( $services ) . ' dịch vụ →</a></p></div></div>';
+
+	$posts = (int) $a['posts'] > 0 ? sgd_group_posts( $terms, (int) $a['posts'], $used ) : array();
+	if ( $posts ) {
+		$used = array_merge( $used, wp_list_pluck( $posts, 'ID' ) );
+		ob_start();
+		echo '<div class="sgd-gsec__posts">';
+		global $post;
+		$keep = $post;
+		foreach ( $posts as $post ) { // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+			setup_postdata( $post );
+			get_template_part( 'template-parts/dichvu/post-card', null, array( 'tag' => 'h3' ) );
+		}
+		$post = $keep; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_reset_postdata();
+		echo '</div>';
+		$out .= ob_get_clean();
+	}
+	return $out . '</div>';
+}
+add_shortcode( 'sgd_group_section', 'sgd_sc_group_section' );
+
+/**
+ * Chuyên viên tư vấn (Tuỳ biến → Thông tin công ty → Chuyên viên tư vấn).
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function sgd_sc_team( $atts ) {
+	$a    = shortcode_atts( array( 'title' => 'Chuyên viên tư vấn', 'sub' => 'Gọi trực tiếp chuyên viên phụ trách để được tư vấn nhanh nhất.' ), $atts, 'sgd_team' );
+	$rows = array_filter(
+		sgd_lines( sgd_opt( 'team' ), 4 ),
+		function ( $r ) {
+			return '' !== $r[0];
+		}
+	);
+	if ( ! $rows ) {
+		return '';
+	}
+	$out = sgd_sc_title( array( 'text' => $a['title'], 'sub' => $a['sub'], 'class' => 'is-lined' ) ) . '<ul class="sgd-team">';
+	foreach ( $rows as $r ) {
+		$ini  = mb_strtoupper( mb_substr( trim( preg_replace( '/.*\s/u', '', $r[0] ) ), 0, 1 ) );
+		$out .= '<li class="sgd-team__item"><span class="sgd-team__photo">' . ( $r[3] ? '<img src="' . esc_url( $r[3] ) . '" alt="' . esc_attr( $r[0] ) . '" width="140" height="140" loading="lazy">' : '<b>' . esc_html( $ini ) . '</b>' ) . '</span>'
+			. '<strong class="sgd-team__name">' . esc_html( $r[0] ) . '</strong>'
+			. ( $r[1] ? '<span class="sgd-team__role">' . esc_html( $r[1] ) . '</span>' : '' )
+			. ( $r[2] ? '<a class="sgd-team__tel" href="tel:' . esc_attr( sgd_tel( $r[2] ) ) . '">' . esc_html( $r[2] ) . '</a>' : '' ) . '</li>';
+	}
+	return $out . '</ul>';
+}
+add_shortcode( 'sgd_team', 'sgd_sc_team' );
+
+/**
+ * Logo đối tác / khách hàng tiêu biểu.
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function sgd_sc_partners( $atts ) {
+	$a    = shortcode_atts( array( 'title' => 'Đối tác & khách hàng tiêu biểu' ), $atts, 'sgd_partners' );
+	$rows = array_filter(
+		sgd_lines( sgd_opt( 'partners' ), 2 ),
+		function ( $r ) {
+			return '' !== $r[1];
+		}
+	);
+	if ( ! $rows ) {
+		return '';
+	}
+	$out = sgd_sc_title( array( 'text' => $a['title'], 'class' => 'is-lined', 'tag' => 'h3' ) ) . '<ul class="sgd-partners">';
+	foreach ( $rows as $r ) {
+		$out .= '<li><img src="' . esc_url( $r[1] ) . '" alt="' . esc_attr( $r[0] ) . '" loading="lazy" width="180" height="70"></li>';
+	}
+	return $out . '</ul>';
+}
+add_shortcode( 'sgd_partners', 'sgd_sc_partners' );
+
+/**
+ * Dải "Tin mới" dưới menu (bài viết mới nhất, chạy ngang; dừng khi rê chuột / khi người dùng tắt hiệu ứng).
+ */
+function sgd_news_ticker() {
+	if ( '0' === (string) sgd_opt( 'ticker' ) ) {
+		return;
+	}
+	$posts = get_posts( array( 'post_type' => 'post', 'posts_per_page' => 6, 'ignore_sticky_posts' => true, 'no_found_rows' => true ) );
+	if ( ! $posts ) {
+		return;
+	}
+	$items = '';
+	foreach ( $posts as $p ) {
+		$items .= '<a href="' . esc_url( get_permalink( $p ) ) . '">' . esc_html( get_the_title( $p ) ) . '</a>';
+	}
+	echo '<div class="sgd-ticker" aria-label="Tin mới"><div class="sgd-ticker__in"><span class="sgd-ticker__label">Tin mới</span><div class="sgd-ticker__track"><div class="sgd-ticker__run">' . $items . '<span aria-hidden="true" class="sgd-ticker__dup">' . str_replace( '<a ', '<a tabindex="-1" ', $items ) . '</span></div></div>'
+		. '<span class="sgd-ticker__date">' . esc_html( wp_date( 'd/m/Y' ) ) . '</span></div></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- đã escape.
+}
+add_action( 'flatsome_after_header', 'sgd_news_ticker' );

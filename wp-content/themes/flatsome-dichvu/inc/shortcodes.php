@@ -249,7 +249,7 @@ function sgd_sc_posts( $atts ) {
 	if ( 'cards' === $a['style'] ) {
 		global $post;
 		ob_start();
-		echo '<div class="sgd-blog__grid sgd-blog__grid--3">';
+		echo '<div class="sgd-blog__grid sgd-blog__grid--' . ( 4 === count( $posts ) ? 4 : 3 ) . '">';
 		foreach ( $posts as $post ) { // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 			setup_postdata( $post );
 			get_template_part( 'template-parts/dichvu/post-card', null, array( 'tag' => 'h3' ) );

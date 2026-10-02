@@ -297,6 +297,9 @@ function sgd_group_edit_fields( $term ) {
 	<tr class="form-field"><th><label for="sgd-group-h1">Tiêu đề H1 (tuỳ chọn)</label></th>
 		<td><input id="sgd-group-h1" name="sgd_h1" type="text" value="<?php echo esc_attr( get_term_meta( $term->term_id, '_sgd_h1', true ) ); ?>">
 			<p class="description">Để trống = "Dịch vụ " + tên nhóm. Mô tả nhóm (150–300 chữ) hiện ở đầu trang nhóm.</p></td></tr>
+	<tr class="form-field"><th><label for="sgd-group-image">Ảnh đại diện nhóm (tuỳ chọn)</label></th>
+		<td><input id="sgd-group-image" name="sgd_image" type="url" value="<?php echo esc_attr( get_term_meta( $term->term_id, '_sgd_image', true ) ); ?>" placeholder="https://…/anh-nhom.jpg">
+			<p class="description">Dán đường dẫn ảnh từ Thư viện Media (ngang, khoảng 1100×700). Hiện ở khối nhóm dịch vụ trang chủ; để trống = khung màu thương hiệu.</p></td></tr>
 	<?php
 }
 add_action( 'nhom_dich_vu_edit_form_fields', 'sgd_group_edit_fields' );
@@ -314,6 +317,7 @@ function sgd_group_save( $term_id ) {
 	update_term_meta( $term_id, '_sgd_icon', array_key_exists( $icon, sgd_icons() ) ? $icon : '' );
 	update_term_meta( $term_id, '_sgd_order', isset( $_POST['sgd_order'] ) ? (int) $_POST['sgd_order'] : 0 );
 	update_term_meta( $term_id, '_sgd_h1', isset( $_POST['sgd_h1'] ) ? sanitize_text_field( wp_unslash( $_POST['sgd_h1'] ) ) : '' );
+	update_term_meta( $term_id, '_sgd_image', isset( $_POST['sgd_image'] ) ? esc_url_raw( wp_unslash( $_POST['sgd_image'] ) ) : '' );
 }
 add_action( 'edited_nhom_dich_vu', 'sgd_group_save' );
 
