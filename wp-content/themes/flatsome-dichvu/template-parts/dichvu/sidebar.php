@@ -62,8 +62,8 @@ $sgd_news = get_posts( array( 'post_type' => 'post', 'posts_per_page' => 5, 'no_
 			<ul class="sgd-wbox__posts">
 				<?php foreach ( $sgd_news as $sgd_i => $sgd_p ) : ?>
 					<li<?php echo 0 === $sgd_i ? ' class="is-first"' : ''; ?>>
-						<?php if ( 0 === $sgd_i && has_post_thumbnail( $sgd_p ) ) : ?>
-							<a class="sgd-wbox__thumb" href="<?php echo esc_url( get_permalink( $sgd_p ) ); ?>" tabindex="-1" aria-hidden="true"><?php echo get_the_post_thumbnail( $sgd_p, 'medium_large', array( 'loading' => 'lazy' ) ); ?></a>
+						<?php if ( 0 === $sgd_i ) : ?>
+							<a class="sgd-wbox__thumb" href="<?php echo esc_url( get_permalink( $sgd_p ) ); ?>" tabindex="-1" aria-hidden="true"><?php echo has_post_thumbnail( $sgd_p ) ? get_the_post_thumbnail( $sgd_p, 'medium_large', array( 'loading' => 'lazy' ) ) : '<span class="sgd-post__noimg">' . sgd_icon( 'doc' ) . '</span>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></a>
 						<?php endif; ?>
 						<a href="<?php echo esc_url( get_permalink( $sgd_p ) ); ?>"><?php echo esc_html( get_the_title( $sgd_p ) ); ?></a>
 					</li>
