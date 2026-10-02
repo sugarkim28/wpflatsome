@@ -74,9 +74,19 @@ function sgd_handle_lead() {
 	$phone   = isset( $_POST['sgd_phone'] ) ? sgd_normalize_phone( sanitize_text_field( wp_unslash( $_POST['sgd_phone'] ) ) ) : '';
 	$email   = isset( $_POST['sgd_email'] ) ? sanitize_email( wp_unslash( $_POST['sgd_email'] ) ) : '';
 	$note    = isset( $_POST['sgd_note'] ) ? mb_substr( sanitize_textarea_field( wp_unslash( $_POST['sgd_note'] ) ), 0, 1000 ) : '';
-	$service = isset( $_POST['sgd_service'] ) ? absint( $_POST['sgd_service'] ) : 0;
-	if ( $service && 'dich_vu' !== get_post_type( $service ) ) {
-		$service = 0;
+	$raw     = isset( $_POST['sgd_service'] ) ? sanitize_text_field( wp_unslash( $_POST['sgd_service'] ) ) : '';
+	$group   = '';
+	$service = 0;
+	if ( preg_match( '/^g(\d+)$/', $raw, $m ) ) {
+		$term  = get_term( (int) $m[1], 'nhom_dich_vu' );
+		$group = ( $term && ! is_wp_error( $term ) ) ? $term->name : '';
+	} elseif ( '0' === $raw ) {
+		$group = 'Khác';
+	} else {
+		$service = absint( $raw );
+		if ( $service && 'dich_vu' !== get_post_type( $service ) ) {
+			$service = 0;
+		}
 	}
 	if ( '' === $name || '' === $phone ) {
 		$back( 'invalid' );
@@ -91,7 +101,7 @@ function sgd_handle_lead() {
 		set_transient( $key, 1, MINUTE_IN_SECONDS );
 	}
 
-	$service_name = $service ? get_the_title( $service ) : '';
+	$service_name = $service ? get_the_title( $service ) : $group;
 	$post_id      = wp_insert_post(
 		array(
 			'post_type'   => 'sgd_lead',
@@ -108,6 +118,7 @@ function sgd_handle_lead() {
 		'phone'   => $phone,
 		'email'   => $email,
 		'service' => $service,
+		'group'   => $group,
 		'note'    => $note,
 		'source'  => $source,
 		'page'    => esc_url_raw( $redirect ),
@@ -191,7 +202,7 @@ function sgd_lead_column( $col, $id ) {
 			break;
 		case 'sgd_service':
 			$p = absint( get_post_meta( $id, '_sgd_service', true ) );
-			echo $p ? '<a href="' . esc_url( add_query_arg( 'sgd_service', $p ) ) . '">' . esc_html( get_the_title( $p ) ) . '</a>' : '—';
+			echo $p ? '<a href="' . esc_url( add_query_arg( 'sgd_service', $p ) ) . '">' . esc_html( get_the_title( $p ) ) . '</a>' : esc_html( get_post_meta( $id, '_sgd_group', true ) ? get_post_meta( $id, '_sgd_group', true ) : '—' );
 			break;
 		case 'sgd_note':
 			echo esc_html( wp_trim_words( get_post_meta( $id, '_sgd_note', true ), 15, '…' ) );
@@ -297,7 +308,7 @@ function sgd_lead_export() {
 					get_post_meta( $id, '_sgd_name', true ),
 					get_post_meta( $id, '_sgd_phone', true ),
 					get_post_meta( $id, '_sgd_email', true ),
-					$p ? get_the_title( $p ) : '',
+					$p ? get_the_title( $p ) : get_post_meta( $id, '_sgd_group', true ),
 					get_post_meta( $id, '_sgd_note', true ),
 					get_post_meta( $id, '_sgd_source', true ),
 					get_post_meta( $id, '_sgd_page', true ),
@@ -326,7 +337,7 @@ function sgd_lead_meta_box() {
 				'Họ tên'     => get_post_meta( $post->ID, '_sgd_name', true ),
 				'Điện thoại' => get_post_meta( $post->ID, '_sgd_phone', true ),
 				'Email'      => get_post_meta( $post->ID, '_sgd_email', true ),
-				'Dịch vụ'    => $p ? get_the_title( $p ) : '',
+				'Dịch vụ'    => $p ? get_the_title( $p ) : get_post_meta( $post->ID, '_sgd_group', true ),
 				'Nội dung'   => get_post_meta( $post->ID, '_sgd_note', true ),
 				'Form'       => get_post_meta( $post->ID, '_sgd_source', true ),
 				'Trang'      => get_post_meta( $post->ID, '_sgd_page', true ),

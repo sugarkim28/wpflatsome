@@ -69,40 +69,10 @@ $sgd_msgs = array(
 		<label class="screen-reader-text" for="<?php echo esc_attr( $sgd_uid ); ?>-service">Dịch vụ cần tư vấn</label>
 		<select id="<?php echo esc_attr( $sgd_uid ); ?>-service" name="sgd_service">
 			<option value="">Dịch vụ cần tư vấn</option>
-			<?php
-			$sgd_groups = get_terms( array( 'taxonomy' => 'nhom_dich_vu', 'hide_empty' => true ) );
-			$sgd_shown  = array();
-			if ( $sgd_groups && ! is_wp_error( $sgd_groups ) ) {
-				usort(
-					$sgd_groups,
-					function ( $x, $y ) {
-						return (int) get_term_meta( $x->term_id, '_sgd_order', true ) - (int) get_term_meta( $y->term_id, '_sgd_order', true );
-					}
-				);
-				foreach ( $sgd_groups as $sgd_g ) {
-					$sgd_ps = get_posts( array( 'post_type' => 'dich_vu', 'posts_per_page' => 50, 'orderby' => array( 'menu_order' => 'ASC', 'title' => 'ASC' ), 'tax_query' => array( array( 'taxonomy' => 'nhom_dich_vu', 'terms' => $sgd_g->term_id, 'include_children' => false ) ), 'no_found_rows' => true ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
-					$sgd_ps = array_filter(
-						$sgd_ps,
-						function ( $p ) use ( $sgd_shown ) {
-							return ! in_array( $p->ID, $sgd_shown, true );
-						}
-					);
-					if ( ! $sgd_ps ) {
-						continue;
-					}
-					echo '<optgroup label="' . esc_attr( $sgd_g->name ) . '">';
-					foreach ( $sgd_ps as $sgd_p ) {
-						$sgd_shown[] = $sgd_p->ID;
-						echo '<option value="' . esc_attr( $sgd_p->ID ) . '">' . esc_html( $sgd_p->post_title ) . '</option>';
-					}
-					echo '</optgroup>';
-				}
-			}
-			foreach ( get_posts( array( 'post_type' => 'dich_vu', 'posts_per_page' => 50, 'post__not_in' => $sgd_shown, 'orderby' => 'title', 'order' => 'ASC', 'no_found_rows' => true ) ) as $sgd_p ) {
-				echo '<option value="' . esc_attr( $sgd_p->ID ) . '">' . esc_html( $sgd_p->post_title ) . '</option>';
-			}
-			?>
-			<option value="0">Khác / chưa rõ – cần tư vấn</option>
+			<?php foreach ( sgd_sorted_groups() as $sgd_g ) : ?>
+				<option value="g<?php echo esc_attr( $sgd_g->term_id ); ?>"><?php echo esc_html( $sgd_g->name ); ?></option>
+			<?php endforeach; ?>
+			<option value="0">Khác</option>
 		</select>
 	<?php endif; ?>
 	<?php if ( $sgd_a['note'] ) : ?>
