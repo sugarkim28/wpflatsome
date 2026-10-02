@@ -318,29 +318,74 @@ function sgd_demo_build() {
 	};
 	// Menu kiểu ketoananpha.vn: chữ in hoa, mỗi mục là 1 trang có bài giới thiệu; menu con mở đầu bằng trang tổng quan của nhóm.
 	// Không đặt "Bảng giá" trên menu – bảng giá nằm trong bài viết từng nhóm và từng dịch vụ.
-	$service_links = function ( $slugs, $parent ) use ( $data, $services, $add ) {
-		foreach ( $data['services'] as $s ) {
-			if ( in_array( $s['group'], (array) $slugs, true ) && isset( $services[ $s['slug'] ] ) ) {
-				$add( $s['title'], '', $parent, array( 'menu-item-object' => 'dich_vu', 'menu-item-object-id' => $services[ $s['slug'] ], 'menu-item-type' => 'post_type' ) );
-			}
-		}
-	};
 	$tax_item = function ( $slug, $label, $parent = 0 ) use ( $groups, $add ) {
 		return $add( $label, '', $parent, array( 'menu-item-object' => 'nhom_dich_vu', 'menu-item-object-id' => $groups[ $slug ], 'menu-item-type' => 'taxonomy' ) );
 	};
-	$top = function ( $slug, $label, $overview, $service_groups ) use ( $tax_item, $service_links ) {
+	// Menu con theo danh sách cố định (thứ tự giống ketoananpha.vn): [nhãn, slug dịch vụ].
+	$svc_item = function ( $label, $slug, $parent ) use ( $services, $add ) {
+		if ( isset( $services[ $slug ] ) ) {
+			$add( $label, '', $parent, array( 'menu-item-object' => 'dich_vu', 'menu-item-object-id' => $services[ $slug ], 'menu-item-type' => 'post_type' ) );
+		}
+	};
+	$top = function ( $slug, $label, $overview, $items ) use ( $tax_item, $svc_item ) {
 		$parent = $tax_item( $slug, $label );
 		$tax_item( $slug, $overview, $parent );
-		$service_links( $service_groups, $parent );
+		foreach ( $items as $it ) {
+			$svc_item( $it[0], $it[1], $parent );
+		}
 		return $parent;
 	};
 	$add( 'Giới thiệu', get_permalink( $about ) );
-	$top( 'thanh-lap-doanh-nghiep', 'Dịch vụ thành lập', 'Tổng quan thành lập công ty', 'thanh-lap-doanh-nghiep' );
-	$acc = $top( 'ke-toan', 'Dịch vụ kế toán', 'Tổng quan kế toán – thuế', 'ke-toan' );
-	$tax_item( 'dich-vu-thue', 'Dịch vụ thuế', $acc );
-	$service_links( 'dich-vu-thue', $acc );
-	$top( 'thay-doi-giay-phep', 'Thay đổi GPKD', 'Tổng quan thay đổi giấy phép', 'thay-doi-giay-phep' );
-	$top( 'dich-vu-khac', 'Dịch vụ khác', 'Tổng quan dịch vụ khác', 'dich-vu-khac' );
+	$top(
+		'thanh-lap-doanh-nghiep',
+		'Thành lập công ty',
+		'Thành lập công ty',
+		array(
+			array( 'Công ty TNHH', 'thanh-lap-cong-ty-tnhh' ),
+			array( 'Công ty cổ phần', 'thanh-lap-cong-ty-co-phan' ),
+			array( 'Công ty vốn nước ngoài', 'thanh-lap-cong-ty-von-nuoc-ngoai' ),
+			array( 'Chi nhánh công ty', 'thanh-lap-chi-nhanh-van-phong-dai-dien' ),
+			array( 'Hộ kinh doanh cá thể', 'dang-ky-ho-kinh-doanh' ),
+		)
+	);
+	$top(
+		'ke-toan',
+		'Dịch vụ kế toán',
+		'Dịch vụ kế toán',
+		array(
+			array( 'Kế toán trọn gói', 'ke-toan-tron-goi' ),
+			array( 'Kế toán nội bộ', 'ke-toan-noi-bo' ),
+			array( 'Kế toán hộ kinh doanh', 'ke-toan-ho-kinh-doanh' ),
+			array( 'Khai thuế ban đầu', 'khai-thue-ban-dau' ),
+			array( 'Báo cáo tài chính', 'bao-cao-tai-chinh' ),
+			array( 'Quyết toán thuế cuối năm', 'quyet-toan-thue-cuoi-nam' ),
+			array( 'Làm sổ sách kế toán', 'ra-soat-lam-lai-so-sach-ke-toan' ),
+			array( 'Hoàn thuế GTGT', 'hoan-thue-gtgt' ),
+			array( 'Hoàn thuế TNCN', 'hoan-thue-tncn' ),
+		)
+	);
+	$top(
+		'thay-doi-giay-phep',
+		'Thay đổi GPKD',
+		'Thay đổi giấy phép kinh doanh',
+		array(
+			array( 'Thay đổi địa chỉ', 'thay-doi-dia-chi-cong-ty' ),
+			array( 'Đổi tên, người đại diện', 'thay-doi-nguoi-dai-dien-ten-cong-ty' ),
+			array( 'Tăng, giảm vốn điều lệ', 'tang-giam-von-dieu-le' ),
+			array( 'Bổ sung ngành nghề', 'bo-sung-nganh-nghe-kinh-doanh' ),
+			array( 'Tạm ngừng, giải thể', 'tam-ngung-giai-the-doanh-nghiep' ),
+		)
+	);
+	$top(
+		'dich-vu-khac',
+		'Dịch vụ khác',
+		'Dịch vụ khác',
+		array(
+			array( 'Bảo hiểm xã hội', 'dang-ky-bao-hiem-xa-hoi' ),
+			array( 'Chữ ký số, hóa đơn điện tử', 'chu-ky-so-hoa-don-dien-tu' ),
+			array( 'Đăng ký nhãn hiệu', 'dang-ky-nhan-hieu' ),
+		)
+	);
 	$add( 'Kiến thức', get_permalink( $news ) );
 	$add( 'Liên hệ', get_permalink( $contact ) );
 	$loc                   = get_theme_mod( 'nav_menu_locations', array() );

@@ -634,3 +634,48 @@ function sgd_style_tables( $html ) {
 	);
 }
 add_filter( 'the_content', 'sgd_style_tables', 20 );
+
+/**
+ * Dịch vụ chính liên quan tới 1 bài viết: chọn nhóm có nhiều tên dịch vụ / tên nhóm xuất hiện trong bài nhất,
+ * lấy dịch vụ của nhóm đó (dịch vụ được nhắc tên đứng trước); không khớp thì lấy dịch vụ nổi bật.
+ *
+ * @param int $post_id Bài viết.
+ * @param int $count   Số dịch vụ.
+ * @return WP_Post[]
+ */
+function sgd_services_for_post( $post_id, $count = 3 ) {
+	$text  = mb_strtolower( get_the_title( $post_id ) . ' ' . wp_strip_all_tags( (string) get_post_field( 'post_content', $post_id ) ) );
+	$best  = null;
+	$score = 0;
+	$hits  = array();
+	$terms = get_terms( array( 'taxonomy' => 'nhom_dich_vu', 'hide_empty' => true ) );
+	foreach ( is_array( $terms ) ? $terms : array() as $t ) {
+		$n    = 0;
+		$keys = array( mb_strtolower( preg_replace( '/^Dịch vụ\s+/u', '', $t->name ) ) );
+		$svcs = get_posts( array( 'post_type' => 'dich_vu', 'posts_per_page' => 30, 'orderby' => array( 'menu_order' => 'ASC' ), 'tax_query' => array( array( 'taxonomy' => 'nhom_dich_vu', 'terms' => $t->term_id ) ), 'no_found_rows' => true ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+		foreach ( $svcs as $p ) {
+			$k = mb_strtolower( sgd_meta( 'short', $p->ID ) ? sgd_meta( 'short', $p->ID ) : $p->post_title );
+			if ( $k && false !== mb_strpos( $text, $k ) ) {
+				$n          += 2;
+				$hits[ $p->ID ] = true;
+			}
+		}
+		foreach ( $keys as $k ) {
+			$n += $k ? substr_count( $text, $k ) : 0;
+		}
+		if ( $n > $score ) {
+			$score = $n;
+			$best  = $svcs;
+		}
+	}
+	if ( ! $best ) {
+		return get_posts( array( 'post_type' => 'dich_vu', 'posts_per_page' => $count, 'meta_key' => '_sgd_featured', 'meta_value' => '1', 'no_found_rows' => true ) ); // phpcs:ignore WordPress.DB.SlowDBQuery
+	}
+	usort(
+		$best,
+		function ( $a, $b ) use ( $hits ) {
+			return (int) isset( $hits[ $b->ID ] ) - (int) isset( $hits[ $a->ID ] );
+		}
+	);
+	return array_slice( $best, 0, $count );
+}

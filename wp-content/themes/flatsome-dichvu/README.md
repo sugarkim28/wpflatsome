@@ -48,6 +48,8 @@ Trang chủ (bản 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh
 
 - Menu kiểu ketoananpha.vn (chữ in hoa, thanh sáng, menu con hộp trắng): Giới thiệu · Dịch vụ thành lập · Dịch vụ kế toán (gồm thuế) · Thay đổi GPKD · Dịch vụ khác · Kiến thức · Liên hệ. Không có "Bảng giá" và nút màu trên menu. Mỗi mục là 1 trang có bài giới thiệu; menu con mở đầu bằng trang "Tổng quan …" của nhóm.
 - Trang chủ giới thiệu 4 dịch vụ chính kiểu tanthanhthinh.com `[sgd_group_section … price="0"]` (không hiện giá).
+- Menu: THÀNH LẬP CÔNG TY (Công ty TNHH, cổ phần, vốn nước ngoài, chi nhánh, hộ kinh doanh) · DỊCH VỤ KẾ TOÁN (kế toán trọn gói, nội bộ, hộ kinh doanh, khai thuế ban đầu, báo cáo tài chính, quyết toán thuế, làm sổ sách, hoàn thuế GTGT, hoàn thuế TNCN) · THAY ĐỔI GPKD · DỊCH VỤ KHÁC.
+- Dưới mỗi bài (bài viết, dịch vụ, bài nhóm) có khối thông tin liên hệ + form; "Bài viết liên quan" là bài dịch vụ chính cùng mục.
 - Mọi bảng cùng 1 phong cách (thanh tiêu đề xanh đậm, hàng tiêu đề xanh nhạt, cột đầu in đậm, ghi chú (*) trong khung): bảng giá, chi phí trọn gói, bảng trong bài viết (tự áp dụng; `<caption>` của bảng thành thanh tiêu đề).
 - Quy trình hiện dạng timeline (`[sgd_steps]` mỗi dòng `Bước | Mô tả | Thời gian`; `layout="row"` = timeline ngang, tự chuyển dọc trên điện thoại).
 - Bảng giá nằm trong bài viết lớn của từng nhóm (`[sgd_price_table group="…"]`, `[sgd_pricing service="…" show="packages|table"]`); bài tự viết chưa chèn bảng giá thì theme tự thêm ở cuối.

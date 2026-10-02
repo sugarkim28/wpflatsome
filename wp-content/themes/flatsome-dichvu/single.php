@@ -41,16 +41,7 @@ while ( have_posts() ) :
 				<?php endif; ?>
 				<div class="sgd-content entry-content"><?php echo $sgd_content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- nội dung bài viết đã qua the_content. ?></div>
 
-				<div class="sgd-postcta">
-					<div>
-						<p class="sgd-postcta__title">Cần hỗ trợ thủ tục cho doanh nghiệp của bạn?</p>
-						<p>Chuyên viên <?php echo esc_html( sgd_opt( 'company' ) ); ?> tư vấn miễn phí, báo giá trọn gói trong 15 phút.</p>
-					</div>
-					<p class="sgd-summary__btns">
-						<a class="button sgd-btn" href="#dang-ky">Nhận báo giá</a>
-						<a class="button sgd-btn is-outline" href="tel:<?php echo esc_attr( sgd_tel( sgd_opt( 'hotline' ) ) ); ?>"><?php echo sgd_icon( 'phone' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> <?php echo esc_html( sgd_opt( 'hotline' ) ); ?></a>
-					</p>
-				</div>
+				<?php get_template_part( 'template-parts/dichvu/contact-box', null, array( 'source' => 'Cuối bài viết' ) ); ?>
 
 				<?php $sgd_tags = get_the_tags(); ?>
 				<?php if ( $sgd_tags ) : ?>
@@ -66,35 +57,7 @@ while ( have_posts() ) :
 			</aside>
 		</div>
 
-		<?php
-		$sgd_rel = get_posts(
-			array(
-				'post_type'           => 'post',
-				'posts_per_page'      => 3,
-				'post__not_in'        => array( get_the_ID() ),
-				'category__in'        => $sgd_cat ? array( $sgd_cat->term_id ) : array(),
-				'ignore_sticky_posts' => true,
-				'no_found_rows'       => true,
-			)
-		);
-		?>
-		<?php if ( $sgd_rel ) : ?>
-			<section class="sgd-related">
-				<div class="container">
-					<h2 class="sgd-htab"><span>Bài viết liên quan</span></h2>
-					<div class="sgd-blog__grid sgd-blog__grid--3">
-						<?php
-						global $post;
-						foreach ( $sgd_rel as $post ) : // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-							setup_postdata( $post );
-							get_template_part( 'template-parts/dichvu/post-card', null, array( 'tag' => 'h3' ) );
-						endforeach;
-						wp_reset_postdata();
-						?>
-					</div>
-				</div>
-			</section>
-		<?php endif; ?>
+		<?php get_template_part( 'template-parts/dichvu/related-services', null, array( 'posts' => sgd_services_for_post( get_the_ID(), 3 ) ) ); ?>
 	</div>
 	<?php
 endwhile;

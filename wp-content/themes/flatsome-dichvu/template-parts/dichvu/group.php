@@ -15,7 +15,6 @@ list( $sgd_article, $sgd_heads ) = sgd_content_headings( sgd_group_article( $sgd
 $sgd_img   = get_term_meta( $sgd_term->term_id, '_sgd_image', true );
 $sgd_price = sgd_min_price_label( $sgd_services );
 $sgd_intro = trim( wp_strip_all_tags( term_description( $sgd_term ) ) );
-$sgd_posts = sgd_group_posts( array( $sgd_term ), 3 );
 ?>
 <div id="content" class="sgd-listing sgd-group-page">
 	<?php echo sgd_pagehead( sgd_listing_h1(), $sgd_intro ? '<p>' . esc_html( $sgd_intro ) . '</p>' : '' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- đã escape. ?>
@@ -49,26 +48,11 @@ $sgd_posts = sgd_group_posts( array( $sgd_term ), 3 );
 				<div class="sgd-content entry-content"><?php echo $sgd_article; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- nội dung quản trị viên nhập (đã lọc wp_kses_post khi lưu). ?></div>
 			<?php endif; ?>
 
-			<?php get_template_part( 'template-parts/dichvu/call-now' ); ?>
-
-			<?php if ( $sgd_posts ) : ?>
-				<section class="sgd-related-posts">
-					<h2 class="sgd-htab"><span>Bài viết liên quan</span></h2>
-					<div class="sgd-blog__grid sgd-blog__grid--3">
-						<?php
-						global $post;
-						foreach ( $sgd_posts as $post ) : // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-							setup_postdata( $post );
-							get_template_part( 'template-parts/dichvu/post-card', null, array( 'tag' => 'h3' ) );
-						endforeach;
-						wp_reset_postdata();
-						?>
-					</div>
-				</section>
-			<?php endif; ?>
+			<?php get_template_part( 'template-parts/dichvu/contact-box', null, array( 'source' => 'Cuối bài nhóm: ' . $sgd_term->name ) ); ?>
 		</div>
 		<aside class="col large-4 sgd-single__side">
 			<?php get_template_part( 'template-parts/dichvu/sidebar' ); ?>
 		</aside>
 	</div>
+	<?php get_template_part( 'template-parts/dichvu/related-services', null, array( 'posts' => array_slice( $sgd_services, 0, 6 ), 'title' => 'Bài viết dịch vụ ' . mb_strtolower( preg_replace( '/^Dịch vụ\s+/u', '', $sgd_term->name ) ) ) ); ?>
 </div>

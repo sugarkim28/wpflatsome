@@ -1415,3 +1415,27 @@ body.sgd { background: #fff; font-size: 16px; -webkit-font-smoothing: antialiase
 .sgd .sgd-mtable--costs tr.is-total th, .sgd .sgd-mtable--costs tr.is-total td { background: #fff1f2 !important; color: var(--sgd-red); font-size: 1.02rem; font-weight: 800; }
 .sgd .sgd-mtable--costs tbody th, .sgd .sgd-mtable--list tbody th, .sgd .sgd-mtable--content tbody th { white-space: normal; }
 .sgd .sgd-mtable--costs thead th:first-child, .sgd .sgd-mtable--list thead th:first-child { text-align: left; }
+
+/* ==========================================================================
+   v12 – thông tin liên hệ dưới bài viết + thẻ "Bài viết liên quan" là dịch vụ chính cùng mục
+   ========================================================================== */
+.sgd-cbox { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; margin: 34px 0 24px; overflow: hidden; border: 1px solid var(--sgd-line); border-radius: 18px; background: #fff; box-shadow: var(--sgd-card-shadow); }
+.sgd-cbox__info { position: relative; padding: 26px 26px 22px; background: radial-gradient(380px 220px at 100% 0%, rgba(225, 11, 23, .35), transparent 70%), linear-gradient(140deg, var(--sgd-navy), var(--sgd-primary)); color: rgba(255, 255, 255, .88); }
+.sgd-cbox__info .sgd-eyebrow { color: #ffd166; }
+.sgd .sgd-cbox__title { margin: 0 0 8px; color: #fff; font-size: 1.25rem; font-weight: 800; line-height: 1.35; }
+.sgd-cbox__lead { margin: 0 0 16px; color: rgba(255, 255, 255, .82); font-size: .93rem; line-height: 1.6; text-align: left; }
+.sgd .sgd-cbox .sgd-clist li { color: rgba(255, 255, 255, .9); font-size: .93rem; }
+.sgd .sgd-cbox .sgd-clist a { color: #fff; font-weight: 700; }
+.sgd .sgd-cbox .sgd-clist .sgd-ico { color: #ffd166; }
+.sgd-cbox .sgd-callbtns { margin-top: 6px; }
+.sgd-cbox__form { padding: 22px 22px 14px; }
+.sgd-cbox__form .sgd-form__title { margin-top: 0; text-align: left; }
+@media (max-width: 849px) { .sgd-cbox { grid-template-columns: 1fr; } }
+@media (max-width: 549px) { .sgd-cbox__info { padding: 22px 18px 18px; } .sgd-cbox__form { padding: 18px 16px 10px; } }
+
+.sgd-bcard--service .sgd-post__noimg { font-size: 46px; }
+.sgd .sgd-bcard__svc { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; margin-top: auto; }
+.sgd .sgd-bcard__svc b { color: var(--sgd-red); font-size: .98rem; font-weight: 800; }
+.sgd .sgd-bcard__svc span { display: inline-flex; gap: 4px; align-items: center; color: var(--sgd-muted); }
+.sgd-group-page > .sgd-related { margin-top: 10px; padding: 36px 0 46px; background: var(--sgd-soft); }
+.sgd .sgd-cbox .sgd-callbtns { grid-template-columns: 1fr; max-width: 300px; }

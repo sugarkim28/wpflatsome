@@ -141,6 +141,8 @@ while ( have_posts() ) :
 					</section>
 				<?php endif; ?>
 
+				<?php get_template_part( 'template-parts/dichvu/contact-box', null, array( 'source' => 'Cuối bài dịch vụ', 'service' => $sgd_id ) ); ?>
+
 				<p class="sgd-disclaimer"><?php echo esc_html( sgd_opt( 'disclaimer' ) ); ?> Cập nhật: <?php echo esc_html( get_the_modified_date( 'd/m/Y' ) ); ?>.</p>
 
 				<?php if ( $sgd_group ) : ?>
@@ -153,24 +155,7 @@ while ( have_posts() ) :
 			</aside>
 		</div>
 
-		<?php $sgd_rel = sgd_related_posts_for_service( $sgd_id, 3 ); ?>
-		<?php if ( $sgd_rel ) : ?>
-			<section class="sgd-related">
-				<div class="container">
-					<h2 class="sgd-htab"><span>Bài viết liên quan</span></h2>
-					<div class="sgd-blog__grid sgd-blog__grid--3">
-						<?php
-						global $post;
-						foreach ( $sgd_rel as $post ) : // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-							setup_postdata( $post );
-							get_template_part( 'template-parts/dichvu/post-card', null, array( 'tag' => 'h3' ) );
-						endforeach;
-						wp_reset_postdata();
-						?>
-					</div>
-				</div>
-			</section>
-		<?php endif; ?>
+		<?php get_template_part( 'template-parts/dichvu/related-services', null, array( 'posts' => sgd_related_services( $sgd_id, 3 ) ) ); ?>
 	</div>
 	<?php
 endwhile;
