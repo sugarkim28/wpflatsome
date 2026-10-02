@@ -519,3 +519,49 @@ function sgd_close_comments() {
 }
 add_filter( 'comments_open', 'sgd_close_comments' );
 add_filter( 'pings_open', 'sgd_close_comments' );
+
+/**
+ * Bài viết liên quan tới 1 dịch vụ: bài có nhắc tên dịch vụ / nhóm dịch vụ trước, thiếu thì lấy bài mới.
+ *
+ * @param int $id    ID dịch vụ.
+ * @param int $count Số bài.
+ * @return WP_Post[]
+ */
+function sgd_related_posts_for_service( $id, $count = 3 ) {
+	$found = array();
+	$group = sgd_first_group( $id );
+	$terms = array_filter( array( sgd_meta( 'short', $id ), get_the_title( $id ), $group ? $group->name : '' ) );
+	foreach ( $terms as $term ) {
+		if ( count( $found ) >= $count ) {
+			break;
+		}
+		$found = array_merge(
+			$found,
+			get_posts(
+				array(
+					'post_type'           => 'post',
+					's'                   => $term,
+					'posts_per_page'      => $count - count( $found ),
+					'post__not_in'        => wp_list_pluck( $found, 'ID' ),
+					'ignore_sticky_posts' => true,
+					'no_found_rows'       => true,
+				)
+			)
+		);
+	}
+	if ( count( $found ) < $count ) {
+		$found = array_merge(
+			$found,
+			get_posts(
+				array(
+					'post_type'           => 'post',
+					'posts_per_page'      => $count - count( $found ),
+					'post__not_in'        => wp_list_pluck( $found, 'ID' ),
+					'ignore_sticky_posts' => true,
+					'no_found_rows'       => true,
+				)
+			)
+		);
+	}
+	return $found;
+}

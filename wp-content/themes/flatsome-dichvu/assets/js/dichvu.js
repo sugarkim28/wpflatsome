@@ -76,6 +76,37 @@
 		} );
 	}
 
+	// Tab (danh mục dịch vụ, bảng giá): chuột, bàn phím ← → ↑ ↓.
+	document.querySelectorAll( '.sgd-tabset' ).forEach( function ( set ) {
+		var tabs = Array.prototype.slice.call( set.querySelectorAll( '[role="tab"]' ) );
+		function select( tab, focus ) {
+			tabs.forEach( function ( t ) {
+				var on = t === tab;
+				t.setAttribute( 'aria-selected', on ? 'true' : 'false' );
+				t.tabIndex = on ? 0 : -1;
+				var panel = document.getElementById( t.getAttribute( 'aria-controls' ) );
+				if ( panel ) {
+					panel.hidden = ! on;
+				}
+			} );
+			if ( focus ) {
+				tab.focus();
+			}
+		}
+		tabs.forEach( function ( tab, i ) {
+			tab.addEventListener( 'click', function () {
+				select( tab, false );
+			} );
+			tab.addEventListener( 'keydown', function ( e ) {
+				var d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[ e.key ];
+				if ( d ) {
+					e.preventDefault();
+					select( tabs[ ( i + d + tabs.length ) % tabs.length ], true );
+				}
+			} );
+		} );
+	} );
+
 	// Bấm "Chọn gói này" trong bảng giá: ghi tên gói vào ô nội dung của form.
 	document.addEventListener( 'click', function ( e ) {
 		var btn = e.target.closest ? e.target.closest( '[data-sgd-package]' ) : null;

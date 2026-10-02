@@ -398,67 +398,36 @@ function sgd_demo_build() {
  */
 function sgd_demo_home_content() {
 	$company = esc_html( sgd_opt( 'company' ) );
-	// Bố cục hiện đại, chuẩn SEO: 1 H1 duy nhất ở banner; mỗi khối 1 H2; thẻ dịch vụ H3.
-	return '[section label="Đầu trang (H1)" bg_color="#f5f8ff" padding="56px" padding__sm="28px" class="sgd-heroband"]
+	// Bố cục 0.4 – đi theo hành trình khách hàng, mỗi khối 1 mục đích, 1 H1 duy nhất:
+	// 1 Banner + form → 2 Chọn nhu cầu → 3 Danh mục & giá (tab) → 4 Vì sao + quy trình
+	// → 5 Bảng giá trọn gói (tab) → 6 Hỏi đáp + form → 7 Kiến thức → 8 Dải gọi ngay.
+	return '[section label="1. Banner (H1) + form" bg_color="#f3f6ff" padding="56px" padding__sm="28px" class="sgd-heroband"]
 [row]
 [col span="12"]
 [sgd_hero title="Dịch vụ thành lập công ty, thuế &amp; kế toán" highlight="trọn gói – không phát sinh"]
 [/col]
 [/row]
 [/section]
-[section label="Số liệu" bg_color="#ffffff" padding="0px"]
+[section label="2. Bạn cần hỗ trợ việc gì?" bg_color="#ffffff" padding="0px" class="sgd-gnav-sec"]
 [row]
 [col span="12"]
-<div class="sgd-stats"><div class="sgd-stat"><strong>3–5</strong><span>ngày có giấy phép</span></div><div class="sgd-stat"><strong>250K</strong><span>phí dịch vụ thành lập</span></div><div class="sgd-stat"><strong>500K</strong><span>kế toán trọn gói/tháng</span></div><div class="sgd-stat"><strong>0đ</strong><span>phí tư vấn</span></div></div>
+[sgd_groupnav]
 [/col]
 [/row]
 [/section]
-[section label="Dịch vụ nổi bật" bg_color="#ffffff" padding="64px"]
+[section label="3. Danh mục dịch vụ &amp; bảng giá" bg_color="#ffffff" padding="72px" padding__sm="44px"]
 [row]
 [col span="12"]
-[sgd_title text="Dịch vụ được chọn nhiều nhất" sub="Báo giá trọn gói, ghi rõ thời gian hoàn thành – bấm vào từng dịch vụ để xem chi phí chi tiết, hồ sơ cần chuẩn bị và quy trình."]
-[sgd_services number="6" featured="1" layout="feature" columns="3"]
+[sgd_title text="Dịch vụ &amp; bảng giá" sub="Chọn nhóm dịch vụ để xem từng thủ tục, phí trọn gói và thời gian hoàn thành."]
+[sgd_catalog]
 [/col]
 [/row]
 [/section]
-[section label="Tất cả dịch vụ" bg_color="#f7f9fc" padding="56px"]
-[row]
-[col span="12"]
-[sgd_title text="Tất cả dịch vụ doanh nghiệp" sub="Chọn dịch vụ để xem chi phí trọn gói, hồ sơ cần chuẩn bị và thời gian hoàn thành."]
-[sgd_groups services="0" style="hub"]
-[/col]
-[/row]
-[/section]
-[section label="Kêu gọi" bg_color="#0b2a5b" dark="true" padding="44px" class="sgd-band"]
-[row]
-[col span="12"]
-<p class="sgd-band__text">Chưa chắc nên chọn loại hình hay gói nào? Gọi cho chúng tôi – tư vấn miễn phí, báo giá trọn gói trong 15 phút.</p>
-<div class="sgd-band__btns"><a href="#dang-ky">Nhận báo giá</a><a href="' . esc_url( sgd_demo_url( 'bang-gia' ) ) . '">Xem bảng giá</a></div>
-[/col]
-[/row]
-[/section]
-[section label="Gói thành lập" bg_color="#ffffff" padding="64px"]
-[row]
-[col span="12"]
-[sgd_title text="Bảng giá thành lập công ty trọn gói" sub="Giá ưu đãi hơn khi dùng kèm dịch vụ kế toán"]
-[sgd_pricing service="thanh-lap-cong-ty-tnhh" show="packages"]
-[/col]
-[/row]
-[/section]
-[section label="Bảng giá kế toán" bg_color="#f7f9fc" padding="64px"]
-[row]
-[col span="12"]
-[sgd_title text="Bảng giá kế toán thuế trọn gói" sub="Tính theo ngành nghề và số hóa đơn mỗi quý – minh bạch, không phát sinh."]
-[sgd_pricing service="ke-toan-tron-goi" show="table"]
-[sgd_hotlines title="Gọi ngay để được báo giá"]
-[/col]
-[/row]
-[/section]
-[section label="Vì sao chọn" bg_color="#ffffff" padding="64px"]
+[section label="4. Vì sao chọn + quy trình" bg_color="#f6f8fc" padding="72px" padding__sm="44px"]
 [row]
 [col span="12"]
 <div class="sgd-whybox">
-<div class="sgd-whybox__panel"><div class="sgd-stats"><div class="sgd-stat"><strong>1:1</strong><span>chuyên viên riêng</span></div><div class="sgd-stat"><strong>100%</strong><span>hồ sơ nộp online</span></div><div class="sgd-stat"><strong>15′</strong><span>phản hồi yêu cầu</span></div><div class="sgd-stat"><strong>0đ</strong><span>phát sinh ngoài báo giá</span></div></div></div>
+<div class="sgd-whybox__panel"><div class="sgd-stats"><div class="sgd-stat"><strong>3–5</strong><span>ngày có giấy phép</span></div><div class="sgd-stat"><strong>1:1</strong><span>chuyên viên riêng</span></div><div class="sgd-stat"><strong>100%</strong><span>hồ sơ nộp online</span></div><div class="sgd-stat"><strong>0đ</strong><span>phí tư vấn, không phát sinh</span></div></div></div>
 <div>
 <h2>Vì sao chọn <b>' . $company . '</b>?</h2>
 <ul class="sgd-whylist">
@@ -469,8 +438,8 @@ function sgd_demo_home_content() {
 </ul>
 </div>
 </div>
-[gap height="40px"]
-[sgd_title text="Quy trình làm việc 4 bước"]
+[gap height="48px"]
+[sgd_title text="Quy trình làm việc 4 bước" tag="h3"]
 [sgd_steps layout="row"]
 Tiếp nhận thông tin | Lắng nghe nhu cầu, tư vấn quy định và báo giá trọn gói miễn phí
 Soạn hồ sơ | Soạn hồ sơ theo quy trình chuẩn, gửi khách ký tại nhà hoặc ký số
@@ -480,10 +449,18 @@ Bàn giao kết quả | Giao giấy phép, con dấu, hồ sơ tận nơi và h�
 [/col]
 [/row]
 [/section]
-[section label="Hỏi đáp (FAQ)" bg_color="#f7f9fc" padding="64px"]
-[row h_align="center"]
-[col span="9" span__sm="12"]
-[sgd_title text="Câu hỏi thường gặp"]
+[section label="5. Bảng giá trọn gói" bg_color="#ffffff" padding="72px" padding__sm="44px"]
+[row]
+[col span="12"]
+[sgd_title text="Bảng giá trọn gói" sub="Giá công khai – ưu đãi hơn khi dùng kèm dịch vụ kế toán."]
+[sgd_pricetabs items="thanh-lap-cong-ty-tnhh:packages:Thành lập công ty,ke-toan-tron-goi:table:Kế toán thuế trọn gói,thay-doi-dia-chi-cong-ty:all:Thay đổi giấy phép"]
+[/col]
+[/row]
+[/section]
+[section label="6. Hỏi đáp + tư vấn" bg_color="#f6f8fc" padding="72px" padding__sm="44px"]
+[row]
+[col span="7" span__sm="12"]
+[sgd_title text="Câu hỏi thường gặp" class="is-left"]
 [sgd_faq]
 Thành lập công ty mất bao lâu? | Cơ quan đăng ký kinh doanh giải quyết trong 3 ngày làm việc kể từ khi nhận hồ sơ hợp lệ. Tính cả soạn hồ sơ, khắc dấu và giao nhận, thường mất 3 – 5 ngày làm việc.
 Thành lập công ty cần vốn tối thiểu bao nhiêu? | Với đa số ngành nghề, pháp luật không quy định vốn tối thiểu. Vốn điều lệ nên phù hợp quy mô kinh doanh và phải góp đủ trong 90 ngày kể từ ngày được cấp giấy chứng nhận.
@@ -492,21 +469,24 @@ Doanh nghiệp chưa có doanh thu có cần làm báo cáo thuế không? | Có
 Phí dịch vụ đã gồm lệ phí nhà nước chưa? | Báo giá ghi rõ phí dịch vụ và lệ phí nhà nước (nếu có). Chúng tôi không thu thêm ngoài báo giá đã thống nhất.
 [/sgd_faq]
 [/col]
-[/row]
-[/section]
-[section label="Kiến thức" bg_color="#ffffff" padding="56px"]
-[row]
-[col span="12"]
-[sgd_title text="Kiến thức doanh nghiệp mới nhất"]
-[sgd_posts number="4" style="grid" columns="4"]
+[col span="5" span__sm="12"]
+<div class="sgd-hero__form sgd-sticky-form">[sgd_lead_form source="Trang chủ – hỏi đáp" perks="1" title="Chưa thấy câu trả lời? Hỏi chuyên viên"]</div>
 [/col]
 [/row]
 [/section]
-[section label="Kêu gọi cuối trang" bg_color="#eef3ff" padding="56px"]
+[section label="7. Kiến thức" bg_color="#ffffff" padding="72px" padding__sm="44px"]
 [row]
 [col span="12"]
-[sgd_title text="Bắt đầu từ một cuộc trò chuyện nhỏ" sub="Để lại yêu cầu – chuyên viên sẽ gọi lại tư vấn miễn phí"]
-<div class="sgd-bigform">[sgd_lead_form source="Trang chủ – cuối trang" perks="0" title="" button="Gửi yêu cầu"]</div>
+[sgd_title text="Kiến thức doanh nghiệp" sub="Hướng dẫn thủ tục, lịch nộp thuế, lưu ý pháp lý – cập nhật thường xuyên."]
+[sgd_posts number="3" style="cards"]
+[/col]
+[/row]
+[/section]
+[section label="8. Gọi ngay" bg_color="#ffffff" padding="0px"]
+[row]
+[col span="12"]
+[sgd_cta_strip]
+[gap height="56px"]
 [/col]
 [/row]
 [/section]';

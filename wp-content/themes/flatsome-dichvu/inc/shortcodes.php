@@ -4,7 +4,7 @@
  *  [sgd_featured ids="slug1,slug2,slug3,slug4"]  – lưới banner nổi bật (1 lớn + 3), trống = 4 dịch vụ nổi bật
  *  [sgd_htab text="" link=""]                   – tiêu đề khối dạng thẻ
  *  [sgd_group_block group="slug" number="5"]    – khối chuyên mục: 1 dịch vụ lớn + danh sách
- *  [sgd_posts number="5" category="" style="magazine|grid|links" columns="4"] – bài viết
+ *  [sgd_posts number="5" category="" style="magazine|grid|links|cards" columns="4"] – bài viết
  *  [sgd_hero title="" highlight="" sub=""]          – banner đầu trang chủ: H1 duy nhất + form + dịch vụ phổ biến
  *  [sgd_faq]Câu hỏi | Trả lời (mỗi dòng)[/sgd_faq] – hỏi đáp + dữ liệu FAQPage cho Google
  *  [sgd_title text="" sub=""]                    – tiêu đề giữa, kẻ ngang hai bên
@@ -246,7 +246,19 @@ function sgd_sc_posts( $atts ) {
 		}
 		return $out . '</ul>';
 	}
-	if ( 'grid' === $a['style'] ) {
+	if ( 'cards' === $a['style'] ) {
+		global $post;
+		ob_start();
+		echo '<div class="sgd-blog__grid sgd-blog__grid--3">';
+		foreach ( $posts as $post ) { // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+			setup_postdata( $post );
+			get_template_part( 'template-parts/dichvu/post-card', null, array( 'tag' => 'h3' ) );
+		}
+		echo '</div>';
+		wp_reset_postdata();
+		return ob_get_clean();
+	}
+		if ( 'grid' === $a['style'] ) {
 		$out = '<div class="sgd-pgrid sgd-grid sgd-grid--' . absint( $a['columns'] ) . '">';
 		foreach ( $posts as $p ) {
 			$link  = esc_url( get_permalink( $p ) );
@@ -585,9 +597,9 @@ add_shortcode( 'sgd_price_table', 'sgd_sc_price_table' );
  * @return string
  */
 function sgd_sc_title( $atts ) {
-	$a   = shortcode_atts( array( 'text' => '', 'sub' => '', 'tag' => 'h2' ), $atts, 'sgd_title' );
+	$a   = shortcode_atts( array( 'text' => '', 'sub' => '', 'tag' => 'h2', 'class' => '' ), $atts, 'sgd_title' );
 	$tag = in_array( $a['tag'], array( 'h1', 'h2', 'h3' ), true ) ? $a['tag'] : 'h2';
-	return '<div class="sgd-ltitle"><' . $tag . ' class="sgd-ltitle__text"><span>' . esc_html( $a['text'] ) . '</span></' . $tag . '>'
+	return '<div class="sgd-ltitle ' . esc_attr( $a['class'] ) . '"><' . $tag . ' class="sgd-ltitle__text"><span>' . esc_html( $a['text'] ) . '</span></' . $tag . '>'
 		. ( $a['sub'] ? '<p class="sgd-ltitle__sub">' . esc_html( $a['sub'] ) . '</p>' : '' ) . '</div>';
 }
 add_shortcode( 'sgd_title', 'sgd_sc_title' );

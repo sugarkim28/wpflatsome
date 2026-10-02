@@ -2,7 +2,7 @@
 /**
  * Trang chi tiết dịch vụ – bố cục dạng bài viết (cột nội dung + cột phải):
  * Breadcrumb → H1 → ngày cập nhật, người kiểm duyệt → đoạn mở đầu → ô tóm tắt (phí, thời gian, nút) → mục lục → chi phí & bảng giá → Gọi ngay →
- * công việc thực hiện → hồ sơ cần chuẩn bị → quy trình → nội dung (H2) → FAQ → dịch vụ cùng nhóm.
+ * công việc thực hiện → hồ sơ cần chuẩn bị → quy trình → nội dung (H2) → FAQ → bài viết liên quan.
  *
  * @package Flatsome_Dichvu
  */
@@ -151,17 +151,17 @@ while ( have_posts() ) :
 			</aside>
 		</div>
 
-		<?php $sgd_rel = sgd_related_services( $sgd_id, 4 ); ?>
+		<?php $sgd_rel = sgd_related_posts_for_service( $sgd_id, 3 ); ?>
 		<?php if ( $sgd_rel ) : ?>
 			<section class="sgd-related">
 				<div class="container">
-					<h2 class="sgd-htab"><span>Cùng chuyên mục</span></h2>
-					<div class="sgd-grid sgd-grid--4">
+					<h2 class="sgd-htab"><span>Bài viết liên quan</span></h2>
+					<div class="sgd-blog__grid sgd-blog__grid--3">
 						<?php
 						global $post;
 						foreach ( $sgd_rel as $post ) : // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 							setup_postdata( $post );
-							get_template_part( 'template-parts/dichvu/card', null, array( 'tag' => 'h3' ) );
+							get_template_part( 'template-parts/dichvu/post-card', null, array( 'tag' => 'h3' ) );
 						endforeach;
 						wp_reset_postdata();
 						?>

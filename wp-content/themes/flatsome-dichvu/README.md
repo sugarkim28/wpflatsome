@@ -25,7 +25,7 @@ Giữ lại điểm mạnh bán hàng của cả hai: giá ngay trong tiêu đ�
 
 Giao diện: 1 hàng header (logo – menu – nút *Nhận báo giá*), banner đầu trang có form ngay màn hình đầu, thẻ dịch vụ dạng icon, bo góc 14px, bóng nhẹ, chữ thường (không in hoa toàn bộ), phông *Be Vietnam Pro* (thiết kế cho tiếng Việt, 4 độ đậm, preconnect).
 
-Trang chủ (thứ tự): Banner H1 + form → dải số liệu → 6 dịch vụ nổi bật → tất cả dịch vụ theo nhóm → dải kêu gọi → 4 gói thành lập → bảng giá kế toán + Gọi ngay → vì sao chọn + quy trình → hỏi đáp (FAQPage) → kiến thức mới → form cuối trang.
+Trang chủ (bản 0.4, theo hành trình khách hàng): 1 Banner H1 + form → 2 *Bạn cần hỗ trợ việc gì?* (ô nhóm dịch vụ, giá từ) → 3 *Dịch vụ & bảng giá* (tab nhóm, danh sách thủ tục – thời gian – giá) → 4 Vì sao chọn + quy trình → 5 *Bảng giá trọn gói* (tab: thành lập / kế toán / thay đổi) → 6 Hỏi đáp (FAQPage) + form → 7 Kiến thức → 8 Dải gọi ngay. Shortcode: `[sgd_groupnav]`, `[sgd_catalog]`, `[sgd_pricetabs items="slug:packages|table|all:Nhãn,…"]`, `[sgd_cta_strip]`.
 
 ### Việc cần làm để đạt chuẩn SEO
 
