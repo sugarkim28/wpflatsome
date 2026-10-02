@@ -18,7 +18,7 @@ while ( have_posts() ) :
 	$sgd_has_cost = sgd_meta( 'costs' ) || sgd_price_tables() || $sgd_pkgs;
 	$sgd_includes = sgd_list( sgd_meta( 'includes' ) );
 	$sgd_docs     = sgd_list( sgd_meta( 'documents' ) );
-	$sgd_steps    = sgd_lines( sgd_meta( 'process' ) );
+	$sgd_steps    = sgd_lines( sgd_meta( 'process' ), 3 );
 	$sgd_faq      = sgd_lines( sgd_meta( 'faq' ) );
 	$sgd_title    = get_the_title();
 	list( $sgd_content, $sgd_heads ) = sgd_content_headings( apply_filters( 'the_content', get_the_content() ) ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- hook lõi WP.

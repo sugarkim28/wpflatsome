@@ -471,10 +471,10 @@ function sgd_demo_home_content() {
 [col span="12"]
 [sgd_title text="Quy trình làm việc 4 bước" sub="Minh bạch từng khâu – khách hàng nắm được tiến độ hồ sơ mọi lúc qua Zalo." class="is-light"]
 [sgd_steps layout="row"]
-Tiếp nhận thông tin | Lắng nghe nhu cầu, tư vấn quy định và báo giá trọn gói miễn phí
-Soạn hồ sơ | Soạn hồ sơ theo quy trình chuẩn, gửi khách ký tại nhà hoặc ký số
-Nộp &amp; theo dõi | Nộp hồ sơ, theo dõi và báo tiến độ qua Zalo
-Bàn giao kết quả | Giao giấy phép, con dấu, hồ sơ tận nơi và hướng dẫn việc tiếp theo
+Tiếp nhận thông tin | Lắng nghe nhu cầu, tư vấn quy định và báo giá trọn gói miễn phí | Trong 15 phút
+Soạn hồ sơ | Soạn hồ sơ theo quy trình chuẩn, gửi khách ký tại nhà hoặc ký số | Trong ngày
+Nộp &amp; theo dõi | Nộp hồ sơ trực tuyến, theo dõi và báo tiến độ qua Zalo | 3 – 5 ngày làm việc
+Bàn giao kết quả | Giao giấy phép, con dấu, hồ sơ tận nơi và hướng dẫn việc tiếp theo | Tận nơi
 [/sgd_steps]
 [/col]
 [/row]
@@ -601,7 +601,12 @@ function sgd_demo_about_content() {
 <li><strong>Bảo mật:</strong> giữ kín giấy tờ, số liệu của khách hàng.</li>
 </ul>
 <h2>Cách chúng tôi làm việc</h2>
-<p>Tiếp nhận nhu cầu và tư vấn miễn phí → báo giá trọn gói → soạn hồ sơ, khách ký tại nhà hoặc ký số → nộp hồ sơ trực tuyến, theo dõi kết quả → bàn giao tận nơi và hướng dẫn các việc tiếp theo.</p>
+[sgd_steps]
+Tiếp nhận và tư vấn | Lắng nghe nhu cầu, tư vấn miễn phí quy định liên quan | Trong 15 phút
+Báo giá trọn gói | Ghi rõ phí dịch vụ và lệ phí nhà nước, không phát sinh | Trong ngày
+Thực hiện hồ sơ | Soạn hồ sơ, khách ký tại nhà hoặc ký số; nộp trực tuyến, báo tiến độ qua Zalo | Theo từng thủ tục
+Bàn giao và hỗ trợ | Giao kết quả tận nơi, hướng dẫn các việc tiếp theo | Sau khi có kết quả
+[/sgd_steps]
 <h2>Thông tin pháp nhân</h2>
 <p><strong>' . esc_html( sgd_opt( 'company_full' ) ) . '</strong></p>
 [sgd_contact_list]

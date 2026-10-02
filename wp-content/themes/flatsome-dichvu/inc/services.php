@@ -64,7 +64,7 @@ function sgd_service_fields() {
 		'price_table' => array( 'Bảng giá dạng bảng – dòng "## Tiêu đề" mở bảng mới, dòng kế tiếp là tiêu đề cột, các dòng sau: Ô 1 | Ô 2 | …; dòng bắt đầu "* " là ghi chú', 'textarea', "## Bảng giá kế toán trọn gói (theo quý)\nSố hóa đơn/quý | Dịch vụ | Thương mại\nKhông có hóa đơn | 1.500.000đ | 1.500.000đ\n* Giá chưa gồm VAT" ),
 		'includes'   => array( 'Công việc chúng tôi thực hiện – mỗi dòng 1 ý', 'textarea', "Tư vấn loại hình, vốn, ngành nghề\nSoạn và nộp hồ sơ online" ),
 		'documents'  => array( 'Hồ sơ khách hàng cần chuẩn bị – mỗi dòng 1 ý', 'textarea', "CCCD của thành viên/cổ đông\nĐịa chỉ trụ sở" ),
-		'process'    => array( 'Quy trình – mỗi dòng: Bước | Mô tả', 'textarea', "Tiếp nhận yêu cầu | Tư vấn miễn phí, báo giá trọn gói\nSoạn hồ sơ | ..." ),
+		'process'    => array( 'Quy trình (hiện dạng timeline) – mỗi dòng: Bước | Mô tả | Thời gian (tuỳ chọn, vd: Trong ngày)', 'textarea', "Tiếp nhận yêu cầu | Tư vấn miễn phí, báo giá trọn gói\nSoạn hồ sơ | ..." ),
 		'packages'   => array( 'Các gói – mỗi dòng: Tên gói | Giá | Bao gồm (ngăn bằng ;) | * (gói nổi bật) | Tiết kiệm (tuỳ chọn) | Giá ưu đãi kèm ghi chú, vd: 1.400.000đ (khi dùng dịch vụ kế toán) (tuỳ chọn)', 'textarea', "Cơ bản | 1.000.000đ | Giấy phép; Con dấu |\nTrọn gói | 2.500.000đ | Giấy phép; Con dấu; Chữ ký số | *" ),
 		'faq'        => array( 'Câu hỏi thường gặp – mỗi dòng: Câu hỏi | Trả lời', 'textarea', 'Cần bao nhiêu vốn để thành lập công ty? | Pháp luật không quy định vốn tối thiểu với đa số ngành nghề…' ),
 		'lead_email' => array( 'Email nhận khách của dịch vụ (để trống = email chung)', 'email', '' ),

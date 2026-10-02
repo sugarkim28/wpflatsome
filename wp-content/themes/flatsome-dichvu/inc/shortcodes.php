@@ -477,7 +477,7 @@ function sgd_sc_steps( $atts, $content = '' ) {
 	$a    = shortcode_atts( array( 'layout' => '' ), $atts, 'sgd_steps' );
 	$text = str_ireplace( array( '<br>', '<br/>', '<br />', '</p>' ), "\n", (string) $content );
 	ob_start();
-	get_template_part( 'template-parts/dichvu/process', null, array( 'steps' => sgd_lines( wp_strip_all_tags( $text ) ), 'row' => 'row' === $a['layout'] ) );
+	get_template_part( 'template-parts/dichvu/process', null, array( 'steps' => sgd_lines( wp_strip_all_tags( $text ), 3 ), 'row' => 'row' === $a['layout'] ) );
 	return ob_get_clean();
 }
 add_shortcode( 'sgd_steps', 'sgd_sc_steps' );

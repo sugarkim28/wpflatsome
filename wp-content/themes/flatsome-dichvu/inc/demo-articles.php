@@ -46,12 +46,12 @@ return array(
 <p>Chọn gói phù hợp – bấm "Chọn gói này" để đăng ký, chuyên viên sẽ gọi lại xác nhận.</p>
 [sgd_pricing service="thanh-lap-cong-ty-tnhh" show="packages"]
 <h2>Quy trình và thời gian thực hiện</h2>
-<ol>
-<li><strong>Tư vấn và báo giá:</strong> thống nhất loại hình, tên, ngành nghề, vốn, chi phí trọn gói.</li>
-<li><strong>Soạn hồ sơ:</strong> khách ký hồ sơ tại nhà hoặc ký số.</li>
-<li><strong>Nộp hồ sơ trực tuyến:</strong> cơ quan đăng ký kinh doanh giải quyết trong 3 ngày làm việc kể từ khi nhận hồ sơ hợp lệ.</li>
-<li><strong>Nhận kết quả:</strong> giấy chứng nhận đăng ký doanh nghiệp (kiêm mã số thuế), khắc con dấu, bàn giao tận nơi.</li>
-</ol>
+[sgd_steps]
+Tư vấn và báo giá | Thống nhất loại hình, tên, ngành nghề, vốn và chi phí trọn gói | Trong 15 phút
+Soạn hồ sơ | Soạn giấy đề nghị, điều lệ; khách ký tại nhà hoặc ký số | Trong ngày
+Nộp hồ sơ trực tuyến | Cơ quan đăng ký kinh doanh giải quyết hồ sơ hợp lệ | 3 ngày làm việc
+Nhận kết quả | Giấy chứng nhận đăng ký doanh nghiệp (kiêm mã số thuế), khắc con dấu, bàn giao tận nơi | Ngày 4 – 5
+[/sgd_steps]
 <h2>Việc cần làm sau khi thành lập công ty</h2>
 <ul>
 <li>Treo biển hiệu tại trụ sở.</li>
@@ -96,12 +96,12 @@ return array(
 <h2>Tạm ngừng kinh doanh và giải thể</h2>
 <p>Doanh nghiệp tạm ngừng kinh doanh phải thông báo bằng văn bản cho cơ quan đăng ký kinh doanh chậm nhất 3 ngày làm việc trước ngày tạm ngừng. Giải thể doanh nghiệp cần thanh toán hết các khoản nợ, quyết toán và đóng mã số thuế trước khi xóa tên trên hệ thống.</p>
 <h2>Quy trình thực hiện tại ' . '{company}' . '</h2>
-<ol>
-<li>Tiếp nhận yêu cầu, kiểm tra tình trạng pháp lý và thuế của doanh nghiệp.</li>
-<li>Soạn quyết định, biên bản họp, thông báo thay đổi; khách ký tại nhà hoặc ký số.</li>
-<li>Nộp hồ sơ trực tuyến và theo dõi kết quả (thường 3 ngày làm việc).</li>
-<li>Bàn giao giấy chứng nhận mới, hướng dẫn cập nhật hóa đơn, ngân hàng, con dấu.</li>
-</ol>
+[sgd_steps]
+Tiếp nhận yêu cầu | Kiểm tra tình trạng pháp lý và nghĩa vụ thuế của doanh nghiệp | Trong ngày
+Soạn hồ sơ | Quyết định, biên bản họp, thông báo thay đổi; khách ký tại nhà hoặc ký số | 1 ngày
+Nộp và theo dõi | Nộp hồ sơ trực tuyến, theo dõi kết quả | 3 ngày làm việc
+Bàn giao | Giấy chứng nhận mới; hướng dẫn cập nhật hóa đơn, ngân hàng, con dấu | Ngày 4 – 5
+[/sgd_steps]
 <h2>Lưu ý để tránh bị phạt</h2>
 <ul>
 <li>Đăng ký thay đổi đúng thời hạn 10 ngày.</li>
@@ -191,12 +191,12 @@ return array(
 <h2>Kế toán thuế cho hộ kinh doanh</h2>
 <p>Hộ kinh doanh cũng cần theo dõi doanh thu, chi phí và kê khai thuế theo phương pháp được áp dụng. Dịch vụ hỗ trợ ghi sổ, kê khai và cập nhật thay đổi chính sách thuế đối với hộ kinh doanh.</p>
 <h2>Quy trình làm việc</h2>
-<ol>
-<li>Khảo sát, báo giá theo số lượng hóa đơn và ngành nghề.</li>
-<li>Ký hợp đồng, bàn giao chứng từ (trực tiếp hoặc qua email, Zalo).</li>
-<li>Thực hiện sổ sách, kê khai; gửi báo cáo số thuế phải nộp trước hạn.</li>
-<li>Cuối năm lập báo cáo tài chính, quyết toán và bàn giao sổ sách.</li>
-</ol>',
+[sgd_steps]
+Khảo sát và báo giá | Theo số lượng hóa đơn và ngành nghề | Trong ngày
+Ký hợp đồng, bàn giao chứng từ | Trực tiếp hoặc qua email, Zalo | Đầu kỳ
+Sổ sách và kê khai | Gửi báo cáo số thuế phải nộp trước hạn | Hằng tháng / quý
+Quyết toán và bàn giao | Báo cáo tài chính, quyết toán thuế, bàn giao sổ sách | Cuối năm
+[/sgd_steps]',
 
 	'dich-vu-khac'           => '
 <p>Ngoài thủ tục thành lập, thay đổi giấy phép và kế toán thuế, doanh nghiệp còn nhiều việc pháp lý cần làm đúng hạn: đăng ký bảo hiểm xã hội cho người lao động, chữ ký số, hóa đơn điện tử, bảo hộ thương hiệu. ' . '{company}' . ' hỗ trợ trọn gói các dịch vụ này để doanh nghiệp tập trung kinh doanh.</p>
@@ -209,12 +209,12 @@ return array(
 <h2>Đăng ký nhãn hiệu – logo độc quyền</h2>
 <p>Đăng ký nhãn hiệu tại Cục Sở hữu trí tuệ giúp doanh nghiệp được bảo hộ độc quyền tên thương hiệu, logo; văn bằng có hiệu lực 10 năm và được gia hạn. Nên tra cứu khả năng đăng ký trước khi nộp đơn để hạn chế bị từ chối.</p>
 <h3>Quy trình đăng ký nhãn hiệu</h3>
-<ol>
-<li>Tra cứu sơ bộ khả năng bảo hộ.</li>
-<li>Chuẩn bị mẫu nhãn, danh mục sản phẩm, dịch vụ theo bảng phân loại.</li>
-<li>Nộp đơn, theo dõi thẩm định hình thức và nội dung.</li>
-<li>Nhận văn bằng bảo hộ.</li>
-</ol>
+[sgd_steps]
+Tra cứu sơ bộ | Đánh giá khả năng bảo hộ trước khi nộp | 1 – 2 ngày
+Chuẩn bị hồ sơ | Mẫu nhãn, danh mục sản phẩm, dịch vụ theo bảng phân loại | 1 ngày
+Nộp đơn và theo dõi | Thẩm định hình thức, công bố đơn, thẩm định nội dung | Theo thời hạn của Cục SHTT
+Nhận văn bằng | Văn bằng bảo hộ hiệu lực 10 năm, được gia hạn | Khi có quyết định cấp
+[/sgd_steps]
 <h2>Bảng giá dịch vụ khác</h2>
 [sgd_price_table group="dich-vu-khac"]
 <h2>Vì sao nên dùng dịch vụ trọn gói?</h2>
