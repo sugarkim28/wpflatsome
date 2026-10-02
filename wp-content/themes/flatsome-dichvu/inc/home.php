@@ -525,3 +525,24 @@ function sgd_news_ticker() {
 		. '<span class="sgd-ticker__date">' . esc_html( wp_date( 'd/m/Y' ) ) . '</span></div></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- đã escape.
 }
 add_action( 'flatsome_after_header', 'sgd_news_ticker' );
+
+/**
+ * Menu điện thoại: thêm logo + khẩu hiệu ở đầu, hotline / Zalo ở cuối (không cần sửa menu trong quản trị).
+ *
+ * @param string   $items Mục menu HTML.
+ * @param stdClass $args  Tham số menu.
+ * @return string
+ */
+function sgd_mobile_menu_extras( $items, $args ) {
+	if ( empty( $args->theme_location ) || 'primary_mobile' !== $args->theme_location ) {
+		return $items;
+	}
+	$hot  = sgd_opt( 'hotline' );
+	$zalo = sgd_tel( sgd_opt( 'zalo' ) );
+	$head = '<li class="sgd-mnav-head"><a href="' . esc_url( home_url( '/' ) ) . '"><img src="' . esc_url( SGD_URI . '/assets/img/logo-119.svg' ) . '" alt="' . esc_attr( sgd_opt( 'company' ) ) . '" width="190" height="38"></a></li>';
+	$foot = '<li class="sgd-mnav-contact"><a class="sgd-mnav-contact__call" href="tel:' . esc_attr( sgd_tel( $hot ) ) . '">' . sgd_icon( 'phone' ) . '<span><small>Hotline tư vấn</small>' . esc_html( $hot ) . '</span></a>'
+		. ( $zalo ? '<a class="sgd-mnav-contact__zalo" href="https://zalo.me/' . esc_attr( $zalo ) . '" target="_blank" rel="noopener"><b>Zalo</b><span><small>Chat Zalo</small>' . esc_html( $hot ) . '</span></a>' : '' )
+		. ( sgd_opt( 'working_hours' ) ? '<p>' . esc_html( sgd_opt( 'working_hours' ) ) . '</p>' : '' ) . '</li>';
+	return $head . $items . $foot;
+}
+add_filter( 'wp_nav_menu_items', 'sgd_mobile_menu_extras', 10, 2 );

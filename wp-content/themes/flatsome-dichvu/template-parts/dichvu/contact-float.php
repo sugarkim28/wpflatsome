@@ -33,6 +33,7 @@ $sgd_msg  = $sgd_msg ? 'https://m.me/' . rawurlencode( preg_replace( '#^.*(?:m\.
 		<button type="button" class="sgd-popup__close" aria-label="Đóng">&times;</button>
 		<p class="sgd-popup__title" id="sgd-popup-title"><?php echo esc_html( sgd_opt( 'popup_title' ) ); ?></p>
 		<p class="sgd-popup__sub"><?php echo esc_html( sgd_opt( 'popup_sub' ) ); ?></p>
+		<p class="sgd-popup__pick" hidden><span>Gói đã chọn</span><strong></strong><b></b></p>
 		<?php
 		get_template_part(
 			'template-parts/dichvu/lead-form',

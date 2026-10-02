@@ -36,7 +36,7 @@ if ( ! $sgd_pkgs ) {
 				<?php $sgd_c = preg_split( '/\s*(?=\()/', $sgd_p['combo'], 2 ); ?>
 				<p class="sgd-plan__combo">Còn <strong><?php echo esc_html( $sgd_c[0] ); ?></strong><?php echo isset( $sgd_c[1] ) ? '<small>' . esc_html( $sgd_c[1] ) . '</small>' : ''; ?></p>
 			<?php endif; ?>
-			<a class="button sgd-btn<?php echo $sgd_p['hot'] ? '' : ' is-outline'; ?> expand" href="#dang-ky" data-sgd-package="<?php echo esc_attr( get_the_title( $sgd_id ) . ' – gói ' . $sgd_p['name'] ); ?>">Chọn gói này</a>
+			<a class="button sgd-btn<?php echo $sgd_p['hot'] ? '' : ' is-outline'; ?> expand" href="#dang-ky" data-sgd-package="<?php echo esc_attr( get_the_title( $sgd_id ) . ' – gói ' . $sgd_p['name'] ); ?>" data-sgd-price="<?php echo esc_attr( $sgd_p['price'] ); ?>">Chọn gói này</a>
 		</div>
 	<?php endforeach; ?>
 </div>

@@ -28,6 +28,7 @@
 			return;
 		}
 		popup.hidden = true;
+		popup.classList.remove( 'is-package' );
 		document.documentElement.classList.remove( 'sgd-noscroll' );
 		if ( lastFocus && lastFocus.focus ) {
 			lastFocus.focus();
@@ -107,34 +108,46 @@
 		} );
 	} );
 
-	// Bấm "Chọn gói này" trong bảng giá: ghi tên gói vào ô nội dung của form.
+	// Bấm "Chọn gói này": mở ngay form đăng ký (popup) đã ghi sẵn gói + giá, con trỏ ở ô họ tên → khách điền và gửi luôn.
 	document.addEventListener( 'click', function ( e ) {
 		var btn = e.target.closest ? e.target.closest( '[data-sgd-package]' ) : null;
-		var box = document.getElementById( 'dang-ky' );
-		if ( ! btn || ! box ) {
+		if ( ! btn ) {
 			return;
 		}
-		// Form nằm trong #dang-ky, hoặc form đầu tiên đứng sau mốc #dang-ky.
-		var form = box.querySelector( '.sgd-form' );
+		var pkg   = btn.getAttribute( 'data-sgd-package' );
+		var price = btn.getAttribute( 'data-sgd-price' ) || '';
+		var form  = popup ? popup.querySelector( '.sgd-form' ) : null;
 		if ( ! form ) {
-			Array.prototype.some.call( document.querySelectorAll( '.sgd-form' ), function ( f ) {
-				if ( box.compareDocumentPosition( f ) & Node.DOCUMENT_POSITION_FOLLOWING ) {
-					form = f;
-					return true;
-				}
-				return false;
-			} );
+			form = document.querySelector( '#dang-ky .sgd-form' ) || document.querySelector( '.sgd-form' );
+			if ( ! form ) {
+				return;
+			}
+		} else {
+			e.preventDefault();
+			var pick = popup.querySelector( '.sgd-popup__pick' );
+			if ( pick ) {
+				pick.querySelector( 'strong' ).textContent = pkg;
+				pick.querySelector( 'b' ).textContent = price;
+				pick.hidden = false;
+			}
+			popup.classList.add( 'is-package' );
 		}
-		var note = form ? form.querySelector( 'textarea[name="sgd_note"]' ) : null;
+		var note = form.querySelector( 'textarea[name="sgd_note"]' );
 		if ( note ) {
-			note.value = 'Tôi chọn: ' + btn.getAttribute( 'data-sgd-package' ) + ( note.value ? '\n' + note.value.replace( /^Tôi chọn: .*\n?/, '' ) : '' );
-			form.classList.add( 'is-picked' );
+			var rest = note.value.replace( /^Tôi chọn: .*\n?/, '' ).trim();
+			note.value = 'Tôi chọn: ' + pkg + ( price ? ' (' + price + ')' : '' ) + ( rest ? '\n' + rest : '' );
 		}
-		var name = form ? form.querySelector( 'input[name="sgd_name"]' ) : null;
-		if ( name ) {
-			setTimeout( function () {
-				name.focus( { preventScroll: true } );
-			}, 450 );
+		form.classList.add( 'is-picked' );
+		if ( popup && popup.contains( form ) ) {
+			openPopup();
+		} else {
+			var name = form.querySelector( 'input[name="sgd_name"]' );
+			form.scrollIntoView( { behavior: 'smooth', block: 'center' } );
+			if ( name ) {
+				setTimeout( function () {
+					name.focus( { preventScroll: true } );
+				}, 450 );
+			}
 		}
 	} );
 } )();
