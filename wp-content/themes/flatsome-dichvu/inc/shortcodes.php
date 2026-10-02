@@ -564,29 +564,42 @@ add_shortcode( 'sgd_icon', 'sgd_sc_icon' );
  * @return string
  */
 function sgd_sc_price_table( $atts ) {
-	$a    = shortcode_atts( array( 'group' => '' ), $atts, 'sgd_price_table' );
+	$a    = shortcode_atts( array( 'group' => '', 'title' => '', 'note' => '' ), $atts, 'sgd_price_table' );
 	$args = array(
 		'post_type'      => 'dich_vu',
 		'posts_per_page' => 50,
 		'orderby'        => array( 'menu_order' => 'ASC', 'title' => 'ASC' ),
 		'no_found_rows'  => true,
 	);
+	$names = array();
 	if ( $a['group'] ) {
-		$args['tax_query'] = array( array( 'taxonomy' => 'nhom_dich_vu', 'field' => 'slug', 'terms' => array_map( 'trim', explode( ',', $a['group'] ) ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+		$slugs             = array_map( 'trim', explode( ',', $a['group'] ) );
+		$args['tax_query'] = array( array( 'taxonomy' => 'nhom_dich_vu', 'field' => 'slug', 'terms' => $slugs ) ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+		foreach ( $slugs as $slug ) {
+			$t = get_term_by( 'slug', $slug, 'nhom_dich_vu' );
+			if ( $t && ! is_wp_error( $t ) ) {
+				$names[] = mb_strtolower( preg_replace( '/^Dịch vụ\s+/u', '', $t->name ) );
+			}
+		}
 	}
 	$posts = get_posts( $args );
 	if ( ! $posts ) {
 		return '';
 	}
-	$out = '<div class="sgd-ptable"><table><thead><tr><th scope="col">Dịch vụ</th><th scope="col">Phí dịch vụ</th><th scope="col">Thời gian</th><th scope="col"><span class="screen-reader-text">Chi tiết</span></th></tr></thead><tbody>';
+	$title = $a['title'] ? $a['title'] : 'Bảng giá dịch vụ' . ( $names ? ' ' . implode( ' – ', $names ) : '' );
+	// Cùng phong cách bảng giá kế toán: thanh tiêu đề xanh đậm, hàng tiêu đề xanh nhạt, cột đầu in đậm, ghi chú (*) trong khung.
+	$out = '<div class="sgd-mtable sgd-mtable--list"><p class="sgd-mtable__title">' . esc_html( $title ) . '</p><div class="sgd-mtable__scroll"><table class="sgd-t">'
+		. '<thead><tr><th scope="col">Dịch vụ</th><th scope="col">Phí dịch vụ</th><th scope="col" class="sgd-mtable__time">Thời gian</th><th scope="col" class="sgd-mtable__go"><span class="screen-reader-text">Chi tiết</span></th></tr></thead><tbody>';
 	foreach ( $posts as $p ) {
 		$price = sgd_meta( 'price', $p->ID );
-		$out  .= '<tr><td data-label="Dịch vụ"><a href="' . esc_url( get_permalink( $p ) ) . '">' . esc_html( get_the_title( $p ) ) . '</a></td>'
-			. '<td data-label="Phí dịch vụ" class="sgd-ptable__price">' . esc_html( $price ? $price : 'Liên hệ' ) . '</td>'
-			. '<td data-label="Thời gian">' . esc_html( sgd_meta( 'duration', $p->ID ) ) . '</td>'
-			. '<td><a class="sgd-ptable__more" href="' . esc_url( get_permalink( $p ) ) . '#bang-gia">Xem gói</a></td></tr>';
+		$time  = sgd_meta( 'duration', $p->ID );
+		$out  .= '<tr><th scope="row"><a href="' . esc_url( get_permalink( $p ) ) . '">' . esc_html( get_the_title( $p ) ) . '</a>' . ( $time ? '<small>' . esc_html( $time ) . '</small>' : '' ) . '</th>'
+			. '<td class="sgd-mtable__price">' . esc_html( $price ? $price : 'Liên hệ' ) . '</td>'
+			. '<td class="sgd-mtable__time">' . esc_html( $time ) . '</td>'
+			. '<td class="sgd-mtable__go"><a href="' . esc_url( get_permalink( $p ) ) . '#bang-gia">Chi tiết ›</a></td></tr>';
 	}
-	return $out . '</tbody></table></div>';
+	$note = $a['note'] ? $a['note'] : 'Phí dịch vụ chưa gồm lệ phí nhà nước (nếu có). Bấm tên dịch vụ để xem chi tiết công việc, hồ sơ và các gói.';
+	return $out . '</tbody></table></div><p class="sgd-mtable__note">(*) ' . esc_html( $note ) . '</p></div>';
 }
 add_shortcode( 'sgd_price_table', 'sgd_sc_price_table' );
 

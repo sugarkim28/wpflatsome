@@ -12,13 +12,21 @@ $sgd_costs  = sgd_lines( sgd_meta( 'costs', $sgd_id ) );
 $sgd_tables = sgd_price_tables( $sgd_id );
 ?>
 <?php if ( $sgd_costs ) : ?>
-	<div class="sgd-costs">
-		<?php foreach ( $sgd_costs as $sgd_c ) : ?>
-			<div class="sgd-costs__row<?php echo 0 === mb_stripos( $sgd_c[0], 'tổng' ) ? ' is-total' : ''; ?>">
-				<span><?php echo esc_html( $sgd_c[0] ); ?></span>
-				<strong><?php echo esc_html( $sgd_c[1] ); ?></strong>
-			</div>
-		<?php endforeach; ?>
+	<div class="sgd-mtable sgd-mtable--costs">
+		<p class="sgd-mtable__title">Chi phí trọn gói – <?php echo esc_html( get_the_title( $sgd_id ) ); ?></p>
+		<div class="sgd-mtable__scroll">
+		<table class="sgd-t">
+			<thead><tr><th scope="col">Hạng mục</th><th scope="col">Chi phí</th></tr></thead>
+			<tbody>
+				<?php foreach ( $sgd_costs as $sgd_c ) : ?>
+					<tr<?php echo 0 === mb_stripos( $sgd_c[0], 'tổng' ) ? ' class="is-total"' : ''; ?>>
+						<th scope="row"><?php echo esc_html( $sgd_c[0] ); ?></th>
+						<td><?php echo esc_html( $sgd_c[1] ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+		</div>
 	</div>
 <?php endif; ?>
 <?php foreach ( $sgd_tables as $sgd_t ) : ?>
@@ -28,7 +36,7 @@ $sgd_tables = sgd_price_tables( $sgd_id );
 			<p class="sgd-mtable__title"><?php echo esc_html( $sgd_t['title'] ); ?></p>
 		<?php endif; ?>
 		<div class="sgd-mtable__scroll">
-		<table>
+		<table class="sgd-t">
 			<?php if ( $sgd_t['head'] ) : ?>
 				<thead><tr>
 					<?php foreach ( $sgd_t['head'] as $sgd_h ) : ?>

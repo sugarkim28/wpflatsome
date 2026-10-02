@@ -1370,3 +1370,48 @@ body.sgd { background: #fff; font-size: 16px; -webkit-font-smoothing: antialiase
 	.sgd-tl--h .sgd-tl__desc { text-align: left; }
 }
 @media (max-width: 549px) { .sgd-tl--v .sgd-tl__item { gap: 12px; } .sgd-tl--v .sgd-tl__body { padding: 12px 14px; } }
+
+/* ==========================================================================
+   v11 – MỌI BẢNG cùng 1 phong cách (theo bảng giá kế toán):
+   khung bo góc + bóng nhẹ, thanh tiêu đề xanh đậm, hàng tiêu đề xanh nhạt, cột đầu in đậm, ô nền xanh rất nhạt, ghi chú (*) trong khung
+   ========================================================================== */
+.sgd .sgd-mtable { margin: 0 0 24px; overflow: hidden; border: 1px solid var(--sgd-line); border-radius: 16px; background: #fff; box-shadow: var(--sgd-card-shadow); }
+.sgd .sgd-mtable__title { margin: 0; padding: 13px 18px; background: var(--sgd-navy); color: #fff; font-size: 1.02rem; font-weight: 700; line-height: 1.4; text-align: center; }
+.sgd .sgd-mtable table { width: 100%; margin: 0; border: 0; border-collapse: collapse; border-radius: 0; box-shadow: none; }
+.sgd .sgd-mtable th, .sgd .sgd-mtable td { padding: 12px 14px; border: 1px solid #fff !important; color: var(--sgd-ink); font-size: .95rem; line-height: 1.5; text-transform: none; vertical-align: middle; }
+.sgd .sgd-mtable thead th { background: #dbe7ff !important; color: var(--sgd-navy); font-weight: 700; text-align: center; }
+.sgd .sgd-mtable tbody th, .sgd .sgd-mtable--content tbody td:first-child { background: #eaf1ff !important; font-weight: 700; text-align: left; }
+.sgd .sgd-mtable tbody td { background: #f7faff !important; }
+.sgd .sgd-mtable tbody tr:hover th, .sgd .sgd-mtable tbody tr:hover td { background: #e6eeff !important; }
+.sgd .sgd-mtable__note { margin: 0; padding: 10px 16px 0; color: #344054; font-size: .9rem; line-height: 1.6; text-align: left; }
+.sgd .sgd-mtable__note:last-child { padding-bottom: 14px; }
+.sgd .sgd-mtable__note + .sgd-mtable__note { padding-top: 6px; }
+
+/* Bảng trong bài viết: chữ canh trái cho dễ đọc */
+.sgd .sgd-mtable--content table { min-width: 0; }
+.sgd .sgd-mtable--content.is-wide table { min-width: 600px; }
+.sgd .sgd-mtable--content td { text-align: left; }
+.sgd .sgd-mtable--content thead th { text-align: left; }
+
+/* Bảng giá danh sách dịch vụ */
+.sgd .sgd-mtable--list table { min-width: 0; }
+.sgd .sgd-mtable--list tbody th a { color: var(--sgd-navy); }
+.sgd .sgd-mtable--list tbody th a:hover { color: var(--sgd-primary); }
+.sgd .sgd-mtable--list tbody th small { display: none; }
+.sgd .sgd-mtable--list td { text-align: center; }
+.sgd .sgd-mtable__price { font-weight: 700; white-space: nowrap; }
+.sgd .sgd-mtable--list .sgd-mtable__go { width: 1%; white-space: nowrap; }
+.sgd .sgd-mtable__go a { color: var(--sgd-primary); font-size: .88rem; font-weight: 700; }
+@media (max-width: 549px) {
+	.sgd .sgd-mtable--list .sgd-mtable__time, .sgd .sgd-mtable--list .sgd-mtable__go { display: none; }
+	.sgd .sgd-mtable--list tbody th small { display: block; margin-top: 2px; color: var(--sgd-muted); font-size: .8rem; font-weight: 500; }
+	.sgd .sgd-mtable th, .sgd .sgd-mtable td { padding: 10px 10px; font-size: .9rem; }
+}
+
+/* Chi phí trọn gói (2 cột) */
+.sgd .sgd-mtable--costs table { min-width: 0; }
+.sgd .sgd-mtable--costs td { font-weight: 700; text-align: right; white-space: nowrap; }
+.sgd .sgd-mtable--costs thead th:last-child { text-align: right; }
+.sgd .sgd-mtable--costs tr.is-total th, .sgd .sgd-mtable--costs tr.is-total td { background: #fff1f2 !important; color: var(--sgd-red); font-size: 1.02rem; font-weight: 800; }
+.sgd .sgd-mtable--costs tbody th, .sgd .sgd-mtable--list tbody th, .sgd .sgd-mtable--content tbody th { white-space: normal; }
+.sgd .sgd-mtable--costs thead th:first-child, .sgd .sgd-mtable--list thead th:first-child { text-align: left; }

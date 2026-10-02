@@ -120,6 +120,7 @@ Bàn giao | Giấy chứng nhận mới; hướng dẫn cập nhật hóa đơn,
 </ul>
 <h2>Lịch nộp tờ khai thuế cần nhớ</h2>
 <table>
+<caption>Thời hạn nộp tờ khai, báo cáo thuế</caption>
 <thead><tr><th>Loại báo cáo</th><th>Thời hạn nộp</th></tr></thead>
 <tbody>
 <tr><td>Tờ khai thuế theo tháng</td><td>Chậm nhất ngày 20 của tháng sau</td></tr>
@@ -173,6 +174,7 @@ Bàn giao | Giấy chứng nhận mới; hướng dẫn cập nhật hóa đơn,
 </ul>
 <h2>So sánh kế toán dịch vụ và kế toán nội bộ</h2>
 <table>
+<caption>So sánh kế toán dịch vụ và kế toán nội bộ</caption>
 <thead><tr><th>Tiêu chí</th><th>Kế toán dịch vụ</th><th>Kế toán nội bộ</th></tr></thead>
 <tbody>
 <tr><td>Chi phí</td><td>Theo tháng, theo số hóa đơn</td><td>Lương, bảo hiểm, phần mềm, chỗ làm</td></tr>

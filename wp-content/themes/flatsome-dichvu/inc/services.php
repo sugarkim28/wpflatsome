@@ -594,5 +594,43 @@ function sgd_group_article( $term ) {
 		$html .= "\n<h2>Bảng giá " . esc_html( mb_strtolower( $term->name ) ) . "</h2>\n[sgd_price_table group=\"" . esc_attr( $term->slug ) . "\"]";
 	}
 	$html = str_replace( '{company}', esc_html( sgd_opt( 'company' ) ), $html );
-	return $html ? do_shortcode( shortcode_unautop( wpautop( $html ) ) ) : '';
+	return $html ? sgd_style_tables( do_shortcode( shortcode_unautop( wpautop( $html ) ) ) ) : '';
 }
+
+/**
+ * Bảng trong nội dung (bài viết, dịch vụ, trang, bài nhóm) → cùng phong cách bảng giá:
+ * khung bo góc, thanh tiêu đề xanh đậm (lấy từ <caption>), hàng tiêu đề xanh nhạt, cột đầu in đậm, cuộn ngang trên điện thoại.
+ * Bảng đã có class "sgd-t" (do theme tạo) được bỏ qua.
+ *
+ * @param string $html Nội dung.
+ * @return string
+ */
+function sgd_style_tables( $html ) {
+	if ( false === stripos( (string) $html, '<table' ) ) {
+		return $html;
+	}
+	return preg_replace_callback(
+		'#<table(\s[^>]*)?>(.*?)</table>#is',
+		function ( $m ) {
+			$attrs = isset( $m[1] ) ? $m[1] : '';
+			if ( false !== strpos( $attrs, 'sgd-t' ) ) {
+				return $m[0];
+			}
+			$inner = $m[2];
+			$title = '';
+			if ( preg_match( '#<caption[^>]*>(.*?)</caption>#is', $inner, $c ) ) {
+				$title = trim( wp_strip_all_tags( $c[1] ) );
+				$inner = str_replace( $c[0], '', $inner );
+			}
+			if ( false === stripos( $inner, '<thead' ) && preg_match( '#<tr[^>]*>(.*?)</tr>#is', $inner, $r ) ) {
+				$head  = '<thead><tr>' . preg_replace( '#<td([^>]*)>(.*?)</td>#is', '<th scope="col"$1>$2</th>', $r[1] ) . '</tr></thead>';
+				$inner = $head . preg_replace( '#' . preg_quote( $r[0], '#' ) . '#', '', $inner, 1 );
+			}
+			$cols = preg_match( '#<thead[^>]*>(.*?)</thead>#is', $inner, $h ) ? substr_count( strtolower( $h[1] ), '<th' ) : 0;
+			return '<div class="sgd-mtable sgd-mtable--content' . ( $cols >= 4 ? ' is-wide' : '' ) . '">' . ( $title ? '<p class="sgd-mtable__title">' . esc_html( $title ) . '</p>' : '' )
+				. '<div class="sgd-mtable__scroll"><table class="sgd-t">' . $inner . '</table></div></div>';
+		},
+		$html
+	);
+}
+add_filter( 'the_content', 'sgd_style_tables', 20 );
