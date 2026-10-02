@@ -1,7 +1,7 @@
 <?php
 /**
  * Trang nhóm dịch vụ (/nhom-dich-vu/...) – dạng bài viết chuyên mục như tanthanhthinh.com:
- * dải tiêu đề (H1) → ảnh nhóm → danh sách dịch vụ gọn (tên – thời gian – giá) → mục lục → bài viết của nhóm
+ * dải tiêu đề (H1) → ảnh nhóm → mục lục → bài viết của nhóm (bảng giá nằm trong bài)
  * → gọi ngay → bài viết liên quan. Cột phải: form, dịch vụ nổi bật, bài viết mới.
  *
  * @package Flatsome_Dichvu
@@ -33,21 +33,6 @@ $sgd_posts = sgd_group_posts( array( $sgd_term ), 3 );
 				<span class="sgd-gsec__bar"><span><?php echo esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) ); ?></span><span><?php echo sgd_icon( 'phone' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> Hotline: <?php echo esc_html( sgd_opt( 'hotline' ) ); ?></span></span>
 			</figure>
 
-			<?php if ( $sgd_services ) : ?>
-				<section class="sgd-gpage__list" aria-labelledby="sgd-group-list-title">
-					<h2 class="sgd-gpage__list-title" id="sgd-group-list-title">Các dịch vụ <?php echo esc_html( mb_strtolower( $sgd_term->name ) ); ?></h2>
-					<ul class="sgd-cat__list">
-						<?php foreach ( $sgd_services as $sgd_p ) : ?>
-							<li class="sgd-cat__row"><a href="<?php echo esc_url( get_permalink( $sgd_p ) ); ?>">
-								<span class="sgd-cat__name"><strong><?php echo esc_html( get_the_title( $sgd_p ) ); ?></strong></span>
-								<span class="sgd-cat__time"><?php echo sgd_meta( 'duration', $sgd_p->ID ) ? sgd_icon( 'clock' ) . ' ' . esc_html( sgd_meta( 'duration', $sgd_p->ID ) ) : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-								<span class="sgd-cat__price"><?php echo esc_html( sgd_meta( 'price', $sgd_p->ID ) ? sgd_meta( 'price', $sgd_p->ID ) : 'Liên hệ' ); ?></span>
-								<span class="sgd-cat__go" aria-hidden="true">›</span>
-							</a></li>
-						<?php endforeach; ?>
-					</ul>
-				</section>
-			<?php endif; ?>
 
 			<?php if ( count( $sgd_heads ) >= 2 ) : ?>
 				<nav class="sgd-toc" aria-label="Mục lục">

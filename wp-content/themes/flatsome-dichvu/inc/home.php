@@ -415,7 +415,7 @@ function sgd_group_posts( $terms, $count = 3, $exclude = array(), $fill = true )
  */
 function sgd_sc_group_section( $atts ) {
 	static $used = array();
-	$a     = shortcode_atts( array( 'group' => '', 'title' => '', 'text' => '', 'posts' => 3, 'flip' => '0' ), $atts, 'sgd_group_section' );
+	$a     = shortcode_atts( array( 'group' => '', 'title' => '', 'text' => '', 'posts' => 3, 'flip' => '0', 'price' => '1' ), $atts, 'sgd_group_section' );
 	$terms = array();
 	foreach ( array_filter( array_map( 'trim', explode( ',', $a['group'] ) ) ) as $slug ) {
 		$t = get_term_by( 'slug', $slug, 'nhom_dich_vu' );
@@ -434,7 +434,7 @@ function sgd_sc_group_section( $atts ) {
 	$title = $a['title'] ? $a['title'] : $main->name;
 	$text  = $a['text'] ? $a['text'] : wp_strip_all_tags( $main->description );
 	$img   = get_term_meta( $main->term_id, '_sgd_image', true );
-	$price = sgd_min_price_label( $services );
+	$price = '1' === (string) $a['price'] ? sgd_min_price_label( $services ) : '';
 
 	$visual = $img
 		? '<img src="' . esc_url( $img ) . '" alt="' . esc_attr( $title ) . '" loading="lazy" width="1100" height="700">'
@@ -446,10 +446,10 @@ function sgd_sc_group_section( $atts ) {
 		. '<span class="sgd-gsec__bar"><span>' . esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) ) . '</span><span>' . sgd_icon( 'phone' ) . ' Hotline: ' . esc_html( sgd_opt( 'hotline' ) ) . '</span></span></a>';
 	$out .= '<div class="sgd-gsec__text">' . ( $text ? '<p class="sgd-gsec__desc">' . esc_html( sgd_clip( $text, 260 ) ) . '</p>' : '' ) . '<ul class="sgd-gsec__list">';
 	foreach ( array_slice( $services, 0, 7 ) as $p ) {
-		$pr   = sgd_meta( 'price', $p->ID );
+		$pr   = '1' === (string) $a['price'] ? sgd_meta( 'price', $p->ID ) : '';
 		$out .= '<li><a href="' . esc_url( get_permalink( $p ) ) . '"><span>' . esc_html( get_the_title( $p ) ) . '</span>' . ( $pr ? '<b>' . esc_html( $pr ) . '</b>' : '' ) . '</a></li>';
 	}
-	$out .= '</ul><p class="sgd-gsec__btns"><a class="button sgd-btn" href="#dang-ky">Nhận báo giá</a><a class="sgd-gsec__more" href="' . esc_url( get_term_link( $main ) ) . '">Xem tất cả ' . count( $services ) . ' dịch vụ →</a></p></div></div>';
+	$out .= '</ul><p class="sgd-gsec__btns"><a class="button sgd-btn" href="' . esc_url( get_term_link( $main ) ) . '">Tìm hiểu &amp; bảng giá</a><a class="sgd-gsec__more" href="#dang-ky">Nhận tư vấn miễn phí →</a></p></div></div>';
 
 	$posts = (int) $a['posts'] > 0 ? sgd_group_posts( $terms, (int) $a['posts'], $used ) : array();
 	if ( $posts ) {

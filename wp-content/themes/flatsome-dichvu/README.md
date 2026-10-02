@@ -44,6 +44,12 @@ Trang chủ (bản 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh
 - Màu mặc định: xanh `#123fb8`, đỏ `#e10b17` (nút, giá), nền tối `#0b1f5c`; khẩu hiệu *Uy tín tạo niềm tin*; hotline/Zalo 0914 108 322.
 - **Máy chủ nginx**: nếu đường dẫn có dạng `/index.php/dich-vu/...` là nginx chưa có quy tắc rewrite của WordPress. Thêm vào khối `server` của site: `location / { try_files $uri $uri/ /index.php?$args; }` rồi vào **Cài đặt → Đường dẫn tĩnh** chọn *Tên bài viết* để có đường dẫn gọn (tốt cho SEO). Theme không dùng đường dẫn cứng nên chạy được cả hai dạng.
 
+## Menu, trang chủ, bảng giá (bản 0.9)
+
+- Menu kiểu ketoananpha.vn (chữ in hoa, thanh sáng, menu con hộp trắng): Giới thiệu · Dịch vụ thành lập · Dịch vụ kế toán (gồm thuế) · Thay đổi GPKD · Dịch vụ khác · Kiến thức · Liên hệ. Không có "Bảng giá" và nút màu trên menu. Mỗi mục là 1 trang có bài giới thiệu; menu con mở đầu bằng trang "Tổng quan …" của nhóm.
+- Trang chủ giới thiệu 4 dịch vụ chính kiểu tanthanhthinh.com `[sgd_group_section … price="0"]` (không hiện giá).
+- Bảng giá nằm trong bài viết lớn của từng nhóm (`[sgd_price_table group="…"]`, `[sgd_pricing service="…" show="packages|table"]`); bài tự viết chưa chèn bảng giá thì theme tự thêm ở cuối.
+
 ## Trang nhóm dịch vụ (bản 0.8)
 
 Mỗi mục lớn trên menu (Thành lập công ty, Thay đổi GPKD, Kế toán & Thuế, Dịch vụ khác…) mở trang nhóm dạng bài viết chuyên mục như tanthanhthinh.com: dải tiêu đề (H1) → ảnh nhóm → danh sách dịch vụ gọn (tên – thời gian – giá) → mục lục "Nội dung chính" → bài viết của nhóm (H2/H3) → Gọi ngay → Bài viết liên quan. Sửa bài ở *Dịch vụ → Nhóm dịch vụ → sửa nhóm → Bài viết của nhóm* (trống = bài mẫu trong `inc/demo-articles.php`). Ảnh nhóm: ô "Ảnh đại diện nhóm".

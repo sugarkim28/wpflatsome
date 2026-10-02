@@ -316,8 +316,8 @@ function sgd_demo_build() {
 		}
 		return wp_update_nav_menu_item( $menu_id, 0, $item );
 	};
-	// Menu gọn 1 hàng (giống timsen.vn), nhưng giữ liên kết nhóm dịch vụ trên menu chính để
-	// Google hiểu cấu trúc site (anchor text đúng từ khoá – điểm mạnh của ketoananpha.vn).
+	// Menu kiểu ketoananpha.vn: chữ in hoa, mỗi mục là 1 trang có bài giới thiệu; menu con mở đầu bằng trang tổng quan của nhóm.
+	// Không đặt "Bảng giá" trên menu – bảng giá nằm trong bài viết từng nhóm và từng dịch vụ.
 	$service_links = function ( $slugs, $parent ) use ( $data, $services, $add ) {
 		foreach ( $data['services'] as $s ) {
 			if ( in_array( $s['group'], (array) $slugs, true ) && isset( $services[ $s['slug'] ] ) ) {
@@ -325,18 +325,24 @@ function sgd_demo_build() {
 			}
 		}
 	};
-	$tax_item = function ( $slug, $label ) use ( $groups, $add ) {
-		return $add( $label, '', 0, array( 'menu-item-object' => 'nhom_dich_vu', 'menu-item-object-id' => $groups[ $slug ], 'menu-item-type' => 'taxonomy' ) );
+	$tax_item = function ( $slug, $label, $parent = 0 ) use ( $groups, $add ) {
+		return $add( $label, '', $parent, array( 'menu-item-object' => 'nhom_dich_vu', 'menu-item-object-id' => $groups[ $slug ], 'menu-item-type' => 'taxonomy' ) );
 	};
-	$service_links( 'thanh-lap-doanh-nghiep', $tax_item( 'thanh-lap-doanh-nghiep', 'Thành lập công ty' ) );
-	$service_links( 'thay-doi-giay-phep', $tax_item( 'thay-doi-giay-phep', 'Thay đổi GPKD' ) );
-	$service_links( array( 'ke-toan', 'dich-vu-thue' ), $tax_item( 'ke-toan', 'Kế toán & Thuế' ) );
-	$service_links( 'dich-vu-khac', $tax_item( 'dich-vu-khac', 'Dịch vụ khác' ) );
-	$add( 'Bảng giá', get_permalink( $pricing ) );
+	$top = function ( $slug, $label, $overview, $service_groups ) use ( $tax_item, $service_links ) {
+		$parent = $tax_item( $slug, $label );
+		$tax_item( $slug, $overview, $parent );
+		$service_links( $service_groups, $parent );
+		return $parent;
+	};
+	$add( 'Giới thiệu', get_permalink( $about ) );
+	$top( 'thanh-lap-doanh-nghiep', 'Dịch vụ thành lập', 'Tổng quan thành lập công ty', 'thanh-lap-doanh-nghiep' );
+	$acc = $top( 'ke-toan', 'Dịch vụ kế toán', 'Tổng quan kế toán – thuế', 'ke-toan' );
+	$tax_item( 'dich-vu-thue', 'Dịch vụ thuế', $acc );
+	$service_links( 'dich-vu-thue', $acc );
+	$top( 'thay-doi-giay-phep', 'Thay đổi GPKD', 'Tổng quan thay đổi giấy phép', 'thay-doi-giay-phep' );
+	$top( 'dich-vu-khac', 'Dịch vụ khác', 'Tổng quan dịch vụ khác', 'dich-vu-khac' );
 	$add( 'Kiến thức', get_permalink( $news ) );
-	$about_parent = $add( 'Liên hệ', get_permalink( $contact ) );
-	$add( 'Giới thiệu', get_permalink( $about ), $about_parent );
-	$add( 'Nhận báo giá', '#dang-ky', 0, array( 'menu-item-url' => '#dang-ky', 'menu-item-type' => 'custom', 'menu-item-classes' => 'sgd-menu-cta' ) );
+	$add( 'Liên hệ', get_permalink( $contact ) );
 	$loc                   = get_theme_mod( 'nav_menu_locations', array() );
 	$loc['primary']        = $menu_id;
 	$loc['primary_mobile'] = $menu_id;
@@ -361,13 +367,13 @@ function sgd_demo_build() {
 	set_theme_mod( 'logo_width', 240 );
 	set_theme_mod( 'header_bg', '#ffffff' );
 	set_theme_mod( 'header_color', 'light' );
-	set_theme_mod( 'nav_position_bg', sgd_opt( 'color_primary' ) );
-	set_theme_mod( 'nav_position_color', 'dark' );
+	set_theme_mod( 'nav_position_bg', '#ffffff' );
+	set_theme_mod( 'nav_position_color', 'light' );
 	set_theme_mod( 'nav_style_bottom', '' );
 	set_theme_mod( 'nav_uppercase', 0 );
-	set_theme_mod( 'nav_uppercase_bottom', 0 );
-	set_theme_mod( 'type_nav_bottom_color', '#ffffff' );
-	set_theme_mod( 'type_nav_bottom_color_hover', '#ffffff' );
+	set_theme_mod( 'nav_uppercase_bottom', 1 );
+	set_theme_mod( 'type_nav_bottom_color', '#1d2939' );
+	set_theme_mod( 'type_nav_bottom_color_hover', sgd_opt( 'color_primary' ) );
 	set_theme_mod( 'type_nav_color', '#1d2939' );
 	set_theme_mod( 'type_nav_color_hover', sgd_opt( 'color_primary' ) );
 	set_theme_mod( 'header_sticky', 1 );
@@ -409,9 +415,8 @@ function sgd_demo_home_content() {
 	$company = esc_html( sgd_opt( 'company' ) );
 	// Bố cục 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh.com theo hành trình ra quyết định của khách:
 	// Nhu cầu → Giá → Tin cậy → Gói → Giải đáp → Hành động. Mỗi khối 1 việc, không lặp nội dung, 1 H1 duy nhất.
-	// 1 Banner + form → 2 Cam kết (thẻ nổi trên mép banner) → 3 Dịch vụ & bảng giá (tab nhóm = nơi chọn nhu cầu, không lặp ô nhóm)
-	// → 4 Về công ty + số liệu → 5 Quy trình → 6 Chuyên viên (nếu có) → 7 Hỏi đáp + form → 8 Tin tức + đối tác → 9 Gọi ngay.
-	// Bảng giá chỉ 1 chỗ, dạng gọn (tối đa 4 dịch vụ/nhóm); bảng gói chi tiết nằm ở trang dịch vụ và trang Bảng giá.
+	// 1 Banner + form → 2 Cam kết → 3 Về công ty → 4–7 Giới thiệu từng dịch vụ chính kiểu tanthanhthinh.com (danh sách dịch vụ + bài viết của nhóm,
+	// không hiện giá – bảng giá nằm trong bài viết lớn của từng nhóm) → 8 Quy trình → 9 Chuyên viên + đối tác (nếu có) → 10 Hỏi đáp + form → 11 Gọi ngay.
 	return '[section label="1. Banner (H1) + form" bg_color="#0b2a5b" padding="56px" padding__sm="28px" class="sgd-heroband"]
 [row]
 [col span="12"]
@@ -426,22 +431,42 @@ function sgd_demo_home_content() {
 [/col]
 [/row]
 [/section]
-[section label="3. Dịch vụ &amp; bảng giá" bg_color="#ffffff" padding="64px" padding__sm="40px"]
-[row]
-[col span="12"]
-[sgd_title text="Dịch vụ &amp; bảng giá" sub="Chọn nhóm dịch vụ – xem nhanh phí trọn gói và thời gian; bảng giá từng gói nằm trong trang chi tiết." class="is-lined"]
-[sgd_catalog limit="4" compact="1"]
-[/col]
-[/row]
-[/section]
-[section label="4. Về công ty + số liệu" bg_color="#f4f7fc" padding="64px" padding__sm="40px"]
+[section label="3. Về công ty + số liệu" bg_color="#ffffff" padding="64px" padding__sm="40px"]
 [row]
 [col span="12"]
 [sgd_about]
 [/col]
 [/row]
 [/section]
-[section label="5. Quy trình làm việc" bg_color="#0b2a5b" dark="true" padding="72px" padding__sm="44px" class="sgd-navyband"]
+[section label="4. Dịch vụ thành lập" bg_color="#f4f7fc" padding="64px" padding__sm="40px"]
+[row]
+[col span="12"]
+[sgd_group_section group="thanh-lap-doanh-nghiep" title="Tư vấn thành lập công ty" price="0"]
+[/col]
+[/row]
+[/section]
+[section label="5. Dịch vụ kế toán – thuế" bg_color="#ffffff" padding="64px" padding__sm="40px"]
+[row]
+[col span="12"]
+[sgd_group_section group="ke-toan,dich-vu-thue" title="Dịch vụ kế toán – thuế" flip="1" price="0"]
+[/col]
+[/row]
+[/section]
+[section label="6. Thay đổi GPKD" bg_color="#f4f7fc" padding="64px" padding__sm="40px"]
+[row]
+[col span="12"]
+[sgd_group_section group="thay-doi-giay-phep" title="Thay đổi đăng ký kinh doanh" price="0"]
+[/col]
+[/row]
+[/section]
+[section label="7. Dịch vụ khác" bg_color="#ffffff" padding="64px" padding__sm="40px"]
+[row]
+[col span="12"]
+[sgd_group_section group="dich-vu-khac" title="Dịch vụ khác cho doanh nghiệp" flip="1" price="0"]
+[/col]
+[/row]
+[/section]
+[section label="8. Quy trình làm việc" bg_color="#0b2a5b" dark="true" padding="72px" padding__sm="44px" class="sgd-navyband"]
 [row]
 [col span="12"]
 [sgd_title text="Quy trình làm việc 4 bước" sub="Minh bạch từng khâu – khách hàng nắm được tiến độ hồ sơ mọi lúc qua Zalo." class="is-light"]
@@ -454,14 +479,15 @@ Bàn giao kết quả | Giao giấy phép, con dấu, hồ sơ tận nơi và h�
 [/col]
 [/row]
 [/section]
-[section label="6. Chuyên viên tư vấn (Tuỳ biến → Thông tin công ty; trống = ẩn)" bg_color="#ffffff" padding="64px" padding__sm="40px" class="sgd-team-sec"]
+[section label="9. Chuyên viên tư vấn (Tuỳ biến → Thông tin công ty; trống = ẩn)" bg_color="#ffffff" padding="64px" padding__sm="40px" class="sgd-team-sec"]
 [row]
 [col span="12"]
 [sgd_team]
+[sgd_partners]
 [/col]
 [/row]
 [/section]
-[section label="7. Hỏi đáp + tư vấn" bg_color="#f4f7fc" padding="72px" padding__sm="44px"]
+[section label="10. Hỏi đáp + tư vấn" bg_color="#f4f7fc" padding="72px" padding__sm="44px"]
 [row]
 [col span="7" span__sm="12"]
 [sgd_title text="Câu hỏi thường gặp" class="is-left"]
@@ -478,17 +504,7 @@ Phí dịch vụ đã gồm lệ phí nhà nước chưa? | Báo giá ghi rõ ph
 [/col]
 [/row]
 [/section]
-[section label="8. Tin tức + đối tác" bg_color="#ffffff" padding="64px" padding__sm="40px"]
-[row]
-[col span="12"]
-[sgd_title text="Tin tức – kiến thức doanh nghiệp" class="is-lined"]
-[sgd_posts number="4" style="cards"]
-[sgd_partners]
-[gap height="40px"]
-[/col]
-[/row]
-[/section]
-[section label="9. Gọi ngay" bg_color="#ffffff" padding="0px"]
+[section label="11. Gọi ngay" bg_color="#ffffff" padding="0px"]
 [row]
 [col span="12"]
 [sgd_cta_strip]
@@ -541,6 +557,7 @@ function sgd_demo_pricing_content( $groups ) {
  * @return string
  */
 function sgd_demo_about_content() {
+	$c = esc_html( sgd_opt( 'company' ) );
 	return '[sgd_pagehead title="Giới thiệu ' . esc_attr( sgd_opt( 'company' ) ) . '" sub="' . esc_attr( sgd_opt( 'company_full' ) ) . ' – ' . esc_attr( sgd_opt( 'tagline' ) ) . '."]
 [section bg_color="#ffffff" padding="60px" padding__sm="36px"]
 [row]
@@ -567,9 +584,24 @@ function sgd_demo_about_content() {
 [section bg_color="#ffffff" padding="60px" padding__sm="36px"]
 [row]
 [col span="7" span__sm="12" class="sgd-prose"]
-<p class="sgd-note">Nội dung mẫu – thay bằng giới thiệu thật của công ty (năm thành lập, đội ngũ, chứng chỉ hành nghề, ảnh văn phòng).</p>
-<h2>Đội ngũ</h2>
-<p>Giới thiệu luật sư, chuyên viên pháp lý, kế toán viên, chứng chỉ hành nghề (đại lý thuế, kế toán…) kèm ảnh thật – giúp khách hàng tin tưởng và tốt cho SEO.</p>
+<h2>Về ' . $c . '</h2>
+<p>' . $c . ' là đơn vị cung cấp dịch vụ pháp lý doanh nghiệp, thuế và kế toán cho doanh nghiệp vừa và nhỏ, hộ kinh doanh và người mới khởi nghiệp. Chúng tôi đồng hành từ khi khách hàng có ý tưởng kinh doanh: tư vấn loại hình, thành lập công ty, khai thuế ban đầu, đến kế toán – báo cáo thuế hằng tháng và các thủ tục thay đổi trong suốt quá trình hoạt động.</p>
+<h2>Lĩnh vực hoạt động</h2>
+<ul>
+<li><strong>Thành lập doanh nghiệp:</strong> công ty TNHH, cổ phần, hộ kinh doanh, chi nhánh, văn phòng đại diện, công ty có vốn nước ngoài.</li>
+<li><strong>Thay đổi giấy phép kinh doanh:</strong> địa chỉ, tên, người đại diện, vốn điều lệ, thành viên, ngành nghề; tạm ngừng, giải thể.</li>
+<li><strong>Dịch vụ thuế – kế toán:</strong> khai thuế ban đầu, báo cáo thuế tháng/quý, quyết toán, báo cáo tài chính, kế toán trọn gói, làm lại sổ sách.</li>
+<li><strong>Dịch vụ khác:</strong> bảo hiểm xã hội, chữ ký số, hóa đơn điện tử, đăng ký nhãn hiệu.</li>
+</ul>
+<h2>Giá trị chúng tôi theo đuổi</h2>
+<ul>
+<li><strong>Uy tín:</strong> làm đúng những gì đã cam kết trong báo giá và hợp đồng.</li>
+<li><strong>Minh bạch:</strong> phí dịch vụ, lệ phí nhà nước ghi rõ từ đầu, không phát sinh.</li>
+<li><strong>Tận tâm:</strong> một chuyên viên phụ trách, cập nhật tiến độ thường xuyên qua Zalo.</li>
+<li><strong>Bảo mật:</strong> giữ kín giấy tờ, số liệu của khách hàng.</li>
+</ul>
+<h2>Cách chúng tôi làm việc</h2>
+<p>Tiếp nhận nhu cầu và tư vấn miễn phí → báo giá trọn gói → soạn hồ sơ, khách ký tại nhà hoặc ký số → nộp hồ sơ trực tuyến, theo dõi kết quả → bàn giao tận nơi và hướng dẫn các việc tiếp theo.</p>
 <h2>Thông tin pháp nhân</h2>
 <p><strong>' . esc_html( sgd_opt( 'company_full' ) ) . '</strong></p>
 [sgd_contact_list]

@@ -537,7 +537,7 @@ body.sgd { color: var(--sgd-ink); }
 .sgd-content h3, .sgd .entry-content h3 { color: #d93a2b; font-size: 1.3rem; }
 .sgd-content table, .sgd .entry-content table { border-collapse: collapse; font-size: .95rem; }
 .sgd-content table th, .sgd-content table td { padding: 9px 12px; border: 1px solid #cfe0fb; text-align: left; vertical-align: top; }
-.sgd-content table tr:first-child td, .sgd-content table th { background: var(--sgd-navy); color: #fff; font-weight: 700; }
+.sgd-content table:not(:has(thead)) tr:first-child td, .sgd-content table th { background: var(--sgd-navy); color: #fff; font-weight: 700; }
 .sgd-content table tr:nth-child(even) td { background: #f5f9ff; }
 
 /* Footer nền xanh đậm 4 cột */
@@ -1286,3 +1286,39 @@ body.sgd { background: #fff; font-size: 16px; -webkit-font-smoothing: antialiase
 .sgd .sgd-gpage__list .sgd-cat__list { margin: 0; padding: 0; list-style: none; }
 .sgd .sgd-gpage__list .sgd-cat__row { margin: 0; }
 @media (max-width: 849px) { .sgd-gpage__list .sgd-cat__row a { grid-template-columns: minmax(0, 1fr) auto; } }
+
+/* ==========================================================================
+   v9 – menu kiểu ketoananpha.vn: thanh sáng, chữ in hoa đậm, menu con hộp trắng gọn
+   ========================================================================== */
+.sgd #wide-nav, .sgd .header-bottom { background: #fff !important; background-image: none !important; border-top: 1px solid #edf1f7; box-shadow: 0 2px 0 #e6ebf3; }
+.sgd .header-bottom .header-bottom-nav, .sgd .header-bottom .nav { justify-content: space-between; }
+.sgd .header-bottom .nav > li > a { min-height: 50px; padding: 0 10px !important; color: #212529 !important; font-size: 15px; font-weight: 700; letter-spacing: 0; text-transform: uppercase; }
+.sgd .header-bottom .nav > li:first-child > a { padding-left: 0 !important; }
+.sgd .header-bottom .nav > li:last-child > a { padding-right: 0 !important; }
+.sgd .header-bottom .nav > li > a:hover, .sgd .header-bottom .nav > li.active > a, .sgd .header-bottom .nav > li.current-menu-ancestor > a, .sgd .header-bottom .nav > li.current-menu-item > a { background: none; color: var(--sgd-primary) !important; box-shadow: inset 0 -3px 0 var(--sgd-accent); }
+.sgd .header-bottom .nav > li > a .icon-angle-down { margin-left: 3px; font-size: .8em; opacity: .7; }
+.sgd .header-bottom .nav-dropdown { min-width: 250px; padding: 4px 0; border: 1px solid #dfe3ea; border-top: 0; border-radius: 0; box-shadow: 0 10px 24px rgba(16, 24, 40, .1); }
+.sgd .header-bottom .nav-dropdown > li > a { padding: 11px 16px; border: 0; color: #495057; font-size: 15px; font-weight: 400; text-transform: none; }
+.sgd .header-bottom .nav-dropdown > li > a:hover { background: #f4f7fc; color: var(--sgd-primary); }
+.sgd .header-bottom .nav-dropdown > li:first-child > a { color: var(--sgd-primary); font-weight: 700; }
+@media (max-width: 1199px) { .sgd .header-bottom .nav > li > a { padding: 0 7px !important; font-size: 14px; } }
+
+/* Khối dịch vụ trang chủ trên điện thoại: bài viết vuốt ngang */
+@media (max-width: 549px) {
+	.sgd .sgd-gsec__posts { display: grid; grid-auto-flow: column; grid-auto-columns: 82%; grid-template-columns: none; gap: 14px; overflow-x: auto; margin-right: -15px; padding: 4px 15px 12px 2px; scroll-snap-type: x mandatory; }
+	.sgd .sgd-gsec__posts > * { scroll-snap-align: start; }
+	.sgd .sgd-gsec__posts .sgd-bcard__excerpt { display: none; }
+}
+.sgd .sgd-team-sec:not(:has(.sgd-team)):has(.sgd-partners) { display: block; }
+@media (max-width: 549px) {
+	.sgd .sgd-ptable table, .sgd .sgd-ptable tbody, .sgd .sgd-ptable tr, .sgd .sgd-ptable td { display: block; width: 100%; }
+	.sgd .sgd-ptable { border: 0; box-shadow: none; background: none; }
+	.sgd .sgd-ptable thead { display: none; }
+	.sgd .sgd-ptable tr { display: grid !important; grid-template-columns: 1fr auto; gap: 2px 10px; margin: 0 0 10px; padding: 12px 14px; border: 1px solid var(--sgd-line); border-radius: 12px; background: #fff !important; }
+	.sgd .sgd-ptable td { padding: 0 !important; border: 0 !important; background: none !important; font-size: .92rem; text-align: left !important; }
+	.sgd .sgd-ptable td::before { display: none !important; }
+	.sgd .sgd-ptable td:nth-child(1) { grid-column: 1 / -1; font-weight: 700; }
+	.sgd .sgd-ptable td:nth-child(2) { grid-column: 2; grid-row: 2; font-weight: 800; text-align: right !important; }
+	.sgd .sgd-ptable td:nth-child(3) { grid-column: 1; grid-row: 2; color: var(--sgd-muted); font-size: .85rem; }
+	.sgd .sgd-ptable td:nth-child(4) { grid-column: 1 / -1; font-size: .85rem; }
+}

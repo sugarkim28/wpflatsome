@@ -39,6 +39,12 @@ return array(
 <li>Bản sao giấy tờ pháp lý của cá nhân (căn cước) hoặc tổ chức là thành viên, cổ đông.</li>
 <li>Giấy ủy quyền cho đơn vị dịch vụ nộp hồ sơ (nếu có).</li>
 </ol>
+<h2>Bảng giá dịch vụ thành lập công ty</h2>
+<p>Phí trọn gói theo từng loại hình. Bấm vào tên dịch vụ để xem chi tiết công việc và hồ sơ.</p>
+[sgd_price_table group="thanh-lap-doanh-nghiep"]
+<h3>Các gói thành lập công ty TNHH</h3>
+<p>Chọn gói phù hợp – bấm "Chọn gói này" để đăng ký, chuyên viên sẽ gọi lại xác nhận.</p>
+[sgd_pricing service="thanh-lap-cong-ty-tnhh" show="packages"]
 <h2>Quy trình và thời gian thực hiện</h2>
 <ol>
 <li><strong>Tư vấn và báo giá:</strong> thống nhất loại hình, tên, ngành nghề, vốn, chi phí trọn gói.</li>
@@ -83,6 +89,10 @@ return array(
 <p>Cần chuẩn bị hồ sơ chứng minh việc góp vốn, chuyển nhượng phần vốn góp hoặc cổ phần. Việc chuyển nhượng có thể phát sinh nghĩa vụ thuế thu nhập; nên được tư vấn trước để kê khai đúng.</p>
 <h3>Bổ sung ngành nghề kinh doanh</h3>
 <p>Doanh nghiệp thông báo bổ sung mã ngành mới trước khi hoạt động. Với ngành nghề có điều kiện, phải đáp ứng điều kiện tương ứng.</p>
+<h2>Bảng giá dịch vụ thay đổi giấy phép kinh doanh</h2>
+[sgd_price_table group="thay-doi-giay-phep"]
+<h3>Gói thay đổi địa chỉ trụ sở</h3>
+[sgd_pricing service="thay-doi-dia-chi-cong-ty" show="packages"]
 <h2>Tạm ngừng kinh doanh và giải thể</h2>
 <p>Doanh nghiệp tạm ngừng kinh doanh phải thông báo bằng văn bản cho cơ quan đăng ký kinh doanh chậm nhất 3 ngày làm việc trước ngày tạm ngừng. Giải thể doanh nghiệp cần thanh toán hết các khoản nợ, quyết toán và đóng mã số thuế trước khi xóa tên trên hệ thống.</p>
 <h2>Quy trình thực hiện tại ' . '{company}' . '</h2>
@@ -128,6 +138,8 @@ return array(
 <p>Rà soát chứng từ, lập báo cáo tài chính, quyết toán thuế TNDN và TNCN; giải trình số liệu khi được yêu cầu.</p>
 <h3>Hoàn thuế, làm việc với cơ quan thuế</h3>
 <p>Chuẩn bị hồ sơ hoàn thuế GTGT, giải trình, hỗ trợ khi cơ quan thuế kiểm tra, thanh tra.</p>
+<h2>Bảng giá dịch vụ thuế</h2>
+[sgd_price_table group="dich-vu-thue"]
 <h2>Rủi ro thường gặp khi tự kê khai</h2>
 <ul>
 <li>Quên nộp tờ khai khi chưa có doanh thu.</li>
@@ -169,6 +181,11 @@ return array(
 <tr><td>Trách nhiệm</td><td>Theo hợp đồng dịch vụ</td><td>Doanh nghiệp tự chịu</td></tr>
 </tbody>
 </table>
+<h2>Bảng giá dịch vụ kế toán – thuế</h2>
+<p>Phí kế toán trọn gói tính theo tháng, phụ thuộc số lượng hóa đơn và lĩnh vực hoạt động.</p>
+[sgd_pricing service="ke-toan-tron-goi" show="table"]
+<h3>Các dịch vụ kế toán – thuế khác</h3>
+[sgd_price_table group="ke-toan,dich-vu-thue"]
 <h2>Rà soát, làm lại sổ sách kế toán</h2>
 <p>Doanh nghiệp có sổ sách tồn đọng, sai sót nhiều năm hoặc chuẩn bị quyết toán, kiểm tra thuế nên rà soát lại: đối chiếu hóa đơn, công nợ, tồn kho, tài sản; điều chỉnh sai sót và hoàn thiện hồ sơ để giảm rủi ro bị truy thu, xử phạt.</p>
 <h2>Kế toán thuế cho hộ kinh doanh</h2>
@@ -198,6 +215,8 @@ return array(
 <li>Nộp đơn, theo dõi thẩm định hình thức và nội dung.</li>
 <li>Nhận văn bằng bảo hộ.</li>
 </ol>
+<h2>Bảng giá dịch vụ khác</h2>
+[sgd_price_table group="dich-vu-khac"]
 <h2>Vì sao nên dùng dịch vụ trọn gói?</h2>
 <ul>
 <li>Một đầu mối xử lý mọi thủ tục pháp lý – thuế – bảo hiểm.</li>

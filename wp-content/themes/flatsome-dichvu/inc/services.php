@@ -589,6 +589,10 @@ function sgd_group_article( $term ) {
 		}
 		$html = isset( $defaults[ $term->slug ] ) ? $defaults[ $term->slug ] : '';
 	}
+	// Bảng giá nằm trong bài: bài tự viết chưa chèn bảng giá thì tự thêm ở cuối.
+	if ( $html && false === strpos( $html, '[sgd_price' ) ) {
+		$html .= "\n<h2>Bảng giá " . esc_html( mb_strtolower( $term->name ) ) . "</h2>\n[sgd_price_table group=\"" . esc_attr( $term->slug ) . "\"]";
+	}
 	$html = str_replace( '{company}', esc_html( sgd_opt( 'company' ) ), $html );
-	return $html ? do_shortcode( wpautop( $html ) ) : '';
+	return $html ? do_shortcode( shortcode_unautop( wpautop( $html ) ) ) : '';
 }
