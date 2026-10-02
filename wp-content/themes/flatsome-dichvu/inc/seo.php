@@ -67,6 +67,11 @@ function sgd_breadcrumb_trail() {
 			$trail[] = array( $a->name, get_term_link( $a ) );
 		}
 		$trail[] = array( $term->name, get_term_link( $term ) );
+	} elseif ( is_page() && ! is_front_page() ) {
+		foreach ( array_reverse( get_post_ancestors( get_the_ID() ) ) as $anc ) {
+			$trail[] = array( get_the_title( $anc ), get_permalink( $anc ) );
+		}
+		$trail[] = array( get_the_title(), get_permalink() );
 	}
 	return $trail;
 }
@@ -458,7 +463,7 @@ function sgd_schema() {
 		$graph[] = $article;
 	}
 
-	if ( ( is_singular( array( 'dich_vu', 'post' ) ) || sgd_is_listing() || is_home() || is_category() || is_tag() ) && ! sgd_rank_math_breadcrumbs() && ! ( is_singular( 'post' ) && sgd_has_seo_plugin() ) ) {
+	if ( ( is_singular( array( 'dich_vu', 'post' ) ) || sgd_is_listing() || is_home() || is_category() || is_tag() || ( is_page() && ! is_front_page() && ! sgd_has_seo_plugin() ) ) && ! sgd_rank_math_breadcrumbs() && ! ( is_singular( 'post' ) && sgd_has_seo_plugin() ) ) {
 		$list = array();
 		foreach ( sgd_breadcrumb_trail() as $i => $t ) {
 			$list[] = array(

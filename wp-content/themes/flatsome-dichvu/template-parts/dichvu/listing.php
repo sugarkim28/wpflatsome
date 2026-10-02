@@ -22,13 +22,9 @@ if ( $sgd_groups && ! is_wp_error( $sgd_groups ) ) {
 }
 ?>
 <div id="content" class="sgd-listing">
+	<?php echo sgd_pagehead( sgd_listing_h1(), trim( wp_strip_all_tags( (string) $sgd_intro ) ) ? wp_kses_post( $sgd_intro ) : '' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- đã escape. ?>
 	<div class="row sgd-single__row">
 		<div class="col large-8">
-			<?php sgd_breadcrumbs(); ?>
-			<h1 class="sgd-single__title"><?php echo esc_html( sgd_listing_h1() ); ?></h1>
-			<?php if ( trim( wp_strip_all_tags( (string) $sgd_intro ) ) ) : ?>
-				<div class="sgd-single__intro"><?php echo wp_kses_post( $sgd_intro ); ?></div>
-			<?php endif; ?>
 			<?php if ( $sgd_groups && ! is_wp_error( $sgd_groups ) ) : ?>
 				<nav class="sgd-tabs" aria-label="Nhóm dịch vụ">
 					<a href="<?php echo esc_url( get_post_type_archive_link( 'dich_vu' ) ); ?>"<?php echo $sgd_term ? '' : ' class="is-active" aria-current="page"'; ?>>Tất cả</a>

@@ -15,13 +15,9 @@ $sgd_cats  = get_categories( array( 'hide_empty' => true, 'number' => 8 ) );
 $sgd_first = ! is_paged() && ! is_search();
 ?>
 <div id="content" class="sgd-blog">
+	<?php echo sgd_pagehead( $sgd_title, trim( wp_strip_all_tags( (string) $sgd_desc ) ) ? wp_kses_post( wpautop( $sgd_desc ) ) : '' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- đã escape. ?>
 	<div class="row sgd-single__row">
 		<div class="col large-8">
-			<?php sgd_breadcrumbs(); ?>
-			<h1 class="sgd-single__title"><?php echo esc_html( $sgd_title ); ?></h1>
-			<?php if ( trim( wp_strip_all_tags( (string) $sgd_desc ) ) ) : ?>
-				<div class="sgd-single__intro"><?php echo wp_kses_post( wpautop( $sgd_desc ) ); ?></div>
-			<?php endif; ?>
 			<?php if ( count( $sgd_cats ) > 1 ) : ?>
 				<nav class="sgd-tabs" aria-label="Chuyên mục">
 					<a href="<?php echo esc_url( get_permalink( get_option( 'page_for_posts' ) ) ? get_permalink( get_option( 'page_for_posts' ) ) : home_url( '/' ) ); ?>"<?php echo is_home() ? ' class="is-active" aria-current="page"' : ''; ?>>Tất cả</a>

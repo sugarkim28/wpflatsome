@@ -616,8 +616,10 @@ function sgd_sc_topbar( $atts ) {
 		return '<span class="sgd-topbar__slogan">' . esc_html( sgd_opt( 'topbar_text' ) ) . '</span>';
 	}
 	$out  = '<span class="sgd-topbar">';
-	$out .= '<a href="#dang-ky" class="sgd-topbar__req">' . sgd_icon( 'mail' ) . ' Gửi yêu cầu tư vấn</a>';
-	$out .= '<a href="tel:' . esc_attr( sgd_tel( sgd_opt( 'hotline' ) ) ) . '" class="sgd-topbar__hot">Hotline hỗ trợ: <strong>' . esc_html( sgd_opt( 'hotline' ) ) . '</strong></a>';
+	if ( sgd_opt( 'email' ) ) {
+		$out .= '<a href="mailto:' . esc_attr( sgd_opt( 'email' ) ) . '" class="sgd-topbar__mail">' . sgd_icon( 'mail' ) . ' ' . esc_html( sgd_opt( 'email' ) ) . '</a>';
+	}
+	$out .= '<a href="#dang-ky" class="sgd-topbar__req">Gửi yêu cầu tư vấn →</a>';
 	foreach ( array( 'facebook' => 'f', 'youtube' => '▶' ) as $k => $label ) {
 		if ( sgd_opt( $k ) ) {
 			$out .= '<a class="sgd-topbar__soc" href="' . esc_url( sgd_opt( $k ) ) . '" target="_blank" rel="noopener" aria-label="' . esc_attr( ucfirst( $k ) ) . '">' . esc_html( $label ) . '</a>';

@@ -43,16 +43,18 @@ while ( have_posts() ) :
 	$sgd_intro = has_excerpt() ? get_the_excerpt() : sgd_meta( 'subtitle' );
 	?>
 	<div id="content" class="sgd-single">
+		<?php
+		$sgd_by = 'Cập nhật <time datetime="' . esc_attr( get_the_modified_date( 'c' ) ) . '">' . esc_html( get_the_modified_date( 'd/m/Y' ) ) . '</time>';
+		if ( sgd_meta( 'duration' ) ) {
+			$sgd_by .= ' · Thời gian: <strong>' . esc_html( sgd_meta( 'duration' ) ) . '</strong>';
+		}
+		if ( sgd_opt( 'expert' ) ) {
+			$sgd_by .= ' · Kiểm duyệt nội dung: <strong>' . esc_html( trim( sgd_opt( 'expert_title' ) . ' ' . sgd_opt( 'expert' ) ) ) . '</strong>';
+		}
+		echo sgd_pagehead( get_the_title(), '<p class="sgd-byline">' . $sgd_by . '</p>', $sgd_group ? '<a class="sgd-pagehead__cat" href="' . esc_url( get_term_link( $sgd_group ) ) . '">' . esc_html( $sgd_group->name ) . '</a>' : '' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- đã escape từng phần.
+		?>
 		<div class="row sgd-single__row">
 			<div class="col large-8 sgd-single__main">
-				<?php sgd_breadcrumbs(); ?>
-				<h1 class="sgd-single__title"><?php the_title(); ?></h1>
-				<p class="sgd-byline">
-					Cập nhật <time datetime="<?php echo esc_attr( get_the_modified_date( 'c' ) ); ?>"><?php echo esc_html( get_the_modified_date( 'd/m/Y' ) ); ?></time>
-					<?php if ( sgd_opt( 'expert' ) ) : ?>
-						· Kiểm duyệt nội dung: <strong><?php echo esc_html( trim( sgd_opt( 'expert_title' ) . ' ' . sgd_opt( 'expert' ) ) ); ?></strong>
-					<?php endif; ?>
-				</p>
 				<?php if ( $sgd_intro ) : ?>
 					<p class="sgd-single__intro"><?php echo esc_html( wp_strip_all_tags( $sgd_intro ) ); ?></p>
 				<?php endif; ?>

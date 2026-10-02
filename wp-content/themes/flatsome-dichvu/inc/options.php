@@ -44,6 +44,9 @@ function sgd_defaults() {
 		'popup_sub'      => 'Tư vấn thành lập công ty, thuế, kế toán miễn phí',
 		'form_title'     => 'Nhận tư vấn & báo giá miễn phí',
 		'form_perks'     => "Tư vấn miễn phí, trả lời trong 15 phút\nBáo giá trọn gói, cam kết không phát sinh\nSoạn hồ sơ – nộp online – giao kết quả tận nơi",
+		'about_title'    => 'Đồng hành cùng doanh nghiệp từ ngày đầu thành lập',
+		'about_text'     => 'Tin Học 119 hỗ trợ trọn gói thủ tục thành lập, thay đổi giấy phép kinh doanh, kê khai thuế và kế toán cho doanh nghiệp vừa và nhỏ. Mỗi khách hàng có một chuyên viên riêng phụ trách, báo giá rõ ràng ngay từ đầu và cập nhật tiến độ thường xuyên qua Zalo.',
+		'stats'          => "3 – 5 ngày | có giấy phép kinh doanh\n500.000đ | kế toán trọn gói mỗi tháng\n100% | hồ sơ nộp trực tuyến\n1 : 1 | chuyên viên riêng phụ trách",
 	);
 }
 
@@ -169,6 +172,9 @@ function sgd_customize_register( $wp_customize ) {
 		'popup_sub'      => array( 'sgd_form', 'text', 'Dòng phụ của popup' ),
 		'form_title'     => array( 'sgd_form', 'text', 'Tiêu đề form' ),
 		'form_perks'     => array( 'sgd_form', 'textarea', 'Lợi ích khi đăng ký (mỗi dòng 1 ý)' ),
+		'about_title'    => array( 'sgd_company', 'text', 'Trang chủ – tiêu đề khối giới thiệu' ),
+		'about_text'     => array( 'sgd_company', 'textarea', 'Trang chủ – đoạn giới thiệu công ty (nên ghi năm thành lập, số doanh nghiệp đã hỗ trợ, chứng chỉ đại lý thuế… nếu có)' ),
+		'stats'          => array( 'sgd_company', 'textarea', 'Số liệu uy tín (trang chủ, trang giới thiệu) – mỗi dòng: Con số | Mô tả (vd: 10+ năm | kinh nghiệm). Chỉ ghi số liệu thật' ),
 		'color_primary'  => array( 'sgd_form', 'color', 'Màu chủ đạo' ),
 		'color_accent'   => array( 'sgd_form', 'color', 'Màu nhấn (nút)' ),
 	);

@@ -6,6 +6,13 @@
  *  [sgd_pricetabs items="slug:show:Nhãn,…"] – bảng giá trọn gói theo tab
  *  [sgd_cta_strip]                   – dải kêu gọi cuối trang (hotline, Zalo, nút)
  *
+ * Bản 0.5 (đồng bộ toàn site, phong cách công ty kế toán – đại lý thuế):
+ *  [sgd_header_info]                 – header: hotline, Zalo, giờ làm việc (máy tính) / nút gọi gọn (điện thoại)
+ *  [sgd_about]                       – khối giới thiệu công ty + số liệu uy tín
+ *  [sgd_commit]                      – cam kết dịch vụ (dùng trên nền xanh đậm)
+ *  [sgd_pagehead title sub]          – dải tiêu đề trang (breadcrumb + H1) dùng chung mọi trang
+ *  [sgd_contact_list]                – thông tin liên hệ có icon, bỏ dòng trống (footer, trang liên hệ)
+ *
  * Tab: nội dung mọi tab đều có sẵn trong HTML (Google đọc được), tab chưa chọn ẩn bằng
  * thuộc tính hidden ngay từ máy chủ nên không nhảy bố cục khi tải trang.
  *
@@ -186,3 +193,151 @@ function sgd_sc_cta_strip( $atts ) {
 		. '<a class="button sgd-btn" href="#dang-ky">Nhận báo giá</a></div></div>';
 }
 add_shortcode( 'sgd_cta_strip', 'sgd_sc_cta_strip' );
+
+/**
+ * Số liệu uy tín: [[con số, mô tả], ...].
+ *
+ * @return array
+ */
+function sgd_stats() {
+	return array_slice( array_filter( sgd_lines( sgd_opt( 'stats' ) ), function ( $l ) {
+		return '' !== $l[0];
+	} ), 0, 4 );
+}
+
+/**
+ * Header: thông tin liên hệ (máy tính) + nút gọi gọn (điện thoại).
+ *
+ * @return string
+ */
+function sgd_sc_header_info() {
+	$hot  = sgd_opt( 'hotline' );
+	$zalo = sgd_tel( sgd_opt( 'zalo' ) );
+	$out  = '<div class="sgd-hinfo">';
+	$out .= '<a class="sgd-hinfo__item" href="tel:' . esc_attr( sgd_tel( $hot ) ) . '"><span class="sgd-hinfo__ico is-red">' . sgd_icon( 'phone' ) . '</span><span><small>Hotline tư vấn</small><strong>' . esc_html( $hot ) . '</strong></span></a>';
+	if ( $zalo ) {
+		$out .= '<a class="sgd-hinfo__item" href="https://zalo.me/' . esc_attr( $zalo ) . '" target="_blank" rel="noopener"><span class="sgd-hinfo__ico is-zalo">Zalo</span><span><small>Chat Zalo</small><strong>' . esc_html( sgd_tel( $hot ) === $zalo ? $hot : sgd_opt( 'zalo' ) ) . '</strong></span></a>';
+	}
+	if ( sgd_opt( 'working_hours' ) ) {
+		$out .= '<span class="sgd-hinfo__item"><span class="sgd-hinfo__ico">' . sgd_icon( 'clock' ) . '</span><span><small>Giờ làm việc</small><strong>' . esc_html( sgd_opt( 'working_hours' ) ) . '</strong></span></span>';
+	}
+	return $out . '</div><a class="sgd-hcall sgd-hinfo__m" href="tel:' . esc_attr( sgd_tel( $hot ) ) . '" aria-label="Gọi ' . esc_attr( $hot ) . '">' . sgd_icon( 'phone' ) . '<span><small>Hotline tư vấn</small><strong>' . esc_html( $hot ) . '</strong></span></a>';
+}
+add_shortcode( 'sgd_header_info', 'sgd_sc_header_info' );
+
+/**
+ * Khối giới thiệu công ty (trang chủ): thẻ thương hiệu + số liệu bên trái, nội dung bên phải.
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function sgd_sc_about( $atts ) {
+	$a     = shortcode_atts(
+		array(
+			'title'  => sgd_opt( 'about_title' ),
+			'text'   => sgd_opt( 'about_text' ),
+			'points' => "Giá trọn gói, công khai – ghi rõ trong báo giá, hợp đồng\nHồ sơ kiểm tra kỹ trước khi nộp, đúng hẹn\nMột chuyên viên phụ trách từ đầu đến cuối\nBảo mật giấy tờ, số liệu doanh nghiệp",
+			'more'   => '',
+		),
+		$atts,
+		'sgd_about'
+	);
+	$stats = '';
+	foreach ( sgd_stats() as $st ) {
+		$stats .= '<div class="sgd-about__stat"><strong>' . esc_html( $st[0] ) . '</strong><span>' . esc_html( $st[1] ) . '</span></div>';
+	}
+	$points = '';
+	foreach ( sgd_list( str_replace( array( '<br />', '<br>' ), "\n", $a['points'] ) ) as $pt ) {
+		$points .= '<li>' . esc_html( $pt ) . '</li>';
+	}
+	$more = $a['more'] ? $a['more'] : ( get_page_by_path( 'gioi-thieu' ) ? get_permalink( get_page_by_path( 'gioi-thieu' ) ) : '' );
+	return '<div class="sgd-about">'
+		. '<div class="sgd-about__brand"><img src="' . esc_url( SGD_URI . '/assets/img/logo-119-white.svg' ) . '" alt="' . esc_attr( sgd_opt( 'company' ) ) . '" width="280" height="56" loading="lazy">'
+		. '<p class="sgd-about__slogan">' . esc_html( sgd_opt( 'tagline' ) ) . '</p>'
+		. ( $stats ? '<div class="sgd-about__stats">' . $stats . '</div>' : '' ) . '</div>'
+		. '<div class="sgd-about__text"><p class="sgd-eyebrow">Về ' . esc_html( sgd_opt( 'company' ) ) . '</p>'
+		. '<h2 class="sgd-about__title">' . esc_html( $a['title'] ) . '</h2>'
+		. ( $a['text'] ? '<p class="sgd-about__lead">' . esc_html( wp_strip_all_tags( $a['text'] ) ) . '</p>' : '' )
+		. ( $points ? '<ul class="sgd-check sgd-about__points">' . $points . '</ul>' : '' )
+		. '<p class="sgd-about__btns"><a class="button sgd-btn" href="#dang-ky">Nhận tư vấn miễn phí</a>'
+		. ( $more ? '<a class="sgd-about__more" href="' . esc_url( $more ) . '">Tìm hiểu về chúng tôi →</a>' : '' ) . '</p>'
+		. '</div></div>';
+}
+add_shortcode( 'sgd_about', 'sgd_sc_about' );
+
+/**
+ * Cam kết dịch vụ – mỗi dòng nội dung: "icon | Tiêu đề | Mô tả".
+ *
+ * @param array  $atts    Thuộc tính.
+ * @param string $content Nội dung.
+ * @return string
+ */
+function sgd_sc_commit( $atts, $content = '' ) {
+	$text  = trim( wp_strip_all_tags( str_ireplace( array( '<br>', '<br/>', '<br />', '</p>' ), "\n", (string) $content ) ) );
+	$items = $text ? sgd_lines( $text, 3 ) : array(
+		array( 'wallet', 'Đúng giá', 'Báo giá trọn gói, không thu thêm ngoài hợp đồng' ),
+		array( 'clock', 'Đúng hạn', 'Hoàn thành đúng thời gian đã cam kết' ),
+		array( 'shield', 'Bảo mật', 'Giữ kín giấy tờ, số liệu của doanh nghiệp' ),
+		array( 'users', 'Đồng hành', 'Hỗ trợ miễn phí các câu hỏi sau dịch vụ' ),
+	);
+	$out = '<ul class="sgd-commit">';
+	foreach ( $items as $it ) {
+		$out .= '<li><span class="sgd-commit__ico">' . sgd_icon( sanitize_key( $it[0] ) ) . '</span><span><strong>' . esc_html( $it[1] ) . '</strong>' . esc_html( $it[2] ) . '</span></li>';
+	}
+	return $out . '</ul>';
+}
+add_shortcode( 'sgd_commit', 'sgd_sc_commit' );
+
+/**
+ * Dải tiêu đề trang dùng chung: breadcrumb + (nhãn) + H1 + dòng phụ / thông tin.
+ *
+ * @param string $title H1.
+ * @param string $sub   Dòng phụ (HTML an toàn).
+ * @param string $pre   HTML trước H1 (vd nhãn chuyên mục).
+ * @return string
+ */
+function sgd_pagehead( $title, $sub = '', $pre = '' ) {
+	ob_start();
+	sgd_breadcrumbs();
+	$crumbs = ob_get_clean();
+	return '<div class="sgd-pagehead"><div class="row"><div class="col large-12">' . $crumbs . $pre
+		. '<h1 class="sgd-pagehead__title">' . esc_html( $title ) . '</h1>'
+		. ( $sub ? '<div class="sgd-pagehead__sub">' . $sub . '</div>' : '' ) . '</div></div></div>';
+}
+
+/**
+ * Shortcode dải tiêu đề cho trang dựng bằng UX Builder.
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function sgd_sc_pagehead( $atts ) {
+	$a = shortcode_atts( array( 'title' => get_the_title(), 'sub' => '' ), $atts, 'sgd_pagehead' );
+	return sgd_pagehead( $a['title'], $a['sub'] ? '<p>' . esc_html( $a['sub'] ) . '</p>' : '' );
+}
+add_shortcode( 'sgd_pagehead', 'sgd_sc_pagehead' );
+
+/**
+ * Thông tin liên hệ có icon (bỏ qua mục trống).
+ *
+ * @return string
+ */
+function sgd_sc_contact_list() {
+	$rows = array(
+		array( 'pin', sgd_opt( 'address' ), '' ),
+		array( 'phone', sgd_opt( 'hotline' ), 'tel:' . sgd_tel( sgd_opt( 'hotline' ) ) ),
+		array( 'mail', sgd_opt( 'email' ), 'mailto:' . sgd_opt( 'email' ) ),
+		array( 'doc', sgd_opt( 'tax_code' ) ? 'MST: ' . sgd_opt( 'tax_code' ) : '', '' ),
+		array( 'clock', sgd_opt( 'working_hours' ), '' ),
+	);
+	$out = '<ul class="sgd-clist">';
+	foreach ( $rows as $r ) {
+		if ( '' === trim( (string) $r[1] ) || false !== strpos( $r[1], '...' ) ) {
+			continue;
+		}
+		$val  = $r[2] ? '<a href="' . esc_url( $r[2], array( 'tel', 'mailto' ) ) . '">' . esc_html( $r[1] ) . '</a>' : esc_html( $r[1] );
+		$out .= '<li>' . sgd_icon( $r[0] ) . '<span>' . $val . '</span></li>';
+	}
+	return $out . '</ul>';
+}
+add_shortcode( 'sgd_contact_list', 'sgd_sc_contact_list' );

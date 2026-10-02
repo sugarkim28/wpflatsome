@@ -16,18 +16,13 @@ while ( have_posts() ) :
 	list( $sgd_content, $sgd_heads ) = sgd_content_headings( apply_filters( 'the_content', get_the_content() ) ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- hook lõi WP.
 	?>
 	<div id="content" class="sgd-single sgd-post-single">
+		<?php
+		$sgd_by = 'Cập nhật <time datetime="' . esc_attr( get_the_modified_date( 'c' ) ) . '">' . esc_html( get_the_modified_date( 'd/m/Y' ) ) . '</time> · ' . esc_html( sgd_reading_time() ) . ' phút đọc · '
+			. ( sgd_opt( 'expert' ) ? 'Kiểm duyệt: <strong>' . esc_html( trim( sgd_opt( 'expert_title' ) . ' ' . sgd_opt( 'expert' ) ) ) . '</strong>' : 'Biên tập: <strong>' . esc_html( sgd_opt( 'company' ) ) . '</strong>' );
+		echo sgd_pagehead( get_the_title(), '<p class="sgd-byline">' . $sgd_by . '</p>', $sgd_cat ? '<a class="sgd-pagehead__cat" href="' . esc_url( get_category_link( $sgd_cat ) ) . '">' . esc_html( $sgd_cat->name ) . '</a>' : '' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- đã escape từng phần.
+		?>
 		<div class="row sgd-single__row">
 			<article class="col large-8 sgd-single__main">
-				<?php sgd_breadcrumbs(); ?>
-				<?php if ( $sgd_cat ) : ?>
-					<a class="sgd-bcard__cat" href="<?php echo esc_url( get_category_link( $sgd_cat ) ); ?>"><?php echo esc_html( $sgd_cat->name ); ?></a>
-				<?php endif; ?>
-				<h1 class="sgd-single__title"><?php the_title(); ?></h1>
-				<p class="sgd-byline">
-					Cập nhật <time datetime="<?php echo esc_attr( get_the_modified_date( 'c' ) ); ?>"><?php echo esc_html( get_the_modified_date( 'd/m/Y' ) ); ?></time>
-					· <?php echo esc_html( sgd_reading_time() ); ?> phút đọc
-					· <?php echo sgd_opt( 'expert' ) ? 'Kiểm duyệt: <strong>' . esc_html( trim( sgd_opt( 'expert_title' ) . ' ' . sgd_opt( 'expert' ) ) ) . '</strong>' : 'Biên tập: <strong>' . esc_html( sgd_opt( 'company' ) ) . '</strong>'; ?>
-				</p>
 				<?php if ( has_excerpt() ) : ?>
 					<p class="sgd-single__intro"><?php echo esc_html( get_the_excerpt() ); ?></p>
 				<?php endif; ?>
