@@ -1,0 +1,12 @@
+<?php
+/**
+ * Kết quả tìm kiếm.
+ *
+ * @package Flatsome_Dichvu
+ */
+
+defined( 'ABSPATH' ) || exit;
+
+get_header();
+get_template_part( 'template-parts/dichvu/blog-list' );
+get_footer();
