@@ -1465,9 +1465,30 @@ body.sgd { background: #fff; font-size: 16px; -webkit-font-smoothing: antialiase
 .sgd .sgd-htab span { display: inline-block; padding: 10px 18px; border: 0; border-left: 6px solid var(--sgd-accent); background: var(--sgd-primary); color: #fff; font-size: 1.08rem; font-weight: 800; text-transform: uppercase; }
 .sgd .sgd-side .sgd-wbox__links { background: none; }
 
-/* 0.9.5 – Khối nhóm trang chủ: thẻ = mục con trên menu; điện thoại vuốt ngang */
+/* 0.9.5 – Khối nhóm trang chủ: thẻ = mục con trên menu, chia hàng đầy (lưới 12 cột); điện thoại vuốt ngang */
+.sgd-gsec__menu { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; margin-top: 36px; }
+.sgd-gcell { display: flex; min-width: 0; }
+.sgd-gcell > .sgd-bcard { flex: 1; }
+.sgd-gcell.is-w12 { grid-column: span 12; }
+.sgd-gcell.is-w6 { grid-column: span 6; }
+.sgd-gcell.is-w4 { grid-column: span 4; }
+.sgd-gcell.is-w3 { grid-column: span 3; }
+/* Thẻ lớn (hàng 1–2 thẻ): nằm ngang, ảnh trái – chữ phải */
+.sgd-gcell.is-w6 > .sgd-bcard, .sgd-gcell.is-w12 > .sgd-bcard { display: grid; grid-template-columns: 42% 1fr; }
+.sgd-gcell.is-w6 .sgd-bcard__img, .sgd-gcell.is-w12 .sgd-bcard__img { aspect-ratio: auto; height: 100%; min-height: 200px; }
+.sgd-gcell.is-w6 .sgd-bcard__body, .sgd-gcell.is-w12 .sgd-bcard__body { justify-content: center; padding: 22px 24px; }
+.sgd .sgd-gcell.is-w6 .sgd-bcard__title, .sgd .sgd-gcell.is-w12 .sgd-bcard__title { font-size: 1.22rem; }
+/* Hàng 4 thẻ: gọn hơn */
+.sgd .sgd-gcell.is-w3 .sgd-bcard__title { font-size: 1rem; }
+.sgd-gcell.is-w3 .sgd-bcard__excerpt { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.sgd-gcell .sgd-bcard__meta { margin-top: auto; }
+@media (max-width: 1099px) and (min-width: 850px) {
+	.sgd-gcell.is-w3 { grid-column: span 6; }
+}
 @media (max-width: 849px) {
 	.sgd .sgd-gsec__menu { display: grid; grid-auto-flow: column; grid-auto-columns: 46%; grid-template-columns: none; gap: 14px; overflow-x: auto; margin-right: -15px; padding: 4px 15px 14px 2px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
-	.sgd .sgd-gsec__menu > * { scroll-snap-align: start; }
+	.sgd .sgd-gsec__menu > .sgd-gcell { grid-column: auto; scroll-snap-align: start; }
+	.sgd-gcell.is-w6 > .sgd-bcard, .sgd-gcell.is-w12 > .sgd-bcard { display: flex; }
+	.sgd-gcell.is-w6 .sgd-bcard__img, .sgd-gcell.is-w12 .sgd-bcard__img { aspect-ratio: 16 / 9; height: auto; min-height: 0; }
 }
 @media (max-width: 549px) { .sgd .sgd-gsec__menu { grid-auto-columns: 82%; } }

@@ -457,13 +457,16 @@ function sgd_sc_group_section( $atts ) {
 	$menu_items = 'menu' === $a['source'] ? sgd_group_menu_items( $terms ) : null;
 	if ( $menu_items ) {
 		ob_start();
-		echo '<div class="sgd-gsec__posts sgd-gsec__menu">';
-		foreach ( $menu_items as $mi ) {
+		$widths = sgd_balanced_widths( count( $menu_items ) );
+		echo '<div class="sgd-gsec__menu">';
+		foreach ( $menu_items as $i => $mi ) {
+			echo '<div class="sgd-gcell is-w' . (int) $widths[ $i ] . '">';
 			if ( $mi['post'] && 'dich_vu' === $mi['post']->post_type ) {
-				get_template_part( 'template-parts/dichvu/service-card', null, array( 'post' => $mi['post'], 'tag' => 'h3', 'price' => '1' === (string) $a['price'], 'title' => $mi['title'] ) );
+				get_template_part( 'template-parts/dichvu/service-card', null, array( 'post' => $mi['post'], 'tag' => 'h3', 'price' => '1' === (string) $a['price'] ) );
 			} else {
 				sgd_menu_card( $mi );
 			}
+			echo '</div>';
 		}
 		echo '</div>';
 		$out .= ob_get_clean();
@@ -489,6 +492,34 @@ function sgd_sc_group_section( $atts ) {
 	return $out . '</div>';
 }
 add_shortcode( 'sgd_group_section', 'sgd_sc_group_section' );
+
+/**
+ * Chia n thẻ thành các hàng đầy, cân đối (lưới 12 cột): hàng 3 là chính,
+ * dư 1 → 1 hàng 4; dư 2 → 2 hàng 4 (riêng 5 thẻ: 2 thẻ lớn + 3).
+ * VD: 5 = 2+3 · 6 = 3+3 · 7 = 4+3 · 8 = 4+4 · 9 = 3+3+3 · 10 = 4+3+3.
+ *
+ * @param int $n Số thẻ.
+ * @return int[] Độ rộng (trên 12 cột) của từng thẻ.
+ */
+function sgd_balanced_widths( $n ) {
+	if ( $n <= 0 ) {
+		return array();
+	}
+	if ( $n <= 4 ) {
+		$rows = array( $n );
+	} elseif ( 5 === $n ) {
+		$rows = array( 2, 3 );
+	} else {
+		$r    = $n % 3;
+		$rows = array_fill( 0, $r, 4 );
+		$rows = array_merge( $rows, array_fill( 0, (int) ( ( $n - 4 * $r ) / 3 ), 3 ) );
+	}
+	$w = array();
+	foreach ( $rows as $size ) {
+		$w = array_merge( $w, array_fill( 0, $size, (int) ( 12 / $size ) ) );
+	}
+	return $w;
+}
 
 /**
  * Các mục con trên menu chính ứng với nhóm dịch vụ (theo thứ tự trong menu).
