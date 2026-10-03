@@ -722,3 +722,30 @@ function sgd_sc_faq( $atts, $content = '' ) {
 	return $out . '</div>';
 }
 add_shortcode( 'sgd_faq', 'sgd_sc_faq' );
+
+/**
+ * [sgd_lookup] – Tra cứu nhanh: dẫn tới các cổng tra cứu chính thức của cơ quan nhà nước.
+ * Mỗi thẻ: tên, mô tả, dịch vụ liên quan của công ty (để khách cần hỗ trợ thì liên hệ).
+ *
+ * @return string
+ */
+function sgd_sc_lookup() {
+	$items = array(
+		array( 'building', 'Thông tin doanh nghiệp', 'Tra cứu tên, mã số, địa chỉ, người đại diện, tình trạng hoạt động của doanh nghiệp đã đăng ký.', 'https://dangkykinhdoanh.gov.vn/', 'Cổng thông tin quốc gia về đăng ký doanh nghiệp' ),
+		array( 'tax', 'Mã số thuế doanh nghiệp', 'Tra cứu thông tin người nộp thuế là doanh nghiệp, tổ chức theo mã số thuế hoặc tên.', 'https://tracuunnt.gdt.gov.vn/tcnnt/mstdn.jsp', 'Cục Thuế – Bộ Tài chính' ),
+		array( 'users', 'Mã số thuế cá nhân', 'Tra cứu mã số thuế, tình trạng đăng ký thuế của cá nhân.', 'https://tracuunnt.gdt.gov.vn/tcnnt/mstcn.jsp', 'Cục Thuế – Bộ Tài chính' ),
+		array( 'doc', 'Hoá đơn điện tử', 'Kiểm tra hoá đơn điện tử đã được cơ quan thuế cấp mã / tiếp nhận hay chưa.', 'https://hoadondientu.gdt.gov.vn/', 'Cổng hoá đơn điện tử – Cục Thuế' ),
+		array( 'calculator', 'Thuế điện tử (eTax)', 'Nộp tờ khai, nộp thuế, tra cứu nghĩa vụ thuế của doanh nghiệp.', 'https://thuedientu.gdt.gov.vn/', 'Cục Thuế – Bộ Tài chính' ),
+		array( 'shield', 'Bảo hiểm xã hội', 'Tra cứu quá trình đóng BHXH, mã số BHXH, cơ sở khám chữa bệnh.', 'https://baohiemxahoi.gov.vn/', 'Bảo hiểm xã hội Việt Nam' ),
+		array( 'trademark', 'Nhãn hiệu, logo', 'Tra cứu nhãn hiệu đã nộp đơn / được bảo hộ trước khi đăng ký thương hiệu.', 'https://wipopublish.ipvietnam.gov.vn/', 'Cục Sở hữu trí tuệ' ),
+		array( 'search', 'Văn bản pháp luật', 'Tra cứu luật, nghị định, thông tư về doanh nghiệp, thuế, kế toán.', 'https://vbpl.vn/', 'Cơ sở dữ liệu quốc gia về văn bản pháp luật' ),
+	);
+	$out = '<div class="sgd-lookup">';
+	foreach ( $items as $it ) {
+		$out .= '<a class="sgd-lookup__item" href="' . esc_url( $it[3] ) . '" target="_blank" rel="noopener nofollow">'
+			. '<span class="sgd-lookup__ico">' . sgd_icon( $it[0] ) . '</span>'
+			. '<span class="sgd-lookup__body"><strong>' . esc_html( $it[1] ) . '</strong><span>' . esc_html( $it[2] ) . '</span><small>' . esc_html( $it[4] ) . ' ↗</small></span></a>';
+	}
+	return $out . '</div><p class="sgd-lookup__note">Các liên kết dẫn tới trang chính thức của cơ quan nhà nước. Cần hỗ trợ tra cứu hoặc xử lý kết quả? Gọi <a href="tel:' . esc_attr( sgd_tel( sgd_opt( 'hotline' ) ) ) . '">' . esc_html( sgd_opt( 'hotline' ) ) . '</a> – chuyên viên kiểm tra giúp miễn phí.</p>';
+}
+add_shortcode( 'sgd_lookup', 'sgd_sc_lookup' );

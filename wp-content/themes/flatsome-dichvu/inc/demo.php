@@ -29,7 +29,7 @@ function sgd_demo_page() {
 		<?php if ( 'done' === $msg ) : ?>
 			<div class="notice notice-success"><p><strong>Đã tạo xong.</strong> <a href="<?php echo esc_url( home_url( '/' ) ); ?>" target="_blank">Xem trang chủ</a> · <a href="<?php echo esc_url( get_post_type_archive_link( 'dich_vu' ) ); ?>" target="_blank">Xem danh sách dịch vụ</a></p></div>
 		<?php elseif ( 'menu' === $msg ) : ?>
-			<div class="notice notice-success"><p><strong>Đã cập nhật menu</strong> và tạo các trang dịch vụ còn thiếu (trang chủ, dịch vụ đã có giữ nguyên). <a href="<?php echo esc_url( admin_url( 'nav-menus.php' ) ); ?>">Xem menu</a></p></div>
+			<div class="notice notice-success"><p><strong>Đã cập nhật menu</strong>, tạo các trang dịch vụ và trang Tra cứu còn thiếu, đổi tên 3 khối dịch vụ chính trên trang chủ (nội dung khác giữ nguyên). <a href="<?php echo esc_url( admin_url( 'nav-menus.php' ) ); ?>">Xem menu</a></p></div>
 		<?php elseif ( 'cleaned' === $msg ) : ?>
 			<div class="notice notice-success"><p>Đã xoá bài viết mẫu.</p></div>
 		<?php endif; ?>
@@ -233,6 +233,7 @@ function sgd_demo_build() {
 	$about   = sgd_demo_post( array( 'post_type' => 'page', 'post_name' => 'gioi-thieu', 'post_title' => 'Giới thiệu', 'post_content' => sgd_demo_about_content() ), $blank );
 	$contact = sgd_demo_post( array( 'post_type' => 'page', 'post_name' => 'lien-he', 'post_title' => 'Liên hệ', 'post_content' => sgd_demo_contact_content() ), $blank );
 	$news    = sgd_demo_post( array( 'post_type' => 'page', 'post_name' => 'tin-tuc', 'post_title' => 'Kiến thức', 'post_content' => '' ) );
+	sgd_demo_post( array( 'post_type' => 'page', 'post_name' => 'tra-cuu', 'post_title' => 'Tra cứu', 'post_content' => sgd_demo_lookup_content() ), $blank );
 	// Trang chủ tạo sau cùng để liên kết tới các trang khác dùng đúng đường dẫn của site
 	// (máy chủ nginx chưa cấu hình rewrite sẽ có dạng /index.php/bang-gia/).
 	$home    = sgd_demo_post( array( 'post_type' => 'page', 'post_name' => 'trang-chu', 'post_title' => 'Trang chủ', 'post_content' => sgd_demo_home_content() ), $blank );
@@ -354,21 +355,21 @@ function sgd_demo_home_content() {
 [section label="4. Dịch vụ thành lập" bg_color="#f4f7fc" padding="64px" padding__sm="40px"]
 [row]
 [col span="12"]
-[sgd_group_section group="thanh-lap-doanh-nghiep" title="Tư vấn thành lập công ty" price="0"]
+[sgd_group_section group="thanh-lap-doanh-nghiep" title="Dịch vụ thành lập công ty" price="0"]
 [/col]
 [/row]
 [/section]
 [section label="5. Dịch vụ kế toán – thuế" bg_color="#ffffff" padding="64px" padding__sm="40px"]
 [row]
 [col span="12"]
-[sgd_group_section group="ke-toan,dich-vu-thue" title="Dịch vụ kế toán – thuế" flip="1" price="0"]
+[sgd_group_section group="ke-toan,dich-vu-thue" title="Dịch vụ kế toán" flip="1" price="0"]
 [/col]
 [/row]
 [/section]
 [section label="6. Thay đổi GPKD" bg_color="#f4f7fc" padding="64px" padding__sm="40px"]
 [row]
 [col span="12"]
-[sgd_group_section group="thay-doi-giay-phep" title="Thay đổi đăng ký kinh doanh" price="0"]
+[sgd_group_section group="thay-doi-giay-phep" title="Thay đổi giấy phép kinh doanh" price="0"]
 [/col]
 [/row]
 [/section]
@@ -802,10 +803,14 @@ function sgd_demo_build_menu( $groups, $services ) {
 		'Thay đổi GPKD',
 		'',
 		array(
-			array( 'Thay đổi địa chỉ', 'thay-doi-dia-chi-cong-ty' ),
-			array( 'Đổi tên, người đại diện', 'thay-doi-nguoi-dai-dien-ten-cong-ty' ),
-			array( 'Tăng, giảm vốn điều lệ', 'tang-giam-von-dieu-le' ),
-			array( 'Bổ sung ngành nghề', 'bo-sung-nganh-nghe-kinh-doanh' ),
+			array( 'Thay đổi tên', 'doi-ten-cong-ty' ),
+			array( 'Đổi địa chỉ', 'thay-doi-dia-chi-cong-ty' ),
+			array( 'Thêm ngành nghề', 'bo-sung-nganh-nghe-kinh-doanh' ),
+			array( 'Tăng vốn điều lệ', 'tang-giam-von-dieu-le' ),
+			array( 'Thêm cổ đông', 'them-giam-thanh-vien-co-dong' ),
+			array( 'Đổi đại diện pháp luật', 'doi-dai-dien-phap-luat' ),
+			array( 'Đổi loại hình công ty', 'chuyen-doi-loai-hinh-cong-ty' ),
+			array( 'Cập nhật CCCD', 'cap-nhat-cccd-dang-ky-kinh-doanh' ),
 		)
 	);
 	$top(
@@ -836,6 +841,7 @@ function sgd_demo_build_menu( $groups, $services ) {
 		)
 	);
 	$add( 'Kiến thức', ( $news_id ? get_permalink( $news_id ) : $page( 'tin-tuc' ) ) );
+	$add( 'Tra cứu', $page( 'tra-cuu' ) );
 	$add( 'Liên hệ', $page( 'lien-he' ) );
 	$loc                   = get_theme_mod( 'nav_menu_locations', array() );
 	$loc['primary']        = $menu_id;
@@ -854,9 +860,55 @@ function sgd_demo_menu_run() {
 	check_admin_referer( 'sgd_demo_menu_run' );
 	sgd_register_services();
 	list( $groups, $services ) = sgd_demo_services( sgd_demo_data(), true );
+	if ( ! get_page_by_path( 'tra-cuu', OBJECT, 'page' ) ) {
+		sgd_demo_post( array( 'post_type' => 'page', 'post_name' => 'tra-cuu', 'post_title' => 'Tra cứu', 'post_content' => sgd_demo_lookup_content() ), array( '_wp_page_template' => 'page-blank.php' ) );
+	}
+	sgd_demo_rename_home_sections();
 	sgd_demo_build_menu( $groups, $services );
 	flush_rewrite_rules();
 	wp_safe_redirect( admin_url( 'themes.php?page=sgd-demo&sgd_demo=menu' ) );
 	exit;
 }
 add_action( 'admin_post_sgd_demo_menu_run', 'sgd_demo_menu_run' );
+
+/**
+ * Nội dung trang Tra cứu.
+ *
+ * @return string
+ */
+function sgd_demo_lookup_content() {
+	return '[sgd_pagehead title="Tra cứu thông tin doanh nghiệp, thuế, hoá đơn" sub="Liên kết nhanh tới các cổng tra cứu chính thức của cơ quan nhà nước."]
+[section bg_color="#ffffff" padding="50px"]
+[row]
+[col span="8" span__sm="12"]
+[sgd_lookup]
+[/col]
+[col span="4" span__sm="12"]
+<div id="dang-ky"></div>
+[sgd_lead_form title="Cần hỗ trợ? Gửi yêu cầu" source="Trang tra cứu"]
+[/col]
+[/row]
+[/section]';
+}
+
+/**
+ * Đổi tên 3 khối dịch vụ chính trên trang chủ đang dùng (không đụng nội dung khác).
+ */
+function sgd_demo_rename_home_sections() {
+	$id = (int) get_option( 'page_on_front' );
+	if ( ! $id ) {
+		return;
+	}
+	$c   = (string) get_post_field( 'post_content', $id );
+	$new = strtr(
+		$c,
+		array(
+			'title="Tư vấn thành lập công ty"'    => 'title="Dịch vụ thành lập công ty"',
+			'title="Dịch vụ kế toán – thuế"'       => 'title="Dịch vụ kế toán"',
+			'title="Thay đổi đăng ký kinh doanh"' => 'title="Thay đổi giấy phép kinh doanh"',
+		)
+	);
+	if ( $new !== $c ) {
+		wp_update_post( array( 'ID' => $id, 'post_content' => wp_slash( $new ) ) );
+	}
+}

@@ -58,6 +58,13 @@ Trang chủ (bản 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh
 
 Khối `[sgd_group_section group="…"]` (Tư vấn thành lập công ty, Kế toán – thuế, Thay đổi GPKD, Dịch vụ khác): các thẻ bên dưới **lấy đúng các mục con trên menu chính** của mục tương ứng, theo thứ tự trong menu (bỏ mục "Tổng quan" trỏ lại chính nhóm). Thêm / bớt / đổi thứ tự trong **Giao diện → Menu** là trang chủ tự cập nhật. Mục con có thể là dịch vụ, trang, bài viết, chuyên mục hoặc liên kết tự nhập. Thẻ tự chia hàng đầy, cân đối (bản 0.9.6): 3 → 3 · 4 → 4 · 5 → 2 thẻ lớn nằm ngang + 3 · 6 → 3+3 · 7 → 4+3 · 8 → 4+4 · 9 → 3+3+3 · 10 → 4+3+3. Điện thoại: thẻ vuốt ngang. Muốn quay lại kiểu cũ (bài viết Kiến thức liên quan): thêm `source="posts"`.
 
+## Menu giống ketoananpha.vn & trang Tra cứu (bản 0.10.0)
+
+- Menu: Giới thiệu · Dịch vụ thành lập · Dịch vụ kế toán · Thay đổi GPKD (Thay đổi tên, Đổi địa chỉ, Thêm ngành nghề, Tăng vốn điều lệ, Thêm cổ đông, Đổi đại diện pháp luật, Đổi loại hình công ty, Cập nhật CCCD) · Dịch vụ khác · Đào tạo · Kiến thức · **Tra cứu** · Liên hệ.
+- Trang **Tra cứu** (`/tra-cuu/`, shortcode `[sgd_lookup]`): liên kết tới cổng tra cứu chính thức – doanh nghiệp, mã số thuế doanh nghiệp / cá nhân, hoá đơn điện tử, thuế điện tử, BHXH, nhãn hiệu, văn bản pháp luật – kèm form hỗ trợ.
+- Trang chủ: 3 khối chính đổi tên *Dịch vụ thành lập công ty – Dịch vụ kế toán – Thay đổi giấy phép kinh doanh* (nút *Cập nhật menu* tự đổi trên trang chủ đang dùng, không đụng nội dung khác).
+- Trang "Chữ ký số, hóa đơn điện tử" (gói chung) vẫn giữ nguyên.
+
 ## Menu dịch vụ mới (bản 0.9.9)
 
 Menu chính: GIỚI THIỆU · DỊCH VỤ THÀNH LẬP (Thành lập công ty, Công ty TNHH, Công ty cổ phần, Công ty vốn nước ngoài, FDI company establishment, Chi nhánh công ty, Hộ kinh doanh cá thể) · DỊCH VỤ KẾ TOÁN (Kế toán trọn gói, nội bộ, hộ kinh doanh, Tax and accounting service, Khai thuế ban đầu, Báo cáo tài chính, Quyết toán thuế cuối năm, Làm sổ sách kế toán, Hoàn thuế GTGT, Hoàn thuế TNCN) · THAY ĐỔI GPKD · DỊCH VỤ KHÁC (Hóa đơn điện tử, Bảo hiểm xã hội, Tạm ngừng kinh doanh, Giải thể doanh nghiệp, Đăng ký kinh doanh, VPĐD nước ngoài, Đăng ký nhãn hiệu – logo, Chữ ký số, Đăng ký MST cá nhân, Soạn thảo hợp đồng) · ĐÀO TẠO (Kế toán tổng hợp, Kế toán thuế, Sổ sách kế toán) · KIẾN THỨC · LIÊN HỆ.
