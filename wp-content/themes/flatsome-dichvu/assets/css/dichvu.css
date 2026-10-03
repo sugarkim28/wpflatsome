@@ -1532,3 +1532,17 @@ body.sgd { background: #fff; font-size: 16px; -webkit-font-smoothing: antialiase
 	.sgd-share__label { width: 100%; margin-bottom: 2px; }
 	.sgd .sgd-share__btn { flex: 1 1 0; min-width: 0; height: 40px; padding: 0 6px; }
 }
+/* 0.9.9 – Thanh dưới điện thoại: bỏ "Nhận báo giá", số cột theo số nút */
+@media (max-width: 849px) {
+	.sgd-mbar.sgd-mbar--n1 { grid-template-columns: 1fr; }
+	.sgd-mbar.sgd-mbar--n2 { grid-template-columns: 1fr 1fr; }
+	.sgd-mbar.sgd-mbar--n3 { grid-template-columns: repeat(3, 1fr); }
+	.sgd-mbar--n2 a { flex-direction: row; gap: 10px; font-size: .9rem; }
+}
+@media (max-width: 849px) {
+	.sgd-mbar--n1 a::before, .sgd-mbar--n2 a::before { display: none; }
+	.sgd-mbar--n1 svg, .sgd-mbar--n1 b, .sgd-mbar--n2 svg, .sgd-mbar--n2 b { border-radius: 50%; animation: sgd-shake 1.2s ease-in-out infinite, sgd-halo 1.6s ease-out infinite; }
+	.sgd-mbar--n2 .sgd-mbar__call svg { padding: 3px; }
+}
+@keyframes sgd-halo { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, .7); } 100% { box-shadow: 0 0 0 12px rgba(255, 255, 255, 0); } }
+@media (prefers-reduced-motion: reduce) { .sgd-mbar svg, .sgd-mbar b { animation: none !important; } }

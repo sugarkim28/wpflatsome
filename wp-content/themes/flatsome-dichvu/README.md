@@ -58,6 +58,13 @@ Trang chủ (bản 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh
 
 Khối `[sgd_group_section group="…"]` (Tư vấn thành lập công ty, Kế toán – thuế, Thay đổi GPKD, Dịch vụ khác): các thẻ bên dưới **lấy đúng các mục con trên menu chính** của mục tương ứng, theo thứ tự trong menu (bỏ mục "Tổng quan" trỏ lại chính nhóm). Thêm / bớt / đổi thứ tự trong **Giao diện → Menu** là trang chủ tự cập nhật. Mục con có thể là dịch vụ, trang, bài viết, chuyên mục hoặc liên kết tự nhập. Thẻ tự chia hàng đầy, cân đối (bản 0.9.6): 3 → 3 · 4 → 4 · 5 → 2 thẻ lớn nằm ngang + 3 · 6 → 3+3 · 7 → 4+3 · 8 → 4+4 · 9 → 3+3+3 · 10 → 4+3+3. Điện thoại: thẻ vuốt ngang. Muốn quay lại kiểu cũ (bài viết Kiến thức liên quan): thêm `source="posts"`.
 
+## Menu dịch vụ mới (bản 0.9.9)
+
+Menu chính: GIỚI THIỆU · DỊCH VỤ THÀNH LẬP (Thành lập công ty, Công ty TNHH, Công ty cổ phần, Công ty vốn nước ngoài, FDI company establishment, Chi nhánh công ty, Hộ kinh doanh cá thể) · DỊCH VỤ KẾ TOÁN (Kế toán trọn gói, nội bộ, hộ kinh doanh, Tax and accounting service, Khai thuế ban đầu, Báo cáo tài chính, Quyết toán thuế cuối năm, Làm sổ sách kế toán, Hoàn thuế GTGT, Hoàn thuế TNCN) · THAY ĐỔI GPKD · DỊCH VỤ KHÁC (Hóa đơn điện tử, Bảo hiểm xã hội, Tạm ngừng kinh doanh, Giải thể doanh nghiệp, Đăng ký kinh doanh, VPĐD nước ngoài, Đăng ký nhãn hiệu – logo, Chữ ký số, Đăng ký MST cá nhân, Soạn thảo hợp đồng) · ĐÀO TẠO (Kế toán tổng hợp, Kế toán thuế, Sổ sách kế toán) · KIẾN THỨC · LIÊN HỆ.
+
+- Nút **Giao diện → Tạo site mẫu → Cập nhật menu (giữ trang chủ)**: chỉ tạo các trang dịch vụ còn thiếu (13 trang mới, dữ liệu ở `inc/demo-data-more.php`, giá để "Liên hệ") và dựng lại Menu chính – không ghi đè trang chủ, dịch vụ đã sửa, header, footer.
+- Thanh dưới cùng điện thoại: bỏ "Nhận báo giá", còn Gọi điện – Chat Zalo (– Messenger nếu có), icon nhấp nháy.
+
 ## Chia sẻ & nút liên hệ (bản 0.9.8)
 
 - Nút chia sẻ ở cuối bài viết, trang dịch vụ, trang nhóm: Facebook, Zalo, X, LinkedIn, Telegram, Sao chép liên kết. Zalo: điện thoại mở bảng chia sẻ của máy (chọn Zalo); máy tính sao chép liên kết để dán vào Zalo (Zalo không có link chia sẻ web công khai).

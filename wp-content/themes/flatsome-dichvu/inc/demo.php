@@ -28,14 +28,16 @@ function sgd_demo_page() {
 		<h1>Tạo site mẫu – dịch vụ doanh nghiệp</h1>
 		<?php if ( 'done' === $msg ) : ?>
 			<div class="notice notice-success"><p><strong>Đã tạo xong.</strong> <a href="<?php echo esc_url( home_url( '/' ) ); ?>" target="_blank">Xem trang chủ</a> · <a href="<?php echo esc_url( get_post_type_archive_link( 'dich_vu' ) ); ?>" target="_blank">Xem danh sách dịch vụ</a></p></div>
+		<?php elseif ( 'menu' === $msg ) : ?>
+			<div class="notice notice-success"><p><strong>Đã cập nhật menu</strong> và tạo các trang dịch vụ còn thiếu (trang chủ, dịch vụ đã có giữ nguyên). <a href="<?php echo esc_url( admin_url( 'nav-menus.php' ) ); ?>">Xem menu</a></p></div>
 		<?php elseif ( 'cleaned' === $msg ) : ?>
 			<div class="notice notice-success"><p>Đã xoá bài viết mẫu.</p></div>
 		<?php endif; ?>
 		<p><strong>Trước khi bấm:</strong> nhập tên công ty, hotline, Zalo, địa chỉ ở <a href="<?php echo esc_url( admin_url( 'customize.php?autofocus[section]=sgd_company' ) ); ?>">Tuỳ biến → Website dịch vụ</a> (trang chủ, footer, header lấy thông tin từ đó).</p>
 		<p>Nút này dựng sẵn:</p>
 		<ul style="list-style:disc;margin-left:20px">
-			<li>5 nhóm dịch vụ: <em>Thành lập doanh nghiệp, Thay đổi giấy phép kinh doanh, Dịch vụ thuế, Dịch vụ kế toán, Dịch vụ khác</em>.</li>
-			<li>20 dịch vụ có sẵn nội dung, chi phí trọn gói, bảng giá (gói / bảng theo số hóa đơn), quy trình, hồ sơ cần chuẩn bị, câu hỏi thường gặp.</li>
+			<li>6 nhóm dịch vụ: <em>Thành lập doanh nghiệp, Thay đổi giấy phép kinh doanh, Dịch vụ thuế, Dịch vụ kế toán, Dịch vụ khác, Đào tạo kế toán</em>.</li>
+			<li>Hơn 30 dịch vụ có sẵn nội dung, chi phí trọn gói, bảng giá (gói / bảng theo số hóa đơn), quy trình, hồ sơ cần chuẩn bị, câu hỏi thường gặp.</li>
 			<li>3 bài viết mẫu; trang <em>Trang chủ</em>, <em>Bảng giá</em>, <em>Giới thiệu</em>, <em>Liên hệ</em>, <em>Kiến thức</em> (sửa bằng UX Builder).</li>
 			<li>Menu chính, footer (UX Block "Footer website"), header Flatsome.</li>
 		</ul>
@@ -44,6 +46,11 @@ function sgd_demo_page() {
 			<input type="hidden" name="action" value="sgd_demo_run">
 			<?php wp_nonce_field( 'sgd_demo_run' ); ?>
 			<?php submit_button( 'Tạo site mẫu', 'primary hero', 'submit', false ); ?>
+		</form>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;margin-right:10px" onsubmit="return confirm('Dựng lại Menu chính theo mẫu và tạo các trang dịch vụ còn thiếu? Trang chủ và các dịch vụ đã có giữ nguyên. Mục menu bạn tự thêm sẽ bị thay.');">
+			<input type="hidden" name="action" value="sgd_demo_menu_run">
+			<?php wp_nonce_field( 'sgd_demo_menu_run' ); ?>
+			<?php submit_button( 'Cập nhật menu (giữ trang chủ)', 'secondary', 'submit', false ); ?>
 		</form>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block" onsubmit="return confirm('Xoá 3 bài viết mẫu?');">
 			<input type="hidden" name="action" value="sgd_demo_clean">
@@ -162,53 +169,9 @@ function sgd_demo_build() {
 		update_option( 'permalink_structure', '/%postname%/' );
 	}
 	sgd_register_services();
-	$data = require SGD_DIR . '/inc/demo-data.php';
+	$data = sgd_demo_data();
 
-	// 1. Nhóm dịch vụ.
-	$groups = array();
-	foreach ( $data['groups'] as $slug => $g ) {
-		$groups[ $slug ] = sgd_demo_term( 'nhom_dich_vu', $g[0], $slug, $g[3], array( '_sgd_icon' => $g[1], '_sgd_order' => $g[2] ) );
-	}
-
-	// 2. Dịch vụ.
-	$services = array();
-	foreach ( $data['services'] as $i => $s ) {
-		$content = '';
-		foreach ( $s['content'] as $h => $p ) {
-			// Đoạn bắt đầu bằng "<" là HTML soạn sẵn (bảng so sánh…), giữ nguyên.
-			$content .= '<h2>' . esc_html( $h ) . "</h2>\n" . ( 0 === strpos( $p, '<' ) ? $p : '<p>' . esc_html( $p ) . '</p>' ) . "\n";
-		}
-		$id = sgd_demo_post(
-			array(
-				'post_type'    => 'dich_vu',
-				'post_name'    => $s['slug'],
-				'post_title'   => $s['title'],
-				'post_excerpt' => $s['excerpt'],
-				'post_content' => $content,
-				'menu_order'   => $i + 1,
-			),
-			array(
-				'_sgd_demo'      => 'service',
-				'_sgd_short'       => isset( $s['short'] ) ? $s['short'] : '',
-				'_sgd_costs'       => isset( $s['costs'] ) ? $s['costs'] : '',
-				'_sgd_price_table' => isset( $s['price_table'] ) ? $s['price_table'] : '',
-				'_sgd_subtitle'  => $s['subtitle'],
-				'_sgd_price'     => $s['price'],
-				'_sgd_duration'  => $s['duration'],
-				'_sgd_icon'      => $s['icon'],
-				'_sgd_includes'  => $s['includes'],
-				'_sgd_documents' => $s['documents'],
-				'_sgd_process'   => $s['process'],
-				'_sgd_packages'  => $s['packages'],
-				'_sgd_faq'       => $s['faq'],
-				'_sgd_featured'  => $s['featured'] ? '1' : '',
-			)
-		);
-		if ( $id ) {
-			wp_set_object_terms( $id, array( $groups[ $s['group'] ] ), 'nhom_dich_vu' );
-			$services[ $s['slug'] ] = $id;
-		}
-	}
+	list( $groups, $services ) = sgd_demo_services( $data );
 	$link = function ( $slug ) use ( $services ) {
 		return isset( $services[ $slug ] ) ? get_permalink( $services[ $slug ] ) : get_post_type_archive_link( 'dich_vu' );
 	};
@@ -296,102 +259,7 @@ function sgd_demo_build() {
 	set_theme_mod( 'footer_right_text', '' );
 
 	// 6. Menu.
-	$menu_name = 'Menu chính';
-	$menu      = wp_get_nav_menu_object( $menu_name );
-	$menu_id   = $menu ? $menu->term_id : wp_create_nav_menu( $menu_name );
-	foreach ( (array) wp_get_nav_menu_items( $menu_id ) as $it ) {
-		wp_delete_post( $it->ID, true );
-	}
-	$add = function ( $title, $url, $parent = 0, $obj = array() ) use ( $menu_id ) {
-		$item = array(
-			'menu-item-title'     => $title,
-			'menu-item-status'    => 'publish',
-			'menu-item-parent-id' => $parent,
-		);
-		if ( $obj ) {
-			$item = array_merge( $item, $obj );
-		} else {
-			$item['menu-item-url']  = $url;
-			$item['menu-item-type'] = 'custom';
-		}
-		return wp_update_nav_menu_item( $menu_id, 0, $item );
-	};
-	// Menu kiểu ketoananpha.vn: chữ in hoa, mỗi mục là 1 trang có bài giới thiệu; menu con mở đầu bằng trang tổng quan của nhóm.
-	// Không đặt "Bảng giá" trên menu – bảng giá nằm trong bài viết từng nhóm và từng dịch vụ.
-	$tax_item = function ( $slug, $label, $parent = 0 ) use ( $groups, $add ) {
-		return $add( $label, '', $parent, array( 'menu-item-object' => 'nhom_dich_vu', 'menu-item-object-id' => $groups[ $slug ], 'menu-item-type' => 'taxonomy' ) );
-	};
-	// Menu con theo danh sách cố định (thứ tự giống ketoananpha.vn): [nhãn, slug dịch vụ].
-	$svc_item = function ( $label, $slug, $parent ) use ( $services, $add ) {
-		if ( isset( $services[ $slug ] ) ) {
-			$add( $label, '', $parent, array( 'menu-item-object' => 'dich_vu', 'menu-item-object-id' => $services[ $slug ], 'menu-item-type' => 'post_type' ) );
-		}
-	};
-	$top = function ( $slug, $label, $overview, $items ) use ( $tax_item, $svc_item ) {
-		$parent = $tax_item( $slug, $label );
-		$tax_item( $slug, $overview, $parent );
-		foreach ( $items as $it ) {
-			$svc_item( $it[0], $it[1], $parent );
-		}
-		return $parent;
-	};
-	$add( 'Giới thiệu', get_permalink( $about ) );
-	$top(
-		'thanh-lap-doanh-nghiep',
-		'Thành lập công ty',
-		'Thành lập công ty',
-		array(
-			array( 'Công ty TNHH', 'thanh-lap-cong-ty-tnhh' ),
-			array( 'Công ty cổ phần', 'thanh-lap-cong-ty-co-phan' ),
-			array( 'Công ty vốn nước ngoài', 'thanh-lap-cong-ty-von-nuoc-ngoai' ),
-			array( 'Chi nhánh công ty', 'thanh-lap-chi-nhanh-van-phong-dai-dien' ),
-			array( 'Hộ kinh doanh cá thể', 'dang-ky-ho-kinh-doanh' ),
-		)
-	);
-	$top(
-		'ke-toan',
-		'Dịch vụ kế toán',
-		'Dịch vụ kế toán',
-		array(
-			array( 'Kế toán trọn gói', 'ke-toan-tron-goi' ),
-			array( 'Kế toán nội bộ', 'ke-toan-noi-bo' ),
-			array( 'Kế toán hộ kinh doanh', 'ke-toan-ho-kinh-doanh' ),
-			array( 'Khai thuế ban đầu', 'khai-thue-ban-dau' ),
-			array( 'Báo cáo tài chính', 'bao-cao-tai-chinh' ),
-			array( 'Quyết toán thuế cuối năm', 'quyet-toan-thue-cuoi-nam' ),
-			array( 'Làm sổ sách kế toán', 'ra-soat-lam-lai-so-sach-ke-toan' ),
-			array( 'Hoàn thuế GTGT', 'hoan-thue-gtgt' ),
-			array( 'Hoàn thuế TNCN', 'hoan-thue-tncn' ),
-		)
-	);
-	$top(
-		'thay-doi-giay-phep',
-		'Thay đổi GPKD',
-		'Thay đổi giấy phép kinh doanh',
-		array(
-			array( 'Thay đổi địa chỉ', 'thay-doi-dia-chi-cong-ty' ),
-			array( 'Đổi tên, người đại diện', 'thay-doi-nguoi-dai-dien-ten-cong-ty' ),
-			array( 'Tăng, giảm vốn điều lệ', 'tang-giam-von-dieu-le' ),
-			array( 'Bổ sung ngành nghề', 'bo-sung-nganh-nghe-kinh-doanh' ),
-			array( 'Tạm ngừng, giải thể', 'tam-ngung-giai-the-doanh-nghiep' ),
-		)
-	);
-	$top(
-		'dich-vu-khac',
-		'Dịch vụ khác',
-		'Dịch vụ khác',
-		array(
-			array( 'Bảo hiểm xã hội', 'dang-ky-bao-hiem-xa-hoi' ),
-			array( 'Chữ ký số, hóa đơn điện tử', 'chu-ky-so-hoa-don-dien-tu' ),
-			array( 'Đăng ký nhãn hiệu', 'dang-ky-nhan-hieu' ),
-		)
-	);
-	$add( 'Kiến thức', get_permalink( $news ) );
-	$add( 'Liên hệ', get_permalink( $contact ) );
-	$loc                   = get_theme_mod( 'nav_menu_locations', array() );
-	$loc['primary']        = $menu_id;
-	$loc['primary_mobile'] = $menu_id;
-	set_theme_mod( 'nav_menu_locations', $loc );
+	sgd_demo_build_menu( $groups, $services );
 
 	// 7. Header Flatsome 2 tầng (kiểu công ty kế toán – đại lý thuế): thanh trên cùng (khẩu hiệu – email)
 	// → hàng chính: logo trái, hotline/Zalo/giờ làm việc phải → thanh menu xanh chủ đạo toàn chiều ngang.
@@ -752,3 +620,243 @@ function sgd_demo_url( $slug ) {
 	$p = get_page_by_path( $slug );
 	return $p ? get_permalink( $p ) : home_url( '/' );
 }
+
+/**
+ * Dữ liệu mẫu: demo-data.php + demo-data-more.php (menu mới).
+ *
+ * @return array
+ */
+function sgd_demo_data() {
+	$data = require SGD_DIR . '/inc/demo-data.php';
+	$more = require SGD_DIR . '/inc/demo-data-more.php';
+	$data['groups']   = array_merge( $data['groups'], $more['groups'] );
+	$data['services'] = array_merge( $data['services'], $more['services'] );
+	return $data;
+}
+
+/**
+ * Tạo / cập nhật nhóm và dịch vụ mẫu.
+ *
+ * @param array $data         Dữ liệu.
+ * @param bool  $only_missing true = chỉ tạo dịch vụ chưa có (không ghi đè dịch vụ bạn đã sửa).
+ * @return array [ nhóm slug => ID, dịch vụ slug => ID ]
+ */
+function sgd_demo_services( $data, $only_missing = false ) {
+	$defaults = array(
+		'subtitle'  => '',
+		'price'     => '',
+		'duration'  => '',
+		'icon'      => 'doc',
+		'includes'  => '',
+		'documents' => '',
+		'process'   => '',
+		'packages'  => '',
+		'faq'       => '',
+		'featured'  => false,
+		'content'   => array(),
+		'excerpt'   => '',
+	);
+	$services = array();
+	$groups = array();
+	foreach ( $data['groups'] as $slug => $g ) {
+		$groups[ $slug ] = sgd_demo_term( 'nhom_dich_vu', $g[0], $slug, $g[3], array( '_sgd_icon' => $g[1], '_sgd_order' => $g[2] ) );
+	}
+
+	// Dịch vụ.
+	foreach ( $data['services'] as $i => $s ) {
+		$s = array_merge( $defaults, $s );
+		if ( $only_missing ) {
+			$have = get_page_by_path( $s['slug'], OBJECT, 'dich_vu' );
+			if ( $have ) {
+				$services[ $s['slug'] ] = $have->ID;
+				continue;
+			}
+		}
+		$content = '';
+		foreach ( $s['content'] as $h => $p ) {
+			// Đoạn bắt đầu bằng "<" là HTML soạn sẵn (bảng so sánh…), giữ nguyên.
+			$content .= '<h2>' . esc_html( $h ) . "</h2>\n" . ( 0 === strpos( $p, '<' ) ? $p : '<p>' . esc_html( $p ) . '</p>' ) . "\n";
+		}
+		$id = sgd_demo_post(
+			array(
+				'post_type'    => 'dich_vu',
+				'post_name'    => $s['slug'],
+				'post_title'   => $s['title'],
+				'post_excerpt' => $s['excerpt'],
+				'post_content' => $content,
+				'menu_order'   => $i + 1,
+			),
+			array(
+				'_sgd_demo'      => 'service',
+				'_sgd_short'       => isset( $s['short'] ) ? $s['short'] : '',
+				'_sgd_costs'       => isset( $s['costs'] ) ? $s['costs'] : '',
+				'_sgd_price_table' => isset( $s['price_table'] ) ? $s['price_table'] : '',
+				'_sgd_subtitle'  => $s['subtitle'],
+				'_sgd_price'     => $s['price'],
+				'_sgd_duration'  => $s['duration'],
+				'_sgd_icon'      => $s['icon'],
+				'_sgd_includes'  => $s['includes'],
+				'_sgd_documents' => $s['documents'],
+				'_sgd_process'   => $s['process'],
+				'_sgd_packages'  => $s['packages'],
+				'_sgd_faq'       => $s['faq'],
+				'_sgd_featured'  => $s['featured'] ? '1' : '',
+			)
+		);
+		if ( $id ) {
+			wp_set_object_terms( $id, array( $groups[ $s['group'] ] ), 'nhom_dich_vu' );
+			$services[ $s['slug'] ] = $id;
+		}
+	}
+	return array( $groups, $services );
+}
+
+/**
+ * Menu chính theo bố cục ketoananpha.vn: Giới thiệu · Dịch vụ thành lập · Dịch vụ kế toán · Thay đổi GPKD
+ * · Dịch vụ khác · Đào tạo · Kiến thức · Liên hệ.
+ *
+ * @param array $groups   Nhóm (slug => ID).
+ * @param array $services Dịch vụ (slug => ID).
+ */
+function sgd_demo_build_menu( $groups, $services ) {
+	$page = function ( $slug ) {
+		$p = get_page_by_path( $slug, OBJECT, 'page' );
+		return $p ? get_permalink( $p ) : home_url( '/' . $slug . '/' );
+	};
+	$news_id = (int) get_option( 'page_for_posts' );
+	$menu_name = 'Menu chính';
+	$menu      = wp_get_nav_menu_object( $menu_name );
+	$menu_id   = $menu ? $menu->term_id : wp_create_nav_menu( $menu_name );
+	foreach ( (array) wp_get_nav_menu_items( $menu_id ) as $it ) {
+		wp_delete_post( $it->ID, true );
+	}
+	$add = function ( $title, $url, $parent = 0, $obj = array() ) use ( $menu_id ) {
+		$item = array(
+			'menu-item-title'     => $title,
+			'menu-item-status'    => 'publish',
+			'menu-item-parent-id' => $parent,
+		);
+		if ( $obj ) {
+			$item = array_merge( $item, $obj );
+		} else {
+			$item['menu-item-url']  = $url;
+			$item['menu-item-type'] = 'custom';
+		}
+		return wp_update_nav_menu_item( $menu_id, 0, $item );
+	};
+	// Menu kiểu ketoananpha.vn: chữ in hoa, mỗi mục là 1 trang có bài giới thiệu; menu con mở đầu bằng trang tổng quan của nhóm.
+	// Không đặt "Bảng giá" trên menu – bảng giá nằm trong bài viết từng nhóm và từng dịch vụ.
+	$tax_item = function ( $slug, $label, $parent = 0 ) use ( $groups, $add ) {
+		return $add( $label, '', $parent, array( 'menu-item-object' => 'nhom_dich_vu', 'menu-item-object-id' => $groups[ $slug ], 'menu-item-type' => 'taxonomy' ) );
+	};
+	// Menu con theo danh sách cố định (thứ tự giống ketoananpha.vn): [nhãn, slug dịch vụ].
+	$svc_item = function ( $label, $slug, $parent ) use ( $services, $add ) {
+		if ( isset( $services[ $slug ] ) ) {
+			$add( $label, '', $parent, array( 'menu-item-object' => 'dich_vu', 'menu-item-object-id' => $services[ $slug ], 'menu-item-type' => 'post_type' ) );
+		}
+	};
+	// $overview = '' → không có mục tổng quan ở đầu menu con.
+	$top = function ( $slug, $label, $overview, $items ) use ( $tax_item, $svc_item ) {
+		$parent = $tax_item( $slug, $label );
+		if ( $overview ) {
+			$tax_item( $slug, $overview, $parent );
+		}
+		foreach ( $items as $it ) {
+			$svc_item( $it[0], $it[1], $parent );
+		}
+		return $parent;
+	};
+	$add( 'Giới thiệu', $page( 'gioi-thieu' ) );
+	$top(
+		'thanh-lap-doanh-nghiep',
+		'Dịch vụ thành lập',
+		'Thành lập công ty',
+		array(
+			array( 'Công ty TNHH', 'thanh-lap-cong-ty-tnhh' ),
+			array( 'Công ty cổ phần', 'thanh-lap-cong-ty-co-phan' ),
+			array( 'Công ty vốn nước ngoài', 'thanh-lap-cong-ty-von-nuoc-ngoai' ),
+			array( 'FDI company establishment', 'fdi-company-establishment' ),
+			array( 'Chi nhánh công ty', 'thanh-lap-chi-nhanh-van-phong-dai-dien' ),
+			array( 'Hộ kinh doanh cá thể', 'dang-ky-ho-kinh-doanh' ),
+		)
+	);
+	$top(
+		'ke-toan',
+		'Dịch vụ kế toán',
+		'',
+		array(
+			array( 'Kế toán trọn gói', 'ke-toan-tron-goi' ),
+			array( 'Kế toán nội bộ', 'ke-toan-noi-bo' ),
+			array( 'Kế toán hộ kinh doanh', 'ke-toan-ho-kinh-doanh' ),
+			array( 'Tax and accounting service', 'tax-and-accounting-service' ),
+			array( 'Khai thuế ban đầu', 'khai-thue-ban-dau' ),
+			array( 'Báo cáo tài chính', 'bao-cao-tai-chinh' ),
+			array( 'Quyết toán thuế cuối năm', 'quyet-toan-thue-cuoi-nam' ),
+			array( 'Làm sổ sách kế toán', 'ra-soat-lam-lai-so-sach-ke-toan' ),
+			array( 'Hoàn thuế GTGT', 'hoan-thue-gtgt' ),
+			array( 'Hoàn thuế TNCN', 'hoan-thue-tncn' ),
+		)
+	);
+	$top(
+		'thay-doi-giay-phep',
+		'Thay đổi GPKD',
+		'',
+		array(
+			array( 'Thay đổi địa chỉ', 'thay-doi-dia-chi-cong-ty' ),
+			array( 'Đổi tên, người đại diện', 'thay-doi-nguoi-dai-dien-ten-cong-ty' ),
+			array( 'Tăng, giảm vốn điều lệ', 'tang-giam-von-dieu-le' ),
+			array( 'Bổ sung ngành nghề', 'bo-sung-nganh-nghe-kinh-doanh' ),
+		)
+	);
+	$top(
+		'dich-vu-khac',
+		'Dịch vụ khác',
+		'',
+		array(
+			array( 'Hóa đơn điện tử', 'hoa-don-dien-tu' ),
+			array( 'Bảo hiểm xã hội', 'dang-ky-bao-hiem-xa-hoi' ),
+			array( 'Tạm ngừng kinh doanh', 'tam-ngung-kinh-doanh' ),
+			array( 'Giải thể doanh nghiệp', 'giai-the-doanh-nghiep' ),
+			array( 'Đăng ký kinh doanh', 'dang-ky-kinh-doanh' ),
+			array( 'VPĐD nước ngoài', 'thanh-lap-van-phong-dai-dien-nuoc-ngoai' ),
+			array( 'Đăng ký nhãn hiệu, logo', 'dang-ky-nhan-hieu' ),
+			array( 'Chữ ký số', 'chu-ky-so' ),
+			array( 'Đăng ký MST cá nhân', 'dang-ky-ma-so-thue-ca-nhan' ),
+			array( 'Soạn thảo hợp đồng', 'soan-thao-hop-dong' ),
+		)
+	);
+	$top(
+		'dao-tao',
+		'Đào tạo',
+		'',
+		array(
+			array( 'Kế toán tổng hợp', 'khoa-hoc-ke-toan-tong-hop' ),
+			array( 'Kế toán thuế', 'khoa-hoc-ke-toan-thue' ),
+			array( 'Sổ sách kế toán', 'khoa-hoc-so-sach-ke-toan' ),
+		)
+	);
+	$add( 'Kiến thức', ( $news_id ? get_permalink( $news_id ) : $page( 'tin-tuc' ) ) );
+	$add( 'Liên hệ', $page( 'lien-he' ) );
+	$loc                   = get_theme_mod( 'nav_menu_locations', array() );
+	$loc['primary']        = $menu_id;
+	$loc['primary_mobile'] = $menu_id;
+	set_theme_mod( 'nav_menu_locations', $loc );
+
+}
+
+/**
+ * Chỉ dựng lại menu + tạo dịch vụ còn thiếu (không đụng trang chủ, dịch vụ đã sửa, header, footer).
+ */
+function sgd_demo_menu_run() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'Không có quyền.' );
+	}
+	check_admin_referer( 'sgd_demo_menu_run' );
+	sgd_register_services();
+	list( $groups, $services ) = sgd_demo_services( sgd_demo_data(), true );
+	sgd_demo_build_menu( $groups, $services );
+	flush_rewrite_rules();
+	wp_safe_redirect( admin_url( 'themes.php?page=sgd-demo&sgd_demo=menu' ) );
+	exit;
+}
+add_action( 'admin_post_sgd_demo_menu_run', 'sgd_demo_menu_run' );
