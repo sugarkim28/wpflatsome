@@ -58,6 +58,16 @@ Trang chủ (bản 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh
 
 Khối `[sgd_group_section group="…"]` (Tư vấn thành lập công ty, Kế toán – thuế, Thay đổi GPKD, Dịch vụ khác): các thẻ bên dưới **lấy đúng các mục con trên menu chính** của mục tương ứng, theo thứ tự trong menu (bỏ mục "Tổng quan" trỏ lại chính nhóm). Thêm / bớt / đổi thứ tự trong **Giao diện → Menu** là trang chủ tự cập nhật. Mục con có thể là dịch vụ, trang, bài viết, chuyên mục hoặc liên kết tự nhập. Thẻ tự chia hàng đầy, cân đối (bản 0.9.6): 3 → 3 · 4 → 4 · 5 → 2 thẻ lớn nằm ngang + 3 · 6 → 3+3 · 7 → 4+3 · 8 → 4+4 · 9 → 3+3+3 · 10 → 4+3+3. Điện thoại: thẻ vuốt ngang. Muốn quay lại kiểu cũ (bài viết Kiến thức liên quan): thêm `source="posts"`.
 
+## 10 bài Kiến thức & Đào tạo (bản 0.10.2)
+
+- **Kiến thức** (5 bài, chuyên mục *Kiến thức pháp lý*, *Kiến thức thuế*): thủ tục thành lập công ty 2026 · lịch nộp tờ khai thuế 2026 · khi nào phải thay đổi giấy phép kinh doanh · thuế hộ kinh doanh 2026 (bỏ thuế khoán) · hoá đơn điện tử 2026.
+- **Đào tạo** (5 bài, chuyên mục *Bài học kế toán*): kế toán tổng hợp cho người mới · kê khai thuế GTGT · tính thuế TNCN từ tiền lương 2026 · điểm mới Thông tư 99/2025 · chi phí được trừ thuế TNDN.
+- Nội dung tự biên soạn, cập nhật theo văn bản có hiệu lực đến 10/2026 (Luật DN sửa đổi 76/2025, NĐ 168/2025 + 296/2026, Luật QLT 108/2025 + NĐ 252/2026, Luật TNDN 67/2025 + NĐ 320/2025, Luật TNCN 109/2025 + NQ 110/2025, Luật GTGT 48/2024 + NĐ 181/2025 + 144/2026, NĐ 68/2026, NĐ 70/2025, TT 99/2025, NQ 198/2025…). Nên rà lại khi có văn bản mới.
+- Link nội bộ về trang dịch vụ viết dạng `[[slug-dich-vu|chữ neo]]` / `[[nhom:slug-nhom|chữ neo]]` trong `inc/demo-posts.php`, tự đổi thành link thật khi nhập; dịch vụ chưa có thì chỉ hiện chữ.
+- 3 bài "(bài mẫu)" cũ được thay nội dung, giữ nguyên đường dẫn. Bài đã nhập hoặc bạn tự sửa không bị ghi đè khi bấm lại.
+- Menu: Đào tạo → *Bài học kế toán*; Kiến thức → *Kiến thức pháp lý*, *Kiến thức thuế*.
+- Cập nhật: tải theme đè lên → **Tạo site mẫu → Cập nhật menu (giữ trang chủ)**.
+
 ## Slider dịch vụ đầu trang chủ & menu mới (bản 0.10.1)
 
 - Banner đầu trang chủ thành **slider 3 dịch vụ**: Thành lập công ty · Dịch vụ kế toán · Thay đổi GPKD (form tư vấn vẫn ở bên phải). Tự chuyển sau 6 giây, dừng khi rê chuột, bấm tab hoặc vuốt để chuyển. Trang chủ vẫn chỉ có 1 H1.

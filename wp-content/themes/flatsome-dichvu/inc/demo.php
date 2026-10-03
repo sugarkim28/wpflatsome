@@ -29,7 +29,7 @@ function sgd_demo_page() {
 		<?php if ( 'done' === $msg ) : ?>
 			<div class="notice notice-success"><p><strong>Đã tạo xong.</strong> <a href="<?php echo esc_url( home_url( '/' ) ); ?>" target="_blank">Xem trang chủ</a> · <a href="<?php echo esc_url( get_post_type_archive_link( 'dich_vu' ) ); ?>" target="_blank">Xem danh sách dịch vụ</a></p></div>
 		<?php elseif ( 'menu' === $msg ) : ?>
-			<div class="notice notice-success"><p><strong>Đã cập nhật menu</strong>, tạo các trang dịch vụ và trang Tra cứu còn thiếu, đổi tên 3 khối dịch vụ chính trên trang chủ (nội dung khác giữ nguyên). <a href="<?php echo esc_url( admin_url( 'nav-menus.php' ) ); ?>">Xem menu</a></p></div>
+			<div class="notice notice-success"><p><strong>Đã cập nhật menu</strong>, tạo các trang dịch vụ, trang Tra cứu và bài viết Kiến thức – Đào tạo còn thiếu (bài bạn đã sửa giữ nguyên), đổi tên 3 khối dịch vụ chính trên trang chủ. <a href="<?php echo esc_url( admin_url( 'nav-menus.php' ) ); ?>">Xem menu</a></p></div>
 		<?php elseif ( 'cleaned' === $msg ) : ?>
 			<div class="notice notice-success"><p>Đã xoá bài viết mẫu.</p></div>
 		<?php endif; ?>
@@ -38,7 +38,7 @@ function sgd_demo_page() {
 		<ul style="list-style:disc;margin-left:20px">
 			<li>6 nhóm dịch vụ: <em>Thành lập doanh nghiệp, Thay đổi giấy phép kinh doanh, Dịch vụ thuế, Dịch vụ kế toán, Dịch vụ khác, Đào tạo kế toán</em>.</li>
 			<li>Hơn 30 dịch vụ có sẵn nội dung, chi phí trọn gói, bảng giá (gói / bảng theo số hóa đơn), quy trình, hồ sơ cần chuẩn bị, câu hỏi thường gặp.</li>
-			<li>3 bài viết mẫu; trang <em>Trang chủ</em>, <em>Bảng giá</em>, <em>Giới thiệu</em>, <em>Liên hệ</em>, <em>Kiến thức</em> (sửa bằng UX Builder).</li>
+			<li>10 bài viết Kiến thức &amp; Đào tạo (cập nhật luật 2026, có link về trang dịch vụ); trang <em>Trang chủ</em>, <em>Bảng giá</em>, <em>Giới thiệu</em>, <em>Liên hệ</em>, <em>Kiến thức</em> (sửa bằng UX Builder).</li>
 			<li>Menu chính, footer (UX Block "Footer website"), header Flatsome.</li>
 		</ul>
 		<p><strong>Lưu ý:</strong> giá trong dữ liệu mẫu là <strong>giá minh hoạ</strong> – sửa theo bảng giá thật (Dịch vụ → sửa từng dịch vụ). Chạy lại sẽ đưa các dịch vụ/trang mẫu về nội dung gốc (dịch vụ bạn tự thêm không bị ảnh hưởng).</p>
@@ -47,12 +47,12 @@ function sgd_demo_page() {
 			<?php wp_nonce_field( 'sgd_demo_run' ); ?>
 			<?php submit_button( 'Tạo site mẫu', 'primary hero', 'submit', false ); ?>
 		</form>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;margin-right:10px" onsubmit="return confirm('Dựng lại Menu chính theo mẫu và tạo các trang dịch vụ còn thiếu? Trang chủ và các dịch vụ đã có giữ nguyên. Mục menu bạn tự thêm sẽ bị thay.');">
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;margin-right:10px" onsubmit="return confirm('Dựng lại Menu chính theo mẫu, tạo các trang dịch vụ và bài viết Kiến thức – Đào tạo còn thiếu? Trang chủ và các dịch vụ đã có giữ nguyên. Mục menu bạn tự thêm sẽ bị thay.');">
 			<input type="hidden" name="action" value="sgd_demo_menu_run">
 			<?php wp_nonce_field( 'sgd_demo_menu_run' ); ?>
 			<?php submit_button( 'Cập nhật menu (giữ trang chủ)', 'secondary', 'submit', false ); ?>
 		</form>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block" onsubmit="return confirm('Xoá 3 bài viết mẫu?');">
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block" onsubmit="return confirm('Xoá các bài viết mẫu cũ (có chữ “bài mẫu”)? 10 bài Kiến thức – Đào tạo không bị xoá.');">
 			<input type="hidden" name="action" value="sgd_demo_clean">
 			<?php wp_nonce_field( 'sgd_demo_clean' ); ?>
 			<?php submit_button( 'Xoá bài viết mẫu', 'secondary', 'submit', false ); ?>
@@ -172,51 +172,8 @@ function sgd_demo_build() {
 	$data = sgd_demo_data();
 
 	list( $groups, $services ) = sgd_demo_services( $data );
-	$link = function ( $slug ) use ( $services ) {
-		return isset( $services[ $slug ] ) ? get_permalink( $services[ $slug ] ) : get_post_type_archive_link( 'dich_vu' );
-	};
-
-	// 3. Bài viết mẫu.
-	$cat   = sgd_demo_term( 'category', 'Kiến thức doanh nghiệp', 'kien-thuc-doanh-nghiep' );
-	$posts = array(
-		array(
-			'thu-tuc-thanh-lap-cong-ty',
-			'Thủ tục thành lập công ty: hồ sơ, các bước và lưu ý (bài mẫu)',
-			'<p><em>Bài viết mẫu – minh hoạ cách viết bài chuẩn SEO và liên kết về trang dịch vụ. Kiểm tra lại quy định mới nhất trước khi đăng.</em></p>'
-			. '<h2>Chọn loại hình doanh nghiệp</h2><p>Công ty TNHH phù hợp với ít thành viên, quản lý gọn; công ty cổ phần phù hợp khi có từ 3 cổ đông và cần huy động vốn. Xem chi tiết: <a href="' . esc_url( $link( 'thanh-lap-cong-ty-tnhh' ) ) . '">dịch vụ thành lập công ty TNHH</a>, <a href="' . esc_url( $link( 'thanh-lap-cong-ty-co-phan' ) ) . '">thành lập công ty cổ phần</a>.</p>'
-			. '<h2>Chuẩn bị thông tin</h2><p>Tên công ty, địa chỉ trụ sở, vốn điều lệ, ngành nghề, người đại diện theo pháp luật và giấy tờ pháp lý của các thành viên.</p>'
-			. '<h2>Nộp hồ sơ và nhận kết quả</h2><p>Hồ sơ nộp trực tuyến qua Cổng thông tin quốc gia về đăng ký doanh nghiệp; thời hạn giải quyết 3 ngày làm việc kể từ khi nhận hồ sơ hợp lệ.</p>'
-			. '<h2>Việc cần làm sau khi thành lập</h2><p>Mở tài khoản ngân hàng, chữ ký số, hóa đơn điện tử, kê khai thuế ban đầu, góp vốn trong 90 ngày. Tham khảo <a href="' . esc_url( $link( 'khai-thue-ban-dau' ) ) . '">dịch vụ khai thuế ban đầu</a>.</p>',
-		),
-		array(
-			'lich-nop-to-khai-thue',
-			'Lịch nộp tờ khai thuế cho doanh nghiệp nhỏ (bài mẫu)',
-			'<p><em>Bài viết mẫu – kiểm tra lại quy định mới nhất trước khi đăng.</em></p>'
-			. '<h2>Kê khai theo tháng</h2><p>Nộp tờ khai chậm nhất ngày 20 của tháng tiếp theo.</p>'
-			. '<h2>Kê khai theo quý</h2><p>Nộp tờ khai chậm nhất ngày cuối cùng của tháng đầu quý tiếp theo.</p>'
-			. '<h2>Quyết toán năm</h2><p>Báo cáo tài chính, quyết toán thuế TNDN, TNCN nộp chậm nhất ngày cuối cùng của tháng thứ 3 sau khi kết thúc năm tài chính. Xem <a href="' . esc_url( $link( 'quyet-toan-thue-cuoi-nam' ) ) . '">dịch vụ quyết toán thuế</a> và <a href="' . esc_url( $link( 'ke-toan-tron-goi' ) ) . '">kế toán trọn gói</a>.</p>',
-		),
-		array(
-			'khi-nao-phai-thay-doi-giay-phep-kinh-doanh',
-			'Khi nào doanh nghiệp phải đăng ký thay đổi giấy phép kinh doanh? (bài mẫu)',
-			'<p><em>Bài viết mẫu – kiểm tra lại quy định mới nhất trước khi đăng.</em></p>'
-			. '<h2>Các nội dung phải đăng ký thay đổi</h2><p>Tên, địa chỉ trụ sở, người đại diện theo pháp luật, vốn điều lệ, thành viên/cổ đông, ngành nghề kinh doanh…</p>'
-			. '<h2>Thời hạn đăng ký</h2><p>Trong 10 ngày kể từ ngày có thay đổi. Chậm đăng ký có thể bị xử phạt vi phạm hành chính.</p>'
-			. '<h2>Dịch vụ hỗ trợ</h2><p><a href="' . esc_url( $link( 'thay-doi-dia-chi-cong-ty' ) ) . '">Thay đổi địa chỉ công ty</a>, <a href="' . esc_url( $link( 'bo-sung-nganh-nghe-kinh-doanh' ) ) . '">bổ sung ngành nghề</a>, <a href="' . esc_url( $link( 'tang-giam-von-dieu-le' ) ) . '">tăng giảm vốn điều lệ</a>.</p>',
-		),
-	);
-	foreach ( $posts as $p ) {
-		sgd_demo_post(
-			array(
-				'post_type'     => 'post',
-				'post_name'     => $p[0],
-				'post_title'    => $p[1],
-				'post_content'  => $p[2],
-				'post_category' => array( $cat ),
-			),
-			array( '_sgd_demo' => 'sample' )
-		);
-	}
+	// 3. Bài viết Kiến thức & Đào tạo (10 bài, link nội bộ về trang dịch vụ).
+	sgd_demo_import_posts();
 
 	// Xoá nội dung mặc định của WordPress (bài "Hello world!", "Sample Page", bình luận mẫu) nếu chưa bị sửa.
 	foreach ( array( array( 'hello-world', 'post' ), array( 'sample-page', 'page' ) ) as $d ) {
@@ -831,7 +788,7 @@ function sgd_demo_build_menu( $groups, $services ) {
 			array( 'Soạn thảo hợp đồng', 'soan-thao-hop-dong' ),
 		)
 	);
-	$top(
+	$training = $top(
 		'dao-tao',
 		'Đào tạo',
 		'',
@@ -841,7 +798,17 @@ function sgd_demo_build_menu( $groups, $services ) {
 			array( 'Sổ sách kế toán', 'khoa-hoc-so-sach-ke-toan' ),
 		)
 	);
-	$add( 'Kiến thức', ( $news_id ? get_permalink( $news_id ) : $page( 'tin-tuc' ) ) );
+	// Chuyên mục bài viết: menu con dẫn tới trang chuyên mục (chỉ thêm khi đã có).
+	$cat_item = function ( $label, $slug, $parent ) use ( $add ) {
+		$c = get_term_by( 'slug', $slug, 'category' );
+		if ( $c ) {
+			$add( $label, '', $parent, array( 'menu-item-object' => 'category', 'menu-item-object-id' => $c->term_id, 'menu-item-type' => 'taxonomy' ) );
+		}
+	};
+	$cat_item( 'Bài học kế toán', 'bai-hoc-ke-toan', $training );
+	$news = $add( 'Kiến thức', ( $news_id ? get_permalink( $news_id ) : $page( 'tin-tuc' ) ) );
+	$cat_item( 'Kiến thức pháp lý', 'kien-thuc-phap-ly', $news );
+	$cat_item( 'Kiến thức thuế', 'kien-thuc-thue', $news );
 	$add( 'Liên hệ', $page( 'lien-he' ) );
 	$loc                   = get_theme_mod( 'nav_menu_locations', array() );
 	$loc['primary']        = $menu_id;
@@ -864,6 +831,7 @@ function sgd_demo_menu_run() {
 		sgd_demo_post( array( 'post_type' => 'page', 'post_name' => 'tra-cuu', 'post_title' => 'Tra cứu', 'post_content' => sgd_demo_lookup_content() ), array( '_wp_page_template' => 'page-blank.php' ) );
 	}
 	sgd_demo_rename_home_sections();
+	sgd_demo_import_posts();
 	sgd_demo_build_menu( $groups, $services );
 	flush_rewrite_rules();
 	wp_safe_redirect( admin_url( 'themes.php?page=sgd-demo&sgd_demo=menu' ) );
@@ -911,4 +879,72 @@ function sgd_demo_rename_home_sections() {
 	if ( $new !== $c ) {
 		wp_update_post( array( 'ID' => $id, 'post_content' => wp_slash( $new ) ) );
 	}
+}
+
+/**
+ * Nhập 10 bài Kiến thức & Đào tạo (inc/demo-posts.php).
+ * Bài chưa có → tạo mới; bài mẫu cũ cùng đường dẫn (… (bài mẫu)) → thay nội dung, giữ URL;
+ * bài đã nhập trước đó hoặc bạn tự viết → giữ nguyên, không ghi đè.
+ *
+ * @return int Số bài tạo / cập nhật.
+ */
+function sgd_demo_import_posts() {
+	$data = require SGD_DIR . '/inc/demo-posts.php';
+	$cats = array();
+	foreach ( $data['categories'] as $slug => $c ) {
+		$cats[ $slug ] = sgd_demo_term( 'category', $c[0], $slug, $c[1] );
+	}
+	$done = 0;
+	$now  = current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
+	foreach ( $data['posts'] as $i => $p ) {
+		$old = get_page_by_path( $p['slug'], OBJECT, 'post' );
+		if ( $old && 'sample' !== get_post_meta( $old->ID, '_sgd_demo', true ) ) {
+			continue;
+		}
+		$args = array(
+			'post_type'     => 'post',
+			'post_name'     => $p['slug'],
+			'post_title'    => $p['title'],
+			'post_excerpt'  => $p['excerpt'],
+			'post_content'  => sgd_demo_resolve_links( $p['content'] ),
+			'post_category' => array( $cats[ $p['cat'] ] ),
+		);
+		// Bài đầu danh sách mới nhất, cách nhau 1 ngày.
+		$args['post_date']     = gmdate( 'Y-m-d H:i:s', $now - $i * DAY_IN_SECONDS );
+		$args['post_date_gmt'] = get_gmt_from_date( $args['post_date'] );
+		if ( sgd_demo_post( $args, array( '_sgd_demo' => 'article' ) ) ) {
+			++$done;
+		}
+	}
+	// Chuyên mục của bài mẫu cũ – xoá nếu không còn bài nào.
+	$legacy = get_term_by( 'slug', 'kien-thuc-doanh-nghiep', 'category' );
+	if ( $legacy && 0 === (int) $legacy->count && (int) get_option( 'default_category' ) !== (int) $legacy->term_id ) {
+		wp_delete_term( $legacy->term_id, 'category' );
+	}
+	return $done;
+}
+
+/**
+ * Đổi [[slug|chữ]] → link trang dịch vụ, [[nhom:slug|chữ]] → link trang nhóm dịch vụ.
+ * Không tìm thấy trang đích → giữ chữ, không tạo link.
+ *
+ * @param string $html Nội dung.
+ * @return string
+ */
+function sgd_demo_resolve_links( $html ) {
+	return preg_replace_callback(
+		'/\[\[(?:(nhom):)?([a-z0-9-]+)\|([^\]]+)\]\]/u',
+		function ( $m ) {
+			$url = '';
+			if ( 'nhom' === $m[1] ) {
+				$t = get_term_by( 'slug', $m[2], 'nhom_dich_vu' );
+				$url = $t ? get_term_link( $t ) : '';
+			} else {
+				$post = get_page_by_path( $m[2], OBJECT, 'dich_vu' );
+				$url  = $post && 'publish' === $post->post_status ? get_permalink( $post ) : '';
+			}
+			return ( $url && ! is_wp_error( $url ) ) ? '<a href="' . esc_url( $url ) . '">' . $m[3] . '</a>' : $m[3];
+		},
+		$html
+	);
 }
