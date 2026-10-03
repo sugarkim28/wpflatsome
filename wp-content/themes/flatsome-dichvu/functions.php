@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SGD_VERSION', '0.10.2' );
+define( 'SGD_VERSION', '0.10.3' );
 define( 'SGD_DIR', get_stylesheet_directory() );
 define( 'SGD_URI', get_stylesheet_directory_uri() );
 

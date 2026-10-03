@@ -884,7 +884,7 @@ function sgd_demo_rename_home_sections() {
 /**
  * Nhập 10 bài Kiến thức & Đào tạo (inc/demo-posts.php).
  * Bài chưa có → tạo mới; bài mẫu cũ cùng đường dẫn (… (bài mẫu)) → thay nội dung, giữ URL;
- * bài đã nhập trước đó hoặc bạn tự viết → giữ nguyên, không ghi đè.
+ * bài đã nhập mà chưa sửa tay → lên bản mới; bài đã sửa hoặc bạn tự viết → giữ nguyên.
  *
  * @return int Số bài tạo / cập nhật.
  */
@@ -897,22 +897,34 @@ function sgd_demo_import_posts() {
 	$done = 0;
 	$now  = current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
 	foreach ( $data['posts'] as $i => $p ) {
-		$old = get_page_by_path( $p['slug'], OBJECT, 'post' );
-		if ( $old && 'sample' !== get_post_meta( $old->ID, '_sgd_demo', true ) ) {
-			continue;
+		$old     = get_page_by_path( $p['slug'], OBJECT, 'post' );
+		$content = sgd_demo_resolve_links( $p['content'] );
+		if ( $old ) {
+			$kind = get_post_meta( $old->ID, '_sgd_demo', true );
+			// Bài đã nhập: chỉ cập nhật khi nội dung chưa bị sửa tay (so mã băm lúc nhập).
+			$hash      = get_post_meta( $old->ID, '_sgd_hash', true );
+			$untouched = 'article' === $kind && ( $hash ? md5( $old->post_content ) === $hash : in_array( sgd_demo_text_hash( $old->post_content ), sgd_demo_legacy_hashes(), true ) );
+			if ( 'sample' !== $kind && ! $untouched ) {
+				continue;
+			}
+			if ( $untouched && md5( $content ) === $hash ) {
+				continue; // Đã là bản mới nhất.
+			}
 		}
 		$args = array(
 			'post_type'     => 'post',
 			'post_name'     => $p['slug'],
 			'post_title'    => $p['title'],
 			'post_excerpt'  => $p['excerpt'],
-			'post_content'  => sgd_demo_resolve_links( $p['content'] ),
+			'post_content'  => $content,
 			'post_category' => array( $cats[ $p['cat'] ] ),
 		);
 		// Bài đầu danh sách mới nhất, cách nhau 1 ngày.
 		$args['post_date']     = gmdate( 'Y-m-d H:i:s', $now - $i * DAY_IN_SECONDS );
 		$args['post_date_gmt'] = get_gmt_from_date( $args['post_date'] );
-		if ( sgd_demo_post( $args, array( '_sgd_demo' => 'article' ) ) ) {
+		$id = sgd_demo_post( $args, array( '_sgd_demo' => 'article' ) );
+		if ( $id ) {
+			update_post_meta( $id, '_sgd_hash', md5( get_post_field( 'post_content', $id ) ) );
 			++$done;
 		}
 	}
@@ -946,5 +958,35 @@ function sgd_demo_resolve_links( $html ) {
 			return ( $url && ! is_wp_error( $url ) ) ? '<a href="' . esc_url( $url ) . '">' . $m[3] . '</a>' : $m[3];
 		},
 		$html
+	);
+}
+
+/**
+ * Mã băm phần chữ của bài (bỏ thẻ HTML, gộp khoảng trắng) – nhận diện bài chưa sửa tay.
+ *
+ * @param string $html Nội dung.
+ * @return string
+ */
+function sgd_demo_text_hash( $html ) {
+	return md5( trim( preg_replace( '/\s+/u', ' ', wp_strip_all_tags( $html ) ) ) );
+}
+
+/**
+ * Mã băm 10 bài nhập ở bản 0.10.2 (khi đó chưa lưu _sgd_hash) – bài còn nguyên thì được lên bản đính chính.
+ *
+ * @return array
+ */
+function sgd_demo_legacy_hashes() {
+	return array(
+		'75125afe30228bdfd83f216e96dcac8f',
+		'9715bb3247ebaebcf144ecc791c28f5b',
+		'ac50779fd79d8d8b27db8b0c041eaaf9',
+		'59795bd11eede6195f9486f7dccefb13',
+		'6204f672eca615df6bba3f71d489450a',
+		'7e3034d6b278daec841cd2d0c65bc636',
+		'1494c3311301542606dac99879b41f32',
+		'139a4033ffa8aaaf5f2ce9abc607e1a2',
+		'8aced97170c2410d7a59360cd8b07f5f',
+		'3270de03ba39ee228bb21537306900c5',
 	);
 }
