@@ -12,6 +12,21 @@ global $wp_query;
 $sgd_title = sgd_blog_title();
 $sgd_desc  = is_category() || is_tag() ? term_description() : ( is_search() ? '' : sgd_opt( 'blog_intro' ) );
 $sgd_cats  = get_categories( array( 'hide_empty' => true, 'number' => 8 ) );
+$sgd_here  = is_category() ? get_queried_object() : null;
+if ( $sgd_here ) {
+	// Đang xem chuyên mục: tab là các chuyên mục con (chuyên mục cha) hoặc anh em (chuyên mục con).
+	$sgd_root = $sgd_here->parent ? get_category( $sgd_here->parent ) : $sgd_here;
+	$sgd_sub  = get_categories( array( 'parent' => $sgd_root->term_id, 'hide_empty' => true ) );
+	if ( $sgd_sub ) {
+		usort(
+			$sgd_sub,
+			function ( $a, $b ) {
+				return (int) get_term_meta( $a->term_id, '_sgd_order', true ) <=> (int) get_term_meta( $b->term_id, '_sgd_order', true );
+			}
+		);
+		$sgd_cats = array_merge( array( $sgd_root ), $sgd_sub );
+	}
+}
 $sgd_first = ! is_paged() && ! is_search();
 ?>
 <div id="content" class="sgd-blog">

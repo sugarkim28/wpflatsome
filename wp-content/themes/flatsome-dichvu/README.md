@@ -58,6 +58,13 @@ Trang chủ (bản 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh
 
 Khối `[sgd_group_section group="…"]` (Tư vấn thành lập công ty, Kế toán – thuế, Thay đổi GPKD, Dịch vụ khác): các thẻ bên dưới **lấy đúng các mục con trên menu chính** của mục tương ứng, theo thứ tự trong menu (bỏ mục "Tổng quan" trỏ lại chính nhóm). Thêm / bớt / đổi thứ tự trong **Giao diện → Menu** là trang chủ tự cập nhật. Mục con có thể là dịch vụ, trang, bài viết, chuyên mục hoặc liên kết tự nhập. Thẻ tự chia hàng đầy, cân đối (bản 0.9.6): 3 → 3 · 4 → 4 · 5 → 2 thẻ lớn nằm ngang + 3 · 6 → 3+3 · 7 → 4+3 · 8 → 4+4 · 9 → 3+3+3 · 10 → 4+3+3. Điện thoại: thẻ vuốt ngang. Muốn quay lại kiểu cũ (bài viết Kiến thức liên quan): thêm `source="posts"`.
 
+## Trang Kiến thức dạng chủ đề (bản 0.10.4)
+
+- Trang **Kiến thức** (trang 1) trình bày như ketoananpha.vn/kien-thuc.html: khối **Kiến thức kế toán** và **Kiến thức pháp lý**, mỗi khối có đoạn giới thiệu + lưới thẻ chủ đề (tên, số bài, nút "Xem chi tiết", hình minh hoạ), cuối trang **Bài viết mới nhất** (1 bài lớn + danh sách 2 cột). Trang 2 trở đi là danh sách bài như cũ.
+- Thẻ chủ đề = **chuyên mục con**; khối = **chuyên mục cha**. Thêm/sửa ở Bài viết → Chuyên mục (chọn "Chuyên mục hiện tại" là Kiến thức kế toán / Kiến thức pháp lý). Mô tả chuyên mục cha là đoạn giới thiệu của khối.
+- Chủ đề chưa có bài hiện "Đang cập nhật" (nút xám) và trang chuyên mục đó tự **noindex** cho tới khi có bài.
+- Menu Kiến thức → Kiến thức kế toán, Kiến thức pháp lý. Trang chuyên mục có tab các chủ đề con.
+
 ## Đính chính 10 bài theo văn bản gốc (bản 0.10.3)
 
 - Đối chiếu lại với luatvietnam.vn: bổ sung Nghị định 253/2026 (TNCN: tiền ăn ca 1,2 triệu, giảm trừ y tế 23 triệu / giáo dục 24 triệu, khấu trừ 10% từ 5 triệu/lần), Nghị định 68/2026 + Thông tư 152/2025 (hộ kinh doanh: bảng tỷ lệ thuế theo ngành, thuế suất 15/17/20%, chi phí được trừ, hoá đơn từ 1 tỷ), Thông tư 20/2026 + CV 218/CST-TN (chứng từ không dùng tiền mặt), Nghị định 296/2026 (chủ sở hữu hưởng lợi từ 25%, xác thực điện tử, tạm ngừng), Thông tư 99/2025 (đổi tên tài khoản, quy chế hạch toán).

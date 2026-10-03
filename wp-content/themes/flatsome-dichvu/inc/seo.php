@@ -102,7 +102,8 @@ function sgd_breadcrumbs() {
  * @return array
  */
 function sgd_robots( $robots ) {
-	if ( isset( $_GET['sgd_status'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	// Chuyên mục chưa có bài (thẻ "Đang cập nhật" trên trang Kiến thức) – không cho Google lập chỉ mục trang trống.
+	if ( isset( $_GET['sgd_status'] ) || ( is_category() && ! have_posts() ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$robots['noindex'] = true;
 		$robots['follow']  = true;
 		unset( $robots['index'] );
@@ -118,7 +119,7 @@ add_filter( 'wp_robots', 'sgd_robots' );
  * @return array
  */
 function sgd_rank_math_robots( $robots ) {
-	if ( isset( $_GET['sgd_status'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	if ( isset( $_GET['sgd_status'] ) || ( is_category() && ! have_posts() ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$robots['index']  = 'noindex';
 		$robots['follow'] = 'follow';
 	}

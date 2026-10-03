@@ -807,8 +807,8 @@ function sgd_demo_build_menu( $groups, $services ) {
 	};
 	$cat_item( 'Bài học kế toán', 'bai-hoc-ke-toan', $training );
 	$news = $add( 'Kiến thức', ( $news_id ? get_permalink( $news_id ) : $page( 'tin-tuc' ) ) );
+	$cat_item( 'Kiến thức kế toán', 'kien-thuc-ke-toan', $news );
 	$cat_item( 'Kiến thức pháp lý', 'kien-thuc-phap-ly', $news );
-	$cat_item( 'Kiến thức thuế', 'kien-thuc-thue', $news );
 	$add( 'Liên hệ', $page( 'lien-he' ) );
 	$loc                   = get_theme_mod( 'nav_menu_locations', array() );
 	$loc['primary']        = $menu_id;
@@ -892,8 +892,18 @@ function sgd_demo_import_posts() {
 	$data = require SGD_DIR . '/inc/demo-posts.php';
 	$cats = array();
 	foreach ( $data['categories'] as $slug => $c ) {
-		$cats[ $slug ] = sgd_demo_term( 'category', $c[0], $slug, $c[1] );
+		$cats[ $slug ] = sgd_demo_term( 'category', $c[0], $slug, $c[1], array( '_sgd_icon' => $c[3], '_sgd_order' => $c[4] ) );
+		$parent        = $c[2] && isset( $cats[ $c[2] ] ) ? $cats[ $c[2] ] : 0;
+		$term          = get_term( $cats[ $slug ], 'category' );
+		if ( $term && ! is_wp_error( $term ) && (int) $term->parent !== $parent ) {
+			wp_update_term( $term->term_id, 'category', array( 'parent' => $parent ) );
+		}
 	}
+	$cat_ids = function ( $list ) use ( $cats ) {
+		return array_values( array_filter( array_map( function ( $c ) use ( $cats ) {
+			return isset( $cats[ $c ] ) ? $cats[ $c ] : 0;
+		}, (array) $list ) ) );
+	};
 	$done = 0;
 	$now  = current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
 	foreach ( $data['posts'] as $i => $p ) {
@@ -904,6 +914,11 @@ function sgd_demo_import_posts() {
 			// Bài đã nhập: chỉ cập nhật khi nội dung chưa bị sửa tay (so mã băm lúc nhập).
 			$hash      = get_post_meta( $old->ID, '_sgd_hash', true );
 			$untouched = 'article' === $kind && ( $hash ? md5( $old->post_content ) === $hash : in_array( sgd_demo_text_hash( $old->post_content ), sgd_demo_legacy_hashes(), true ) );
+			if ( in_array( $kind, array( 'sample', 'article' ), true ) ) {
+				// Gắn thêm chuyên mục theo cây mới (giữ chuyên mục bạn tự thêm), bỏ chuyên mục cũ của bản 0.10.2.
+				wp_set_post_categories( $old->ID, $cat_ids( $p['cat'] ), true );
+				wp_remove_object_terms( $old->ID, 'kien-thuc-thue', 'category' );
+			}
 			if ( 'sample' !== $kind && ! $untouched ) {
 				continue;
 			}
@@ -917,7 +932,7 @@ function sgd_demo_import_posts() {
 			'post_title'    => $p['title'],
 			'post_excerpt'  => $p['excerpt'],
 			'post_content'  => $content,
-			'post_category' => array( $cats[ $p['cat'] ] ),
+			'post_category' => $cat_ids( $p['cat'] ),
 		);
 		// Bài đầu danh sách mới nhất, cách nhau 1 ngày.
 		$args['post_date']     = gmdate( 'Y-m-d H:i:s', $now - $i * DAY_IN_SECONDS );
@@ -928,10 +943,15 @@ function sgd_demo_import_posts() {
 			++$done;
 		}
 	}
-	// Chuyên mục của bài mẫu cũ – xoá nếu không còn bài nào.
-	$legacy = get_term_by( 'slug', 'kien-thuc-doanh-nghiep', 'category' );
-	if ( $legacy && 0 === (int) $legacy->count && (int) get_option( 'default_category' ) !== (int) $legacy->term_id ) {
-		wp_delete_term( $legacy->term_id, 'category' );
+	// Chuyên mục cũ (bài mẫu, bản 0.10.2) – xoá nếu không còn bài nào.
+	foreach ( array( 'kien-thuc-doanh-nghiep', 'kien-thuc-thue' ) as $old_slug ) {
+		$legacy = get_term_by( 'slug', $old_slug, 'category' );
+		if ( $legacy ) {
+			$left = get_posts( array( 'category' => $legacy->term_id, 'posts_per_page' => 1, 'fields' => 'ids', 'post_status' => 'any' ) );
+			if ( ! $left && (int) get_option( 'default_category' ) !== (int) $legacy->term_id ) {
+				wp_delete_term( $legacy->term_id, 'category' );
+			}
+		}
 	}
 	return $done;
 }

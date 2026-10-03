@@ -14,17 +14,34 @@ defined( 'ABSPATH' ) || exit;
 $sgd_upd = '<p class="sgd-updated"><em>Cập nhật tháng 10/2026 theo quy định đang có hiệu lực. Chính sách thuế, đăng ký doanh nghiệp thay đổi thường xuyên – trước khi thực hiện, bạn nên liên hệ chuyên viên để được kiểm tra theo trường hợp cụ thể.</em></p>';
 
 return array(
+	// Cây chuyên mục kiểu trang Kiến thức của ketoananpha.vn: [tên, mô tả, chuyên mục cha, icon, thứ tự].
 	'categories' => array(
-		'kien-thuc-phap-ly' => array( 'Kiến thức pháp lý', 'Thủ tục thành lập, thay đổi đăng ký doanh nghiệp, hộ kinh doanh – cập nhật theo Luật Doanh nghiệp và nghị định mới nhất.' ),
-		'kien-thuc-thue'    => array( 'Kiến thức thuế', 'Lịch nộp tờ khai, thuế hộ kinh doanh, hoá đơn điện tử và các chính sách thuế đang có hiệu lực.' ),
-		'bai-hoc-ke-toan'   => array( 'Bài học kế toán', 'Bài học kế toán tổng hợp, kế toán thuế, sổ sách theo chế độ kế toán mới – dành cho người mới và chủ doanh nghiệp nhỏ.' ),
+		'kien-thuc-ke-toan'            => array( 'Kiến thức kế toán', 'Giải đáp các vướng mắc về kế toán và thuế: hạch toán, hoá đơn, kê khai, quyết toán, các loại thuế doanh nghiệp và hộ kinh doanh phải nộp – cập nhật theo quy định mới nhất.', '', 'calculator', 1 ),
+		'thue-tndn'                    => array( 'Thuế thu nhập doanh nghiệp', 'Thuế suất, chi phí được trừ, tạm nộp và quyết toán thuế TNDN theo Luật Thuế TNDN 2025.', 'kien-thuc-ke-toan', 'tax', 1 ),
+		'thue-tncn'                    => array( 'Thuế thu nhập cá nhân', 'Cách tính thuế TNCN từ tiền lương, giảm trừ gia cảnh, khấu trừ, quyết toán và hoàn thuế.', 'kien-thuc-ke-toan', 'users', 2 ),
+		'thue-gtgt'                    => array( 'Thuế giá trị gia tăng', 'Kê khai, khấu trừ, hoàn thuế GTGT và các mức thuế suất đang áp dụng.', 'kien-thuc-ke-toan', 'wallet', 3 ),
+		'thue-ho-kinh-doanh'           => array( 'Thuế hộ, cá nhân kinh doanh', 'Ngưỡng doanh thu chịu thuế, cách tính thuế, khai thuế và sổ sách của hộ kinh doanh.', 'kien-thuc-ke-toan', 'building', 4 ),
+		'hoa-don-chung-tu'             => array( 'Hoá đơn, chứng từ', 'Hoá đơn điện tử, xử lý hoá đơn sai sót, chứng từ thanh toán không dùng tiền mặt.', 'kien-thuc-ke-toan', 'doc', 5 ),
+		'bao-cao-thue-tai-chinh'       => array( 'Báo cáo thuế – Tài chính', 'Lịch nộp tờ khai, báo cáo tài chính, quyết toán năm và các mốc thời hạn cần nhớ.', 'kien-thuc-ke-toan', 'chart', 6 ),
+		'so-sach-ke-toan'              => array( 'Sổ sách kế toán', 'Chế độ kế toán, hệ thống tài khoản, ghi sổ và tổ chức công tác kế toán.', 'kien-thuc-ke-toan', 'edit', 7 ),
+		'bao-hiem-xa-hoi'              => array( 'Bảo hiểm xã hội', 'Đăng ký, đóng và báo tăng giảm bảo hiểm xã hội, y tế, thất nghiệp cho người lao động.', 'kien-thuc-ke-toan', 'shield', 8 ),
+		'kien-thuc-phap-ly'            => array( 'Kiến thức pháp lý', 'Tổng hợp các thủ tục pháp lý doanh nghiệp thường gặp: thành lập, thay đổi đăng ký kinh doanh, hộ kinh doanh, tạm ngừng, giải thể, sở hữu trí tuệ – cập nhật theo Luật Doanh nghiệp và nghị định mới.', '', 'stamp', 2 ),
+		'thu-tuc-thanh-lap'            => array( 'Thành lập doanh nghiệp', 'Hồ sơ, trình tự thành lập công ty TNHH, cổ phần và những việc cần làm sau khi có giấy phép.', 'kien-thuc-phap-ly', 'stamp', 1 ),
+		'ho-kinh-doanh-ca-the'         => array( 'Hộ kinh doanh cá thể', 'Đăng ký, quản lý và chuyển đổi hộ kinh doanh lên doanh nghiệp.', 'kien-thuc-phap-ly', 'pin', 2 ),
+		'cong-ty-von-nuoc-ngoai'       => array( 'Công ty vốn nước ngoài', 'Thủ tục đầu tư, thành lập và vận hành doanh nghiệp có vốn đầu tư nước ngoài.', 'kien-thuc-phap-ly', 'globe', 3 ),
+		'thay-doi-dang-ky-kinh-doanh'  => array( 'Thay đổi GPKD', 'Các trường hợp phải đăng ký thay đổi nội dung đăng ký doanh nghiệp và thời hạn thực hiện.', 'kien-thuc-phap-ly', 'edit', 4 ),
+		'chi-nhanh-van-phong-dai-dien' => array( 'Chi nhánh – Văn phòng đại diện', 'Thành lập, thay đổi, chấm dứt hoạt động chi nhánh, văn phòng đại diện, địa điểm kinh doanh.', 'kien-thuc-phap-ly', 'building', 5 ),
+		'so-huu-tri-tue'               => array( 'Nhãn hiệu – Sở hữu trí tuệ', 'Đăng ký bảo hộ nhãn hiệu, logo và các quyền sở hữu trí tuệ của doanh nghiệp.', 'kien-thuc-phap-ly', 'trademark', 6 ),
+		'tam-ngung-giai-the'           => array( 'Tạm ngừng – Giải thể', 'Thủ tục tạm ngừng kinh doanh, hoạt động trở lại, giải thể doanh nghiệp.', 'kien-thuc-phap-ly', 'clock', 7 ),
+		'thu-tuc-phap-ly-khac'         => array( 'Thủ tục pháp lý khác', 'Hợp đồng, giấy phép con và các thủ tục pháp lý khác của doanh nghiệp.', 'kien-thuc-phap-ly', 'search', 8 ),
+		'bai-hoc-ke-toan'              => array( 'Bài học kế toán', 'Bài học kế toán tổng hợp, kế toán thuế, sổ sách theo chế độ kế toán mới – dành cho người mới và chủ doanh nghiệp nhỏ.', '', 'calculator', 9 ),
 	),
 	'posts'      => array(
 
 		// ===================== KIẾN THỨC =====================
 		array(
 			'slug'    => 'thu-tuc-thanh-lap-cong-ty',
-			'cat'     => 'kien-thuc-phap-ly',
+			'cat'     => array( 'thu-tuc-thanh-lap' ),
 			'title'   => 'Thủ tục thành lập công ty năm 2026: hồ sơ, các bước và chi phí',
 			'excerpt' => 'Hướng dẫn thành lập công ty theo Luật Doanh nghiệp sửa đổi 2025, Nghị định 168/2025 và Nghị định 296/2026: chọn loại hình, hồ sơ, xác thực điện tử, chủ sở hữu hưởng lợi và việc cần làm sau khi có giấy phép.',
 			'content' => $sgd_upd . '
@@ -102,7 +119,7 @@ return array(
 
 		array(
 			'slug'    => 'lich-nop-to-khai-thue',
-			'cat'     => 'kien-thuc-thue',
+			'cat'     => array( 'bao-cao-thue-tai-chinh' ),
 			'title'   => 'Lịch nộp tờ khai thuế năm 2026 cho doanh nghiệp theo Luật Quản lý thuế mới',
 			'excerpt' => 'Thời hạn nộp tờ khai thuế tháng, quý, quyết toán năm theo Luật Quản lý thuế 2025 và Nghị định 252/2026; ai được khai theo quý, lệ phí môn bài đã bãi bỏ và lưu ý tạm nộp thuế TNDN.',
 			'content' => $sgd_upd . '
@@ -155,7 +172,7 @@ return array(
 
 		array(
 			'slug'    => 'khi-nao-phai-thay-doi-giay-phep-kinh-doanh',
-			'cat'     => 'kien-thuc-phap-ly',
+			'cat'     => array( 'thay-doi-dang-ky-kinh-doanh', 'tam-ngung-giai-the' ),
 			'title'   => 'Khi nào doanh nghiệp phải đăng ký thay đổi giấy phép kinh doanh?',
 			'excerpt' => 'Những thay đổi bắt buộc phải đăng ký trong 10 ngày, trường hợp địa chỉ thay đổi do sắp xếp đơn vị hành chính, quy định mới về tạm ngừng kinh doanh và xác thực điện tử theo Nghị định 296/2026.',
 			'content' => $sgd_upd . '
@@ -205,7 +222,7 @@ return array(
 
 		array(
 			'slug'    => 'thue-ho-kinh-doanh-2026-bo-thue-khoan',
-			'cat'     => 'kien-thuc-thue',
+			'cat'     => array( 'thue-ho-kinh-doanh', 'ho-kinh-doanh-ca-the' ),
 			'title'   => 'Thuế hộ kinh doanh năm 2026: bỏ thuế khoán, ngưỡng 500 triệu và cách tính mới',
 			'excerpt' => 'Từ 2026 hộ kinh doanh không còn nộp thuế khoán, doanh thu đến 500 triệu đồng/năm không phải nộp thuế GTGT, TNCN. Cách tính thuế theo tỷ lệ hoặc theo thu nhập, hoá đơn điện tử và sổ sách cần có.',
 			'content' => $sgd_upd . '
@@ -260,7 +277,7 @@ return array(
 
 		array(
 			'slug'    => 'hoa-don-dien-tu-2026-quy-dinh-moi',
-			'cat'     => 'kien-thuc-thue',
+			'cat'     => array( 'hoa-don-chung-tu', 'thue-gtgt' ),
 			'title'   => 'Hoá đơn điện tử năm 2026: những quy định doanh nghiệp cần nắm',
 			'excerpt' => 'Quy định hoá đơn điện tử theo Nghị định 70/2025 (sửa Nghị định 123/2020): thời điểm lập, xử lý hoá đơn sai sót, hoá đơn từ máy tính tiền, điều kiện khấu trừ khi thanh toán từ 5 triệu đồng và thuế suất 8%.',
 			'content' => $sgd_upd . '
@@ -307,7 +324,7 @@ return array(
 		// ===================== ĐÀO TẠO =====================
 		array(
 			'slug'    => 'ke-toan-tong-hop-cho-nguoi-moi',
-			'cat'     => 'bai-hoc-ke-toan',
+			'cat'     => array( 'so-sach-ke-toan', 'bai-hoc-ke-toan' ),
 			'title'   => 'Kế toán tổng hợp là làm gì? Quy trình công việc cho người mới bắt đầu',
 			'excerpt' => 'Công việc của kế toán tổng hợp theo tháng, quý, năm; chọn chế độ kế toán (Thông tư 99/2025, Thông tư 133/2016, Thông tư 58/2026) và những kỹ năng cần có để làm được việc ngay.',
 			'content' => $sgd_upd . '
@@ -361,7 +378,7 @@ return array(
 
 		array(
 			'slug'    => 'huong-dan-ke-khai-thue-gtgt-phuong-phap-khau-tru',
-			'cat'     => 'bai-hoc-ke-toan',
+			'cat'     => array( 'thue-gtgt', 'bai-hoc-ke-toan' ),
 			'title'   => 'Hướng dẫn kê khai thuế GTGT theo phương pháp khấu trừ (cập nhật 2026)',
 			'excerpt' => 'Các bước kê khai thuế GTGT theo phương pháp khấu trừ: tổng hợp hoá đơn, kiểm tra điều kiện khấu trừ theo Luật Thuế GTGT 2024, thuế suất 8%/10%, khai bổ sung và những lỗi kế toán mới hay mắc.',
 			'content' => $sgd_upd . '
@@ -414,7 +431,7 @@ return array(
 
 		array(
 			'slug'    => 'cach-tinh-thue-tncn-tu-tien-luong-2026',
-			'cat'     => 'bai-hoc-ke-toan',
+			'cat'     => array( 'thue-tncn', 'bai-hoc-ke-toan' ),
 			'title'   => 'Cách tính thuế TNCN từ tiền lương năm 2026: biểu thuế 5 bậc, giảm trừ 15,5 triệu',
 			'excerpt' => 'Công thức tính thuế thu nhập cá nhân từ tiền lương, tiền công năm 2026 theo Luật Thuế TNCN 2025 và Nghị quyết 110/2025: mức giảm trừ gia cảnh mới, biểu thuế lũy tiến 5 bậc và ví dụ cụ thể.',
 			'content' => $sgd_upd . '
@@ -482,7 +499,7 @@ return array(
 
 		array(
 			'slug'    => 'diem-moi-thong-tu-99-2025-che-do-ke-toan',
-			'cat'     => 'bai-hoc-ke-toan',
+			'cat'     => array( 'so-sach-ke-toan', 'bai-hoc-ke-toan' ),
 			'title'   => 'Điểm mới Thông tư 99/2025/TT-BTC về chế độ kế toán doanh nghiệp từ 2026',
 			'excerpt' => 'Thông tư 99/2025/TT-BTC thay Thông tư 200/2014 từ 01/01/2026: phạm vi áp dụng, thay đổi hệ thống tài khoản (thêm TK 215, TK 332…), chứng từ, sổ sách tự thiết kế và việc doanh nghiệp nhỏ có nên chuyển đổi.',
 			'content' => $sgd_upd . '
@@ -530,7 +547,7 @@ return array(
 
 		array(
 			'slug'    => 'chi-phi-duoc-tru-thue-tndn-2026',
-			'cat'     => 'bai-hoc-ke-toan',
+			'cat'     => array( 'thue-tndn', 'bai-hoc-ke-toan' ),
 			'title'   => 'Chi phí được trừ khi tính thuế TNDN theo Luật Thuế TNDN 2025',
 			'excerpt' => 'Điều kiện chi phí được trừ theo Luật Thuế TNDN số 67/2025/QH15 và Nghị định 320/2025: chứng từ, thanh toán không dùng tiền mặt từ 5 triệu đồng, các khoản chi lương, chi phí hay bị loại và thuế suất 15% – 17% – 20%.',
 			'content' => $sgd_upd . '
