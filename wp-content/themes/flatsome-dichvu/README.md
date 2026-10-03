@@ -58,6 +58,10 @@ Trang chủ (bản 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh
 
 Khối `[sgd_group_section group="…"]` (Tư vấn thành lập công ty, Kế toán – thuế, Thay đổi GPKD, Dịch vụ khác): các thẻ bên dưới **lấy đúng các mục con trên menu chính** của mục tương ứng, theo thứ tự trong menu (bỏ mục "Tổng quan" trỏ lại chính nhóm). Thêm / bớt / đổi thứ tự trong **Giao diện → Menu** là trang chủ tự cập nhật. Mục con có thể là dịch vụ, trang, bài viết, chuyên mục hoặc liên kết tự nhập. Thẻ tự chia hàng đầy, cân đối (bản 0.9.6): 3 → 3 · 4 → 4 · 5 → 2 thẻ lớn nằm ngang + 3 · 6 → 3+3 · 7 → 4+3 · 8 → 4+4 · 9 → 3+3+3 · 10 → 4+3+3. Điện thoại: thẻ vuốt ngang. Muốn quay lại kiểu cũ (bài viết Kiến thức liên quan): thêm `source="posts"`.
 
+## Tiêu đề & mô tả trang chủ (bản 0.9.7)
+
+Khi không dùng plugin SEO, trang chủ có tiêu đề chứa từ khoá *Dịch vụ thành lập công ty, kế toán thuế trọn gói – Tin Học 119* (thay cho *Tin Học 119 – Uy tín tạo niềm tin*) và mô tả mở đầu bằng dịch vụ, kết bằng hotline (≤ 155 ký tự). Sửa ở *Tuỳ biến → Website dịch vụ → Trang danh sách dịch vụ → Tiêu đề / Mô tả trang chủ*. Dùng Rank Math thì đặt trong Rank Math.
+
 ## Trang nhóm dịch vụ (bản 0.8)
 
 Mỗi mục lớn trên menu (Thành lập công ty, Thay đổi GPKD, Kế toán & Thuế, Dịch vụ khác…) mở trang nhóm dạng bài viết chuyên mục như tanthanhthinh.com: dải tiêu đề (H1) → ảnh nhóm → danh sách dịch vụ gọn (tên – thời gian – giá) → mục lục "Nội dung chính" → bài viết của nhóm (H2/H3) → Gọi ngay → Bài viết liên quan. Sửa bài ở *Dịch vụ → Nhóm dịch vụ → sửa nhóm → Bài viết của nhóm* (trống = bài mẫu trong `inc/demo-articles.php`). Ảnh nhóm: ô "Ảnh đại diện nhóm".

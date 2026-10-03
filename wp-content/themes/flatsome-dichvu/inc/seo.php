@@ -157,7 +157,12 @@ function sgd_fallback_meta() {
 	} elseif ( is_home() || is_category() || is_tag() ) {
 		$desc = is_home() ? sgd_opt( 'blog_intro' ) : term_description();
 	} elseif ( is_front_page() ) {
-		$desc = sgd_opt( 'company' ) . ' – ' . sgd_opt( 'tagline' ) . '. ' . sgd_opt( 'archive_intro' );
+		$desc = sgd_opt( 'home_desc' );
+		if ( '' === trim( (string) $desc ) ) {
+			// Mở đầu bằng dịch vụ (từ khoá), kết bằng hotline – không tốn ký tự cho khẩu hiệu.
+			$desc = 'Dịch vụ thành lập công ty, thay đổi giấy phép kinh doanh, kê khai thuế, kế toán trọn gói. Báo giá rõ ràng, không phát sinh.'
+				. ( sgd_opt( 'hotline' ) ? ' Hotline ' . sgd_opt( 'hotline' ) . '.' : '' );
+		}
 	}
 	$desc = sgd_clip( wp_strip_all_tags( (string) $desc ), 155 );
 	if ( $desc ) {
@@ -212,6 +217,13 @@ function sgd_clip( $text, $max = 155 ) {
  * @return array
  */
 function sgd_title_parts( $parts ) {
+	if ( ! sgd_has_seo_plugin() && is_front_page() && sgd_opt( 'home_title' ) ) {
+		// Trang chủ: "Dịch vụ … | Thương hiệu" thay cho "Thương hiệu – Khẩu hiệu" (không có từ khoá).
+		return array(
+			'title' => sgd_opt( 'home_title' ),
+			'site'  => sgd_opt( 'company' ),
+		);
+	}
 	if ( sgd_has_seo_plugin() || ! is_singular( 'dich_vu' ) ) {
 		return $parts;
 	}
