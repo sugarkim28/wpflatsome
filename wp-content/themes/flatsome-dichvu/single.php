@@ -41,6 +41,8 @@ while ( have_posts() ) :
 				<?php endif; ?>
 				<div class="sgd-content entry-content"><?php echo $sgd_content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- nội dung bài viết đã qua the_content. ?></div>
 
+				<?php get_template_part( 'template-parts/dichvu/share' ); ?>
+
 				<?php get_template_part( 'template-parts/dichvu/contact-box', null, array( 'source' => 'Cuối bài viết' ) ); ?>
 
 				<?php $sgd_tags = get_the_tags(); ?>

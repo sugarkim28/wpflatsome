@@ -1492,3 +1492,43 @@ body.sgd { background: #fff; font-size: 16px; -webkit-font-smoothing: antialiase
 	.sgd-gcell.is-w6 .sgd-bcard__img, .sgd-gcell.is-w12 .sgd-bcard__img { aspect-ratio: 16 / 9; height: auto; min-height: 0; }
 }
 @media (max-width: 549px) { .sgd .sgd-gsec__menu { grid-auto-columns: 82%; } }
+
+/* 0.9.8 – Hotline nổi: icon đỏ, số điện thoại hiện luôn; nút Gọi / Nhắn nhấp nháy */
+.sgd-callbtn--phone .sgd-ring { background: var(--sgd-red, #e10b17); --ring: 225, 11, 23; }
+.sgd-float .sgd-callbtn { padding: 5px 18px 5px 5px; border-radius: 999px; box-shadow: 0 8px 24px rgba(11, 31, 92, .22); }
+.sgd-float .sgd-callbtn__txt, .sgd-float .sgd-callbtn:hover .sgd-callbtn__txt { display: flex; }
+.sgd-float .sgd-callbtn--phone { border: 2px solid var(--sgd-red, #e10b17); }
+.sgd-float .sgd-callbtn--phone .sgd-callbtn__txt strong { color: var(--sgd-red, #e10b17); font-size: 1.12rem; }
+.sgd-float .sgd-callbtn--msg .sgd-ring svg { animation: sgd-shake 1.2s ease-in-out infinite; }
+/* Thanh dưới cùng (điện thoại): icon rung + sóng lan */
+.sgd-mbar__call svg, .sgd-mbar__zalo b, .sgd-mbar__msg svg { position: relative; animation: sgd-shake 1.2s ease-in-out infinite; }
+.sgd-mbar__call, .sgd-mbar__zalo, .sgd-mbar__msg { position: relative; overflow: hidden; }
+.sgd-mbar__call::before, .sgd-mbar__zalo::before, .sgd-mbar__msg::before {
+	content: ""; position: absolute; top: 6px; left: 50%; width: 30px; height: 30px; margin-left: -15px; border-radius: 50%;
+	background: rgba(255, 255, 255, .45); animation: sgd-ripple 1.6s ease-out infinite; pointer-events: none;
+}
+.sgd-mbar__msg::before { background: rgba(0, 132, 255, .3); }
+.sgd .sgd-mbar__call { background: var(--sgd-red, #e10b17) !important; }
+@media (prefers-reduced-motion: reduce) { .sgd-mbar__call svg, .sgd-mbar__zalo b, .sgd-mbar__msg svg, .sgd-mbar a::before, .sgd-float .sgd-callbtn--msg .sgd-ring svg { animation: none; } }
+
+/* 0.9.8 – Nút chia sẻ mạng xã hội */
+.sgd-share { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 28px 0 20px; padding: 14px 0; border-top: 1px solid var(--sgd-line, #e6ebf4); border-bottom: 1px solid var(--sgd-line, #e6ebf4); }
+.sgd-share__label { margin-right: 4px; color: var(--sgd-ink, #1d2433); font-weight: 700; }
+.sgd .sgd-share__btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 40px; height: 40px; margin: 0; padding: 0 10px; border: 0; border-radius: 10px; color: #fff !important; font-size: .85rem; font-weight: 700; line-height: 1; cursor: pointer; transition: transform .15s, filter .15s; }
+.sgd .sgd-share__btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+.sgd-share__btn svg { width: 19px; height: 19px; fill: currentColor; }
+.sgd-share__btn--facebook { background: #1877f2; }
+.sgd-share__btn--zalo { background: #0068ff; }
+.sgd-share__btn--zalo b { font-size: .8rem; }
+.sgd-share__btn--x { background: #111; }
+.sgd-share__btn--linkedin { background: #0a66c2; }
+.sgd-share__btn--telegram { background: #29a9eb; }
+.sgd .sgd-share__btn--copy { background: #eef2f9; color: var(--sgd-ink, #1d2433) !important; }
+.sgd-share__msg { color: #17803d; font-size: .85rem; font-weight: 600; }
+@media (max-width: 549px) { .sgd-share__btn--copy span { display: none; } }
+.sgd .sgd-share__btn { min-height: 40px; max-height: 40px; vertical-align: middle; line-height: 40px; text-transform: none; letter-spacing: 0; box-shadow: none; }
+@media (max-width: 549px) {
+	.sgd-share { gap: 6px; }
+	.sgd-share__label { width: 100%; margin-bottom: 2px; }
+	.sgd .sgd-share__btn { flex: 1 1 0; min-width: 0; height: 40px; padding: 0 6px; }
+}

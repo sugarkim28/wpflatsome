@@ -150,4 +150,35 @@
 			}
 		}
 	} );
+	// Nút chia sẻ: Facebook/X/LinkedIn/Telegram mở cửa sổ nhỏ; Zalo dùng bảng chia sẻ của điện thoại
+	// (có Zalo), máy tính thì sao chép liên kết để dán vào Zalo; "Sao chép" lấy liên kết bài.
+	document.querySelectorAll( '.sgd-share' ).forEach( function ( box ) {
+		var url = box.getAttribute( 'data-url' ), title = box.getAttribute( 'data-title' ), msg = box.querySelector( '.sgd-share__msg' );
+		function say( t ) { if ( msg ) { msg.textContent = t; setTimeout( function () { msg.textContent = ''; }, 3500 ); } }
+		function copy( done ) {
+			if ( navigator.clipboard && window.isSecureContext ) {
+				navigator.clipboard.writeText( url ).then( function () { say( done ); } );
+			} else {
+				var ta = document.createElement( 'textarea' ); ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+				document.body.appendChild( ta ); ta.select();
+				try { document.execCommand( 'copy' ); say( done ); } catch ( e ) { window.prompt( 'Sao chép liên kết:', url ); }
+				document.body.removeChild( ta );
+			}
+		}
+		box.addEventListener( 'click', function ( e ) {
+			var a = e.target.closest( 'a.sgd-share__btn' ), b = e.target.closest( 'button[data-share]' );
+			if ( a ) {
+				e.preventDefault();
+				window.open( a.href, 'sgd-share', 'width=640,height=560,noopener' );
+			} else if ( b && 'zalo' === b.getAttribute( 'data-share' ) ) {
+				if ( navigator.share ) {
+					navigator.share( { title: title, url: url } ).catch( function () {} );
+				} else {
+					copy( 'Đã sao chép liên kết – dán vào Zalo để gửi.' );
+				}
+			} else if ( b ) {
+				copy( 'Đã sao chép liên kết.' );
+			}
+		} );
+	} );
 } )();

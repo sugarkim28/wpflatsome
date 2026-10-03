@@ -48,6 +48,8 @@ $sgd_intro = trim( wp_strip_all_tags( term_description( $sgd_term ) ) );
 				<div class="sgd-content entry-content"><?php echo $sgd_article; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- nội dung quản trị viên nhập (đã lọc wp_kses_post khi lưu). ?></div>
 			<?php endif; ?>
 
+			<?php get_template_part( 'template-parts/dichvu/share', null, array( 'url' => get_term_link( $sgd_term ), 'title' => sgd_listing_h1() ) ); ?>
+
 			<?php get_template_part( 'template-parts/dichvu/contact-box', null, array( 'source' => 'Cuối bài nhóm: ' . $sgd_term->name ) ); ?>
 		</div>
 		<aside class="col large-4 sgd-single__side">

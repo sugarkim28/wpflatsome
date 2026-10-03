@@ -141,6 +141,8 @@ while ( have_posts() ) :
 					</section>
 				<?php endif; ?>
 
+				<?php get_template_part( 'template-parts/dichvu/share' ); ?>
+
 				<?php get_template_part( 'template-parts/dichvu/contact-box', null, array( 'source' => 'Cuối bài dịch vụ', 'service' => $sgd_id ) ); ?>
 
 				<p class="sgd-disclaimer"><?php echo esc_html( sgd_opt( 'disclaimer' ) ); ?> Cập nhật: <?php echo esc_html( get_the_modified_date( 'd/m/Y' ) ); ?>.</p>
