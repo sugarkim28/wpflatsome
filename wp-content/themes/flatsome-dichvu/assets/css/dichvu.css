@@ -1559,3 +1559,27 @@ body.sgd { background: #fff; font-size: 16px; -webkit-font-smoothing: antialiase
 .sgd-lookup__body small { color: var(--sgd-primary); font-weight: 700; }
 .sgd-lookup__note { margin-top: 18px; color: var(--sgd-muted, #5d6677); }
 @media (max-width: 549px) { .sgd-lookup { grid-template-columns: 1fr; } }
+
+/* 0.10.1 – Slider dịch vụ đầu trang chủ */
+.sgd .sgd-hero__h1 { display: inline-block; max-width: 100%; margin: 0 0 16px; padding: 7px 16px; font-size: .9rem; font-weight: 700; line-height: 1.45; letter-spacing: 0; text-transform: none; }
+.sgd-hslider { position: relative; }
+.sgd-hslider__tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; }
+.sgd .sgd-hslider__tab { position: relative; overflow: hidden; margin: 0; padding: 0 16px; min-height: 38px; border: 1px solid rgba(255, 255, 255, .28); border-radius: 999px; background: rgba(255, 255, 255, .06); color: rgba(255, 255, 255, .85); font-size: .9rem; font-weight: 600; line-height: 36px; text-transform: none; letter-spacing: 0; cursor: pointer; transition: background .2s, color .2s, border-color .2s; }
+.sgd .sgd-hslider__tab:hover { border-color: #fff; color: #fff; }
+.sgd .sgd-hslider__tab.is-active { border-color: #fff; background: #fff; color: var(--sgd-primary); }
+.sgd-hslider__tab i { position: absolute; left: 0; bottom: 0; width: 0; height: 3px; background: var(--sgd-accent); }
+.sgd-hslider.is-playing .sgd-hslider__tab.is-active i { animation: sgd-hsbar var(--sgd-hs, 6000ms) linear forwards; }
+.sgd-hslider.is-paused .sgd-hslider__tab.is-active i { animation-play-state: paused; }
+@keyframes sgd-hsbar { from { width: 0; } to { width: 100%; } }
+.sgd-hslider__track { display: grid; }
+.sgd-hslide { grid-area: 1 / 1; opacity: 0; visibility: hidden; transform: translateX(24px); transition: opacity .5s ease, transform .5s ease, visibility 0s linear .5s; }
+.sgd-hslide.is-active { opacity: 1; visibility: visible; transform: none; transition: opacity .5s ease, transform .5s ease, visibility 0s; }
+.sgd .sgd-hslide .sgd-hero__title { font-size: clamp(1.8rem, 3.8vw, 2.9rem); }
+.sgd-hslide .sgd-hero__btns { margin-bottom: 4px; }
+.sgd-hero--slider .sgd-hero__poplabel { margin-top: 20px; }
+@media (prefers-reduced-motion: reduce) { .sgd-hslide, .sgd-hslide.is-active { transform: none; transition: none; } .sgd-hslider__tab i { display: none; } }
+@media (max-width: 549px) {
+	.sgd .sgd-hero__h1 { font-size: .82rem; padding: 6px 12px; border-radius: 12px; }
+	.sgd-hslider__tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+	.sgd .sgd-hslider__tab { padding: 6px 4px; min-height: 44px; border-radius: 12px; font-size: .8rem; line-height: 1.25; white-space: normal; }
+}

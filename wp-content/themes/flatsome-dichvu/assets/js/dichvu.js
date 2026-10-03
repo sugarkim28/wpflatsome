@@ -181,4 +181,116 @@
 			}
 		} );
 	} );
+	// Slider dịch vụ đầu trang chủ: tự chuyển, dừng khi rê chuột / focus, phím mũi tên, vuốt trên điện thoại.
+	document.querySelectorAll( '.sgd-hslider' ).forEach( function ( box ) {
+		var tabs = box.querySelectorAll( '.sgd-hslider__tab' ),
+			slides = box.querySelectorAll( '.sgd-hslide' ),
+			ms = parseInt( box.getAttribute( 'data-interval' ), 10 ) || 6000,
+			reduce = window.matchMedia && window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches,
+			cur = 0, timer = null, hold = false, x0 = null;
+		if ( slides.length < 2 ) {
+			return;
+		}
+		box.style.setProperty( '--sgd-hs', ms + 'ms' );
+		function go( n, focus ) {
+			cur = ( n + slides.length ) % slides.length;
+			slides.forEach( function ( s, i ) {
+				var on = i === cur;
+				s.classList.toggle( 'is-active', on );
+				if ( on ) {
+					s.removeAttribute( 'aria-hidden' );
+				} else {
+					s.setAttribute( 'aria-hidden', 'true' );
+				}
+				s.querySelectorAll( 'a' ).forEach( function ( a ) {
+					if ( on ) {
+						a.removeAttribute( 'tabindex' );
+					} else {
+						a.setAttribute( 'tabindex', '-1' );
+					}
+				} );
+			} );
+			tabs.forEach( function ( t, i ) {
+				var on = i === cur;
+				t.classList.toggle( 'is-active', on );
+				t.setAttribute( 'aria-selected', on ? 'true' : 'false' );
+				t.setAttribute( 'tabindex', on ? '0' : '-1' );
+				// Khởi động lại thanh tiến trình.
+				var bar = t.querySelector( 'i' );
+				if ( bar ) {
+					bar.style.animation = 'none';
+					void bar.offsetWidth;
+					bar.style.animation = '';
+				}
+			} );
+			if ( focus ) {
+				tabs[ cur ].focus();
+			}
+			play();
+		}
+		function play() {
+			clearTimeout( timer );
+			if ( reduce || hold || document.hidden ) {
+				box.classList.remove( 'is-playing' );
+				return;
+			}
+			box.classList.add( 'is-playing' );
+			timer = setTimeout( function () {
+				go( cur + 1 );
+			}, ms );
+		}
+		function pause( on ) {
+			hold = on;
+			box.classList.toggle( 'is-paused', on );
+			if ( on ) {
+				clearTimeout( timer );
+			} else {
+				go( cur );
+			}
+		}
+		tabs.forEach( function ( t, i ) {
+			t.addEventListener( 'click', function () {
+				go( i );
+			} );
+			t.addEventListener( 'keydown', function ( e ) {
+				if ( 'ArrowRight' === e.key || 'ArrowLeft' === e.key ) {
+					e.preventDefault();
+					go( cur + ( 'ArrowRight' === e.key ? 1 : -1 ), true );
+				}
+			} );
+		} );
+		box.addEventListener( 'mouseenter', function () {
+			pause( true );
+		} );
+		box.addEventListener( 'mouseleave', function () {
+			pause( false );
+		} );
+		box.addEventListener( 'focusin', function () {
+			if ( ! hold ) {
+				hold = true;
+				clearTimeout( timer );
+				box.classList.add( 'is-paused' );
+			}
+		} );
+		box.addEventListener( 'focusout', function ( e ) {
+			if ( ! box.contains( e.relatedTarget ) ) {
+				pause( false );
+			}
+		} );
+		box.addEventListener( 'touchstart', function ( e ) {
+			x0 = e.touches[ 0 ].clientX;
+		}, { passive: true } );
+		box.addEventListener( 'touchend', function ( e ) {
+			if ( null === x0 ) {
+				return;
+			}
+			var dx = e.changedTouches[ 0 ].clientX - x0;
+			x0 = null;
+			if ( Math.abs( dx ) > 50 ) {
+				go( cur + ( dx < 0 ? 1 : -1 ) );
+			}
+		}, { passive: true } );
+		document.addEventListener( 'visibilitychange', play );
+		play();
+	} );
 } )();

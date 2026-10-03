@@ -643,8 +643,48 @@ function sgd_sc_topbar( $atts ) {
 add_shortcode( 'sgd_topbar', 'sgd_sc_topbar' );
 
 /**
- * Banner đầu trang chủ: H1 duy nhất của trang, lợi ích, nút gọi/báo giá, dịch vụ phổ biến kèm giá,
- * form tư vấn ngay màn hình đầu (không dùng slider – nhẹ, LCP nhanh, không nhảy bố cục).
+ * Các slide giới thiệu dịch vụ ở đầu trang chủ.
+ * Tuỳ biến tại Customizer (hero_slides) hoặc filter sgd_hero_slides.
+ *
+ * @return array
+ */
+function sgd_hero_slides() {
+	$raw = trim( (string) sgd_opt( 'hero_slides' ) );
+	if ( '' === $raw ) {
+		$raw = "Thành lập công ty | Dịch vụ thành lập công ty | trọn gói từ A – Z | Có giấy phép sau 3 – 5 ngày làm việc. Tư vấn chọn loại hình, ngành nghề, vốn điều lệ; soạn hồ sơ, nộp online và giao giấy phép, con dấu tận nơi. | Tư vấn miễn phí loại hình TNHH, cổ phần, hộ kinh doanh; Soạn và nộp hồ sơ trực tuyến, không cần đi lại; Hỗ trợ khai thuế ban đầu, chữ ký số, hóa đơn điện tử | thanh-lap-doanh-nghiep\n"
+			. "Dịch vụ kế toán | Dịch vụ kế toán thuế | trọn gói hằng tháng | Kê khai thuế, làm sổ sách, báo cáo tài chính và quyết toán cuối năm – đúng hạn, đúng luật, chuyên viên riêng phụ trách. | Báo cáo thuế đúng hạn, không lo bị phạt; Sổ sách, báo cáo tài chính đầy đủ, khớp số liệu; Chịu trách nhiệm khi cơ quan thuế kiểm tra | ke-toan\n"
+			. 'Thay đổi GPKD | Thay đổi giấy phép kinh doanh | nhanh – đúng luật | Đổi tên, địa chỉ, ngành nghề, vốn điều lệ, người đại diện, thành viên – trọn gói từ soạn hồ sơ đến nhận kết quả. | Rà soát và soạn hồ sơ trong ngày; Có kết quả sau 3 – 5 ngày làm việc; Cập nhật thông tin thuế, hóa đơn sau khi thay đổi | thay-doi-giay-phep';
+	}
+	$slides = array();
+	foreach ( preg_split( '/\r\n|\r|\n/', $raw ) as $line ) {
+		$c = array_map( 'trim', explode( '|', $line ) );
+		if ( count( $c ) < 2 || '' === $c[1] ) {
+			continue;
+		}
+		$c   = array_pad( $c, 6, '' );
+		$url = '';
+		if ( $c[5] ) {
+			$term = get_term_by( 'slug', $c[5], 'nhom_dich_vu' );
+			$url  = $term ? get_term_link( $term ) : '';
+			$url  = is_wp_error( $url ) ? '' : $url;
+		}
+		$slides[] = array(
+			'label'     => $c[0] ? $c[0] : $c[1],
+			'title'     => $c[1],
+			'highlight' => $c[2],
+			'sub'       => $c[3],
+			'points'    => array_values( array_filter( array_map( 'trim', explode( ';', $c[4] ) ) ) ),
+			'url'       => $url,
+		);
+	}
+	return apply_filters( 'sgd_hero_slides', $slides );
+}
+
+/**
+ * Banner đầu trang chủ: H1 duy nhất của trang, slider giới thiệu 3 dịch vụ chính (thành lập công ty,
+ * kế toán, thay đổi giấy phép) bên trái, form tư vấn bên phải. Slide xếp chồng bằng CSS grid nên
+ * không nhảy bố cục; slide đầu hiển thị sẵn, không cần JS.
+ * slider="0" → banner tĩnh như bản cũ (title, highlight, sub, points).
  *
  * @param array $atts Thuộc tính.
  * @return string
@@ -657,29 +697,70 @@ function sgd_sc_hero( $atts ) {
 			'sub'       => sgd_opt( 'archive_intro' ),
 			'points'    => "Có giấy phép sau 3 – 5 ngày làm việc\nKế toán trọn gói từ 500.000đ/tháng\nLàm hồ sơ online, giao kết quả tận nơi",
 			'popular'   => '1',
+			'slider'    => '1',
+			'h1'        => 'Dịch vụ thành lập công ty, kế toán thuế, thay đổi giấy phép kinh doanh',
+			'interval'  => '6',
 		),
 		$atts,
 		'sgd_hero'
 	);
+	$slides  = '1' === (string) $a['slider'] ? sgd_hero_slides() : array();
 	$popular = '1' === (string) $a['popular'] ? sgd_query_services( array( 'number' => 6, 'featured' => '1', 'group' => '', 'exclude' => '' ) ) : array();
+	$tel     = sgd_tel( sgd_opt( 'hotline' ) );
 	ob_start();
 	?>
-	<div class="sgd-hero">
+	<div class="sgd-hero<?php echo $slides ? ' sgd-hero--slider' : ''; ?>">
 		<div class="sgd-hero__text">
-			<p class="sgd-hero__kicker"><?php echo esc_html( sgd_opt( 'topbar_text' ) ? sgd_opt( 'topbar_text' ) : sgd_opt( 'company' ) ); ?></p>
-			<h1 class="sgd-hero__title"><?php echo esc_html( $a['title'] ); ?> <span><?php echo esc_html( $a['highlight'] ); ?></span></h1>
-			<?php if ( $a['sub'] ) : ?>
-				<p class="sgd-hero__sub"><?php echo esc_html( sgd_clip( $a['sub'], 220 ) ); ?></p>
+			<?php if ( $slides ) : ?>
+				<h1 class="sgd-hero__kicker sgd-hero__h1"><?php echo esc_html( $a['h1'] ); ?></h1>
+				<div class="sgd-hslider" data-interval="<?php echo esc_attr( max( 3, (int) $a['interval'] ) * 1000 ); ?>">
+					<div class="sgd-hslider__tabs" role="tablist" aria-label="Dịch vụ chính">
+						<?php foreach ( $slides as $i => $sl ) : ?>
+							<button type="button" class="sgd-hslider__tab<?php echo 0 === $i ? ' is-active' : ''; ?>" role="tab" id="sgd-hs-tab-<?php echo (int) $i; ?>" aria-controls="sgd-hs-<?php echo (int) $i; ?>" aria-selected="<?php echo 0 === $i ? 'true' : 'false'; ?>" tabindex="<?php echo 0 === $i ? '0' : '-1'; ?>"><?php echo esc_html( $sl['label'] ); ?><i></i></button>
+						<?php endforeach; ?>
+					</div>
+					<div class="sgd-hslider__track">
+						<?php foreach ( $slides as $i => $sl ) : ?>
+							<div class="sgd-hslide<?php echo 0 === $i ? ' is-active' : ''; ?>" role="tabpanel" id="sgd-hs-<?php echo (int) $i; ?>" aria-labelledby="sgd-hs-tab-<?php echo (int) $i; ?>"<?php echo 0 === $i ? '' : ' aria-hidden="true"'; ?>>
+								<h2 class="sgd-hero__title"><?php echo esc_html( $sl['title'] ); ?><?php echo $sl['highlight'] ? ' <span>' . esc_html( $sl['highlight'] ) . '</span>' : ''; ?></h2>
+								<?php if ( $sl['sub'] ) : ?>
+									<p class="sgd-hero__sub"><?php echo esc_html( $sl['sub'] ); ?></p>
+								<?php endif; ?>
+								<?php if ( $sl['points'] ) : ?>
+									<ul class="sgd-check sgd-hero__points">
+										<?php foreach ( $sl['points'] as $pt ) : ?>
+											<li><?php echo esc_html( $pt ); ?></li>
+										<?php endforeach; ?>
+									</ul>
+								<?php endif; ?>
+								<p class="sgd-hero__btns">
+									<?php if ( $sl['url'] ) : ?>
+										<a class="button sgd-btn" href="<?php echo esc_url( $sl['url'] ); ?>"<?php echo 0 === $i ? '' : ' tabindex="-1"'; ?>>Xem <?php echo esc_html( mb_strtolower( $sl['title'] ) ); ?></a>
+									<?php else : ?>
+										<a class="button sgd-btn" href="#dang-ky"<?php echo 0 === $i ? '' : ' tabindex="-1"'; ?>>Nhận báo giá miễn phí</a>
+									<?php endif; ?>
+									<a class="button sgd-btn is-outline" href="tel:<?php echo esc_attr( $tel ); ?>"<?php echo 0 === $i ? '' : ' tabindex="-1"'; ?>><?php echo sgd_icon( 'phone' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> <?php echo esc_html( sgd_opt( 'hotline' ) ); ?></a>
+								</p>
+							</div>
+						<?php endforeach; ?>
+					</div>
+				</div>
+			<?php else : ?>
+				<p class="sgd-hero__kicker"><?php echo esc_html( sgd_opt( 'topbar_text' ) ? sgd_opt( 'topbar_text' ) : sgd_opt( 'company' ) ); ?></p>
+				<h1 class="sgd-hero__title"><?php echo esc_html( $a['title'] ); ?> <span><?php echo esc_html( $a['highlight'] ); ?></span></h1>
+				<?php if ( $a['sub'] ) : ?>
+					<p class="sgd-hero__sub"><?php echo esc_html( sgd_clip( $a['sub'], 220 ) ); ?></p>
+				<?php endif; ?>
+				<ul class="sgd-check sgd-hero__points">
+					<?php foreach ( sgd_list( str_replace( array( '<br />', '<br>', '\n' ), "\n", $a['points'] ) ) as $pt ) : ?>
+						<li><?php echo esc_html( $pt ); ?></li>
+					<?php endforeach; ?>
+				</ul>
+				<p class="sgd-hero__btns">
+					<a class="button sgd-btn" href="#dang-ky">Nhận báo giá miễn phí</a>
+					<a class="button sgd-btn is-outline" href="tel:<?php echo esc_attr( $tel ); ?>"><?php echo sgd_icon( 'phone' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> <?php echo esc_html( sgd_opt( 'hotline' ) ); ?></a>
+				</p>
 			<?php endif; ?>
-			<ul class="sgd-check sgd-hero__points">
-				<?php foreach ( sgd_list( str_replace( array( '<br />', '<br>', '\n' ), "\n", $a['points'] ) ) as $pt ) : ?>
-					<li><?php echo esc_html( $pt ); ?></li>
-				<?php endforeach; ?>
-			</ul>
-			<p class="sgd-hero__btns">
-				<a class="button sgd-btn" href="#dang-ky">Nhận báo giá miễn phí</a>
-				<a class="button sgd-btn is-outline" href="tel:<?php echo esc_attr( sgd_tel( sgd_opt( 'hotline' ) ) ); ?>"><?php echo sgd_icon( 'phone' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> <?php echo esc_html( sgd_opt( 'hotline' ) ); ?></a>
-			</p>
 			<?php if ( $popular ) : ?>
 				<p class="sgd-hero__poplabel">Dịch vụ được chọn nhiều:</p>
 				<ul class="sgd-hero__pop">

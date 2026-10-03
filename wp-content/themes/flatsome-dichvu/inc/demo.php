@@ -770,8 +770,8 @@ function sgd_demo_build_menu( $groups, $services ) {
 	$add( 'Giới thiệu', $page( 'gioi-thieu' ) );
 	$top(
 		'thanh-lap-doanh-nghiep',
-		'Dịch vụ thành lập',
 		'Thành lập công ty',
+		'Dịch vụ thành lập công ty',
 		array(
 			array( 'Công ty TNHH', 'thanh-lap-cong-ty-tnhh' ),
 			array( 'Công ty cổ phần', 'thanh-lap-cong-ty-co-phan' ),
@@ -826,6 +826,7 @@ function sgd_demo_build_menu( $groups, $services ) {
 			array( 'VPĐD nước ngoài', 'thanh-lap-van-phong-dai-dien-nuoc-ngoai' ),
 			array( 'Đăng ký nhãn hiệu, logo', 'dang-ky-nhan-hieu' ),
 			array( 'Chữ ký số', 'chu-ky-so' ),
+			array( 'Chữ ký số và hoá đơn điện tử', 'chu-ky-so-hoa-don-dien-tu' ),
 			array( 'Đăng ký MST cá nhân', 'dang-ky-ma-so-thue-ca-nhan' ),
 			array( 'Soạn thảo hợp đồng', 'soan-thao-hop-dong' ),
 		)
@@ -841,7 +842,6 @@ function sgd_demo_build_menu( $groups, $services ) {
 		)
 	);
 	$add( 'Kiến thức', ( $news_id ? get_permalink( $news_id ) : $page( 'tin-tuc' ) ) );
-	$add( 'Tra cứu', $page( 'tra-cuu' ) );
 	$add( 'Liên hệ', $page( 'lien-he' ) );
 	$loc                   = get_theme_mod( 'nav_menu_locations', array() );
 	$loc['primary']        = $menu_id;

@@ -58,6 +58,13 @@ Trang chủ (bản 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh
 
 Khối `[sgd_group_section group="…"]` (Tư vấn thành lập công ty, Kế toán – thuế, Thay đổi GPKD, Dịch vụ khác): các thẻ bên dưới **lấy đúng các mục con trên menu chính** của mục tương ứng, theo thứ tự trong menu (bỏ mục "Tổng quan" trỏ lại chính nhóm). Thêm / bớt / đổi thứ tự trong **Giao diện → Menu** là trang chủ tự cập nhật. Mục con có thể là dịch vụ, trang, bài viết, chuyên mục hoặc liên kết tự nhập. Thẻ tự chia hàng đầy, cân đối (bản 0.9.6): 3 → 3 · 4 → 4 · 5 → 2 thẻ lớn nằm ngang + 3 · 6 → 3+3 · 7 → 4+3 · 8 → 4+4 · 9 → 3+3+3 · 10 → 4+3+3. Điện thoại: thẻ vuốt ngang. Muốn quay lại kiểu cũ (bài viết Kiến thức liên quan): thêm `source="posts"`.
 
+## Slider dịch vụ đầu trang chủ & menu mới (bản 0.10.1)
+
+- Banner đầu trang chủ thành **slider 3 dịch vụ**: Thành lập công ty · Dịch vụ kế toán · Thay đổi GPKD (form tư vấn vẫn ở bên phải). Tự chuyển sau 6 giây, dừng khi rê chuột, bấm tab hoặc vuốt để chuyển. Trang chủ vẫn chỉ có 1 H1.
+- Sửa nội dung slide: **Tuỳ biến → Danh sách & trang chủ → Slide đầu trang chủ**, mỗi dòng `Nhãn | Tiêu đề | Chữ nổi bật | Mô tả | Ý 1; Ý 2; Ý 3 | slug nhóm dịch vụ`. Tắt slider: `[sgd_hero slider="0"]`.
+- Menu: "Dịch vụ thành lập" → **Thành lập công ty**; thêm **Chữ ký số và hoá đơn điện tử** vào Dịch vụ khác; bỏ "Tra cứu" khỏi menu (trang /tra-cuu/ vẫn còn).
+- Cập nhật trên web đang chạy: tải theme mới đè lên → **Giao diện → Tạo site mẫu → Cập nhật menu (giữ trang chủ)**. Không bấm "Tạo site mẫu".
+
 ## Menu giống ketoananpha.vn & trang Tra cứu (bản 0.10.0)
 
 - Menu: Giới thiệu · Dịch vụ thành lập · Dịch vụ kế toán · Thay đổi GPKD (Thay đổi tên, Đổi địa chỉ, Thêm ngành nghề, Tăng vốn điều lệ, Thêm cổ đông, Đổi đại diện pháp luật, Đổi loại hình công ty, Cập nhật CCCD) · Dịch vụ khác · Đào tạo · Kiến thức · **Tra cứu** · Liên hệ.
