@@ -295,13 +295,17 @@ function sgd_org_schema() {
 		'url'       => home_url( '/' ),
 		'telephone' => sgd_opt( 'hotline' ),
 		'email'     => sgd_opt( 'email' ),
-		'address'   => array(
-			'@type'          => 'PostalAddress',
-			'streetAddress'  => sgd_opt( 'address' ),
-			'addressCountry' => 'VN',
-		),
 		'areaServed' => 'VN',
 	);
+	// Chỉ khai báo địa chỉ khi đã nhập địa chỉ thật (bỏ địa chỉ mẫu "Số ... đường ...").
+	$addr = trim( (string) sgd_opt( 'address' ) );
+	if ( '' !== $addr && false === strpos( $addr, '...' ) ) {
+		$org['address'] = array(
+			'@type'          => 'PostalAddress',
+			'streetAddress'  => $addr,
+			'addressCountry' => 'VN',
+		);
+	}
 	$logo = get_theme_mod( 'site_logo' );
 	if ( $logo ) {
 		$org['logo'] = is_numeric( $logo ) ? wp_get_attachment_image_url( $logo, 'full' ) : $logo;
