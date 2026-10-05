@@ -181,26 +181,109 @@ function sgd_fallback_meta() {
 		}
 		echo '<link rel="canonical" href="' . esc_url( $canon ) . "\">\n";
 	}
-	$image = is_singular() && has_post_thumbnail() ? get_the_post_thumbnail_url( get_the_ID(), 'large' ) : '';
-	if ( ! $image ) {
-		$logo  = get_theme_mod( 'site_logo' );
-		$image = $logo ? ( is_numeric( $logo ) ? wp_get_attachment_image_url( $logo, 'full' ) : $logo ) : '';
-	}
+	// Ảnh chia sẻ: JPG/PNG khổ 1200×630 kèm kích thước – Facebook, Zalo hiện ảnh lớn ngay lần chia sẻ đầu.
+	$img  = sgd_og_image();
 	$tags = array(
-		'og:locale'      => 'vi_VN',
+		'og:locale'      => sgd_is_en() ? 'en_US' : 'vi_VN',
 		'og:type'        => is_singular( array( 'post' ) ) ? 'article' : 'website',
 		'og:site_name'   => get_bloginfo( 'name' ),
 		'og:title'       => wp_get_document_title(),
 		'og:description' => $desc,
 		'og:url'         => is_wp_error( $url ) ? '' : $url,
-		'og:image'       => $image,
 	);
+	if ( $img ) {
+		$tags['og:image']        = $img['url'];
+		$tags['og:image:type']   = $img['type'];
+		$tags['og:image:width']  = $img['w'];
+		$tags['og:image:height'] = $img['h'];
+		$tags['og:image:alt']    = $img['alt'];
+	}
+	if ( is_singular( 'post' ) ) {
+		$tags['article:published_time'] = get_the_date( 'c' );
+		$tags['article:modified_time']  = get_the_modified_date( 'c' );
+	}
 	foreach ( array_filter( $tags ) as $k => $v ) {
 		echo '<meta property="' . esc_attr( $k ) . '" content="' . esc_attr( $v ) . "\">\n";
 	}
-	echo '<meta name="twitter:card" content="' . ( $image ? 'summary_large_image' : 'summary' ) . "\">\n";
+	echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
+	echo '<meta name="twitter:title" content="' . esc_attr( wp_get_document_title() ) . "\">\n";
+	if ( $desc ) {
+		echo '<meta name="twitter:description" content="' . esc_attr( $desc ) . "\">\n";
+	}
+	if ( $img ) {
+		echo '<meta name="twitter:image" content="' . esc_url( $img['url'] ) . "\">\n";
+	}
 }
 add_action( 'wp_head', 'sgd_fallback_meta', 1 );
+
+/**
+ * Ảnh chia sẻ mạng xã hội của trang hiện tại.
+ * Ảnh đại diện WebP/AVIF được chuyển sang bản JPG (lưu cạnh ảnh gốc, tạo 1 lần) vì Zalo và nhiều ứng dụng
+ * không đọc được WebP; trang không có ảnh dùng ảnh mặc định của theme (không dùng logo SVG).
+ *
+ * @return array|null url, type, w, h, alt.
+ */
+function sgd_og_image() {
+	$alt = is_singular() && ! is_front_page() ? get_the_title() : get_bloginfo( 'name' );
+	$id  = is_singular() ? (int) get_post_thumbnail_id() : 0;
+	if ( $id ) {
+		$file = get_attached_file( $id );
+		$meta = wp_get_attachment_metadata( $id );
+		$mime = get_post_mime_type( $id );
+		if ( $file && file_exists( $file ) ) {
+			if ( in_array( $mime, array( 'image/jpeg', 'image/png' ), true ) ) {
+				return array(
+					'url'  => wp_get_attachment_url( $id ),
+					'type' => $mime,
+					'w'    => isset( $meta['width'] ) ? (int) $meta['width'] : '',
+					'h'    => isset( $meta['height'] ) ? (int) $meta['height'] : '',
+					'alt'  => $alt,
+				);
+			}
+			$jpg = preg_replace( '/\.[a-z0-9]+$/i', '', $file ) . '-og.jpg';
+			if ( ! file_exists( $jpg ) ) {
+				$editor = wp_get_image_editor( $file );
+				if ( ! is_wp_error( $editor ) ) {
+					$editor->set_quality( 85 );
+					$editor->save( $jpg, 'image/jpeg' );
+				}
+			}
+			if ( file_exists( $jpg ) ) {
+				$size = wp_getimagesize( $jpg );
+				return array(
+					'url'  => trailingslashit( dirname( wp_get_attachment_url( $id ) ) ) . basename( $jpg ),
+					'type' => 'image/jpeg',
+					'w'    => $size ? (int) $size[0] : '',
+					'h'    => $size ? (int) $size[1] : '',
+					'alt'  => $alt,
+				);
+			}
+		}
+	}
+	return array(
+		'url'  => SGD_URI . '/assets/img/og-default.jpg',
+		'type' => 'image/jpeg',
+		'w'    => 1200,
+		'h'    => 630,
+		'alt'  => $alt,
+	);
+}
+
+/**
+ * Xoá bản JPG chia sẻ khi xoá ảnh gốc.
+ *
+ * @param int $id ID ảnh.
+ */
+function sgd_og_image_cleanup( $id ) {
+	$file = get_attached_file( $id );
+	if ( $file ) {
+		$jpg = preg_replace( '/\.[a-z0-9]+$/i', '', $file ) . '-og.jpg';
+		if ( file_exists( $jpg ) && $jpg !== $file ) {
+			wp_delete_file( $jpg );
+		}
+	}
+}
+add_action( 'delete_attachment', 'sgd_og_image_cleanup' );
 
 /**
  * Link trang 1 của trang danh sách hiện tại (chuyên mục, nhóm dịch vụ, Kiến thức, danh sách dịch vụ).
