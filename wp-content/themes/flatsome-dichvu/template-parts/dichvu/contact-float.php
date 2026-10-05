@@ -37,7 +37,7 @@ $sgd_msg  = $sgd_msg ? 'https://m.me/' . rawurlencode( preg_replace( '#^.*(?:m\.
 			'template-parts/dichvu/lead-form',
 			null,
 			array(
-				'title'   => '',
+				'notitle' => true,
 				'button'  => 'Gửi yêu cầu ngay',
 				'source'  => 'Popup',
 				'service' => is_singular( 'dich_vu' ) ? get_the_ID() : 0,

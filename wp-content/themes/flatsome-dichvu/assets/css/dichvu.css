@@ -1649,3 +1649,9 @@ body.sgd { background: #fff; font-size: 16px; -webkit-font-smoothing: antialiase
 .sgd-lang--menu a { padding: 6px 14px; border: 1px solid var(--sgd-line); opacity: 1; }
 .sgd-lang--menu a.is-current { border-color: var(--sgd-primary); background: var(--sgd-primary); color: #fff !important; }
 .sgd-lang--menu .sgd-lang__sep { display: none; }
+
+/* v15 – form thống nhất: danh sách lợi ích luôn đọc được (kể cả form nằm trên nền banner / khối tối) */
+.sgd .sgd-form .sgd-perks { margin: 0 0 14px; }
+.sgd .sgd-form .sgd-perks li { color: var(--sgd-ink) !important; font-size: .93rem; font-weight: 400; }
+.sgd .sgd-form .sgd-form__title { color: var(--sgd-navy) !important; }
+.sgd .sgd-form .sgd-form__title { text-align: center; }

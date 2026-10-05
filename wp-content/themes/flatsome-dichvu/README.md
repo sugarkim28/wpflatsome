@@ -205,7 +205,7 @@ Nhóm & dịch vụ mẫu:
 [sgd_pricing service="ke-toan-tron-goi" show="all|table|packages"] – chi phí, bảng giá, các gói của 1 dịch vụ
 [sgd_price_table group="ke-toan"]                      – bảng phí tóm tắt
 [sgd_steps layout="row"]Bước | Mô tả (mỗi dòng 1 bước)[/sgd_steps]
-[sgd_lead_form title="" source="Trang chủ" service="slug-hoac-ID" perks="1" note="1"]
+[sgd_lead_form source="Trang chủ" service="slug-hoac-ID"]  (mọi form dùng chung 1 mẫu: tiêu đề, 3 lợi ích, 5 ô, nút "Gửi yêu cầu tư vấn")
 [sgd_call_buttons]
 [sgd_company field="company|company_full|hotline|zalo|email|address|tax_code|working_hours"]
 [sgd_icon name="building|edit|tax|calculator|stamp|chart|shield|doc|clock|users|wallet|globe|pin|phone|mail|trademark"]

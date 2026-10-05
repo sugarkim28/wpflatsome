@@ -1,6 +1,7 @@
 <?php
 /**
- * Form tư vấn. $args: title, button, source, service (ID – 0 = cho khách chọn), perks (bool), note (bool).
+ * Form tư vấn – 1 mẫu thống nhất cho toàn site. $args: source (nguồn ghi vào danh sách khách), service (ID dịch vụ chọn sẵn),
+ * notitle (true = bỏ tiêu đề khi khung chứa đã có tiêu đề: popup, cột phải). title / button / perks / note cũ được bỏ qua.
  *
  * @package Flatsome_Dichvu
  */
@@ -10,14 +11,16 @@ defined( 'ABSPATH' ) || exit;
 $sgd_a = wp_parse_args(
 	isset( $args ) ? $args : array(),
 	array(
-		'title'   => sgd_opt( 'form_title' ),
-		'button'  => 'Gửi yêu cầu tư vấn',
 		'source'  => 'Form',
 		'service' => 0,
-		'perks'   => true,
-		'note'    => true,
+		'notitle' => false,
 	)
 );
+// Mọi form trên web dùng chung 1 mẫu: tiêu đề, 3 lợi ích, đủ 5 ô (họ tên, điện thoại, email, dịch vụ, nội dung), nút gửi.
+$sgd_a['title']  = $sgd_a['notitle'] ? '' : sgd_t( 'Gửi yêu cầu tư vấn', 'Request a consultation' );
+$sgd_a['button'] = 'Gửi yêu cầu tư vấn';
+$sgd_a['perks']  = true;
+$sgd_a['note']   = true;
 $sgd_form   = sanitize_title( $sgd_a['source'] );
 $sgd_uid    = wp_unique_id( 'sgd-f' );
 $sgd_status = '';
@@ -66,18 +69,17 @@ $sgd_msgs = array(
 	<input id="<?php echo esc_attr( $sgd_uid ); ?>-phone" type="tel" name="sgd_phone" placeholder="Số điện thoại / Zalo *" required pattern="<?php echo esc_attr( sgd_is_en() ? '^\+?[\d\s.\-()]{7,20}$' : '^(\+?84|0)[\d\s.\-]{9,13}$' ); ?>" title="Số điện thoại Việt Nam, ví dụ 0909 123 456" autocomplete="tel">
 	<label class="screen-reader-text" for="<?php echo esc_attr( $sgd_uid ); ?>-email">Email</label>
 	<input id="<?php echo esc_attr( $sgd_uid ); ?>-email" type="email" name="sgd_email" placeholder="Email (không bắt buộc)" autocomplete="email">
-	<?php if ( $sgd_a['service'] ) : ?>
-		<input type="hidden" name="sgd_service" value="<?php echo esc_attr( absint( $sgd_a['service'] ) ); ?>">
-	<?php else : ?>
-		<label class="screen-reader-text" for="<?php echo esc_attr( $sgd_uid ); ?>-service">Dịch vụ cần tư vấn</label>
-		<select id="<?php echo esc_attr( $sgd_uid ); ?>-service" name="sgd_service">
-			<option value="">Dịch vụ cần tư vấn</option>
-			<?php foreach ( sgd_sorted_groups() as $sgd_g ) : ?>
-				<option value="g<?php echo esc_attr( $sgd_g->term_id ); ?>"><?php echo esc_html( $sgd_g->name ); ?></option>
-			<?php endforeach; ?>
-			<option value="0">Khác</option>
-		</select>
-	<?php endif; ?>
+	<label class="screen-reader-text" for="<?php echo esc_attr( $sgd_uid ); ?>-service">Dịch vụ cần tư vấn</label>
+	<select id="<?php echo esc_attr( $sgd_uid ); ?>-service" name="sgd_service">
+		<option value="">Dịch vụ cần tư vấn</option>
+		<?php if ( $sgd_a['service'] && get_post( absint( $sgd_a['service'] ) ) ) : ?>
+			<option value="<?php echo esc_attr( absint( $sgd_a['service'] ) ); ?>" selected><?php echo esc_html( get_the_title( absint( $sgd_a['service'] ) ) ); ?></option>
+		<?php endif; ?>
+		<?php foreach ( sgd_sorted_groups() as $sgd_g ) : ?>
+			<option value="g<?php echo esc_attr( $sgd_g->term_id ); ?>"><?php echo esc_html( $sgd_g->name ); ?></option>
+		<?php endforeach; ?>
+		<option value="0">Khác</option>
+	</select>
 	<?php if ( $sgd_a['note'] ) : ?>
 		<label class="screen-reader-text" for="<?php echo esc_attr( $sgd_uid ); ?>-note">Nội dung cần tư vấn</label>
 		<textarea id="<?php echo esc_attr( $sgd_uid ); ?>-note" name="sgd_note" rows="3" maxlength="1000" placeholder="Nội dung cần tư vấn (không bắt buộc)"></textarea>

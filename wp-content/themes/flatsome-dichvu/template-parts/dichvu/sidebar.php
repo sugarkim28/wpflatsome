@@ -32,7 +32,7 @@ $sgd_news = get_posts( array( 'post_type' => 'post', 'posts_per_page' => 5, 'no_
 					'template-parts/dichvu/lead-form',
 					null,
 					array(
-						'title'   => '',
+						'notitle' => true,
 						'button'  => 'Gửi yêu cầu',
 						'source'  => $sgd_sid ? 'Trang dịch vụ' : 'Cột phải',
 						'service' => $sgd_sid,
