@@ -23,18 +23,24 @@ while ( have_posts() ) :
 	$sgd_title    = get_the_title();
 	list( $sgd_content, $sgd_heads ) = sgd_content_headings( apply_filters( 'the_content', get_the_content() ) ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- hook lõi WP.
 
+	// Trang khoá học (nhóm Đào tạo) dùng tiêu đề mục theo ngữ cảnh học, không phải dịch vụ.
+	$sgd_course = $sgd_group && 'dao-tao' === $sgd_group->slug;
+	$sgd_h      = $sgd_course
+		? array( 'Nội dung khoá học', 'Học viên cần chuẩn bị', 'Lộ trình học' )
+		: array( 'Công việc chúng tôi thực hiện', 'Thông tin, hồ sơ bạn cần chuẩn bị', 'Quy trình & thời gian thực hiện' );
+
 	$sgd_toc = array();
 	if ( $sgd_has_cost ) {
 		$sgd_toc[] = array( 'bang-gia', 'Chi phí & bảng giá ' . $sgd_title );
 	}
 	if ( $sgd_includes ) {
-		$sgd_toc[] = array( 'cong-viec', 'Công việc chúng tôi thực hiện' );
+		$sgd_toc[] = array( 'cong-viec', $sgd_h[0] );
 	}
 	if ( $sgd_docs ) {
-		$sgd_toc[] = array( 'ho-so', 'Thông tin, hồ sơ bạn cần chuẩn bị' );
+		$sgd_toc[] = array( 'ho-so', $sgd_h[1] );
 	}
 	if ( $sgd_steps ) {
-		$sgd_toc[] = array( 'quy-trinh', 'Quy trình & thời gian thực hiện' );
+		$sgd_toc[] = array( 'quy-trinh', $sgd_h[2] );
 	}
 	$sgd_toc = array_merge( $sgd_toc, $sgd_heads );
 	if ( $sgd_faq ) {
@@ -99,7 +105,7 @@ while ( have_posts() ) :
 
 				<?php if ( $sgd_includes ) : ?>
 					<section id="cong-viec" class="sgd-sec">
-						<h2>Công việc chúng tôi thực hiện</h2>
+						<h2><?php echo esc_html( $sgd_h[0] ); ?></h2>
 						<ul class="sgd-check">
 							<?php foreach ( $sgd_includes as $sgd_i ) : ?>
 								<li><?php echo esc_html( $sgd_i ); ?></li>
@@ -110,7 +116,7 @@ while ( have_posts() ) :
 
 				<?php if ( $sgd_docs ) : ?>
 					<section id="ho-so" class="sgd-sec">
-						<h2>Thông tin, hồ sơ bạn cần chuẩn bị</h2>
+						<h2><?php echo esc_html( $sgd_h[1] ); ?></h2>
 						<ol class="sgd-numlist">
 							<?php foreach ( $sgd_docs as $sgd_i ) : ?>
 								<li><?php echo esc_html( $sgd_i ); ?></li>
@@ -121,7 +127,7 @@ while ( have_posts() ) :
 
 				<?php if ( $sgd_steps ) : ?>
 					<section id="quy-trinh" class="sgd-sec">
-						<h2>Quy trình &amp; thời gian thực hiện</h2>
+						<h2><?php echo esc_html( $sgd_h[2] ); ?></h2>
 						<?php if ( sgd_meta( 'duration' ) ) : ?>
 							<p>Tổng thời gian hoàn thành: <strong><?php echo esc_html( sgd_meta( 'duration' ) ); ?></strong>.</p>
 						<?php endif; ?>

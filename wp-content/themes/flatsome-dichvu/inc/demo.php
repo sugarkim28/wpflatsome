@@ -805,6 +805,7 @@ function sgd_demo_build_menu( $groups, $services ) {
 			array( 'Kế toán tổng hợp', 'khoa-hoc-ke-toan-tong-hop' ),
 			array( 'Kế toán thuế', 'khoa-hoc-ke-toan-thue' ),
 			array( 'Sổ sách kế toán', 'khoa-hoc-so-sach-ke-toan' ),
+			array( 'Kế toán dịch vụ', 'khoa-hoc-ke-toan-dich-vu' ),
 		)
 	);
 	// Chuyên mục bài viết: menu con dẫn tới trang chuyên mục (chỉ thêm khi đã có).
