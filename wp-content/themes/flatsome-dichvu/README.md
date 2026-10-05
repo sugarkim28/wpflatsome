@@ -54,6 +54,63 @@ Trang chủ (bản 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh
 - Quy trình hiện dạng timeline (`[sgd_steps]` mỗi dòng `Bước | Mô tả | Thời gian`; `layout="row"` = timeline ngang, tự chuyển dọc trên điện thoại).
 - Bảng giá nằm trong bài viết lớn của từng nhóm (`[sgd_price_table group="…"]`, `[sgd_pricing service="…" show="packages|table"]`); bài tự viết chưa chèn bảng giá thì theme tự thêm ở cuối.
 
+## Khối nhóm ở trang chủ lấy theo menu (bản 0.9.5)
+
+Khối `[sgd_group_section group="…"]` (Tư vấn thành lập công ty, Kế toán – thuế, Thay đổi GPKD, Dịch vụ khác): các thẻ bên dưới **lấy đúng các mục con trên menu chính** của mục tương ứng, theo thứ tự trong menu (bỏ mục "Tổng quan" trỏ lại chính nhóm). Thêm / bớt / đổi thứ tự trong **Giao diện → Menu** là trang chủ tự cập nhật. Mục con có thể là dịch vụ, trang, bài viết, chuyên mục hoặc liên kết tự nhập. Thẻ tự chia hàng đầy, cân đối (bản 0.9.6): 3 → 3 · 4 → 4 · 5 → 2 thẻ lớn nằm ngang + 3 · 6 → 3+3 · 7 → 4+3 · 8 → 4+4 · 9 → 3+3+3 · 10 → 4+3+3. Điện thoại: thẻ vuốt ngang. Muốn quay lại kiểu cũ (bài viết Kiến thức liên quan): thêm `source="posts"`.
+
+## Trang Kiến thức dạng chủ đề (bản 0.10.4)
+
+- Trang **Kiến thức** (trang 1) trình bày như ketoananpha.vn/kien-thuc.html: khối **Kiến thức kế toán** và **Kiến thức pháp lý**, mỗi khối có đoạn giới thiệu + lưới thẻ chủ đề (tên, số bài, nút "Xem chi tiết", hình minh hoạ), cuối trang **Bài viết mới nhất** (1 bài lớn + danh sách 2 cột). Trang 2 trở đi là danh sách bài như cũ.
+- Thẻ chủ đề = **chuyên mục con**; khối = **chuyên mục cha**. Thêm/sửa ở Bài viết → Chuyên mục (chọn "Chuyên mục hiện tại" là Kiến thức kế toán / Kiến thức pháp lý). Mô tả chuyên mục cha là đoạn giới thiệu của khối.
+- Chủ đề chưa có bài hiện "Đang cập nhật" (nút xám) và trang chuyên mục đó tự **noindex** cho tới khi có bài.
+- Menu Kiến thức → Kiến thức kế toán, Kiến thức pháp lý. Trang chuyên mục có tab các chủ đề con.
+
+## Đính chính 10 bài theo văn bản gốc (bản 0.10.3)
+
+- Đối chiếu lại với luatvietnam.vn: bổ sung Nghị định 253/2026 (TNCN: tiền ăn ca 1,2 triệu, giảm trừ y tế 23 triệu / giáo dục 24 triệu, khấu trừ 10% từ 5 triệu/lần), Nghị định 68/2026 + Thông tư 152/2025 (hộ kinh doanh: bảng tỷ lệ thuế theo ngành, thuế suất 15/17/20%, chi phí được trừ, hoá đơn từ 1 tỷ), Thông tư 20/2026 + CV 218/CST-TN (chứng từ không dùng tiền mặt), Nghị định 296/2026 (chủ sở hữu hưởng lợi từ 25%, xác thực điện tử, tạm ngừng), Thông tư 99/2025 (đổi tên tài khoản, quy chế hạch toán).
+- Sửa: ngưỡng cũ của hộ kinh doanh là 100 triệu; bỏ "TK 332"; bỏ việc huỷ hoá đơn (Nghị định 70/2025 đã bãi bỏ).
+- Bấm **Cập nhật menu (giữ trang chủ)**: bài chưa sửa tay tự lên bản mới; bài bạn đã sửa giữ nguyên.
+
+## 10 bài Kiến thức & Đào tạo (bản 0.10.2)
+
+- **Kiến thức** (5 bài, chuyên mục *Kiến thức pháp lý*, *Kiến thức thuế*): thủ tục thành lập công ty 2026 · lịch nộp tờ khai thuế 2026 · khi nào phải thay đổi giấy phép kinh doanh · thuế hộ kinh doanh 2026 (bỏ thuế khoán) · hoá đơn điện tử 2026.
+- **Đào tạo** (5 bài, chuyên mục *Bài học kế toán*): kế toán tổng hợp cho người mới · kê khai thuế GTGT · tính thuế TNCN từ tiền lương 2026 · điểm mới Thông tư 99/2025 · chi phí được trừ thuế TNDN.
+- Nội dung tự biên soạn, cập nhật theo văn bản có hiệu lực đến 10/2026 (Luật DN sửa đổi 76/2025, NĐ 168/2025 + 296/2026, Luật QLT 108/2025 + NĐ 252/2026, Luật TNDN 67/2025 + NĐ 320/2025, Luật TNCN 109/2025 + NQ 110/2025, Luật GTGT 48/2024 + NĐ 181/2025 + 144/2026, NĐ 68/2026, NĐ 70/2025, TT 99/2025, NQ 198/2025…). Nên rà lại khi có văn bản mới.
+- Link nội bộ về trang dịch vụ viết dạng `[[slug-dich-vu|chữ neo]]` / `[[nhom:slug-nhom|chữ neo]]` trong `inc/demo-posts.php`, tự đổi thành link thật khi nhập; dịch vụ chưa có thì chỉ hiện chữ.
+- 3 bài "(bài mẫu)" cũ được thay nội dung, giữ nguyên đường dẫn. Bài đã nhập hoặc bạn tự sửa không bị ghi đè khi bấm lại.
+- Menu: Đào tạo → *Bài học kế toán*; Kiến thức → *Kiến thức pháp lý*, *Kiến thức thuế*.
+- Cập nhật: tải theme đè lên → **Tạo site mẫu → Cập nhật menu (giữ trang chủ)**.
+
+## Slider dịch vụ đầu trang chủ & menu mới (bản 0.10.1)
+
+- Banner đầu trang chủ thành **slider 3 dịch vụ**: Thành lập công ty · Dịch vụ kế toán · Thay đổi GPKD (form tư vấn vẫn ở bên phải). Tự chuyển sau 6 giây, dừng khi rê chuột, bấm tab hoặc vuốt để chuyển. Trang chủ vẫn chỉ có 1 H1.
+- Sửa nội dung slide: **Tuỳ biến → Danh sách & trang chủ → Slide đầu trang chủ**, mỗi dòng `Nhãn | Tiêu đề | Chữ nổi bật | Mô tả | Ý 1; Ý 2; Ý 3 | slug nhóm dịch vụ`. Tắt slider: `[sgd_hero slider="0"]`.
+- Menu: "Dịch vụ thành lập" → **Thành lập công ty**; thêm **Chữ ký số và hoá đơn điện tử** vào Dịch vụ khác; bỏ "Tra cứu" khỏi menu (trang /tra-cuu/ vẫn còn).
+- Cập nhật trên web đang chạy: tải theme mới đè lên → **Giao diện → Tạo site mẫu → Cập nhật menu (giữ trang chủ)**. Không bấm "Tạo site mẫu".
+
+## Menu giống ketoananpha.vn & trang Tra cứu (bản 0.10.0)
+
+- Menu: Giới thiệu · Dịch vụ thành lập · Dịch vụ kế toán · Thay đổi GPKD (Thay đổi tên, Đổi địa chỉ, Thêm ngành nghề, Tăng vốn điều lệ, Thêm cổ đông, Đổi đại diện pháp luật, Đổi loại hình công ty, Cập nhật CCCD) · Dịch vụ khác · Đào tạo · Kiến thức · **Tra cứu** · Liên hệ.
+- Trang **Tra cứu** (`/tra-cuu/`, shortcode `[sgd_lookup]`): liên kết tới cổng tra cứu chính thức – doanh nghiệp, mã số thuế doanh nghiệp / cá nhân, hoá đơn điện tử, thuế điện tử, BHXH, nhãn hiệu, văn bản pháp luật – kèm form hỗ trợ.
+- Trang chủ: 3 khối chính đổi tên *Dịch vụ thành lập công ty – Dịch vụ kế toán – Thay đổi giấy phép kinh doanh* (nút *Cập nhật menu* tự đổi trên trang chủ đang dùng, không đụng nội dung khác).
+- Trang "Chữ ký số, hóa đơn điện tử" (gói chung) vẫn giữ nguyên.
+
+## Menu dịch vụ mới (bản 0.9.9)
+
+Menu chính: GIỚI THIỆU · DỊCH VỤ THÀNH LẬP (Thành lập công ty, Công ty TNHH, Công ty cổ phần, Công ty vốn nước ngoài, FDI company establishment, Chi nhánh công ty, Hộ kinh doanh cá thể) · DỊCH VỤ KẾ TOÁN (Kế toán trọn gói, nội bộ, hộ kinh doanh, Tax and accounting service, Khai thuế ban đầu, Báo cáo tài chính, Quyết toán thuế cuối năm, Làm sổ sách kế toán, Hoàn thuế GTGT, Hoàn thuế TNCN) · THAY ĐỔI GPKD · DỊCH VỤ KHÁC (Hóa đơn điện tử, Bảo hiểm xã hội, Tạm ngừng kinh doanh, Giải thể doanh nghiệp, Đăng ký kinh doanh, VPĐD nước ngoài, Đăng ký nhãn hiệu – logo, Chữ ký số, Đăng ký MST cá nhân, Soạn thảo hợp đồng) · ĐÀO TẠO (Kế toán tổng hợp, Kế toán thuế, Sổ sách kế toán) · KIẾN THỨC · LIÊN HỆ.
+
+- Nút **Giao diện → Tạo site mẫu → Cập nhật menu (giữ trang chủ)**: chỉ tạo các trang dịch vụ còn thiếu (13 trang mới, dữ liệu ở `inc/demo-data-more.php`, giá để "Liên hệ") và dựng lại Menu chính – không ghi đè trang chủ, dịch vụ đã sửa, header, footer.
+- Thanh dưới cùng điện thoại: bỏ "Nhận báo giá", còn Gọi điện – Chat Zalo (– Messenger nếu có), icon nhấp nháy.
+
+## Chia sẻ & nút liên hệ (bản 0.9.8)
+
+- Nút chia sẻ ở cuối bài viết, trang dịch vụ, trang nhóm: Facebook, Zalo, X, LinkedIn, Telegram, Sao chép liên kết. Zalo: điện thoại mở bảng chia sẻ của máy (chọn Zalo); máy tính sao chép liên kết để dán vào Zalo (Zalo không có link chia sẻ web công khai).
+- Nút Hotline nổi (máy tính): icon đỏ, số điện thoại hiện sẵn; nút Gọi / Zalo / Messenger rung + sóng lan nhấp nháy; thanh dưới cùng điện thoại: nút Gọi nền đỏ, icon Gọi và Zalo nhấp nháy. Tự tắt hiệu ứng khi máy bật "giảm chuyển động".
+
+## Tiêu đề & mô tả trang chủ (bản 0.9.7)
+
+Khi không dùng plugin SEO, trang chủ có tiêu đề chứa từ khoá *Dịch vụ thành lập công ty, kế toán thuế trọn gói – Tin Học 119* (thay cho *Tin Học 119 – Uy tín tạo niềm tin*) và mô tả mở đầu bằng dịch vụ, kết bằng hotline (≤ 155 ký tự). Sửa ở *Tuỳ biến → Website dịch vụ → Trang danh sách dịch vụ → Tiêu đề / Mô tả trang chủ*. Dùng Rank Math thì đặt trong Rank Math.
+
 ## Trang nhóm dịch vụ (bản 0.8)
 
 Mỗi mục lớn trên menu (Thành lập công ty, Thay đổi GPKD, Kế toán & Thuế, Dịch vụ khác…) mở trang nhóm dạng bài viết chuyên mục như tanthanhthinh.com: dải tiêu đề (H1) → ảnh nhóm → danh sách dịch vụ gọn (tên – thời gian – giá) → mục lục "Nội dung chính" → bài viết của nhóm (H2/H3) → Gọi ngay → Bài viết liên quan. Sửa bài ở *Dịch vụ → Nhóm dịch vụ → sửa nhóm → Bài viết của nhóm* (trống = bài mẫu trong `inc/demo-articles.php`). Ảnh nhóm: ô "Ảnh đại diện nhóm".

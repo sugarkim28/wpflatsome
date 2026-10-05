@@ -1,7 +1,7 @@
 <?php
 /**
  * Thẻ bài viết dịch vụ chính (dùng cho "Bài viết liên quan"): cùng kiểu thẻ bài viết, kèm phí và thời gian.
- * $args: post (WP_Post), tag (h2/h3).
+ * $args: post (WP_Post), tag (h2/h3), price (bool – hiện phí, mặc định có).
  *
  * @package Flatsome_Dichvu
  */
@@ -11,6 +11,7 @@ defined( 'ABSPATH' ) || exit;
 $sgd_p   = isset( $args['post'] ) ? $args['post'] : get_post();
 $sgd_tag = isset( $args['tag'] ) && in_array( $args['tag'], array( 'h2', 'h3' ), true ) ? $args['tag'] : 'h3';
 $sgd_g   = sgd_first_group( $sgd_p->ID );
+$sgd_pr  = ! isset( $args['price'] ) || $args['price'];
 $sgd_ex  = has_excerpt( $sgd_p ) ? get_the_excerpt( $sgd_p ) : sgd_meta( 'subtitle', $sgd_p->ID );
 ?>
 <article class="sgd-bcard sgd-bcard--service">
@@ -30,7 +31,7 @@ $sgd_ex  = has_excerpt( $sgd_p ) ? get_the_excerpt( $sgd_p ) : sgd_meta( 'subtit
 			<p class="sgd-bcard__excerpt"><?php echo esc_html( wp_trim_words( wp_strip_all_tags( $sgd_ex ), 22, '…' ) ); ?></p>
 		<?php endif; ?>
 		<p class="sgd-bcard__meta sgd-bcard__svc">
-			<?php if ( sgd_meta( 'price', $sgd_p->ID ) ) : ?>
+			<?php if ( $sgd_pr && sgd_meta( 'price', $sgd_p->ID ) ) : ?>
 				<b><?php echo esc_html( sgd_meta( 'price', $sgd_p->ID ) ); ?></b>
 			<?php endif; ?>
 			<?php if ( sgd_meta( 'duration', $sgd_p->ID ) ) : ?>

@@ -14,7 +14,8 @@
  *  [sgd_contact_list]                – thông tin liên hệ có icon, bỏ dòng trống (footer, trang liên hệ)
  *
  * Bản 0.6 (tham khảo bố cục tanthanhthinh.com):
- *  [sgd_group_section group="slug,slug" title="" flip="0"] – khối 1 nhóm: ảnh + giới thiệu + danh sách dịch vụ có giá + bài viết của nhóm
+ *  [sgd_group_section group="slug,slug" title="" flip="0" source="menu|posts"] – khối 1 nhóm: ảnh + giới thiệu + danh sách dịch vụ
+ *     + thẻ bên dưới = các mục con trên menu chính của nhóm (source="posts": bài viết Kiến thức liên quan)
  *  [sgd_team]                        – chuyên viên tư vấn (ảnh tròn, chức danh, điện thoại)
  *  [sgd_partners]                    – logo đối tác / khách hàng tiêu biểu
  *  Dải "Tin mới" dưới menu (hook flatsome_after_header)
@@ -415,7 +416,7 @@ function sgd_group_posts( $terms, $count = 3, $exclude = array(), $fill = true )
  */
 function sgd_sc_group_section( $atts ) {
 	static $used = array();
-	$a     = shortcode_atts( array( 'group' => '', 'title' => '', 'text' => '', 'posts' => 3, 'flip' => '0', 'price' => '1' ), $atts, 'sgd_group_section' );
+	$a     = shortcode_atts( array( 'group' => '', 'title' => '', 'text' => '', 'posts' => 3, 'flip' => '0', 'price' => '1', 'source' => 'menu' ), $atts, 'sgd_group_section' );
 	$terms = array();
 	foreach ( array_filter( array_map( 'trim', explode( ',', $a['group'] ) ) ) as $slug ) {
 		$t = get_term_by( 'slug', $slug, 'nhom_dich_vu' );
@@ -451,6 +452,27 @@ function sgd_sc_group_section( $atts ) {
 	}
 	$out .= '</ul><p class="sgd-gsec__btns"><a class="button sgd-btn" href="' . esc_url( get_term_link( $main ) ) . '">Tìm hiểu &amp; bảng giá</a><a class="sgd-gsec__more" href="#dang-ky">Nhận tư vấn miễn phí →</a></p></div></div>';
 
+	// Thẻ bên dưới = các mục con trong menu chính của mục ứng với nhóm (sửa menu là tự cập nhật).
+	// Không tìm thấy mục menu tương ứng → bài viết Kiến thức liên quan như trước.
+	$menu_items = 'menu' === $a['source'] ? sgd_group_menu_items( $terms ) : null;
+	if ( $menu_items ) {
+		ob_start();
+		$widths = sgd_balanced_widths( count( $menu_items ) );
+		echo '<div class="sgd-gsec__menu">';
+		foreach ( $menu_items as $i => $mi ) {
+			echo '<div class="sgd-gcell is-w' . (int) $widths[ $i ] . '">';
+			if ( $mi['post'] && 'dich_vu' === $mi['post']->post_type ) {
+				get_template_part( 'template-parts/dichvu/service-card', null, array( 'post' => $mi['post'], 'tag' => 'h3', 'price' => '1' === (string) $a['price'] ) );
+			} else {
+				sgd_menu_card( $mi );
+			}
+			echo '</div>';
+		}
+		echo '</div>';
+		$out .= ob_get_clean();
+		return $out . '</div>';
+	}
+
 	$posts = (int) $a['posts'] > 0 ? sgd_group_posts( $terms, (int) $a['posts'], $used ) : array();
 	if ( $posts ) {
 		$used = array_merge( $used, wp_list_pluck( $posts, 'ID' ) );
@@ -470,6 +492,142 @@ function sgd_sc_group_section( $atts ) {
 	return $out . '</div>';
 }
 add_shortcode( 'sgd_group_section', 'sgd_sc_group_section' );
+
+/**
+ * Chia n thẻ thành các hàng đầy, cân đối (lưới 12 cột): hàng 3 là chính,
+ * dư 1 → 1 hàng 4; dư 2 → 2 hàng 4 (riêng 5 thẻ: 2 thẻ lớn + 3).
+ * VD: 5 = 2+3 · 6 = 3+3 · 7 = 4+3 · 8 = 4+4 · 9 = 3+3+3 · 10 = 4+3+3.
+ *
+ * @param int $n Số thẻ.
+ * @return int[] Độ rộng (trên 12 cột) của từng thẻ.
+ */
+function sgd_balanced_widths( $n ) {
+	if ( $n <= 0 ) {
+		return array();
+	}
+	if ( $n <= 4 ) {
+		$rows = array( $n );
+	} elseif ( 5 === $n ) {
+		$rows = array( 2, 3 );
+	} else {
+		$r    = $n % 3;
+		$rows = array_fill( 0, $r, 4 );
+		$rows = array_merge( $rows, array_fill( 0, (int) ( ( $n - 4 * $r ) / 3 ), 3 ) );
+	}
+	$w = array();
+	foreach ( $rows as $size ) {
+		$w = array_merge( $w, array_fill( 0, $size, (int) ( 12 / $size ) ) );
+	}
+	return $w;
+}
+
+/**
+ * Các mục con trên menu chính ứng với nhóm dịch vụ (theo thứ tự trong menu).
+ * Mục cha = mục cấp 1 trỏ tới nhóm; nếu không có thì mục cấp 1 chứa dịch vụ của nhóm.
+ * Bỏ mục trỏ lại chính nhóm (mục "Tổng quan …").
+ *
+ * @param WP_Term[] $terms Nhóm.
+ * @return array[]|null Mỗi phần tử: title, url, post (WP_Post|null), term (WP_Term|null). null = không tìm thấy trên menu.
+ */
+function sgd_group_menu_items( $terms ) {
+	$locs    = get_nav_menu_locations();
+	$menu_id = ! empty( $locs['primary'] ) ? $locs['primary'] : 0;
+	$items   = $menu_id ? wp_get_nav_menu_items( $menu_id ) : array();
+	if ( ! $items ) {
+		return null;
+	}
+	$ids  = array_map( 'intval', wp_list_pluck( $terms, 'term_id' ) );
+	$byid = array();
+	foreach ( $items as $it ) {
+		$byid[ (int) $it->ID ] = $it;
+	}
+	$top_of = function ( $it ) use ( $byid ) {
+		while ( $it && (int) $it->menu_item_parent && isset( $byid[ (int) $it->menu_item_parent ] ) ) {
+			$it = $byid[ (int) $it->menu_item_parent ];
+		}
+		return $it;
+	};
+	$parent = 0;
+	foreach ( $items as $it ) {
+		if ( ! (int) $it->menu_item_parent && 'taxonomy' === $it->type && 'nhom_dich_vu' === $it->object && in_array( (int) $it->object_id, $ids, true ) ) {
+			$parent = (int) $it->ID;
+			break;
+		}
+	}
+	if ( ! $parent ) {
+		$svc = array();
+		foreach ( $terms as $t ) {
+			$svc = array_merge( $svc, wp_list_pluck( sgd_group_services( $t ), 'ID' ) );
+		}
+		foreach ( $items as $it ) {
+			if ( (int) $it->menu_item_parent && 'post_type' === $it->type && in_array( (int) $it->object_id, array_map( 'intval', $svc ), true ) ) {
+				$parent = (int) $top_of( $it )->ID;
+				break;
+			}
+		}
+	}
+	if ( ! $parent ) {
+		return null;
+	}
+	$out = array();
+	foreach ( $items as $it ) {
+		if ( (int) $it->ID === $parent || (int) $top_of( $it )->ID !== $parent ) {
+			continue;
+		}
+		if ( 'taxonomy' === $it->type && 'nhom_dich_vu' === $it->object && in_array( (int) $it->object_id, $ids, true ) ) {
+			continue;
+		}
+		$row = array(
+			'title' => $it->title,
+			'url'   => $it->url,
+			'post'  => null,
+			'term'  => null,
+		);
+		if ( 'post_type' === $it->type ) {
+			$p = get_post( $it->object_id );
+			if ( ! $p || 'publish' !== $p->post_status ) {
+				continue;
+			}
+			$row['post'] = $p;
+		} elseif ( 'taxonomy' === $it->type ) {
+			$t = get_term( $it->object_id, $it->object );
+			if ( ! $t || is_wp_error( $t ) ) {
+				continue;
+			}
+			$row['term'] = $t;
+		}
+		$out[] = $row;
+	}
+	return $out ? $out : null;
+}
+
+/**
+ * Thẻ cho mục menu không phải dịch vụ (trang, bài viết, chuyên mục, liên kết tự nhập).
+ *
+ * @param array $mi Mục từ sgd_group_menu_items().
+ */
+function sgd_menu_card( $mi ) {
+	$p    = $mi['post'];
+	$url  = $mi['url'];
+	$text = '';
+	if ( $p ) {
+		$text = has_excerpt( $p ) ? get_the_excerpt( $p ) : wp_strip_all_tags( strip_shortcodes( $p->post_content ) );
+	} elseif ( $mi['term'] ) {
+		$text = wp_strip_all_tags( $mi['term']->description );
+	}
+	$icon = $mi['term'] ? get_term_meta( $mi['term']->term_id, '_sgd_icon', true ) : 'doc';
+	echo '<article class="sgd-bcard sgd-bcard--service"><a class="sgd-bcard__img" href="' . esc_url( $url ) . '" tabindex="-1" aria-hidden="true">';
+	if ( $p && has_post_thumbnail( $p ) ) {
+		echo get_the_post_thumbnail( $p, 'medium_large', array( 'loading' => 'lazy', 'alt' => esc_attr( $mi['title'] ) ) );
+	} else {
+		echo '<span class="sgd-post__noimg">' . sgd_icon( $icon ? $icon : 'doc' ) . '</span>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+	echo '</a><div class="sgd-bcard__body"><h3 class="sgd-bcard__title"><a href="' . esc_url( $url ) . '">' . esc_html( $mi['title'] ) . '</a></h3>';
+	if ( $text ) {
+		echo '<p class="sgd-bcard__excerpt">' . esc_html( wp_trim_words( $text, 22, '…' ) ) . '</p>';
+	}
+	echo '</div></article>';
+}
 
 /**
  * Chuyên viên tư vấn (Tuỳ biến → Thông tin công ty → Chuyên viên tư vấn).
