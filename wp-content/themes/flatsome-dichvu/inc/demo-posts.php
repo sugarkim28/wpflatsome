@@ -223,21 +223,21 @@ return array(
 		array(
 			'slug'    => 'thue-ho-kinh-doanh-2026-bo-thue-khoan',
 			'cat'     => array( 'thue-ho-kinh-doanh', 'ho-kinh-doanh-ca-the' ),
-			'title'   => 'Thuế hộ kinh doanh năm 2026: bỏ thuế khoán, ngưỡng 500 triệu và cách tính mới',
-			'excerpt' => 'Từ 2026 hộ kinh doanh không còn nộp thuế khoán, doanh thu đến 500 triệu đồng/năm không phải nộp thuế GTGT, TNCN. Cách tính thuế theo tỷ lệ hoặc theo thu nhập, hoá đơn điện tử và sổ sách cần có.',
+			'title'   => 'Thuế hộ kinh doanh năm 2026: bỏ thuế khoán, ngưỡng 1 tỷ đồng và cách tính mới',
+			'excerpt' => 'Từ 2026 hộ kinh doanh không còn nộp thuế khoán, doanh thu đến 1 tỷ đồng/năm không phải nộp thuế GTGT, TNCN (Nghị định 141/2026). Cách tính thuế theo tỷ lệ hoặc theo thu nhập, hoá đơn điện tử và sổ sách cần có.',
 			'content' => $sgd_upd . '
-<p>Năm 2026 là năm thay đổi lớn nhất về thuế đối với hộ kinh doanh trong nhiều năm: <strong>thuế khoán bị bãi bỏ</strong>, <strong>lệ phí môn bài không còn</strong>, và mức doanh thu không phải nộp thuế được nâng lên <strong>500 triệu đồng/năm</strong>. Bài viết tóm tắt những gì hộ kinh doanh cần biết theo Luật Thuế TNCN số 109/2025/QH15, Nghị định 68/2026/NĐ-CP (hiệu lực từ 05/3/2026), Thông tư 152/2025/TT-BTC về kế toán hộ kinh doanh và Luật Quản lý thuế 2025.</p>
+<p>Năm 2026 là năm thay đổi lớn nhất về thuế đối với hộ kinh doanh trong nhiều năm: <strong>thuế khoán bị bãi bỏ</strong>, <strong>lệ phí môn bài không còn</strong>, và mức doanh thu không phải nộp thuế được nâng lên <strong>1 tỷ đồng/năm</strong> theo Nghị định 141/2026/NĐ-CP (ban hành 29/4/2026, áp dụng từ 01/01/2026). Bài viết tóm tắt những gì hộ kinh doanh cần biết theo Luật Thuế TNCN số 109/2025/QH15, Nghị định 68/2026/NĐ-CP (hiệu lực từ 05/3/2026) đã sửa đổi bởi Nghị định 141/2026/NĐ-CP, Thông tư 152/2025/TT-BTC về kế toán hộ kinh doanh và Luật Quản lý thuế 2025.</p>
 
 <h2>1. Bỏ thuế khoán – hộ kinh doanh tự khai, tự nộp</h2>
 <p>Từ 01/01/2026, cơ quan thuế không còn ấn định mức thuế khoán. Mọi hộ, cá nhân kinh doanh chuyển sang <strong>tự kê khai doanh thu</strong> và tự tính, nộp thuế. Điều này đồng nghĩa hộ kinh doanh phải ghi chép doanh thu (và chi phí, nếu tính thuế theo thu nhập) một cách có hệ thống thay vì chỉ nộp một khoản cố định như trước.</p>
 
-<h2>2. Doanh thu đến 500 triệu đồng/năm: không phải nộp thuế</h2>
-<p>Hộ, cá nhân kinh doanh có doanh thu năm <strong>từ 500 triệu đồng trở xuống</strong> không phải nộp thuế GTGT và thuế TNCN – gấp 5 lần mức 100 triệu đồng/năm áp dụng đến hết 2025. Tuy vậy, hộ vẫn phải <strong>thông báo doanh thu thực tế</strong> của năm với cơ quan thuế, chậm nhất ngày 31/01 năm sau. Hộ mới ra kinh doanh trong 6 tháng đầu năm thông báo doanh thu đến 30/6 chậm nhất ngày 31/7.</p>
-<p>Doanh thu tính cả tiền thưởng, hỗ trợ đạt doanh số, khuyến mại, chiết khấu thanh toán, tiền bồi thường liên quan đến kinh doanh; không gồm chiết khấu thương mại, giảm giá và hàng bán bị trả lại. Khi doanh thu vượt 500 triệu đồng, hộ phải khai, nộp thuế kể từ quý phát sinh doanh thu vượt ngưỡng.</p>
+<h2>2. Doanh thu đến 1 tỷ đồng/năm: không phải nộp thuế</h2>
+<p>Hộ, cá nhân kinh doanh có doanh thu năm <strong>từ 1 tỷ đồng trở xuống</strong> không phải nộp thuế GTGT và thuế TNCN – gấp 10 lần mức 100 triệu đồng/năm áp dụng đến hết 2025 (mức 500 triệu đồng tại Nghị định 68/2026 đã được Nghị định 141/2026 nâng lên 1 tỷ đồng, áp dụng ngay từ 01/01/2026). Tuy vậy, hộ vẫn phải <strong>thông báo doanh thu thực tế</strong> của năm với cơ quan thuế, chậm nhất ngày 31/01 năm sau. Hộ mới ra kinh doanh trong 6 tháng đầu năm thông báo doanh thu đến 30/6 chậm nhất ngày 31/7.</p>
+<p>Doanh thu tính cả tiền thưởng, hỗ trợ đạt doanh số, khuyến mại, chiết khấu thanh toán, tiền bồi thường liên quan đến kinh doanh; không gồm chiết khấu thương mại, giảm giá và hàng bán bị trả lại. Khi doanh thu vượt 1 tỷ đồng, hộ phải khai, nộp thuế kể từ quý phát sinh doanh thu vượt ngưỡng.</p>
 
-<h2>3. Doanh thu trên 500 triệu đến 3 tỷ đồng: được chọn cách tính</h2>
+<h2>3. Doanh thu trên 1 tỷ đến 3 tỷ đồng: được chọn cách tính</h2>
 <ul>
-<li><strong>Cách 1 – theo tỷ lệ trên doanh thu</strong>: thuế TNCN = tỷ lệ theo ngành × (doanh thu − 500 triệu đồng).</li>
+<li><strong>Cách 1 – theo tỷ lệ trên doanh thu</strong>: thuế TNCN = tỷ lệ theo ngành × (doanh thu − 1 tỷ đồng).</li>
 <li><strong>Cách 2 – theo thu nhập</strong>: thuế TNCN = (doanh thu − chi phí được trừ) × <strong>15%</strong>. Cách này có lợi khi chi phí lớn (biên lợi nhuận thấp) nhưng đòi hỏi hoá đơn, chứng từ chi phí đầy đủ; đã chọn thì phải áp dụng ổn định <strong>2 năm liên tục</strong>.</li>
 </ul>
 <table>
@@ -251,8 +251,8 @@ return array(
 <tr><td>Hoạt động kinh doanh khác</td><td>1%</td></tr>
 </tbody>
 </table>
-<p><em>Ví dụ:</em> cửa hàng tạp hoá doanh thu 800 triệu đồng/năm chọn cách 1: thuế TNCN = (800 − 500) triệu × 0,5% = 1,5 triệu đồng/năm. Thuế GTGT của hộ trên 500 triệu đồng tính trực tiếp bằng tỷ lệ % × doanh thu theo ngành nghề.</p>
-<p>Cá nhân cho thuê bất động sản (trừ kinh doanh lưu trú) nộp thuế TNCN 5% trên phần doanh thu vượt 500 triệu đồng/năm; có thể khai 2 lần/năm (hạn 31/7 và 31/01 năm sau) hoặc 1 lần (hạn 31/01 năm sau).</p>
+<p><em>Ví dụ:</em> cửa hàng tạp hoá doanh thu 1,6 tỷ đồng/năm chọn cách 1: thuế TNCN = (1.600 − 1.000) triệu × 0,5% = 3 triệu đồng/năm. Thuế GTGT của hộ có doanh thu trên 1 tỷ đồng tính trên <strong>toàn bộ doanh thu</strong> bằng tỷ lệ % theo ngành nghề (phân phối hàng hoá 1%, dịch vụ 5%, sản xuất – vận tải 3%, khác 2%).</p>
+<p>Cá nhân cho thuê bất động sản (trừ kinh doanh lưu trú) nộp thuế TNCN 5% trên phần doanh thu vượt 1 tỷ đồng/năm (thuế GTGT 5% tính trên toàn bộ doanh thu khi vượt ngưỡng); có thể khai 2 lần/năm (hạn 31/7 và 31/01 năm sau) hoặc 1 lần (hạn 31/01 năm sau).</p>
 
 <h2>4. Doanh thu trên 3 tỷ đồng: bắt buộc tính theo thu nhập</h2>
 <p>Hộ kinh doanh có doanh thu năm trên 3 tỷ đồng phải tính thuế TNCN theo thu nhập: thuế suất <strong>17%</strong> (trên 3 tỷ đến 50 tỷ đồng) hoặc <strong>20%</strong> (trên 50 tỷ đồng) – tương đương thuế suất TNDN của doanh nghiệp. Hộ phải khai thuế theo tháng hoặc quý và quyết toán thuế TNCN năm chậm nhất ngày 31/3 năm sau.</p>
@@ -260,7 +260,7 @@ return array(
 <p>Chi phí thực tế phát sinh, có hoá đơn, chứng từ; khoản thanh toán từng lần từ 5 triệu đồng phải chuyển khoản. Được trừ: nguyên vật liệu, hàng hoá; lương, bảo hiểm của người lao động; khấu hao tài sản cố định; điện, nước, internet, thuê mặt bằng; lãi vay… <strong>Không được trừ</strong>: tiền lương của chính chủ hộ và các thành viên trong hộ, chi phí sinh hoạt gia đình, tiền phạt, khoản chi không có chứng từ, nhà ở và xe đứng tên cá nhân không dùng để kinh doanh vận tải, du lịch.</p>
 
 <h2>5. Hoá đơn điện tử</h2>
-<p>Theo Nghị định 68/2026/NĐ-CP, hộ, cá nhân kinh doanh có doanh thu tính thuế GTGT năm <strong>từ 1 tỷ đồng trở lên</strong> phải dùng hoá đơn điện tử có mã của cơ quan thuế hoặc <strong>hoá đơn điện tử khởi tạo từ máy tính tiền</strong> kết nối dữ liệu với cơ quan thuế; đăng ký trong 30 ngày kể từ cuối kỳ tính thuế có doanh thu lũy kế đạt 1 tỷ đồng. Có nhiều cửa hàng thì dùng chung mã số thuế, ghi rõ địa chỉ từng điểm trên hoá đơn. Hộ có doanh thu trên 500 triệu đến dưới 1 tỷ đồng không bắt buộc nhưng được đăng ký dùng nếu khách hàng cần hoá đơn. Xem [[hoa-don-dien-tu|dịch vụ hoá đơn điện tử]].</p>
+<p>Theo Nghị định 68/2026/NĐ-CP, hộ, cá nhân kinh doanh có doanh thu năm <strong>trên 1 tỷ đồng</strong> phải dùng hoá đơn điện tử có mã của cơ quan thuế hoặc <strong>hoá đơn điện tử khởi tạo từ máy tính tiền</strong> kết nối dữ liệu với cơ quan thuế; đăng ký khi doanh thu trong năm vượt 1 tỷ đồng. Có nhiều cửa hàng thì dùng chung mã số thuế, ghi rõ địa chỉ từng điểm trên hoá đơn. Hộ có doanh thu đến 1 tỷ đồng không bắt buộc nhưng được đăng ký dùng nếu khách hàng cần hoá đơn. Xem [[hoa-don-dien-tu|dịch vụ hoá đơn điện tử]].</p>
 
 <h2>6. Sổ sách hộ kinh doanh cần có</h2>
 <p>Thông tư 152/2025/TT-BTC (hiệu lực 01/01/2026) hướng dẫn kế toán cho hộ kinh doanh:</p>
@@ -286,7 +286,7 @@ return array(
 <h2>1. Ai phải dùng hoá đơn điện tử?</h2>
 <ul>
 <li><strong>Doanh nghiệp, tổ chức kinh tế</strong>: dùng hoá đơn điện tử khi bán hàng hoá, cung cấp dịch vụ, kể cả bán cho người tiêu dùng không lấy hoá đơn.</li>
-<li><strong>Hộ, cá nhân kinh doanh</strong> có doanh thu tính thuế GTGT năm từ 1 tỷ đồng trở lên: dùng hoá đơn điện tử có mã của cơ quan thuế hoặc hoá đơn khởi tạo từ máy tính tiền (Nghị định 68/2026). Từ 01/7/2026, hộ đăng ký dùng hoá đơn điện tử lần đầu sẽ được cơ quan thuế kiểm tra, xác thực thông tin trước khi chấp nhận.</li>
+<li><strong>Hộ, cá nhân kinh doanh</strong> có doanh thu năm trên 1 tỷ đồng: dùng hoá đơn điện tử có mã của cơ quan thuế hoặc hoá đơn khởi tạo từ máy tính tiền (Nghị định 68/2026, sửa đổi bởi Nghị định 141/2026). Từ 01/7/2026, hộ đăng ký dùng hoá đơn điện tử lần đầu sẽ được cơ quan thuế kiểm tra, xác thực thông tin trước khi chấp nhận.</li>
 </ul>
 <p>Để xuất hoá đơn, doanh nghiệp cần có chữ ký số và đăng ký với cơ quan thuế qua nhà cung cấp hoá đơn. Có thể làm trọn bộ qua [[chu-ky-so-hoa-don-dien-tu|dịch vụ chữ ký số và hoá đơn điện tử]].</p>
 

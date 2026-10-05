@@ -38,6 +38,7 @@ return array(
 	'nq110'    => array( 'Nghị quyết 110/2025/UBTVQH15 về mức giảm trừ gia cảnh', $b . 'Thue-Phi-Le-Phi/Nghi-quyet-110-2025-UBTVQH15-muc-giam-tru-gia-canh-thue-thu-nhap-ca-nhan-665865.aspx' ),
 	'nd253'    => array( 'Nghị định 253/2026/NĐ-CP hướng dẫn Luật Thuế thu nhập cá nhân', $b . 'Thue-Phi-Le-Phi/Nghi-dinh-253-2026-ND-CP-huong-dan-Luat-Thue-thu-nhap-ca-nhan-699193.aspx' ),
 	'nd68'     => array( 'Nghị định 68/2026/NĐ-CP về chính sách thuế và quản lý thuế đối với hộ, cá nhân kinh doanh', $b . 'Doanh-nghiep/Nghi-dinh-68-2026-ND-CP-chinh-sach-thue-va-quan-ly-thue-doi-voi-ho-kinh-doanh-ca-nhan-kinh-doanh-685358.aspx' ),
+	'nd141'    => array( 'Nghị định 141/2026/NĐ-CP sửa đổi Nghị định 68/2026/NĐ-CP và Nghị định 320/2025/NĐ-CP', $b . 'Doanh-nghiep/Nghi-dinh-141-2026-ND-CP-sua-doi-Nghi-dinh-68-2026-ND-CP-chinh-sach-thue-ho-ca-nhan-kinh-doanh-703882.aspx' ),
 	'nq198'    => array( 'Nghị quyết 198/2025/QH15 về cơ chế, chính sách đặc biệt phát triển kinh tế tư nhân', 'https://thuvienphapluat.vn/chinh-sach-phap-luat-moi/vn/ho-tro-phap-luat/chinh-sach-moi/85065/nghi-quyet-198-cham-dut-thu-nop-le-phi-mon-bai-tu-ngay-01-01-2026' ),
 	'tt90'     => array( 'Thông tư 90/2026/TT-BTC quy định về đăng ký thuế', $b . 'Thue-Phi-Le-Phi/Thong-tu-90-2026-TT-BTC-dang-ky-thue-280130.aspx' ),
 	'nd123'    => array( 'Nghị định 123/2020/NĐ-CP quy định về hoá đơn, chứng từ', $b . 'Ke-toan-Kiem-toan/Nghi-dinh-123-2020-ND-CP-quy-dinh-hoa-don-chung-tu-445980.aspx' ),

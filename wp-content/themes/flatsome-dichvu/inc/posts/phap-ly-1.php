@@ -244,9 +244,9 @@ return array(
 <h2>6. Sau khi có giấy chứng nhận cần làm gì?</h2>
 <ul>
 <li>Treo biển hiệu tại trụ sở.</li>
-<li>Tự kê khai doanh thu, nộp thuế: từ 2026 không còn thuế khoán và không còn lệ phí môn bài; doanh thu đến 500 triệu đồng/năm không phải nộp thuế GTGT, TNCN nhưng vẫn phải thông báo doanh thu với cơ quan thuế. Chi tiết xem bài Thuế hộ kinh doanh năm 2026 trong chuyên mục Thuế hộ, cá nhân kinh doanh.</li>
+<li>Tự kê khai doanh thu, nộp thuế: từ 2026 không còn thuế khoán và không còn lệ phí môn bài; doanh thu đến 1 tỷ đồng/năm không phải nộp thuế GTGT, TNCN (theo [[tvpl:nd141]]) nhưng vẫn phải thông báo doanh thu với cơ quan thuế. Chi tiết xem bài Thuế hộ kinh doanh năm 2026 trong chuyên mục Thuế hộ, cá nhân kinh doanh.</li>
 <li>Mở sổ doanh thu theo [[tvpl:tt152]].</li>
-<li>Đăng ký hoá đơn điện tử nếu doanh thu từ 1 tỷ đồng/năm trở lên hoặc khi khách hàng cần hoá đơn.</li>
+<li>Đăng ký hoá đơn điện tử nếu doanh thu trên 1 tỷ đồng/năm hoặc khi khách hàng cần hoá đơn.</li>
 </ul>
 
 <h2>Lưu ý về địa điểm kinh doanh</h2>
@@ -258,7 +258,7 @@ return array(
 		'slug'    => 'ho-kinh-doanh-va-cong-ty-khac-nhau-the-nao',
 		'cat'     => array( 'ho-kinh-doanh-ca-the', 'thu-tuc-thanh-lap' ),
 		'title'   => 'Hộ kinh doanh và công ty khác nhau thế nào? Nên chọn mô hình nào năm 2026',
-		'excerpt' => 'So sánh hộ kinh doanh và công ty TNHH về trách nhiệm tài sản, thuế, hoá đơn, sổ sách, lao động, khả năng ký hợp đồng với doanh nghiệp – cập nhật chính sách bỏ thuế khoán, ngưỡng 500 triệu và miễn thuế TNDN 3 năm cho doanh nghiệp mới.',
+		'excerpt' => 'So sánh hộ kinh doanh và công ty TNHH về trách nhiệm tài sản, thuế, hoá đơn, sổ sách, lao động, khả năng ký hợp đồng với doanh nghiệp – cập nhật chính sách bỏ thuế khoán, ngưỡng miễn thuế 1 tỷ đồng và miễn thuế TNDN 3 năm cho doanh nghiệp mới.',
 		'content' => $u . '
 <p>Năm 2026, khoảng cách giữa hộ kinh doanh và doanh nghiệp nhỏ đã thu hẹp đáng kể: hộ kinh doanh không còn thuế khoán, phải tự kê khai và ghi sổ; trong khi doanh nghiệp nhỏ được hưởng nhiều ưu đãi mới. Bảng so sánh dưới đây giúp bạn chọn mô hình phù hợp.</p>
 
@@ -269,9 +269,9 @@ return array(
 <tr><td>Tư cách pháp nhân</td><td>Không</td><td>Có</td></tr>
 <tr><td>Trách nhiệm</td><td>Vô hạn – bằng toàn bộ tài sản của chủ hộ</td><td>Hữu hạn – trong phạm vi vốn góp</td></tr>
 <tr><td>Nơi đăng ký</td><td>Cơ quan đăng ký kinh doanh cấp xã</td><td>Phòng Đăng ký kinh doanh cấp tỉnh</td></tr>
-<tr><td>Thuế khi doanh thu ≤ 500 triệu/năm</td><td>Không phải nộp thuế GTGT, TNCN</td><td>Vẫn khai thuế GTGT, TNDN theo quy định</td></tr>
+<tr><td>Thuế khi doanh thu ≤ 1 tỷ/năm</td><td>Không phải nộp thuế GTGT, TNCN</td><td>Miễn thuế TNDN; vẫn khai thuế GTGT và nộp quyết toán theo quy định</td></tr>
 <tr><td>Thuế khi doanh thu lớn</td><td>Thuế GTGT theo tỷ lệ; thuế TNCN theo tỷ lệ hoặc theo thu nhập</td><td>Thuế GTGT khấu trừ hoặc trực tiếp; thuế TNDN 15% – 17% – 20%</td></tr>
-<tr><td>Hoá đơn</td><td>Hoá đơn có mã/từ máy tính tiền khi doanh thu từ 1 tỷ đồng/năm</td><td>Hoá đơn điện tử ngay từ đầu</td></tr>
+<tr><td>Hoá đơn</td><td>Hoá đơn có mã/từ máy tính tiền khi doanh thu trên 1 tỷ đồng/năm</td><td>Hoá đơn điện tử ngay từ đầu</td></tr>
 <tr><td>Sổ sách</td><td>Sổ đơn giản theo Thông tư 152/2025</td><td>Chế độ kế toán doanh nghiệp, báo cáo tài chính năm</td></tr>
 <tr><td>Ưu đãi khi mới thành lập</td><td>–</td><td>Doanh nghiệp nhỏ và vừa đăng ký lần đầu được miễn thuế TNDN 3 năm</td></tr>
 </tbody>
@@ -280,7 +280,7 @@ return array(
 <h2>Ưu điểm của hộ kinh doanh</h2>
 <ul>
 <li>Thủ tục đơn giản, đăng ký ở cấp xã, chi phí thấp.</li>
-<li>Doanh thu đến 500 triệu đồng/năm không phải nộp thuế GTGT, TNCN theo [[tvpl:nd68]].</li>
+<li>Doanh thu đến 1 tỷ đồng/năm không phải nộp thuế GTGT, TNCN theo [[tvpl:nd68]] (sửa đổi bởi [[tvpl:nd141]]).</li>
 <li>Sổ sách gọn, chủ hộ có thể tự ghi theo [[tvpl:tt152]].</li>
 </ul>
 
@@ -296,7 +296,7 @@ return array(
 <ul>
 <li>Tài sản cá nhân được bảo vệ, dễ gọi thêm người góp vốn.</li>
 <li>Uy tín với khách hàng doanh nghiệp, được khấu trừ thuế GTGT.</li>
-<li>Được miễn thuế TNDN 3 năm nếu là doanh nghiệp nhỏ và vừa đăng ký lần đầu, theo [[tvpl:nq198|Nghị quyết 198/2025/QH15]]; thuế suất TNDN chỉ 15% với doanh thu đến 3 tỷ đồng/năm theo [[tvpl:ltndn]].</li>
+<li>Được miễn thuế TNDN 3 năm nếu là doanh nghiệp nhỏ và vừa đăng ký lần đầu, theo [[tvpl:nq198|Nghị quyết 198/2025/QH15]]; thuế suất TNDN chỉ 15% với doanh thu đến 3 tỷ đồng/năm theo [[tvpl:ltndn]]; doanh nghiệp có tổng doanh thu năm đến 1 tỷ đồng được miễn thuế TNDN theo [[tvpl:nd141]].</li>
 </ul>
 
 <h2>Vậy nên chọn mô hình nào?</h2>
