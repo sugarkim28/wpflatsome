@@ -21,6 +21,8 @@ return array(
 	'ldt2025'  => array( 'Luật Đầu tư số 143/2025/QH15', $b . 'Dau-tu/Luat-Dau-tu-2025-so-143-2025-QH15-681550.aspx' ),
 	'nd96'     => array( 'Nghị định 96/2026/NĐ-CP hướng dẫn Luật Đầu tư', $b . 'Dau-tu/Nghi-dinh-96-2026-ND-CP-huong-dan-Luat-Dau-tu-690303.aspx' ),
 	'nd07'     => array( 'Nghị định 07/2016/NĐ-CP về văn phòng đại diện, chi nhánh của thương nhân nước ngoài', $b . 'Thuong-mai/Nghi-dinh-07-2016-ND-CP-quy-dinh-chi-tiet-van-phong-dai-dien-chi-nhanh-thuong-nhan-nuoc-ngoai-301477.aspx' ),
+	'blds'     => array( 'Bộ luật Dân sự số 91/2015/QH13', $b . 'Quyen-dan-su/Bo-luat-dan-su-2015-296215.aspx' ),
+	'ltm'      => array( 'Luật Thương mại số 36/2005/QH11', $b . 'Thuong-mai/Luat-Thuong-mai-2005-36-2005-QH11-2633.aspx' ),
 	'lshtt'    => array( 'Luật số 131/2025/QH15 sửa đổi, bổ sung Luật Sở hữu trí tuệ', $b . 'So-huu-tri-tue/Luat-So-huu-tri-tue-sua-doi-2025-so-131-2025-QH15-675267.aspx' ),
 
 	// Thuế.
@@ -37,6 +39,7 @@ return array(
 	'nd253'    => array( 'Nghị định 253/2026/NĐ-CP hướng dẫn Luật Thuế thu nhập cá nhân', $b . 'Thue-Phi-Le-Phi/Nghi-dinh-253-2026-ND-CP-huong-dan-Luat-Thue-thu-nhap-ca-nhan-699193.aspx' ),
 	'nd68'     => array( 'Nghị định 68/2026/NĐ-CP về chính sách thuế và quản lý thuế đối với hộ, cá nhân kinh doanh', $b . 'Doanh-nghiep/Nghi-dinh-68-2026-ND-CP-chinh-sach-thue-va-quan-ly-thue-doi-voi-ho-kinh-doanh-ca-nhan-kinh-doanh-685358.aspx' ),
 	'nq198'    => array( 'Nghị quyết 198/2025/QH15 về cơ chế, chính sách đặc biệt phát triển kinh tế tư nhân', 'https://thuvienphapluat.vn/chinh-sach-phap-luat-moi/vn/ho-tro-phap-luat/chinh-sach-moi/85065/nghi-quyet-198-cham-dut-thu-nop-le-phi-mon-bai-tu-ngay-01-01-2026' ),
+	'tt90'     => array( 'Thông tư 90/2026/TT-BTC quy định về đăng ký thuế', $b . 'Thue-Phi-Le-Phi/Thong-tu-90-2026-TT-BTC-dang-ky-thue-280130.aspx' ),
 	'nd123'    => array( 'Nghị định 123/2020/NĐ-CP quy định về hoá đơn, chứng từ', $b . 'Ke-toan-Kiem-toan/Nghi-dinh-123-2020-ND-CP-quy-dinh-hoa-don-chung-tu-445980.aspx' ),
 	'nd70'     => array( 'Nghị định 70/2025/NĐ-CP sửa đổi Nghị định 123/2020/NĐ-CP về hoá đơn, chứng từ', $b . 'Thue-Phi-Le-Phi/Nghi-dinh-70-2025-ND-CP-sua-doi-Nghi-dinh-123-2020-ND-CP-hoa-don-chung-tu-577816.aspx' ),
 	'nd310'    => array( 'Nghị định 310/2025/NĐ-CP sửa đổi Nghị định 125/2020/NĐ-CP xử phạt vi phạm hành chính về thuế, hoá đơn', $b . 'Thuong-mai/Nghi-dinh-310-2025-ND-CP-sua-doi-Nghi-dinh-125-2020-ND-CP-xu-phat-hanh-chinh-linh-vuc-thue-478004.aspx' ),

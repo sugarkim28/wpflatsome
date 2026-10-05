@@ -619,7 +619,7 @@ return array(
 
 <h2>2. Hồ sơ</h2>
 <ol>
-<li>Giấy đề nghị đăng ký thay đổi người đại diện theo pháp luật (Mẫu số 13, Thông tư 68/2025/TT-BTC).</li>
+<li>Giấy đề nghị đăng ký thay đổi người đại diện theo pháp luật (theo mẫu tại Thông tư 68/2025/TT-BTC, đã sửa đổi bởi Thông tư 121/2026/TT-BTC từ 21/8/2026).</li>
 <li>Nghị quyết/quyết định của chủ sở hữu, Hội đồng thành viên hoặc Hội đồng quản trị về việc thay đổi; kèm biên bản họp (với công ty TNHH hai thành viên, công ty cổ phần).</li>
 <li>Văn bản uỷ quyền cho người nộp hồ sơ (nếu có).</li>
 </ol>
@@ -751,7 +751,7 @@ return array(
 		'slug'    => 'chuyen-dia-chi-tru-so-cong-ty-sang-tinh-khac',
 		'cat'     => array( 'thay-doi-dang-ky-kinh-doanh' ),
 		'title'   => 'Chuyển địa chỉ trụ sở công ty: cùng tỉnh và khác tỉnh làm thế nào?',
-		'excerpt' => 'Thủ tục thay đổi địa chỉ trụ sở chính: trường hợp không đổi cơ quan thuế và trường hợp chuyển sang tỉnh khác phải làm thủ tục thuế nơi đi trước (mẫu 08-MST, 09-MST, 30/ĐK-TCT), hồ sơ đăng ký và việc cần cập nhật.',
+		'excerpt' => 'Thủ tục thay đổi địa chỉ trụ sở chính: trường hợp không đổi cơ quan thuế và trường hợp chuyển sang tỉnh khác phải làm thủ tục thuế nơi đi trước theo Thông tư 90/2026/TT-BTC, hồ sơ đăng ký và việc cần cập nhật.',
 		'content' => $u . '
 <p>Chuyển văn phòng là việc bình thường khi công ty phát triển. Tuy nhiên, thủ tục khác nhau đáng kể giữa chuyển trong cùng địa bàn cơ quan thuế quản lý và chuyển sang tỉnh khác. Làm sai thứ tự có thể khiến hồ sơ bị treo nhiều tuần.</p>
 
@@ -768,9 +768,9 @@ return array(
 <h2>3. Chuyển trụ sở sang tỉnh khác – làm thuế trước</h2>
 <p>Khi trụ sở mới thuộc cơ quan thuế quản lý khác, doanh nghiệp phải <strong>hoàn tất thủ tục với cơ quan thuế nơi đi trước</strong>, sau đó mới đăng ký thay đổi với Phòng Đăng ký kinh doanh nơi đến:</p>
 <ol>
-<li><strong>Tại cơ quan thuế nơi đi</strong>: nộp tờ khai điều chỉnh thông tin đăng ký thuế (mẫu 08-MST, Thông tư 86/2024/TT-BTC); nộp đủ tờ khai, tiền thuế đến thời điểm chuyển; quyết toán hoá đơn (nếu dùng hoá đơn đặt in). Cơ quan thuế ban hành Thông báo về việc người nộp thuế chuyển địa điểm (mẫu 09-MST).</li>
+<li><strong>Tại cơ quan thuế nơi đi</strong>: nộp tờ khai điều chỉnh thông tin đăng ký thuế (mẫu 08 theo [[tvpl:tt90]], thay Thông tư 86/2024/TT-BTC từ 01/7/2026); nộp đủ tờ khai, tiền thuế đến thời điểm chuyển. Cơ quan thuế nơi đi ban hành thông báo về việc người nộp thuế chuyển địa điểm.</li>
 <li><strong>Tại Phòng Đăng ký kinh doanh nơi đến</strong>: nộp hồ sơ thay đổi địa chỉ trụ sở chính.</li>
-<li><strong>Tại cơ quan thuế nơi đến</strong>: trong 10 ngày làm việc kể từ ngày có thông báo 09-MST, nộp văn bản đăng ký chuyển địa điểm (mẫu 30/ĐK-TCT) nếu hệ thống chưa tự cập nhật.</li>
+<li><strong>Tại cơ quan thuế nơi đến</strong>: trong 10 ngày làm việc kể từ ngày cơ quan thuế nơi đi ra thông báo, nộp văn bản đăng ký chuyển địa điểm (mẫu 30/ĐKT) nếu hệ thống chưa tự cập nhật.</li>
 </ol>
 <p>Các thủ tục thuế được quản lý theo [[tvpl:lqlt2025]] và [[tvpl:nd252]].</p>
 
