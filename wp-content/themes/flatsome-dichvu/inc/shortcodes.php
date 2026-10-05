@@ -628,7 +628,7 @@ function sgd_sc_topbar( $atts ) {
 	if ( 'left' === $a['side'] ) {
 		return '<span class="sgd-topbar__slogan">' . esc_html( sgd_opt( 'topbar_text' ) ) . '</span>';
 	}
-	$out  = '<span class="sgd-topbar">';
+	$out  = '<span class="sgd-topbar">' . sgd_lang_switch( 'sgd-lang--top' );
 	if ( sgd_opt( 'email' ) ) {
 		$out .= '<a href="mailto:' . esc_attr( sgd_opt( 'email' ) ) . '" class="sgd-topbar__mail">' . sgd_icon( 'mail' ) . ' ' . esc_html( sgd_opt( 'email' ) ) . '</a>';
 	}
@@ -650,6 +650,11 @@ add_shortcode( 'sgd_topbar', 'sgd_sc_topbar' );
  */
 function sgd_hero_slides() {
 	$raw = trim( (string) sgd_opt( 'hero_slides' ) );
+	if ( '' === $raw && sgd_is_en() ) {
+		$raw = "Company formation | Company formation in Vietnam | for foreign investors | Investment and enterprise certificates, seal, capital account and tax registration – handled end to end by English-speaking consultants. | 100% foreign-owned company or joint venture; Market-access check before filing; Sign documents abroad, we file online | company-formation\n"
+			. "Accounting & tax | Accounting & tax services | monthly, reports in English | Bookkeeping, VAT and income tax returns, payroll, annual financial statements and tax finalisation – always on time. | Fixed monthly fee; Every deadline met; Management reports in English | accounting-tax\n"
+			. 'Trademark | Trademark registration | protect your brand | Clearance search, filing with the IP Office of Vietnam and follow-up until your certificate is granted. | Vietnam is first-to-file – register early; Valid 10 years, renewable; Handled end to end | other-services';
+	}
 	if ( '' === $raw ) {
 		$raw = "Thành lập công ty | Dịch vụ thành lập công ty | trọn gói từ A – Z | Có giấy phép sau 3 – 5 ngày làm việc. Tư vấn chọn loại hình, ngành nghề, vốn điều lệ; soạn hồ sơ, nộp online và giao giấy phép, con dấu tận nơi. | Tư vấn miễn phí loại hình TNHH, cổ phần, hộ kinh doanh; Soạn và nộp hồ sơ trực tuyến, không cần đi lại; Hỗ trợ khai thuế ban đầu, chữ ký số, hóa đơn điện tử | thanh-lap-doanh-nghiep\n"
 			. "Dịch vụ kế toán | Dịch vụ kế toán thuế | trọn gói hằng tháng | Kê khai thuế, làm sổ sách, báo cáo tài chính và quyết toán cuối năm – đúng hạn, đúng luật, chuyên viên riêng phụ trách. | Báo cáo thuế đúng hạn, không lo bị phạt; Sổ sách, báo cáo tài chính đầy đủ, khớp số liệu; Chịu trách nhiệm khi cơ quan thuế kiểm tra | ke-toan\n"
@@ -735,7 +740,7 @@ function sgd_sc_hero( $atts ) {
 								<?php endif; ?>
 								<p class="sgd-hero__btns">
 									<?php if ( $sl['url'] ) : ?>
-										<a class="button sgd-btn" href="<?php echo esc_url( $sl['url'] ); ?>"<?php echo 0 === $i ? '' : ' tabindex="-1"'; ?>>Xem <?php echo esc_html( mb_strtolower( $sl['title'] ) ); ?></a>
+										<a class="button sgd-btn" href="<?php echo esc_url( $sl['url'] ); ?>"<?php echo 0 === $i ? '' : ' tabindex="-1"'; ?>><?php echo esc_html( sgd_is_en() ? 'Learn more' : 'Xem ' . mb_strtolower( $sl['title'] ) ); ?></a>
 									<?php else : ?>
 										<a class="button sgd-btn" href="#dang-ky"<?php echo 0 === $i ? '' : ' tabindex="-1"'; ?>>Nhận báo giá miễn phí</a>
 									<?php endif; ?>

@@ -54,13 +54,16 @@ $sgd_msgs = array(
 	<?php endif; ?>
 	<input type="hidden" name="action" value="sgd_lead">
 	<input type="hidden" name="sgd_source" value="<?php echo esc_attr( $sgd_a['source'] ); ?>">
+	<?php if ( sgd_is_en() ) : ?>
+		<input type="hidden" name="sgd_lang" value="en">
+	<?php endif; ?>
 	<?php wp_nonce_field( 'sgd_lead', 'sgd_nonce', false ); ?>
 	<div class="sgd-hp" aria-hidden="true"><label>Website <input type="text" name="sgd_website" tabindex="-1" autocomplete="off"></label></div>
 
 	<label class="screen-reader-text" for="<?php echo esc_attr( $sgd_uid ); ?>-name">Họ và tên</label>
 	<input id="<?php echo esc_attr( $sgd_uid ); ?>-name" type="text" name="sgd_name" placeholder="Họ và tên *" required maxlength="100" autocomplete="name">
 	<label class="screen-reader-text" for="<?php echo esc_attr( $sgd_uid ); ?>-phone">Số điện thoại</label>
-	<input id="<?php echo esc_attr( $sgd_uid ); ?>-phone" type="tel" name="sgd_phone" placeholder="Số điện thoại / Zalo *" required pattern="^(\+?84|0)[\d\s.\-]{9,13}$" title="Số điện thoại Việt Nam, ví dụ 0909 123 456" autocomplete="tel">
+	<input id="<?php echo esc_attr( $sgd_uid ); ?>-phone" type="tel" name="sgd_phone" placeholder="Số điện thoại / Zalo *" required pattern="<?php echo esc_attr( sgd_is_en() ? '^\+?[\d\s.\-()]{7,20}$' : '^(\+?84|0)[\d\s.\-]{9,13}$' ); ?>" title="Số điện thoại Việt Nam, ví dụ 0909 123 456" autocomplete="tel">
 	<label class="screen-reader-text" for="<?php echo esc_attr( $sgd_uid ); ?>-email">Email</label>
 	<input id="<?php echo esc_attr( $sgd_uid ); ?>-email" type="email" name="sgd_email" placeholder="Email (không bắt buộc)" autocomplete="email">
 	<?php if ( $sgd_a['service'] ) : ?>

@@ -44,6 +44,17 @@ Trang chủ (bản 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh
 - Màu mặc định: xanh `#123fb8`, đỏ `#e10b17` (nút, giá), nền tối `#0b1f5c`; khẩu hiệu *Uy tín tạo niềm tin*; hotline/Zalo 0914 108 322.
 - **Máy chủ nginx**: nếu đường dẫn có dạng `/index.php/dich-vu/...` là nginx chưa có quy tắc rewrite của WordPress. Thêm vào khối `server` của site: `location / { try_files $uri $uri/ /index.php?$args; }` rồi vào **Cài đặt → Đường dẫn tĩnh** chọn *Tên bài viết* để có đường dẫn gọn (tốt cho SEO). Theme không dùng đường dẫn cứng nên chạy được cả hai dạng.
 
+## Bản tiếng Anh (bản 0.11 – Polylang)
+
+1. Cài và kích hoạt **Polylang** (bản miễn phí hoặc Pro). Không cần chạy trình hướng dẫn của Polylang.
+2. *Giao diện → Tạo site mẫu → **Tạo bản tiếng Anh***. Nút này: tạo ngôn ngữ Tiếng Việt (mặc định, URL giữ nguyên) và English (`/en/`); 3 nhóm (*Company formation, Accounting & tax, Trademark & other services*) nối với nhóm tiếng Việt; 4 dịch vụ (*FDI company establishment, Representative office, Tax and accounting service, Trademark registration*) nối bản dịch với dịch vụ tiếng Việt tương ứng; trang chủ `/en/`, *About us*, *Contact us*; footer (UX Block `footer-website-en`) và menu *Main menu (English)* gán cho ngôn ngữ English. Nội dung tiếng Việt giữ nguyên.
+3. Nút **VI | EN** tự hiện trên thanh trên cùng và menu điện thoại; Polylang tự thêm thẻ `hreflang` cho Google.
+
+- Chữ cố định của theme (form, nút, tiêu đề khối, bảng giá, breadcrumb…) tự chuyển tiếng Anh trên trang `/en/` theo từ điển `inc/i18n-en.php`; giá `1.000.000đ` hiện `1,000,000 VND`.
+- Thông tin ở Tuỳ biến → Website dịch vụ: giá trị mặc định có sẵn bản tiếng Anh; giá trị tự nhập dịch ở *Ngôn ngữ → Bản dịch chuỗi* (nhóm "Website dịch vụ").
+- Form tiếng Anh nhận số điện thoại quốc tế (+44…); khách đăng ký từ bản tiếng Anh có nguồn bắt đầu bằng `[EN]`.
+- Thêm dịch vụ / bài viết tiếng Anh: sửa bài tiếng Việt → khung *Ngôn ngữ* của Polylang → bấm dấu **+** ở English.
+
 ## Menu, trang chủ, bảng giá (bản 0.9)
 
 - Menu kiểu ketoananpha.vn (chữ in hoa, thanh sáng, menu con hộp trắng): Giới thiệu · Dịch vụ thành lập · Dịch vụ kế toán (gồm thuế) · Thay đổi GPKD · Dịch vụ khác · Kiến thức · Liên hệ. Không có "Bảng giá" và nút màu trên menu. Mỗi mục là 1 trang có bài giới thiệu; menu con mở đầu bằng trang "Tổng quan …" của nhóm.

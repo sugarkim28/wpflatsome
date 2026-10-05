@@ -59,6 +59,7 @@ function sgd_demo_page() {
 		</form>
 	</div>
 	<?php
+	do_action( 'sgd_demo_page_after' );
 }
 
 /**

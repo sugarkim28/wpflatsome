@@ -7,10 +7,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SGD_VERSION', '0.10.5' );
+define( 'SGD_VERSION', '0.11.0' );
 define( 'SGD_DIR', get_stylesheet_directory() );
 define( 'SGD_URI', get_stylesheet_directory_uri() );
 
+require_once SGD_DIR . '/inc/i18n.php';
 require_once SGD_DIR . '/inc/options.php';
 require_once SGD_DIR . '/inc/services.php';
 require_once SGD_DIR . '/inc/leads.php';
@@ -19,6 +20,7 @@ require_once SGD_DIR . '/inc/seo.php';
 require_once SGD_DIR . '/inc/shortcodes.php';
 require_once SGD_DIR . '/inc/home.php';
 require_once SGD_DIR . '/inc/demo.php';
+require_once SGD_DIR . '/inc/demo-en.php';
 
 /**
  * CSS/JS giao diện.
@@ -33,8 +35,8 @@ function sgd_enqueue_assets() {
 		sprintf( ':root{--sgd-primary:%s;--sgd-accent:%s;}', esc_html( sgd_opt( 'color_primary' ) ), esc_html( sgd_opt( 'color_accent' ) ) )
 	);
 	wp_enqueue_script( 'sgd-main', SGD_URI . '/assets/js/dichvu.js', array(), SGD_VERSION . '.' . filemtime( SGD_DIR . '/assets/js/dichvu.js' ), array( 'in_footer' => true, 'strategy' => 'defer' ) );
-	$sgd_contact = get_page_by_path( 'lien-he' );
-	wp_add_inline_script( 'sgd-main', 'window.sgdContactUrl=' . wp_json_encode( ( $sgd_contact ? get_permalink( $sgd_contact ) : home_url( '/' ) ) . '#dang-ky' ) . ';', 'before' );
+	$sgd_contact = sgd_page_id( 'lien-he' );
+	wp_add_inline_script( 'sgd-main', 'window.sgdContactUrl=' . wp_json_encode( ( $sgd_contact ? get_permalink( $sgd_contact ) : home_url( '/' ) ) . '#dang-ky' ) . ';window.sgdI18n=' . wp_json_encode( sgd_js_strings() ) . ';', 'before' );
 }
 add_action( 'wp_enqueue_scripts', 'sgd_enqueue_assets', 120 );
 

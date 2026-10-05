@@ -56,5 +56,5 @@ $sgd_intro = trim( wp_strip_all_tags( term_description( $sgd_term ) ) );
 			<?php get_template_part( 'template-parts/dichvu/sidebar' ); ?>
 		</aside>
 	</div>
-	<?php get_template_part( 'template-parts/dichvu/related-services', null, array( 'posts' => array_slice( $sgd_services, 0, 6 ), 'title' => 'Bài viết dịch vụ ' . mb_strtolower( preg_replace( '/^Dịch vụ\s+/u', '', $sgd_term->name ) ) ) ); ?>
+	<?php get_template_part( 'template-parts/dichvu/related-services', null, array( 'posts' => array_slice( $sgd_services, 0, 6 ), 'title' => sgd_t( 'Bài viết dịch vụ ' . mb_strtolower( preg_replace( '/^Dịch vụ\s+/u', '', $sgd_term->name ) ), $sgd_term->name . ' – our services' ) ) ); ?>
 </div>

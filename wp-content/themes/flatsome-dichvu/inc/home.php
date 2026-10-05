@@ -260,7 +260,7 @@ function sgd_sc_about( $atts ) {
 	foreach ( sgd_list( str_replace( array( '<br />', '<br>' ), "\n", $a['points'] ) ) as $pt ) {
 		$points .= '<li>' . esc_html( $pt ) . '</li>';
 	}
-	$more = $a['more'] ? $a['more'] : ( get_page_by_path( 'gioi-thieu' ) ? get_permalink( get_page_by_path( 'gioi-thieu' ) ) : '' );
+	$more = $a['more'] ? $a['more'] : ( sgd_page_id( 'gioi-thieu' ) ? get_permalink( sgd_page_id( 'gioi-thieu' ) ) : '' );
 	return '<div class="sgd-about">'
 		. '<div class="sgd-about__brand"><img src="' . esc_url( SGD_URI . '/assets/img/logo-119-white.svg' ) . '" alt="' . esc_attr( sgd_opt( 'company' ) ) . '" width="280" height="56" loading="lazy">'
 		. '<p class="sgd-about__slogan">' . esc_html( sgd_opt( 'tagline' ) ) . '</p>'
@@ -720,6 +720,7 @@ function sgd_mobile_menu_extras( $items, $args ) {
 	$foot = '<li class="sgd-mnav-contact"><a class="sgd-mnav-contact__call" href="tel:' . esc_attr( sgd_tel( $hot ) ) . '">' . sgd_icon( 'phone' ) . '<span><small>Hotline tư vấn</small>' . esc_html( $hot ) . '</span></a>'
 		. ( $zalo ? '<a class="sgd-mnav-contact__zalo" href="https://zalo.me/' . esc_attr( $zalo ) . '" target="_blank" rel="noopener"><b>Zalo</b><span><small>Chat Zalo</small>' . esc_html( $hot ) . '</span></a>' : '' )
 		. ( sgd_opt( 'working_hours' ) ? '<p>' . esc_html( sgd_opt( 'working_hours' ) ) . '</p>' : '' ) . '</li>';
-	return $head . $items . $foot;
+	$lang = sgd_lang_switch( 'sgd-lang--menu' );
+	return $head . ( $lang ? '<li class="sgd-mnav-lang">' . $lang . '</li>' : '' ) . $items . $foot;
 }
 add_filter( 'wp_nav_menu_items', 'sgd_mobile_menu_extras', 10, 2 );

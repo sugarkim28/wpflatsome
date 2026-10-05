@@ -69,7 +69,7 @@ function sgd_opt( $key ) {
 	if ( '' === $val && in_array( $key, array( 'email', 'lead_email' ), true ) ) {
 		$val = get_option( 'admin_email' );
 	}
-	return $val;
+	return sgd_opt_lang( $key, $val );
 }
 
 /**

@@ -43,9 +43,13 @@ add_action( 'init', 'sgd_register_lead_cpt' );
  * @param string $phone Số.
  * @return string Số hợp lệ hoặc rỗng.
  */
-function sgd_normalize_phone( $phone ) {
+function sgd_normalize_phone( $phone, $intl = false ) {
 	$phone = preg_replace( '/[\s.\-()]/', '', (string) $phone );
-	return preg_match( '/^(\+?84|0)(\d{9,10})$/', $phone, $m ) ? '0' . $m[2] : '';
+	if ( preg_match( '/^(\+?84|0)(\d{9,10})$/', $phone, $m ) ) {
+		return '0' . $m[2];
+	}
+	// Form tiếng Anh: nhận số quốc tế (khách nước ngoài), lưu dạng +mã nước…
+	return $intl && preg_match( '/^\+?(\d{7,15})$/', $phone, $m ) ? '+' . $m[1] : '';
 }
 
 /**
@@ -56,6 +60,9 @@ function sgd_handle_lead() {
 	$redirect = $redirect ? $redirect : home_url( '/' );
 	$redirect = preg_replace( '/#.*$/', '', remove_query_arg( array( 'sgd_status', 'sgd_form' ), $redirect ) );
 	$source   = isset( $_POST['sgd_source'] ) ? sanitize_text_field( wp_unslash( $_POST['sgd_source'] ) ) : '';
+	if ( isset( $_POST['sgd_lang'] ) && 'en' === $_POST['sgd_lang'] ) {
+		$source = '[EN] ' . $source; // Khách đăng ký từ bản tiếng Anh.
+	}
 	$form     = sanitize_title( $source );
 
 	$back = function ( $code ) use ( $redirect, $form ) {
@@ -71,7 +78,7 @@ function sgd_handle_lead() {
 	}
 
 	$name    = isset( $_POST['sgd_name'] ) ? sanitize_text_field( wp_unslash( $_POST['sgd_name'] ) ) : '';
-	$phone   = isset( $_POST['sgd_phone'] ) ? sgd_normalize_phone( sanitize_text_field( wp_unslash( $_POST['sgd_phone'] ) ) ) : '';
+	$phone   = isset( $_POST['sgd_phone'] ) ? sgd_normalize_phone( sanitize_text_field( wp_unslash( $_POST['sgd_phone'] ) ), isset( $_POST['sgd_lang'] ) && 'en' === $_POST['sgd_lang'] ) : '';
 	$email   = isset( $_POST['sgd_email'] ) ? sanitize_email( wp_unslash( $_POST['sgd_email'] ) ) : '';
 	$note    = isset( $_POST['sgd_note'] ) ? mb_substr( sanitize_textarea_field( wp_unslash( $_POST['sgd_note'] ) ), 0, 1000 ) : '';
 	$raw     = isset( $_POST['sgd_service'] ) ? sanitize_text_field( wp_unslash( $_POST['sgd_service'] ) ) : '';

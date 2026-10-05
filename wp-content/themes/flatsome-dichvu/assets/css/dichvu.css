@@ -1634,3 +1634,18 @@ body.sgd { background: #fff; font-size: 16px; -webkit-font-smoothing: antialiase
 	.sgd .sgd-kt__list { grid-template-columns: 1fr; }
 	.sgd .sgd-kt__title { font-size: 1.25rem; }
 }
+
+/* ==========================================================================
+   v14 – nút chuyển ngôn ngữ VI | EN (Polylang)
+   ========================================================================== */
+.sgd-lang { display: inline-flex; gap: 6px; align-items: center; font-size: .8rem; font-weight: 700; letter-spacing: .03em; }
+.sgd-lang a { padding: 2px 7px; border-radius: 4px; color: inherit !important; opacity: .75; }
+.sgd-lang a:hover { opacity: 1; }
+.sgd-lang a.is-current { background: #fff; color: var(--sgd-navy) !important; opacity: 1; }
+.sgd-lang__sep { opacity: .4; }
+.sgd-lang--top { margin-right: 6px; padding-right: 12px; border-right: 1px solid rgba(255, 255, 255, .25); color: #fff; }
+.sgd .mobile-sidebar li.sgd-mnav-lang { padding: 12px 20px; border-top: 0 !important; }
+.sgd-lang--menu { font-size: .9rem; color: var(--sgd-ink); }
+.sgd-lang--menu a { padding: 6px 14px; border: 1px solid var(--sgd-line); opacity: 1; }
+.sgd-lang--menu a.is-current { border-color: var(--sgd-primary); background: var(--sgd-primary); color: #fff !important; }
+.sgd-lang--menu .sgd-lang__sep { display: none; }

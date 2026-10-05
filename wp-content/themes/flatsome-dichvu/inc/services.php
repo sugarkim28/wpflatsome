@@ -359,7 +359,7 @@ function sgd_listing_h1() {
 	if ( is_tax( 'nhom_dich_vu' ) ) {
 		$term = get_queried_object();
 		$h1   = get_term_meta( $term->term_id, '_sgd_h1', true );
-		return $h1 ? $h1 : 'Dịch vụ ' . mb_strtolower( $term->name );
+		return $h1 ? $h1 : sgd_t( 'Dịch vụ ' . mb_strtolower( $term->name ), $term->name );
 	}
 	return sgd_opt( 'archive_title' );
 }

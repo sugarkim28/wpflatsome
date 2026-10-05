@@ -135,7 +135,7 @@
 		var note = form.querySelector( 'textarea[name="sgd_note"]' );
 		if ( note ) {
 			var rest = note.value.replace( /^Tôi chọn: .*\n?/, '' ).trim();
-			note.value = 'Tôi chọn: ' + pkg + ( price ? ' (' + price + ')' : '' ) + ( rest ? '\n' + rest : '' );
+			note.value = ( ( window.sgdI18n || {} ).picked || 'Tôi chọn: ' ) + pkg + ( price ? ' (' + price + ')' : '' ) + ( rest ? '\n' + rest : '' );
 		}
 		form.classList.add( 'is-picked' );
 		if ( popup && popup.contains( form ) ) {
@@ -161,7 +161,7 @@
 			} else {
 				var ta = document.createElement( 'textarea' ); ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
 				document.body.appendChild( ta ); ta.select();
-				try { document.execCommand( 'copy' ); say( done ); } catch ( e ) { window.prompt( 'Sao chép liên kết:', url ); }
+				try { document.execCommand( 'copy' ); say( done ); } catch ( e ) { window.prompt( ( window.sgdI18n || {} ).copyPrompt || 'Sao chép liên kết:', url ); }
 				document.body.removeChild( ta );
 			}
 		}
@@ -174,10 +174,10 @@
 				if ( navigator.share ) {
 					navigator.share( { title: title, url: url } ).catch( function () {} );
 				} else {
-					copy( 'Đã sao chép liên kết – dán vào Zalo để gửi.' );
+					copy( ( window.sgdI18n || {} ).copiedZalo || 'Đã sao chép liên kết – dán vào Zalo để gửi.' );
 				}
 			} else if ( b ) {
-				copy( 'Đã sao chép liên kết.' );
+				copy( ( window.sgdI18n || {} ).copied || 'Đã sao chép liên kết.' );
 			}
 		} );
 	} );

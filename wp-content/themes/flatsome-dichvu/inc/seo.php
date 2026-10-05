@@ -161,7 +161,7 @@ function sgd_fallback_meta() {
 		$desc = sgd_opt( 'home_desc' );
 		if ( '' === trim( (string) $desc ) ) {
 			// Mở đầu bằng dịch vụ (từ khoá), kết bằng hotline – không tốn ký tự cho khẩu hiệu.
-			$desc = 'Dịch vụ thành lập công ty, thay đổi giấy phép kinh doanh, kê khai thuế, kế toán trọn gói. Báo giá rõ ràng, không phát sinh.'
+			$desc = sgd_t( 'Dịch vụ thành lập công ty, thay đổi giấy phép kinh doanh, kê khai thuế, kế toán trọn gói. Báo giá rõ ràng, không phát sinh.', sgd_defaults_en()['home_desc'] )
 				. ( sgd_opt( 'hotline' ) ? ' Hotline ' . sgd_opt( 'hotline' ) . '.' : '' );
 		}
 	}
