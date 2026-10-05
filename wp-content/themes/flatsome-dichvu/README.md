@@ -48,6 +48,7 @@ Trang chủ (bản 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh
 
 - 64 bài mới, **4 bài cho mỗi mục nhỏ** của *Kiến thức kế toán* và *Kiến thức pháp lý* (16 mục), nằm trong `inc/posts/*.php` (phap-ly-1, phap-ly-2, thue-1, ke-toan-2). Cộng 10 bài cũ ở `inc/demo-posts.php` là 74 bài.
 - Trích dẫn văn bản: trong nội dung viết `[[tvpl:khoa]]` hoặc `[[tvpl:khoa|chữ neo]]` → link toàn văn trên Thư viện Pháp luật (danh sách khoá ở `inc/posts/sources.php`). Cuối mỗi bài tự thêm mục **Nguồn tham khảo** liệt kê các văn bản đã trích.
+- Ảnh đại diện: 74 ảnh 1200×630 (WebP, ~35 KB) thiết kế riêng từng bài – tiêu đề, chuyên mục, biểu tượng chủ đề – ở `assets/featured/{slug}.webp`; nút nhập bài tự tải vào Thư viện ảnh và gắn cho bài **chưa có ảnh** (ảnh bạn tự đặt giữ nguyên).
 - Nhập bài: *Giao diện → Tạo site mẫu → **Nhập bài viết Kiến thức*** – chỉ tạo bài còn thiếu và cập nhật bài mẫu chưa sửa tay; bài bạn đã sửa giữ nguyên; trang chủ, dịch vụ, menu không bị đụng.
 - Cập nhật Nghị định 141/2026/NĐ-CP: ngưỡng miễn thuế hộ, cá nhân kinh doanh **1 tỷ đồng/năm** (thay 500 triệu), doanh nghiệp doanh thu năm đến 1 tỷ đồng miễn thuế TNDN – đã sửa cả bài *Thuế hộ kinh doanh năm 2026* cũ.
 

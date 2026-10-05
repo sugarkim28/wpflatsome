@@ -41,7 +41,7 @@ function sgd_demo_page() {
 		<ul style="list-style:disc;margin-left:20px">
 			<li>6 nhóm dịch vụ: <em>Thành lập doanh nghiệp, Thay đổi giấy phép kinh doanh, Dịch vụ thuế, Dịch vụ kế toán, Dịch vụ khác, Đào tạo kế toán</em>.</li>
 			<li>Hơn 30 dịch vụ có sẵn nội dung, chi phí trọn gói, bảng giá (gói / bảng theo số hóa đơn), quy trình, hồ sơ cần chuẩn bị, câu hỏi thường gặp.</li>
-			<li>74 bài viết Kiến thức &amp; Đào tạo – 4 bài cho mỗi mục nhỏ, cập nhật luật 2026, có link nguồn Thư viện Pháp luật và link về trang dịch vụ (nút <em>Nhập bài viết Kiến thức</em> chỉ thêm bài còn thiếu); trang <em>Trang chủ</em>, <em>Bảng giá</em>, <em>Giới thiệu</em>, <em>Liên hệ</em>, <em>Kiến thức</em> (sửa bằng UX Builder).</li>
+			<li>74 bài viết Kiến thức &amp; Đào tạo – 4 bài cho mỗi mục nhỏ, kèm ảnh đại diện thiết kế riêng từng bài, cập nhật luật 2026, có link nguồn Thư viện Pháp luật và link về trang dịch vụ (nút <em>Nhập bài viết Kiến thức</em> chỉ thêm bài còn thiếu); trang <em>Trang chủ</em>, <em>Bảng giá</em>, <em>Giới thiệu</em>, <em>Liên hệ</em>, <em>Kiến thức</em> (sửa bằng UX Builder).</li>
 			<li>Menu chính, footer (UX Block "Footer website"), header Flatsome.</li>
 		</ul>
 		<p><strong>Lưu ý:</strong> giá trong dữ liệu mẫu là <strong>giá minh hoạ</strong> – sửa theo bảng giá thật (Dịch vụ → sửa từng dịch vụ). Chạy lại sẽ đưa các dịch vụ/trang mẫu về nội dung gốc (dịch vụ bạn tự thêm không bị ảnh hưởng).</p>
@@ -985,6 +985,13 @@ function sgd_demo_import_posts() {
 			++$done;
 		}
 	}
+	// Ảnh đại diện thiết kế sẵn (assets/featured/{slug}.webp) cho bài chưa có ảnh – ảnh bạn tự đặt giữ nguyên.
+	foreach ( $data['posts'] as $p ) {
+		$post = get_page_by_path( $p['slug'], OBJECT, 'post' );
+		if ( $post && sgd_demo_attach_featured( $post->ID, $p['slug'] ) ) {
+			++$done;
+		}
+	}
 	// Chuyên mục cũ (bài mẫu, bản 0.10.2) – xoá nếu không còn bài nào.
 	foreach ( array( 'kien-thuc-doanh-nghiep', 'kien-thuc-thue' ) as $old_slug ) {
 		$legacy = get_term_by( 'slug', $old_slug, 'category' );
@@ -996,6 +1003,36 @@ function sgd_demo_import_posts() {
 		}
 	}
 	return $done;
+}
+
+/**
+ * Gắn ảnh đại diện có sẵn trong theme cho bài chưa có ảnh (tải vào Thư viện ảnh, alt = tiêu đề bài).
+ *
+ * @param int    $post_id ID bài.
+ * @param string $slug    Đường dẫn bài (tên tệp ảnh).
+ * @return bool Đã gắn ảnh mới.
+ */
+function sgd_demo_attach_featured( $post_id, $slug ) {
+	$file = SGD_DIR . '/assets/featured/' . $slug . '.webp';
+	if ( has_post_thumbnail( $post_id ) || ! file_exists( $file ) ) {
+		return false;
+	}
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	require_once ABSPATH . 'wp-admin/includes/media.php';
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+	$tmp = wp_tempnam( $slug . '.webp' );
+	if ( ! $tmp || ! copy( $file, $tmp ) ) {
+		return false;
+	}
+	$title = get_the_title( $post_id );
+	$id    = media_handle_sideload( array( 'name' => $slug . '.webp', 'tmp_name' => $tmp ), $post_id, $title );
+	if ( is_wp_error( $id ) ) {
+		wp_delete_file( $tmp );
+		return false;
+	}
+	update_post_meta( $id, '_wp_attachment_image_alt', $title );
+	update_post_meta( $id, '_sgd_demo', 'featured' );
+	return (bool) set_post_thumbnail( $post_id, $id );
 }
 
 /**
