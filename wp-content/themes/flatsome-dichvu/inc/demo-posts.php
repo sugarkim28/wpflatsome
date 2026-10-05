@@ -501,7 +501,7 @@ return array(
 			'slug'    => 'diem-moi-thong-tu-99-2025-che-do-ke-toan',
 			'cat'     => array( 'so-sach-ke-toan', 'bai-hoc-ke-toan' ),
 			'title'   => 'Điểm mới Thông tư 99/2025/TT-BTC về chế độ kế toán doanh nghiệp từ 2026',
-			'excerpt' => 'Thông tư 99/2025/TT-BTC thay Thông tư 200/2014 từ 01/01/2026: phạm vi áp dụng, thay đổi hệ thống tài khoản (thêm TK 215, TK 332…), chứng từ, sổ sách tự thiết kế và việc doanh nghiệp nhỏ có nên chuyển đổi.',
+			'excerpt' => 'Thông tư 99/2025/TT-BTC thay Thông tư 200/2014 từ 01/01/2026: phạm vi áp dụng, hệ thống tài khoản mới (thêm TK 215, đổi tên nhiều tài khoản), quy chế hạch toán, chứng từ và sổ sách tự thiết kế và việc doanh nghiệp nhỏ có nên chuyển đổi.',
 			'content' => $sgd_upd . '
 <p>Ngày 27/10/2025, Bộ Tài chính ban hành Thông tư 99/2025/TT-BTC hướng dẫn chế độ kế toán doanh nghiệp, có hiệu lực từ <strong>01/01/2026</strong> và áp dụng cho năm tài chính bắt đầu từ ngày này. Thông tư thay thế Thông tư 200/2014/TT-BTC cùng các thông tư sửa đổi (75/2015, 53/2016). Đây là thay đổi lớn nhất về chế độ kế toán doanh nghiệp sau hơn 10 năm.</p>
 

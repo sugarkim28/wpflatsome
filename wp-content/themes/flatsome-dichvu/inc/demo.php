@@ -923,7 +923,15 @@ function sgd_demo_import_posts() {
 				continue;
 			}
 			if ( $untouched && md5( $content ) === $hash ) {
-				continue; // Đã là bản mới nhất.
+				// Nội dung đã mới nhất – chỉ cập nhật mô tả ngắn nếu mô tả chưa bị sửa tay.
+				$ex_hash = get_post_meta( $old->ID, '_sgd_ex_hash', true );
+				$ex_ok   = $ex_hash ? md5( $old->post_excerpt ) === $ex_hash : false !== strpos( $old->post_excerpt, 'TK 332' );
+				if ( $ex_ok && $old->post_excerpt !== $p['excerpt'] ) {
+					wp_update_post( array( 'ID' => $old->ID, 'post_excerpt' => $p['excerpt'] ) );
+					update_post_meta( $old->ID, '_sgd_ex_hash', md5( $p['excerpt'] ) );
+					++$done;
+				}
+				continue;
 			}
 		}
 		$args = array(
@@ -940,6 +948,7 @@ function sgd_demo_import_posts() {
 		$id = sgd_demo_post( $args, array( '_sgd_demo' => 'article' ) );
 		if ( $id ) {
 			update_post_meta( $id, '_sgd_hash', md5( get_post_field( 'post_content', $id ) ) );
+			update_post_meta( $id, '_sgd_ex_hash', md5( get_post_field( 'post_excerpt', $id ) ) );
 			++$done;
 		}
 	}
