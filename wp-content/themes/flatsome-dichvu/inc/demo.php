@@ -30,6 +30,9 @@ function sgd_demo_page() {
 			<div class="notice notice-success"><p><strong>Đã tạo xong.</strong> <a href="<?php echo esc_url( home_url( '/' ) ); ?>" target="_blank">Xem trang chủ</a> · <a href="<?php echo esc_url( get_post_type_archive_link( 'dich_vu' ) ); ?>" target="_blank">Xem danh sách dịch vụ</a></p></div>
 		<?php elseif ( 'menu' === $msg ) : ?>
 			<div class="notice notice-success"><p><strong>Đã cập nhật menu</strong>, tạo các trang dịch vụ, trang Tra cứu và bài viết Kiến thức – Đào tạo còn thiếu (bài bạn đã sửa giữ nguyên), đổi tên 3 khối dịch vụ chính trên trang chủ. <a href="<?php echo esc_url( admin_url( 'nav-menus.php' ) ); ?>">Xem menu</a></p></div>
+		<?php elseif ( 'posts' === $msg ) : ?>
+			<?php // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- chỉ đọc để hiện thông báo. ?>
+			<div class="notice notice-success"><p><strong>Đã nhập <?php echo (int) ( isset( $_GET['n'] ) ? $_GET['n'] : 0 ); ?> bài viết Kiến thức.</strong> Bài bạn đã sửa tay giữ nguyên. <a href="<?php echo esc_url( admin_url( 'edit.php' ) ); ?>">Xem danh sách bài viết</a></p></div>
 		<?php elseif ( 'cleaned' === $msg ) : ?>
 			<div class="notice notice-success"><p>Đã xoá bài viết mẫu.</p></div>
 		<?php endif; ?>
@@ -51,6 +54,11 @@ function sgd_demo_page() {
 			<input type="hidden" name="action" value="sgd_demo_menu_run">
 			<?php wp_nonce_field( 'sgd_demo_menu_run' ); ?>
 			<?php submit_button( 'Cập nhật menu (giữ trang chủ)', 'secondary', 'submit', false ); ?>
+		</form>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;margin-right:10px" onsubmit="return confirm('Nhập các bài viết Kiến thức còn thiếu (4 bài cho mỗi mục nhỏ)? Trang chủ, dịch vụ, menu và bài bạn đã sửa giữ nguyên.');">
+			<input type="hidden" name="action" value="sgd_demo_posts_run">
+			<?php wp_nonce_field( 'sgd_demo_posts_run' ); ?>
+			<?php submit_button( 'Nhập bài viết Kiến thức', 'secondary', 'submit', false ); ?>
 		</form>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block" onsubmit="return confirm('Xoá các bài viết mẫu cũ (có chữ “bài mẫu”)? 10 bài Kiến thức – Đào tạo không bị xoá.');">
 			<input type="hidden" name="action" value="sgd_demo_clean">
@@ -841,6 +849,21 @@ function sgd_demo_menu_run() {
 add_action( 'admin_post_sgd_demo_menu_run', 'sgd_demo_menu_run' );
 
 /**
+ * Chỉ nhập bài viết Kiến thức (chuyên mục + bài còn thiếu), không đụng trang, dịch vụ, menu.
+ */
+function sgd_demo_posts_run() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'Không có quyền.' );
+	}
+	check_admin_referer( 'sgd_demo_posts_run' );
+	sgd_register_services();
+	$n = sgd_demo_import_posts();
+	wp_safe_redirect( admin_url( 'themes.php?page=sgd-demo&sgd_demo=posts&n=' . (int) $n ) );
+	exit;
+}
+add_action( 'admin_post_sgd_demo_posts_run', 'sgd_demo_posts_run' );
+
+/**
  * Nội dung trang Tra cứu.
  *
  * @return string
@@ -891,6 +914,14 @@ function sgd_demo_rename_home_sections() {
  */
 function sgd_demo_import_posts() {
 	$data = require SGD_DIR . '/inc/demo-posts.php';
+	// Bài viết bổ sung theo từng mục nhỏ (inc/posts/*.php) – bài mới nhất xếp trước.
+	$extra = array();
+	foreach ( (array) glob( SGD_DIR . '/inc/posts/*.php' ) as $file ) {
+		if ( 'sources.php' !== basename( $file ) ) {
+			$extra = array_merge( $extra, (array) require $file );
+		}
+	}
+	$data['posts'] = array_merge( $extra, $data['posts'] );
 	$cats = array();
 	foreach ( $data['categories'] as $slug => $c ) {
 		$cats[ $slug ] = sgd_demo_term( 'category', $c[0], $slug, $c[1], array( '_sgd_icon' => $c[3], '_sgd_order' => $c[4] ) );
@@ -909,7 +940,7 @@ function sgd_demo_import_posts() {
 	$now  = current_time( 'timestamp' ); // phpcs:ignore WordPress.DateTime.CurrentTimeTimestamp.Requested
 	foreach ( $data['posts'] as $i => $p ) {
 		$old     = get_page_by_path( $p['slug'], OBJECT, 'post' );
-		$content = sgd_demo_resolve_links( $p['content'] );
+		$content = sgd_demo_resolve_links( sgd_demo_resolve_sources( $p['content'] ) );
 		if ( $old ) {
 			$kind = get_post_meta( $old->ID, '_sgd_demo', true );
 			// Bài đã nhập: chỉ cập nhật khi nội dung chưa bị sửa tay (so mã băm lúc nhập).
@@ -964,6 +995,41 @@ function sgd_demo_import_posts() {
 		}
 	}
 	return $done;
+}
+
+/**
+ * Đổi [[tvpl:khoa]] / [[tvpl:khoa|chữ]] → link văn bản trên Thư viện Pháp luật (inc/posts/sources.php)
+ * và thêm mục "Nguồn tham khảo" cuối bài.
+ *
+ * @param string $html Nội dung.
+ * @return string
+ */
+function sgd_demo_resolve_sources( $html ) {
+	static $src = null;
+	if ( null === $src ) {
+		$src = require SGD_DIR . '/inc/posts/sources.php';
+	}
+	$used = array();
+	$html = preg_replace_callback(
+		'/\[\[tvpl:([a-z0-9]+)(?:\|([^\]]+))?\]\]/u',
+		function ( $m ) use ( $src, &$used ) {
+			if ( ! isset( $src[ $m[1] ] ) ) {
+				return isset( $m[2] ) ? $m[2] : $m[1];
+			}
+			$used[ $m[1] ] = true;
+			$text          = isset( $m[2] ) && '' !== $m[2] ? $m[2] : $src[ $m[1] ][0];
+			return '<a href="' . esc_url( $src[ $m[1] ][1] ) . '" target="_blank" rel="nofollow noopener">' . $text . '</a>';
+		},
+		$html
+	);
+	if ( $used ) {
+		$html .= "\n\n<h2>Nguồn tham khảo</h2>\n<ul class=\"sgd-sources\">\n";
+		foreach ( array_keys( $used ) as $k ) {
+			$html .= '<li><a href="' . esc_url( $src[ $k ][1] ) . '" target="_blank" rel="nofollow noopener">' . esc_html( $src[ $k ][0] ) . "</a> – Thư viện Pháp luật</li>\n";
+		}
+		$html .= '</ul>';
+	}
+	return $html;
 }
 
 /**
