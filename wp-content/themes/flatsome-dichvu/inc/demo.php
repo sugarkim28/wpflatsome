@@ -41,7 +41,7 @@ function sgd_demo_page() {
 		<ul style="list-style:disc;margin-left:20px">
 			<li>6 nhóm dịch vụ: <em>Thành lập doanh nghiệp, Thay đổi giấy phép kinh doanh, Dịch vụ thuế, Dịch vụ kế toán, Dịch vụ khác, Đào tạo kế toán</em>.</li>
 			<li>Hơn 30 dịch vụ có sẵn nội dung, chi phí trọn gói, bảng giá (gói / bảng theo số hóa đơn), quy trình, hồ sơ cần chuẩn bị, câu hỏi thường gặp.</li>
-			<li>10 bài viết Kiến thức &amp; Đào tạo (cập nhật luật 2026, có link về trang dịch vụ); trang <em>Trang chủ</em>, <em>Bảng giá</em>, <em>Giới thiệu</em>, <em>Liên hệ</em>, <em>Kiến thức</em> (sửa bằng UX Builder).</li>
+			<li>74 bài viết Kiến thức &amp; Đào tạo – 4 bài cho mỗi mục nhỏ, cập nhật luật 2026, có link nguồn Thư viện Pháp luật và link về trang dịch vụ (nút <em>Nhập bài viết Kiến thức</em> chỉ thêm bài còn thiếu); trang <em>Trang chủ</em>, <em>Bảng giá</em>, <em>Giới thiệu</em>, <em>Liên hệ</em>, <em>Kiến thức</em> (sửa bằng UX Builder).</li>
 			<li>Menu chính, footer (UX Block "Footer website"), header Flatsome.</li>
 		</ul>
 		<p><strong>Lưu ý:</strong> giá trong dữ liệu mẫu là <strong>giá minh hoạ</strong> – sửa theo bảng giá thật (Dịch vụ → sửa từng dịch vụ). Chạy lại sẽ đưa các dịch vụ/trang mẫu về nội dung gốc (dịch vụ bạn tự thêm không bị ảnh hưởng).</p>

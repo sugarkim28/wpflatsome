@@ -44,6 +44,13 @@ Trang chủ (bản 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh
 - Màu mặc định: xanh `#123fb8`, đỏ `#e10b17` (nút, giá), nền tối `#0b1f5c`; khẩu hiệu *Uy tín tạo niềm tin*; hotline/Zalo 0914 108 322.
 - **Máy chủ nginx**: nếu đường dẫn có dạng `/index.php/dich-vu/...` là nginx chưa có quy tắc rewrite của WordPress. Thêm vào khối `server` của site: `location / { try_files $uri $uri/ /index.php?$args; }` rồi vào **Cài đặt → Đường dẫn tĩnh** chọn *Tên bài viết* để có đường dẫn gọn (tốt cho SEO). Theme không dùng đường dẫn cứng nên chạy được cả hai dạng.
 
+## Bài viết Kiến thức theo mục nhỏ (bản 0.12)
+
+- 64 bài mới, **4 bài cho mỗi mục nhỏ** của *Kiến thức kế toán* và *Kiến thức pháp lý* (16 mục), nằm trong `inc/posts/*.php` (phap-ly-1, phap-ly-2, thue-1, ke-toan-2). Cộng 10 bài cũ ở `inc/demo-posts.php` là 74 bài.
+- Trích dẫn văn bản: trong nội dung viết `[[tvpl:khoa]]` hoặc `[[tvpl:khoa|chữ neo]]` → link toàn văn trên Thư viện Pháp luật (danh sách khoá ở `inc/posts/sources.php`). Cuối mỗi bài tự thêm mục **Nguồn tham khảo** liệt kê các văn bản đã trích.
+- Nhập bài: *Giao diện → Tạo site mẫu → **Nhập bài viết Kiến thức*** – chỉ tạo bài còn thiếu và cập nhật bài mẫu chưa sửa tay; bài bạn đã sửa giữ nguyên; trang chủ, dịch vụ, menu không bị đụng.
+- Cập nhật Nghị định 141/2026/NĐ-CP: ngưỡng miễn thuế hộ, cá nhân kinh doanh **1 tỷ đồng/năm** (thay 500 triệu), doanh nghiệp doanh thu năm đến 1 tỷ đồng miễn thuế TNDN – đã sửa cả bài *Thuế hộ kinh doanh năm 2026* cũ.
+
 ## Bản tiếng Anh (bản 0.11 – Polylang)
 
 1. Cài và kích hoạt **Polylang** (bản miễn phí hoặc Pro). Không cần chạy trình hướng dẫn của Polylang.
