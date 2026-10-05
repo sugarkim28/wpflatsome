@@ -48,7 +48,8 @@ Trang chủ (bản 0.7 – tổng hợp ketoananpha.vn, timsen.vn, tanthanhthinh
 
 1. Cài và kích hoạt **Polylang** (bản miễn phí hoặc Pro). Không cần chạy trình hướng dẫn của Polylang.
 2. *Giao diện → Tạo site mẫu → **Tạo bản tiếng Anh***. Nút này: tạo ngôn ngữ Tiếng Việt (mặc định, URL giữ nguyên) và English (`/en/`); 3 nhóm (*Company formation, Accounting & tax, Trademark & other services*) nối với nhóm tiếng Việt; 4 dịch vụ (*FDI company establishment, Representative office, Tax and accounting service, Trademark registration*) nối bản dịch với dịch vụ tiếng Việt tương ứng; trang chủ `/en/`, *About us*, *Contact us*; footer (UX Block `footer-website-en`) và menu *Main menu (English)* gán cho ngôn ngữ English. Nội dung tiếng Việt giữ nguyên.
-3. Nút **VI | EN** tự hiện trên thanh trên cùng và menu điện thoại; Polylang tự thêm thẻ `hreflang` cho Google.
+3. Nếu trình hướng dẫn Polylang đã chọn English làm mặc định (nội dung tiếng Việt bị gán nhầm English, URL có /vi/), bấm lại nút này: theme đặt Tiếng Việt làm mặc định, trả nội dung tiếng Việt về đúng ngôn ngữ và gán lại menu.
+4. Nút **VI | EN** tự hiện trên thanh trên cùng và menu điện thoại; Polylang tự thêm thẻ `hreflang` cho Google.
 
 - Chữ cố định của theme (form, nút, tiêu đề khối, bảng giá, breadcrumb…) tự chuyển tiếng Anh trên trang `/en/` theo từ điển `inc/i18n-en.php`; giá `1.000.000đ` hiện `1,000,000 VND`.
 - Thông tin ở Tuỳ biến → Website dịch vụ: giá trị mặc định có sẵn bản tiếng Anh; giá trị tự nhập dịch ở *Ngôn ngữ → Bản dịch chuỗi* (nhóm "Website dịch vụ").

@@ -424,14 +424,24 @@ function sgd_en_languages() {
 	} elseif ( method_exists( $model, 'clean_languages_cache' ) ) {
 		$model->clean_languages_cache();
 	}
-	// Trang chủ tiếng Anh nằm ở /en/ (không phải /en/home/).
+	// Tiếng Việt là ngôn ngữ mặc định (URL không có /vi/); trang chủ tiếng Anh nằm ở /en/ (không phải /en/home/).
 	$opt = PLL()->options;
+	if ( 'vi' !== pll_default_language() ) {
+		if ( isset( $model->languages ) && is_object( $model->languages ) && method_exists( $model->languages, 'update_default' ) ) {
+			$model->languages->update_default( 'vi' );
+		} elseif ( is_object( $opt ) && method_exists( $opt, 'set' ) ) {
+			$opt->set( 'default_lang', 'vi' );
+		}
+	}
 	if ( is_object( $opt ) && method_exists( $opt, 'set' ) ) {
 		$opt->set( 'redirect_lang', true );
+		$opt->set( 'hide_default', true );
+		$opt->set( 'force_lang', 1 );
 		if ( method_exists( $opt, 'save' ) ) {
 			$opt->save();
 		}
 	}
+	sgd_en_fix_mislabeled();
 	// Nội dung cũ chưa có ngôn ngữ → Tiếng Việt.
 	$vi = method_exists( $model, 'get_language' ) ? $model->get_language( 'vi' ) : null;
 	if ( method_exists( $model, 'set_language_in_mass' ) ) {
@@ -439,6 +449,39 @@ function sgd_en_languages() {
 	}
 	$list = (array) pll_languages_list();
 	return in_array( 'vi', $list, true ) && in_array( 'en', $list, true );
+}
+
+/**
+ * Sửa nội dung tiếng Việt bị gán nhầm "English" (xảy ra khi trình hướng dẫn Polylang chọn English làm mặc định
+ * và gán toàn bộ nội dung cũ cho English): mọi bài / trang / dịch vụ / nhóm / chuyên mục đang là English
+ * mà không phải nội dung tiếng Anh của theme (hoặc bản dịch tiếng Anh bạn tự tạo) → Tiếng Việt.
+ */
+function sgd_en_fix_mislabeled() {
+	$data      = sgd_en_data();
+	$en_posts  = array_merge( wp_list_pluck( $data['services'], 'slug' ), array( 'home', 'about-us', 'contact-us', 'footer-website-en' ) );
+	$en_terms  = array_keys( $data['groups'] );
+	$vi_chars  = '/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/iu';
+	$types     = array_values( array_filter( array( 'post', 'page', 'dich_vu', 'blocks' ), 'pll_is_translated_post_type' ) );
+	$ids       = get_posts( array( 'post_type' => $types, 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'lang' => 'en', 'suppress_filters' => false ) );
+	foreach ( $ids as $id ) {
+		$p = get_post( $id );
+		if ( ! $p || 'en' !== pll_get_post_language( $id ) || in_array( $p->post_name, $en_posts, true ) ) {
+			continue;
+		}
+		$tr = pll_get_post_translations( $id );
+		// Bài tiếng Anh bạn tự tạo (tiêu đề không dấu và đã nối với 1 bài tiếng Việt khác) → giữ nguyên.
+		if ( ! preg_match( $vi_chars, $p->post_title ) && ! empty( $tr['vi'] ) && (int) $tr['vi'] !== (int) $id ) {
+			continue;
+		}
+		pll_set_post_language( $id, 'vi' );
+	}
+	$taxes = array_values( array_filter( array( 'category', 'post_tag', 'nhom_dich_vu' ), 'pll_is_translated_taxonomy' ) );
+	$terms = get_terms( array( 'taxonomy' => $taxes, 'hide_empty' => false, 'lang' => 'en' ) );
+	foreach ( is_array( $terms ) ? $terms : array() as $t ) {
+		if ( 'en' === pll_get_term_language( $t->term_id ) && ! in_array( $t->slug, $en_terms, true ) && preg_match( $vi_chars, $t->name ) ) {
+			pll_set_term_language( $t->term_id, 'vi' );
+		}
+	}
 }
 
 /**
@@ -643,11 +686,20 @@ function sgd_en_menu( $groups, $services, $pages ) {
 		$locs  = get_theme_mod( 'nav_menu_locations', array() );
 		$opt   = PLL()->options;
 		$nav   = is_object( $opt ) && method_exists( $opt, 'get' ) ? (array) $opt->get( 'nav_menus' ) : (array) ( $opt['nav_menus'] ?? array() );
+		$vi_menu = wp_get_nav_menu_object( 'Menu chính' );
 		foreach ( array( 'primary', 'primary_mobile' ) as $loc ) {
-			if ( ! empty( $locs[ $loc ] ) && empty( $nav[ $theme ][ $loc ]['vi'] ) ) {
+			if ( $vi_menu ) {
+				$nav[ $theme ][ $loc ]['vi'] = (int) $vi_menu->term_id;
+			} elseif ( ! empty( $locs[ $loc ] ) && (int) $locs[ $loc ] !== (int) $menu_id && empty( $nav[ $theme ][ $loc ]['vi'] ) ) {
 				$nav[ $theme ][ $loc ]['vi'] = (int) $locs[ $loc ];
 			}
 			$nav[ $theme ][ $loc ]['en'] = (int) $menu_id;
+		}
+		// Vị trí menu lưu trong theme là của ngôn ngữ mặc định (Tiếng Việt).
+		if ( $vi_menu ) {
+			$locs['primary']        = (int) $vi_menu->term_id;
+			$locs['primary_mobile'] = (int) $vi_menu->term_id;
+			set_theme_mod( 'nav_menu_locations', $locs );
 		}
 		if ( is_object( $opt ) && method_exists( $opt, 'set' ) ) {
 			$opt->set( 'nav_menus', $nav );
