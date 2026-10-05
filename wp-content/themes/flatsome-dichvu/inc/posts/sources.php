@@ -51,10 +51,12 @@ return array(
 	'lkt'      => array( 'Luật Kế toán số 88/2015/QH13', $b . 'Ke-toan-Kiem-toan/Luat-ke-toan-2015-298369.aspx' ),
 	'tt99'     => array( 'Thông tư 99/2025/TT-BTC hướng dẫn chế độ kế toán doanh nghiệp', 'https://thuvienphapluat.vn/chinh-sach-phap-luat-moi/vn/ho-tro-phap-luat/chinh-sach-moi/97421/da-co-thong-tu-99-2025-tt-btc-huong-dan-che-do-ke-toan-doanh-nghiep-tu-ngay-01-01-2026-thay-the-thong-tu-200-2014' ),
 	'tt133'    => array( 'Thông tư 133/2016/TT-BTC hướng dẫn chế độ kế toán doanh nghiệp nhỏ và vừa', $b . 'Doanh-nghiep/Thong-tu-133-2016-TT-BTC-huong-dan-che-do-ke-toan-doanh-nghiep-nho-va-vua-284997.aspx' ),
+	'tt58'     => array( 'Thông tư 58/2026/TT-BTC hướng dẫn chế độ kế toán cho doanh nghiệp siêu nhỏ', 'https://thuvienphapluat.vn/chinh-sach-phap-luat-moi/vn/ho-tro-phap-luat/chinh-sach-moi/113349/thong-tu-58-2026-huong-dan-ap-dung-che-do-ke-toan-cho-doanh-nghiep-sieu-nho-tu-1-7-2026' ),
 	'tt152'    => array( 'Thông tư 152/2025/TT-BTC hướng dẫn kế toán cho hộ, cá nhân kinh doanh', $b . 'Ke-toan-Kiem-toan/Thong-tu-152-2025-TT-BTC-huong-dan-ke-toan-cho-cac-ho-kinh-doanh-680351.aspx' ),
 
 	// Lao động – bảo hiểm.
 	'lbhxh'    => array( 'Luật Bảo hiểm xã hội số 41/2024/QH15', $b . 'Bao-hiem/Luat-Bao-hiem-xa-hoi-2024-557190.aspx' ),
 	'nd158'    => array( 'Nghị định 158/2025/NĐ-CP hướng dẫn Luật Bảo hiểm xã hội về bảo hiểm xã hội bắt buộc', $b . 'Bao-hiem/Nghi-dinh-158-2025-ND-CP-huong-dan-Luat-Bao-hiem-xa-hoi-ve-bao-hiem-xa-hoi-bat-buoc-634792.aspx' ),
+	'nd283'    => array( 'Nghị định 283/2026/NĐ-CP xử phạt vi phạm hành chính trong lĩnh vực lao động, bảo hiểm xã hội', $b . 'Bao-hiem/Nghi-dinh-283-2026-ND-CP-xu-phat-vi-pham-hanh-chinh-linh-vuc-lao-dong-bao-hiem-xa-hoi-642116.aspx' ),
 	'nd293'    => array( 'Nghị định 293/2025/NĐ-CP về mức lương tối thiểu vùng', 'https://thuvienphapluat.vn/phap-luat-doanh-nghiep/bai-viet/cap-nhat-muc-luong-toi-thieu-vung-2026-chinh-thuc-theo-nghi-dinh-293-2025-nd-cp-15934.html' ),
 );
