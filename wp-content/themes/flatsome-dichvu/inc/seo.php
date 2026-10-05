@@ -171,7 +171,16 @@ function sgd_fallback_meta() {
 	}
 
 	// Open Graph / Twitter (chia sẻ Facebook, Zalo) – plugin SEO đã lo thì bỏ qua.
-	$url   = is_singular() ? get_permalink() : ( is_tax() ? get_term_link( get_queried_object() ) : ( is_post_type_archive( 'dich_vu' ) ? get_post_type_archive_link( 'dich_vu' ) : home_url( '/' ) ) );
+	$url = is_singular() ? get_permalink() : sgd_archive_url();
+	// Canonical cho trang chuyên mục, nhóm dịch vụ, danh sách (WordPress chỉ tự in cho bài, trang).
+	if ( ! is_singular() && ! is_front_page() && ! is_search() && ! is_404() && $url ) {
+		$canon = $url;
+		$paged = (int) get_query_var( 'paged' );
+		if ( $paged > 1 ) {
+			$canon = trailingslashit( $canon ) . user_trailingslashit( 'page/' . $paged, 'paged' );
+		}
+		echo '<link rel="canonical" href="' . esc_url( $canon ) . "\">\n";
+	}
 	$image = is_singular() && has_post_thumbnail() ? get_the_post_thumbnail_url( get_the_ID(), 'large' ) : '';
 	if ( ! $image ) {
 		$logo  = get_theme_mod( 'site_logo' );
@@ -192,6 +201,26 @@ function sgd_fallback_meta() {
 	echo '<meta name="twitter:card" content="' . ( $image ? 'summary_large_image' : 'summary' ) . "\">\n";
 }
 add_action( 'wp_head', 'sgd_fallback_meta', 1 );
+
+/**
+ * Link trang 1 của trang danh sách hiện tại (chuyên mục, nhóm dịch vụ, Kiến thức, danh sách dịch vụ).
+ *
+ * @return string
+ */
+function sgd_archive_url() {
+	if ( is_category() || is_tag() || is_tax() ) {
+		$url = get_term_link( get_queried_object() );
+		return is_wp_error( $url ) ? '' : $url;
+	}
+	if ( is_post_type_archive( 'dich_vu' ) ) {
+		return get_post_type_archive_link( 'dich_vu' );
+	}
+	if ( is_home() ) {
+		$blog = (int) get_option( 'page_for_posts' );
+		return $blog ? get_permalink( $blog ) : home_url( '/' );
+	}
+	return is_front_page() ? home_url( '/' ) : '';
+}
 
 /**
  * Cắt chuỗi theo ký tự, không cắt giữa từ.
@@ -218,12 +247,26 @@ function sgd_clip( $text, $max = 155 ) {
  * @return array
  */
 function sgd_title_parts( $parts ) {
+	if ( isset( $parts['page'] ) && ! sgd_is_en() ) {
+		$parts['page'] = str_replace( 'Page', 'Trang', $parts['page'] );
+	}
 	if ( ! sgd_has_seo_plugin() && is_front_page() && sgd_opt( 'home_title' ) ) {
 		// Trang chủ: "Dịch vụ … | Thương hiệu" thay cho "Thương hiệu – Khẩu hiệu" (không có từ khoá).
 		return array(
 			'title' => sgd_opt( 'home_title' ),
 			'site'  => sgd_opt( 'company' ),
 		);
+	}
+	if ( ! sgd_has_seo_plugin() && is_category() ) {
+		// Chuyên mục con: "Thuế thu nhập cá nhân – Kiến thức kế toán | Thương hiệu" (rõ chủ đề, đủ từ khoá).
+		$term = get_queried_object();
+		if ( $term && $term->parent ) {
+			$parent = get_term( $term->parent, 'category' );
+			if ( $parent && ! is_wp_error( $parent ) ) {
+				$parts['title'] = $term->name . ' – ' . $parent->name;
+			}
+		}
+		return $parts;
 	}
 	if ( sgd_has_seo_plugin() || ! is_singular( 'dich_vu' ) ) {
 		return $parts;

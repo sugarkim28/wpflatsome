@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SGD_VERSION', '0.12.0' );
+define( 'SGD_VERSION', '0.12.1' );
 define( 'SGD_DIR', get_stylesheet_directory() );
 define( 'SGD_URI', get_stylesheet_directory_uri() );
 
@@ -17,6 +17,7 @@ require_once SGD_DIR . '/inc/services.php';
 require_once SGD_DIR . '/inc/leads.php';
 require_once SGD_DIR . '/inc/mail.php';
 require_once SGD_DIR . '/inc/seo.php';
+require_once SGD_DIR . '/inc/permalinks.php';
 require_once SGD_DIR . '/inc/shortcodes.php';
 require_once SGD_DIR . '/inc/home.php';
 require_once SGD_DIR . '/inc/demo.php';
