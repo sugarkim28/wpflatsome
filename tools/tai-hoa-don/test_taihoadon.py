@@ -72,6 +72,7 @@ class FakePortal(BaseHTTPRequestHandler):
     calls = []
     captchas = {}
     logins = []
+    headers = []
 
     def log_message(self, *a):
         pass
@@ -85,6 +86,7 @@ class FakePortal(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self):
+        FakePortal.headers.append(("POST", self.path, dict(self.headers)))
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         FakePortal.logins.append(body["username"])
         if FakePortal.captchas.pop(body["ckey"], None) != body["cvalue"]:
@@ -97,6 +99,14 @@ class FakePortal(BaseHTTPRequestHandler):
         u = urllib.parse.urlparse(self.path)
         q = dict(urllib.parse.parse_qsl(u.query))
         FakePortal.calls.append((u.path, q))
+        FakePortal.headers.append(("GET", u.path, dict(self.headers)))
+        if u.path == "/":
+            body = b"<html>portal</html>"
+            self.send_response(200)
+            self.send_header("Set-Cookie", "TS01=abc; Path=/")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            return self.wfile.write(body)
         if u.path == "/captcha":
             text = "".join(random.sample(list(GLYPHS), len(GLYPHS)))
             key = "K%d" % len(FakePortal.calls)
@@ -171,7 +181,7 @@ class Tests(unittest.TestCase):
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
-        FakePortal.calls, FakePortal.captchas, FakePortal.logins = [], {}, []
+        FakePortal.calls, FakePortal.captchas, FakePortal.logins, FakePortal.headers = [], {}, [], []
         STATE["tthai"] = 1
         self.app = t.App(self.tmp, lambda: t.HoaDonClient(self.base, delay=0))
 
@@ -248,6 +258,25 @@ class Tests(unittest.TestCase):
         self.assertEqual(job2.results[0]["doi"], 1)
         wb = load_workbook(os.path.join(folder, "bang-ke-mua-vao_20260901_20261031.xlsx"))
         self.assertEqual(wb["Doi trang thai"].cell(2, 7).value, "Đã bị huỷ")
+
+    def test_request_profiles(self):
+        """Đăng nhập: trang chủ → captcha → authenticate, chung cookie, header tối giản.
+        Tra cứu/XML: header trang tra cứu có Action, không cookie."""
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        self.run_job(["0309999999"], kinds=("purchase",), start=date(2026, 10, 1), end=date(2026, 10, 31))
+        h = FakePortal.headers
+        self.assertEqual([x[1] for x in h[:3]], ["/", "/captcha", "/security-taxpayer/authenticate"])
+        for _, _, hd in h[1:3]:
+            self.assertIn("TS01=abc", hd.get("Cookie", ""))
+            self.assertNotIn("Origin", hd)
+            self.assertNotIn("Referer", hd)
+            self.assertTrue(hd.get("Request-Id") or hd.get("request-id"))
+        query = next(hd for m, p, hd in h if p == "/query/invoices/purchase")
+        self.assertEqual(urllib.parse.unquote(query["Action"]), "Tìm kiếm")
+        self.assertEqual(query["End-Point"], "/tra-cuu/tra-cuu-hoa-don")
+        self.assertNotIn("Cookie", query)
+        xml = next(hd for m, p, hd in h if p == "/query/invoices/export-xml")
+        self.assertEqual(urllib.parse.unquote(xml["Action"]), "Xuất xml (hóa đơn mua vào)")
 
     def test_expired_token(self):
         c = t.HoaDonClient(self.base, delay=0)

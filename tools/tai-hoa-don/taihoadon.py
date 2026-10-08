@@ -12,6 +12,7 @@ Chỉ dùng thư viện chuẩn Python 3.8+. openpyxl là tuỳ chọn (pip inst
 
 import argparse
 import calendar
+import http.cookiejar
 import csv
 import io
 import json
@@ -22,6 +23,7 @@ import ssl
 import sys
 import threading
 import time
+import uuid
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -30,12 +32,15 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.0.1"
+__version__ = "2.0.2"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
-SITE_URL = "https://hoadondientu.gdt.gov.vn"
 PAGE_SIZE = 50
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+# Cổng có tường lửa nhận dạng hành vi: đăng nhập chỉ mang header tối giản như trình duyệt gọi qua proxy
+# của trang; tra cứu/tải XML mang header của trang tra cứu (Action, End-Point). Gửi sai bộ → 403
+# "Hệ thống phát hiện hành vi không hợp lệ".
+UA_LOGIN = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+UA_QUERY = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36"
 
 # Trạng thái xử lý (ttxly) của CQT dùng khi tra hoá đơn mua vào.
 TTXLY_LABELS = {
@@ -142,30 +147,46 @@ class HoaDonClient:
         self.delay = delay
         self.token = None
         self.username = None
-        self._ctx = None if verify_ssl else ssl._create_unverified_context()
+        # Trang chủ của cổng = base_url bỏ đuôi /api
+        self.site_url = self.base_url[:-4] if self.base_url.endswith("/api") else self.base_url
+        ctx = None if verify_ssl else ssl._create_unverified_context()
+        https = urllib.request.HTTPSHandler(context=ctx)
+        # Đăng nhập dùng chung cookie với trang chủ + captcha; tra cứu không gửi cookie.
+        self._jar = http.cookiejar.CookieJar()
+        self._login_opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self._jar), https)
+        self._query_opener = urllib.request.build_opener(https)
+        self._visited = False
 
     # -- HTTP ---------------------------------------------------------------
-    def _request(self, method, path, params=None, body=None, raw=False, retries=3):
-        url = self.base_url + path
+    def _headers(self, profile, action=None, json_body=False):
+        if profile == "portal":
+            h = {"User-Agent": UA_LOGIN, "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                 "Accept-Language": "vi"}
+        elif profile == "login":
+            h = {"User-Agent": UA_LOGIN, "Accept": "application/json, text/plain, */*"}
+            if json_body:
+                h["Content-Type"] = "application/json"
+        else:
+            h = {"Authorization": "Bearer " + (self.token or ""), "Accept": "application/json, text/plain, */*",
+                 "Accept-Language": "vi", "End-Point": "/tra-cuu/tra-cuu-hoa-don", "Origin": self.site_url,
+                 "Referer": self.site_url + "/", "User-Agent": UA_QUERY,
+                 "Action": urllib.parse.quote(action or "Tìm kiếm", safe="()")}
+        h["request-id"] = str(uuid.uuid4())
+        return h
+
+    def _request(self, method, path, params=None, body=None, raw=False, retries=3, profile="query", action=None,
+                 url=None):
+        url = url or self.base_url + path
         if params:
             url += "?" + urllib.parse.urlencode(params, safe=":,;=/")
-        # Giả lập trình duyệt đang mở trang của cổng (cổng kiểm tra Referer/Origin).
-        headers = {"User-Agent": USER_AGENT, "Accept": "application/json, text/plain, */*",
-                   "Accept-Language": "vi-VN,vi;q=0.9", "Sec-Fetch-Site": "same-origin",
-                   "Sec-Fetch-Mode": "cors", "Sec-Fetch-Dest": "empty",
-                   "Referer": SITE_URL + ("/" if not self.token else "/tra-cuu/tra-cuu-hoa-don")}
-        data = None
-        if body is not None:
-            data = json.dumps(body).encode("utf-8")
-            headers["Content-Type"] = "application/json"
-            headers["Origin"] = SITE_URL
-        if self.token:
-            headers["Authorization"] = "Bearer " + self.token
+        data = json.dumps(body).encode("utf-8") if body is not None else None
+        opener = self._query_opener if profile == "query" else self._login_opener
 
         for attempt in range(retries + 1):
+            headers = self._headers(profile, action, body is not None)
             req = urllib.request.Request(url, data=data, headers=headers, method=method)
             try:
-                with urllib.request.urlopen(req, timeout=self.timeout, context=self._ctx) as resp:
+                with opener.open(req, timeout=self.timeout) as resp:
                     content = resp.read()
                 break
             except urllib.error.HTTPError as e:
@@ -176,7 +197,10 @@ class HoaDonClient:
                 if e.code == 401:
                     self.token = None
                     raise PortalError("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.")
-                raise PortalError(self._error_message(content) or "Cổng hoá đơn trả lỗi HTTP %d" % e.code)
+                msg = self._error_message(content) or "Cổng hoá đơn trả lỗi HTTP %d" % e.code
+                if "hành vi không hợp lệ" in msg:
+                    msg += " (tường lửa của cổng chặn; chờ vài phút rồi thử lại, nếu vẫn bị hãy báo để cập nhật phần mềm)"
+                raise PortalError(msg)
             except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
                 if attempt < retries:
                     time.sleep(2 ** attempt * 2)
@@ -202,9 +226,20 @@ class HoaDonClient:
         return None
 
     # -- Đăng nhập ----------------------------------------------------------
+    def _visit_portal(self):
+        """Mở trang chủ như trình duyệt để nhận cookie trước khi lấy captcha/đăng nhập."""
+        if self._visited:
+            return
+        self._visited = True
+        try:
+            self._request("GET", "", raw=True, retries=1, profile="portal", url=self.site_url + "/")
+        except PortalError:
+            pass
+
     def get_captcha(self):
         """Trả về {'key': ..., 'content': '<svg ...>'}."""
-        data = self._request("GET", "/captcha")
+        self._visit_portal()
+        data = self._request("GET", "/captcha", profile="login")
         if not data.get("key") or not data.get("content"):
             raise PortalError("Không lấy được captcha.")
         return {"key": data["key"], "content": data["content"]}
@@ -214,8 +249,8 @@ class HoaDonClient:
         data = self._request(
             "POST",
             "/security-taxpayer/authenticate",
-            body={"username": username, "password": password, "cvalue": captcha_value, "ckey": captcha_key},
-            retries=0,
+            body={"username": username, "password": password, "ckey": captcha_key, "cvalue": captcha_value},
+            retries=0, profile="login",
         )
         token = data.get("token")
         if not token:
@@ -263,6 +298,7 @@ class HoaDonClient:
                         seen.add(key)
                         inv["_prefix"] = prefix
                         inv["_nguon"] = label
+                        inv["_kind"] = kind
                         results.append(inv)
                     state = data.get("state")
                     if not page or not state or len(page) < PAGE_SIZE:
@@ -278,12 +314,17 @@ class HoaDonClient:
 
     def get_detail(self, inv):
         return self._request("GET", "%s/invoices/detail" % inv.get("_prefix", "/query"),
-                             params=self._invoice_params(inv))
+                             params=self._invoice_params(inv), action="Xem hóa đơn (%s)" % self._kind_label(inv))
 
     def export_xml(self, inv):
         """Trả về bytes file zip (invoice.xml, details.js, ...) do cổng cung cấp."""
         return self._request("GET", "%s/invoices/export-xml" % inv.get("_prefix", "/query"),
-                             params=self._invoice_params(inv), raw=True)
+                             params=self._invoice_params(inv), raw=True,
+                             action="Xuất xml (%s)" % self._kind_label(inv))
+
+    @staticmethod
+    def _kind_label(inv):
+        return "hóa đơn bán ra" if inv.get("_kind") == "sold" else "hóa đơn mua vào"
 
 
 def _num(v):
