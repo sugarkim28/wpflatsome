@@ -10,7 +10,13 @@ Tải hàng loạt hoá đơn **mua vào / bán ra** từ cổng [hoadondientu.g
 - **Xử lý hàng loạt**: chọn các DN (hoặc tất cả), khoảng ngày → phần mềm lần lượt đăng nhập và tải. DN nào lỗi (sai mật khẩu…) được ghi lỗi đỏ dưới tên rồi chuyển sang DN tiếp theo. Sai mật khẩu thì **không thử lại** để tránh bị cổng khoá tài khoản.
 - **Captcha tự học**: vài lần đầu bạn gõ captcha, phần mềm ghi nhớ hình từng ký tự; sau đó tự giải. Số ký tự đã học hiện góc trên bên phải.
 - Tra hoá đơn có mã, không mã, máy tính tiền. Khoảng ngày bất kỳ (tự chia theo tháng, tự lật trang).
-- File Excel gồm 3 sheet: **Bang ke** (có dòng tổng), **Chi tiet hang hoa** (tên hàng, ĐVT, SL, đơn giá, thành tiền, thuế suất – đọc từ XML), **Doi trang thai** (HĐ bị huỷ / thay thế / điều chỉnh so với lần đồng bộ trước).
+- **File Excel theo mẫu Nibot** (`MUA_VAO_<MST>_<kỳ>.xlsx`, `BAN_RA_<MST>_<kỳ>.xlsx`), số liệu chi tiết đọc từ XML:
+  - `HoaDon_TongQuat`: loại HĐ, người bán/mua, địa chỉ, ngày, HTTT, ký hiệu, số, trạng thái, kết quả kiểm tra, tiền chưa thuế/thuế/CK TM/phí/thanh toán, dòng Total.
+  - `Smart_KTSC_OK`: từng dòng hàng theo mẫu import phần mềm kế toán **Smart Pro** (PC/1111 nếu ≤ 5 triệu, PKT/331 nếu > 5 triệu, TK thuế 1331). HĐ bị huỷ/bị thay thế tách sang `Smart_KTSC_CAN_XEM_XET`.
+  - `BangKe_MuaVao`: bảng kê kèm tờ khai 01/GTGT, gom theo hoá đơn + thuế suất; HĐ không chịu thuế / HĐ bán hàng tách sang `BangKe_MuaVao_KCT_HDBH`.
+  - `BangKe_HoanThue_OK`: bảng kê kèm Giấy đề nghị hoàn trả.
+  - `Doi_TrangThai`: HĐ bị huỷ / thay thế / điều chỉnh so với lần đồng bộ trước.
+  - Bán ra: `HoaDon_TongQuat` + `ChiTiet_HangHoa`.
 - Chạy lại không tải trùng XML; chỉ tải lại hoá đơn đổi trạng thái.
 
 ## Cài đặt & chạy
@@ -27,7 +33,8 @@ Tải hàng loạt hoá đơn **mua vào / bán ra** từ cổng [hoadondientu.g
 HoaDon/_cau-hinh/doanh-nghiep.json      danh sách DN (mật khẩu đã mã hoá)
 HoaDon/_cau-hinh/captcha-mau.json       mẫu captcha đã học
 HoaDon/<MST>/mua-vao_20260901_20260930/
-    bang-ke-mua-vao_20260901_20260930.xlsx / .csv
+    MUA_VAO_<MST>_20260901_20260930.xlsx      Excel theo mẫu Nibot
+    bang-ke-mua-vao_20260901_20260930.csv
     xml/20260905_0101234567_1C26TAA_123.xml   (ngày_MST người bán_ký hiệu_số HĐ)
 HoaDon/<MST>/ban-ra_.../
 HoaDon/<MST>/_chi-muc.json              hoá đơn đã biết (để đếm HĐ mới, phát hiện đổi trạng thái)

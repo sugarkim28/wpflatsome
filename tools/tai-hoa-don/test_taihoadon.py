@@ -60,12 +60,17 @@ def make_invoice(i, day, buyer="0309999999"):
             "tthai": STATE["tthai"] if i == 1 else 1, "ttxly": 5, "dvtte": "VND", "mhdon": "M%d" % i}
 
 
-XML = ('<?xml version="1.0" encoding="UTF-8"?><HDon><DLHDon><NDHDon><DSHHDVu>'
+XML = ('<?xml version="1.0" encoding="UTF-8"?><HDon><DLHDon><NDHDon>'
+       '<NBan><Ten>Cong ty Ban</Ten><MST>0101234567</MST><DChi>So 1 Le Loi</DChi></NBan>'
+       '<NMua><Ten>Cong ty Mua</Ten><DChi>So 2 Hai Ba Trung</DChi></NMua><DSHHDVu>'
        '<HHDVu><TChat>1</TChat><STT>1</STT><THHDVu>Giay A4</THHDVu><DVTinh>Ram</DVTinh><SLuong>2</SLuong>'
        '<DGia>50000</DGia><ThTien>100000</ThTien><TSuat>10%%</TSuat></HHDVu>'
        '<HHDVu><TChat>1</TChat><STT>2</STT><THHDVu>But bi</THHDVu><DVTinh>Cay</DVTinh><SLuong>10</SLuong>'
-       '<DGia>5000</DGia><ThTien>50000</ThTien><TSuat>10%%</TSuat></HHDVu>'
-       '</DSHHDVu></NDHDon></DLHDon><SHDon>%s</SHDon></HDon>')
+       '<DGia>5000</DGia><ThTien>50000</ThTien><TSuat>8%%</TSuat></HHDVu>'
+       '<HHDVu><TChat>4</TChat><STT>3</STT><THHDVu>Ghi chu giao hang</THHDVu></HHDVu>'
+       '</DSHHDVu><TToan><THTTLTSuat><LTSuat><TSuat>10%%</TSuat><ThTien>100000</ThTien><TThue>10000</TThue></LTSuat>'
+       '<LTSuat><TSuat>8%%</TSuat><ThTien>50000</ThTien><TThue>4000</TThue></LTSuat></THTTLTSuat></TToan>'
+       '</NDHDon><TTChung><HTTToan>TM/CK</HTTToan></TTChung></DLHDon><SHDon>%s</SHDon></HDon>')
 
 
 class FakePortal(BaseHTTPRequestHandler):
@@ -239,10 +244,30 @@ class Tests(unittest.TestCase):
         folder = os.path.join(self.tmp, "0309999999", "mua-vao_20260901_20261031")
         self.assertEqual(len([f for f in os.listdir(os.path.join(folder, "xml")) if f.endswith(".xml")]), 61)
         from openpyxl import load_workbook
-        wb = load_workbook(os.path.join(folder, "bang-ke-mua-vao_20260901_20261031.xlsx"))
-        self.assertEqual(wb["Bang ke"].max_row, 63)          # tiêu đề + 61 + tổng
-        self.assertEqual(wb["Chi tiet hang hoa"].max_row, 123)  # tiêu đề + 61×2 dòng hàng
-        self.assertEqual(wb["Chi tiet hang hoa"].cell(2, 8).value, "Giay A4")
+        xlsx = os.path.join(folder, "MUA_VAO_0309999999_20260901_20261031.xlsx")
+        wb = load_workbook(xlsx)
+        self.assertEqual(wb.sheetnames, ["HoaDon_TongQuat", "Smart_KTSC_OK", "BangKe_MuaVao", "BangKe_HoanThue_OK"])
+        tq = wb["HoaDon_TongQuat"]
+        self.assertEqual(tq["A1"].value, "HÓA ĐƠN MUA VÀO")
+        self.assertEqual(tq["A3"].value, "Tên DN: A")
+        self.assertEqual((tq["A5"].value, tq["D5"].value, tq["I5"].value, tq["L5"].value, tq["M5"].value),
+                         ("V", "So 1 Le Loi", "TM/CK", "HĐ Mới", "Đã cấp MST"))
+        self.assertEqual(tq["A66"].value, "Total")             # 61 HĐ ở dòng 5..65
+        self.assertEqual(tq["R66"].value, "=SUBTOTAL(109,R5:R65)")
+        sm = wb["Smart_KTSC_OK"]
+        self.assertEqual(sm.max_row, 1 + 61 * 2)                # bỏ dòng ghi chú (TChat 4)
+        row = {h.value: c.value for h, c in zip(sm[1], sm[2])}
+        self.assertEqual((row["MATHANG"], row["DONVI"], row["LUONG"], row["TTVND"], row["TS_GTGT"], row["THUEVND"],
+                          row["TKTHUE"], row["MADTPNCO"]), ("Giay A4", "Ram", 2, 100000, "10", 10000, "1331", "0101234567"))
+        bk = wb["BangKe_MuaVao"]
+        self.assertEqual(bk["B7"].value, "Kỳ tính thuế: Từ ngày 01/09/2026 đến ngày 31/10/2026")
+        self.assertEqual([bk.cell(18, c).value for c in (8, 9, 10, 11, 12)],
+                         ["0101234567", "Giay A4", 100000, "10", 10000])   # gom theo HĐ + thuế suất
+        self.assertEqual(bk.cell(19, 11).value, "8")
+        self.assertEqual(bk["B140"].value, "Tổng")              # 122 dòng: 18..139
+        self.assertEqual(bk["L140"].value, "=SUM(L18:L139)")
+        ht = wb["BangKe_HoanThue_OK"]
+        self.assertEqual([ht.cell(17, c).value for c in (9, 10, 11, 12, 13)], ["Giay A4", "Ram", 2, 50000, 100000])
         # DN B: sai mật khẩu → ghi lỗi, chỉ thử đăng nhập đúng 1 lần, không làm hỏng DN khác
         self.assertIn("mật khẩu", b["loi"])
         self.assertEqual(FakePortal.logins.count("0101234567"), 1)
@@ -258,8 +283,10 @@ class Tests(unittest.TestCase):
         a = self.app.store.get("0309999999")
         self.assertEqual(a["lich_su"]["purchase"]["moi"], 0)
         self.assertEqual(job2.results[0]["doi"], 1)
-        wb = load_workbook(os.path.join(folder, "bang-ke-mua-vao_20260901_20261031.xlsx"))
-        self.assertEqual(wb["Doi trang thai"].cell(2, 7).value, "Đã bị huỷ")
+        wb = load_workbook(xlsx)
+        self.assertEqual(wb["Doi_TrangThai"].cell(2, 7).value, "Đã bị huỷ")
+        self.assertEqual(wb["Smart_KTSC_CAN_XEM_XET"]["A2"].value, "HĐ Đã bị hủy")  # HĐ huỷ → cần xem xét
+        self.assertEqual(wb["BangKe_MuaVao"]["B138"].value, "Tổng")                # chỉ còn 60 HĐ × 2
 
     def test_request_profiles(self):
         """Đăng nhập: trang chủ → captcha → authenticate, chung cookie, header tối giản.
