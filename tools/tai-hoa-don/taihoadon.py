@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Phần mềm tải hoá đơn điện tử từ cổng hoadondientu.gdt.gov.vn.
+"""Phần mềm tải hoá đơn điện tử từ cổng hoadondientu.gdt.gov.vn – quản lý nhiều doanh nghiệp.
 
 Chạy: python taihoadon.py  → trình duyệt mở http://127.0.0.1:8765
-- Đăng nhập bằng tài khoản doanh nghiệp trên cổng hoá đơn điện tử (nhập captcha).
-- Chọn hoá đơn mua vào / bán ra, khoảng ngày (tự chia theo tháng vì cổng chỉ cho tra 1 tháng/lần).
-- Xuất bảng kê Excel (.xlsx nếu có openpyxl, luôn kèm .csv) và tải file XML gốc từng hoá đơn.
+- Danh sách doanh nghiệp (MST, tên, mật khẩu cổng HĐĐT mã hoá trên máy, ghi chú, bật/tắt đồng bộ vào/ra, ẩn).
+- Xử lý hàng loạt: đăng nhập từng DN, tải hoá đơn mua vào / bán ra / máy tính tiền theo khoảng ngày
+  (tự chia theo tháng), XML gốc, bảng kê Excel + chi tiết hàng hoá, phát hiện HĐ đổi trạng thái (huỷ, thay thế...).
+- Captcha tự học: vài lần đầu người dùng gõ, sau đó phần mềm tự giải.
 
-Chỉ dùng thư viện chuẩn Python 3.8+. openpyxl là tuỳ chọn (pip install openpyxl).
-Mật khẩu không được lưu; token đăng nhập chỉ nằm trong bộ nhớ khi chương trình chạy.
+Chỉ dùng thư viện chuẩn Python 3.8+. openpyxl là tuỳ chọn (pip install openpyxl) để xuất .xlsx.
 """
 
 import argparse
@@ -30,7 +30,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn:30000")
 PAGE_SIZE = 50
@@ -296,7 +296,9 @@ def _money(v):
 
 # ---------------------------------------------------------------------------
 # Lưu file
-# ---------------------------------------------------------------------------
+def invoice_key(inv):
+    return "%s|%s|%s|%s" % (inv.get("nbmst"), inv.get("khmshdon"), inv.get("khhdon"), inv.get("shdon"))
+
 
 def invoice_basename(inv):
     d = invoice_date(inv)
@@ -339,6 +341,44 @@ def save_xml(zip_bytes, folder, basename):
     return xml_path
 
 
+# Cột bảng chi tiết hàng hoá (đọc từ XML theo chuẩn TT78: DSHHDVu/HHDVu).
+ITEM_FIELDS = [
+    ("Tên hàng hoá, dịch vụ", "THHDVu"), ("Mã hàng", "MHHDVu"), ("ĐVT", "DVTinh"), ("Số lượng", "SLuong"),
+    ("Đơn giá", "DGia"), ("Chiết khấu", "STCKhau"), ("Thành tiền", "ThTien"), ("Thuế suất", "TSuat"),
+    ("Tính chất", "TChat"),
+]
+ITEM_NUMERIC = {"SLuong", "DGia", "STCKhau", "ThTien"}
+
+
+def _local(tag):
+    return tag.rsplit("}", 1)[-1]
+
+
+def read_items(xml_path):
+    """Đọc danh sách hàng hoá trong file XML hoá đơn. Lỗi đọc → []."""
+    import xml.etree.ElementTree as ET
+    try:
+        root = ET.parse(xml_path).getroot()
+    except (ET.ParseError, OSError):
+        return []
+    items = []
+    for el in root.iter():
+        if _local(el.tag) != "HHDVu":
+            continue
+        vals = {_local(c.tag): (c.text or "").strip() for c in el}
+        row = []
+        for _, key in ITEM_FIELDS:
+            v = vals.get(key, "")
+            if key in ITEM_NUMERIC and v:
+                try:
+                    v = float(v)
+                except ValueError:
+                    pass
+            row.append(v)
+        items.append(row)
+    return items
+
+
 def table_rows(invoices):
     rows = []
     for idx, inv in enumerate(invoices, 1):
@@ -363,8 +403,20 @@ def table_rows(invoices):
     return rows
 
 
-def write_reports(invoices, folder, basename):
-    """Ghi bảng kê .csv (luôn có) và .xlsx (nếu cài openpyxl). Trả về list đường dẫn."""
+ITEM_HEAD = ["Ngày lập", "Ký hiệu", "Số HĐ", "MST người bán", "Tên người bán", "MST người mua", "Tên người mua"]
+CHANGE_HEAD = ["Ngày lập", "Ký hiệu", "Số HĐ", "MST người bán", "Tên người bán", "Trạng thái cũ", "Trạng thái mới"]
+
+
+def _inv_head(inv):
+    d = invoice_date(inv)
+    return [d.strftime("%d/%m/%Y") if d else "", "%s%s" % (inv.get("khmshdon") or "", inv.get("khhdon") or ""),
+            str(inv.get("shdon") or ""), str(inv.get("nbmst") or ""), inv.get("nbten") or "",
+            str(inv.get("nmmst") or ""), inv.get("nmten") or ""]
+
+
+def write_reports(invoices, folder, basename, items=None, changes=None):
+    """Ghi bảng kê .csv (luôn có) và .xlsx (nếu cài openpyxl; gồm sheet chi tiết hàng hoá và
+    hoá đơn đổi trạng thái). Trả về list đường dẫn."""
     os.makedirs(folder, exist_ok=True)
     headers = [c[0] for c in COLUMNS]
     rows = table_rows(invoices)
@@ -384,32 +436,40 @@ def write_reports(invoices, folder, basename):
     except ImportError:
         return paths
 
+    def sheet(ws, head, data, widths, money_cols=(), total=False):
+        ws.append(head)
+        for cell in ws[1]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill("solid", fgColor="1F6FB2")
+        for r in data:
+            ws.append(r)
+        if total and data:
+            tr = len(data) + 2
+            ws.cell(row=tr, column=1, value="Tổng cộng").font = Font(bold=True)
+            for col in money_cols:
+                letter = get_column_letter(col)
+                ws.cell(row=tr, column=col, value="=SUM(%s2:%s%d)" % (letter, letter, tr - 1)).font = Font(bold=True)
+        for col in money_cols:
+            for cells in ws.iter_cols(min_col=col, max_col=col, min_row=2):
+                for c in cells:
+                    c.number_format = "#,##0"
+        for i, wdt in enumerate(widths, 1):
+            ws.column_dimensions[get_column_letter(i)].width = wdt
+        ws.freeze_panes = "A2"
+        ws.auto_filter.ref = ws.dimensions
+
     wb = Workbook()
     ws = wb.active
     ws.title = "Bang ke"
-    ws.append(headers)
-    for cell in ws[1]:
-        cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = PatternFill("solid", fgColor="1F6FB2")
-    for row in rows:
-        ws.append(row)
-    money_cols = [i + 1 for i, (_, k) in enumerate(COLUMNS) if k in MONEY_KEYS]
-    if rows:
-        total_row = len(rows) + 2
-        ws.cell(row=total_row, column=1, value="Tổng cộng").font = Font(bold=True)
-        for col in money_cols:
-            letter = get_column_letter(col)
-            c = ws.cell(row=total_row, column=col, value="=SUM(%s2:%s%d)" % (letter, letter, total_row - 1))
-            c.font = Font(bold=True)
-    for col in money_cols:
-        for cells in ws.iter_cols(min_col=col, max_col=col, min_row=2):
-            for c in cells:
-                c.number_format = "#,##0"
-    widths = [6, 12, 10, 12, 10, 14, 40, 14, 40, 16, 14, 16, 8, 18, 22, 16, 30, 50]
-    for i, wdt in enumerate(widths, 1):
-        ws.column_dimensions[get_column_letter(i)].width = wdt
-    ws.freeze_panes = "A2"
-    ws.auto_filter.ref = ws.dimensions
+    sheet(ws, headers, rows, [6, 12, 10, 12, 10, 14, 40, 14, 40, 16, 14, 16, 8, 18, 22, 16, 30, 50],
+          [i + 1 for i, (_, k) in enumerate(COLUMNS) if k in MONEY_KEYS], total=True)
+    if items:
+        n = len(ITEM_HEAD)
+        sheet(wb.create_sheet("Chi tiet hang hoa"), ITEM_HEAD + [c[0] for c in ITEM_FIELDS], items,
+              [12, 12, 10, 14, 36, 14, 36, 44, 12, 8, 10, 14, 12, 16, 10, 10],
+              [n + 4, n + 5, n + 6, n + 7])
+    if changes:
+        sheet(wb.create_sheet("Doi trang thai"), CHANGE_HEAD, changes, [12, 12, 10, 14, 40, 20, 20])
     xlsx_path = os.path.join(folder, basename + ".xlsx")
     wb.save(xlsx_path)
     paths.append(xlsx_path)
@@ -417,8 +477,247 @@ def write_reports(invoices, folder, basename):
 
 
 # ---------------------------------------------------------------------------
-# Tác vụ tải (chạy nền, giao diện hỏi tiến độ)
+# Mật khẩu lưu trên máy: Windows mã hoá bằng DPAPI (chỉ tài khoản Windows này giải được)
 # ---------------------------------------------------------------------------
+
+def _dpapi(data, encrypt):
+    import ctypes
+    from ctypes import wintypes
+
+    class BLOB(ctypes.Structure):
+        _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_char))]
+
+    buf = ctypes.create_string_buffer(data, len(data))
+    blob_in = BLOB(len(data), ctypes.cast(buf, ctypes.POINTER(ctypes.c_char)))
+    blob_out = BLOB()
+    crypt32 = ctypes.windll.crypt32
+    if encrypt:
+        ok = crypt32.CryptProtectData(ctypes.byref(blob_in), "TaiHoaDon", None, None, None, 0, ctypes.byref(blob_out))
+    else:
+        ok = crypt32.CryptUnprotectData(ctypes.byref(blob_in), None, None, None, None, 0, ctypes.byref(blob_out))
+    if not ok:
+        raise OSError("DPAPI lỗi")
+    try:
+        return ctypes.string_at(blob_out.pbData, blob_out.cbData)
+    finally:
+        ctypes.windll.kernel32.LocalFree(blob_out.pbData)
+
+
+def protect(text):
+    import base64
+    raw = text.encode("utf-8")
+    if os.name == "nt":
+        return "dpapi:" + base64.b64encode(_dpapi(raw, True)).decode()
+    return "b64:" + base64.b64encode(raw).decode()
+
+
+def unprotect(value):
+    import base64
+    if not value:
+        return ""
+    kind, _, data = value.partition(":")
+    raw = base64.b64decode(data)
+    if kind == "dpapi":
+        raw = _dpapi(raw, False)
+    return raw.decode("utf-8")
+
+
+def _load_json(path, default):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def _save_json(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, path)
+
+
+# ---------------------------------------------------------------------------
+# Danh sách doanh nghiệp
+# ---------------------------------------------------------------------------
+
+class Store:
+    def __init__(self, path):
+        self.path = path
+        self.lock = threading.RLock()
+        self.items = _load_json(path, [])
+
+    def save(self):
+        with self.lock:
+            _save_json(self.path, self.items)
+
+    def get(self, mst):
+        with self.lock:
+            return next((c for c in self.items if c["mst"] == mst), None)
+
+    def upsert(self, mst, ten=None, password=None, **fields):
+        mst = re.sub(r"\s+", "", str(mst or ""))
+        if not re.fullmatch(r"\d{10}(-\d{3})?", mst):
+            raise ValueError("MST không hợp lệ: %r" % mst)
+        with self.lock:
+            c = self.get(mst)
+            if not c:
+                c = {"mst": mst, "ten": "", "pw": "", "ghichu": "", "vao": True, "ra": True, "an": False,
+                     "loi": "", "lich_su": {}, "so_hd": {}, "tao": date.today().strftime("%d/%m/%y")}
+                self.items.append(c)
+            if ten is not None:
+                c["ten"] = ten.strip()
+            if password:
+                c["pw"] = protect(password)
+                c["loi"] = ""
+            for k in ("ghichu", "vao", "ra", "an", "loi"):
+                if k in fields and fields[k] is not None:
+                    c[k] = fields[k]
+            self.save()
+            return c
+
+    def delete(self, mst):
+        with self.lock:
+            self.items = [c for c in self.items if c["mst"] != mst]
+            self.save()
+
+    def update(self, mst, fn):
+        with self.lock:
+            c = self.get(mst)
+            if c:
+                fn(c)
+                self.save()
+
+    def public(self):
+        with self.lock:
+            out = []
+            for c in self.items:
+                d = {k: v for k, v in c.items() if k != "pw"}
+                d["co_mk"] = bool(c.get("pw"))
+                out.append(d)
+            return out
+
+    def import_text(self, text):
+        """Mỗi dòng: MST <tab hoặc |> Tên <tab hoặc |> Mật khẩu (dán thẳng từ Excel)."""
+        added, errors = 0, []
+        for n, line in enumerate((text or "").splitlines(), 1):
+            if not line.strip():
+                continue
+            parts = [p.strip() for p in re.split(r"\t|\|", line)]
+            try:
+                self.upsert(parts[0], parts[1] if len(parts) > 1 and parts[1] else None,
+                            parts[2] if len(parts) > 2 else None)
+                added += 1
+            except ValueError as e:
+                errors.append("Dòng %d: %s" % (n, e))
+        return added, errors
+
+
+# ---------------------------------------------------------------------------
+# Captcha tự học: cổng dùng captcha SVG, mỗi ký tự là một <path> có màu tô với hình dạng cố định.
+# Mỗi lần người dùng gõ đúng captcha, phần mềm lưu hình từng ký tự; lần sau tự nhận ra.
+# ---------------------------------------------------------------------------
+
+_PATH_RE = re.compile(r"<path\b([^>]*)/?>", re.I)
+_ATTR_RE = re.compile(r'([\w:-]+)\s*=\s*"([^"]*)"')
+_NUM_RE = re.compile(r"-?\d*\.?\d+(?:e-?\d+)?", re.I)
+
+
+def captcha_glyphs(svg):
+    """Trả về [(chữ lệnh, toạ độ tương đối, x trái)] của các ký tự, xếp từ trái sang phải."""
+    glyphs = []
+    for m in _PATH_RE.finditer(svg or ""):
+        attrs = dict(_ATTR_RE.findall(m.group(1)))
+        fill = attrs.get("fill", "").strip().lower()
+        d = attrs.get("d", "")
+        if not d or not fill or fill == "none":
+            continue  # đường nhiễu chỉ có stroke
+        letters = "".join(re.findall(r"[A-Za-z]", d))
+        nums = [float(x) for x in _NUM_RE.findall(d)]
+        if len(nums) < 4:
+            continue
+        xs, ys = nums[0::2], nums[1::2]
+        minx, miny = min(xs), min(ys)
+        rel = []
+        for i, v in enumerate(nums):
+            rel.append(round(v - (minx if i % 2 == 0 else miny), 1))
+        glyphs.append((letters, rel, minx))
+    glyphs.sort(key=lambda g: g[2])
+    return glyphs
+
+
+def _dist(a, b):
+    if len(a) != len(b):
+        return float("inf")
+    return sum(abs(x - y) for x, y in zip(a, b)) / max(len(a), 1)
+
+
+class CaptchaSolver:
+    THRESHOLD = 1.5
+
+    def __init__(self, path):
+        self.path = path
+        self.lock = threading.Lock()
+        self.templates = _load_json(path, {})  # chữ lệnh → [[ký tự, toạ độ], ...]
+
+    def count(self):
+        with self.lock:
+            return sum(len(v) for v in self.templates.values())
+
+    def chars(self):
+        with self.lock:
+            return sorted({t[0] for v in self.templates.values() for t in v})
+
+    def _match(self, letters, rel):
+        best, best_d = None, float("inf")
+        for ch, tpl in self.templates.get(letters, []):
+            dd = _dist(rel, tpl)
+            if dd < best_d:
+                best, best_d = ch, dd
+        return best if best_d <= self.THRESHOLD else None
+
+    def solve(self, svg):
+        glyphs = captcha_glyphs(svg)
+        if not glyphs:
+            return None
+        out = []
+        with self.lock:
+            for letters, rel, _ in glyphs:
+                ch = self._match(letters, rel)
+                if ch is None:
+                    return None
+                out.append(ch)
+        return "".join(out)
+
+    def learn(self, svg, answer):
+        glyphs = captcha_glyphs(svg)
+        if not answer or len(glyphs) != len(answer):
+            return False
+        with self.lock:
+            for (letters, rel, _), ch in zip(glyphs, answer):
+                lst = self.templates.setdefault(letters, [])
+                if not any(c == ch and _dist(rel, t) <= 0.3 for c, t in lst):
+                    lst.append([ch, rel])
+            _save_json(self.path, self.templates)
+        return True
+
+    def forget(self, svg):
+        """Captcha tự giải bị cổng báo sai → bỏ các mẫu đã dùng để lần sau hỏi lại người dùng."""
+        with self.lock:
+            for letters, rel, _ in captcha_glyphs(svg):
+                lst = self.templates.get(letters, [])
+                self.templates[letters] = [t for t in lst if _dist(rel, t[1]) > self.THRESHOLD]
+            _save_json(self.path, self.templates)
+
+
+# ---------------------------------------------------------------------------
+# Tác vụ chạy nền (đồng bộ hàng loạt / test đăng nhập); giao diện hỏi tiến độ
+# ---------------------------------------------------------------------------
+
+class Cancelled(Exception):
+    pass
+
 
 class Job:
     def __init__(self):
@@ -428,81 +727,177 @@ class Job:
         self.log = []
         self.done = 0
         self.total = 0
-        self.invoices = []
+        self.current = None
+        self.results = []
         self.files = []
-        self.error = None
-        self.folder = None
+        self.need_captcha = None
+        self._answer = None
+        self._event = threading.Event()
 
     def say(self, msg):
         with self.lock:
             self.log.append("%s  %s" % (datetime.now().strftime("%H:%M:%S"), msg))
-            self.log = self.log[-200:]
+            self.log = self.log[-300:]
+
+    def ask_captcha(self, company, svg, timeout=600):
+        with self.lock:
+            self._answer = None
+            self._event.clear()
+            self.need_captcha = {"mst": company["mst"], "ten": company.get("ten"), "svg": svg}
+        self._event.wait(timeout)
+        with self.lock:
+            self.need_captcha = None
+            ans = self._answer
+        if self.cancel or not ans:
+            raise Cancelled()
+        return ans
+
+    def answer(self, text):
+        with self.lock:
+            self._answer = (text or "").strip()
+        self._event.set()
+
+    def stop(self):
+        self.cancel = True
+        self._event.set()
 
     def snapshot(self):
         with self.lock:
-            inv = self.invoices
-            return {
-                "running": self.running, "log": list(self.log), "done": self.done, "total": self.total,
-                "error": self.error, "files": list(self.files), "folder": self.folder,
-                "count": len(inv),
-                "sum_cthue": sum(_money(i.get("tgtcthue")) for i in inv),
-                "sum_thue": sum(_money(i.get("tgtthue")) for i in inv),
-                "sum_tt": sum(_money(i.get("tgtttbso")) for i in inv),
-                "rows": table_rows(inv[:500]),
-                "headers": [c[0] for c in COLUMNS],
-            }
+            return {"running": self.running, "log": list(self.log), "done": self.done, "total": self.total,
+                    "current": self.current, "results": list(self.results), "files": list(self.files),
+                    "need_captcha": self.need_captcha}
 
 
-def run_job(job, client, kinds, start, end, include_mtt, want_xml, out_root):
+def login_company(job, client, company, solver):
+    """Đăng nhập một doanh nghiệp: tự giải captcha nếu đã học, không thì hỏi người dùng.
+    Sai mật khẩu → dừng ngay (không thử lại để tránh bị khoá tài khoản)."""
+    password = unprotect(company.get("pw"))
+    if not password:
+        raise PortalError("Chưa nhập mật khẩu hoadondientu.gdt.gov.vn")
+    for _ in range(4):
+        cap = client.get_captcha()
+        text = solver.solve(cap["content"])
+        auto = text is not None
+        if not auto:
+            job.say("%s: cần nhập captcha" % company["mst"])
+            text = job.ask_captcha(company, cap["content"])
+        try:
+            client.login(company["mst"], password, text, cap["key"])
+        except PortalError as e:
+            if "captcha" in str(e).lower():
+                if auto:
+                    solver.forget(cap["content"])
+                job.say("%s: captcha sai, thử lại" % company["mst"])
+                continue
+            raise
+        if not auto:
+            solver.learn(cap["content"], text)
+        job.say("%s: đăng nhập thành công%s" % (company["mst"], " (tự giải captcha)" if auto else ""))
+        return
+    raise PortalError("Nhập sai captcha quá nhiều lần")
+
+
+def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out_root):
+    mst = company["mst"]
+    label = "mua-vao" if kind == "purchase" else "ban-ra"
+    period = "%s_%s" % (start.strftime("%Y%m%d"), end.strftime("%Y%m%d"))
+    base = os.path.join(out_root, safe_name(mst))
+    folder = os.path.join(base, "%s_%s" % (label, period))
+    index_path = os.path.join(base, "_chi-muc.json")
+    index = _load_json(index_path, {})
+    known = index.setdefault(kind, {})
+
+    invoices = client.list_invoices(kind, start, end, include_mtt, progress=lambda m: job.say("%s: %s" % (mst, m)))
+    new, changes, items = 0, [], []
+    with job.lock:
+        job.total += len(invoices) if want_xml else 0
+    for inv in invoices:
+        if job.cancel:
+            raise Cancelled()
+        key = invoice_key(inv)
+        old = known.get(key)
+        tthai = _num(inv.get("tthai"))
+        if old is None:
+            new += 1
+        elif old.get("tthai") != tthai:
+            changes.append(_inv_head(inv)[:5] + [TTHAI_LABELS.get(old.get("tthai"), old.get("tthai")),
+                                                 TTHAI_LABELS.get(tthai, tthai)])
+            job.say("%s: HĐ %s/%s đổi trạng thái → %s" % (mst, inv.get("khhdon"), inv.get("shdon"),
+                                                          TTHAI_LABELS.get(tthai, tthai)))
+        if want_xml:
+            xml_dir = os.path.join(folder, "xml")
+            name = invoice_basename(inv)
+            existing = os.path.join(xml_dir, name + ".xml")
+            try:
+                if os.path.exists(existing) and (old or {}).get("tthai") == tthai:
+                    path = existing
+                else:
+                    path = save_xml(client.export_xml(inv), xml_dir, name)
+                    time.sleep(client.delay)
+                inv["_xml"] = os.path.relpath(path, folder)
+                head = _inv_head(inv)
+                items.extend(head + it for it in read_items(path))
+            except PortalError as e:
+                inv["_xml"] = "Lỗi: %s" % e
+                job.say("%s: không tải được XML %s/%s: %s" % (mst, inv.get("khhdon"), inv.get("shdon"), e))
+                if "hết hạn" in str(e):
+                    raise
+            with job.lock:
+                job.done += 1
+        known[key] = {"tthai": tthai, "tdlap": inv.get("tdlap")}
+    _save_json(index_path, index)
+
+    paths = write_reports(invoices, folder, "bang-ke-%s_%s" % (label, period), items, changes)
+    with job.lock:
+        job.files.extend(os.path.abspath(p) for p in paths)
+        job.results.append({"mst": mst, "ten": company.get("ten"), "loai": label, "so_hd": len(invoices),
+                            "moi": new, "doi": len(changes), "thu_muc": os.path.abspath(folder)})
+    job.say("%s: %s %d HĐ (%d mới, %d đổi trạng thái)" % (mst, label, len(invoices), new, len(changes)))
+    return len(invoices), new, len(known)
+
+
+def run_batch(job, store, solver, msts, kinds, start, end, include_mtt, want_xml, out_root,
+              test_only=False, client_factory=None):
+    client_factory = client_factory or HoaDonClient
     try:
-        mst = safe_name(client.username or "mst")
-        period = "%s_%s" % (start.strftime("%Y%m%d"), end.strftime("%Y%m%d"))
-        for kind in kinds:
+        for mst in msts:
             if job.cancel:
                 break
-            label = "mua-vao" if kind == "purchase" else "ban-ra"
-            folder = os.path.join(out_root, mst, "%s_%s" % (label, period))
+            company = store.get(mst)
+            if not company:
+                continue
             with job.lock:
-                job.folder = os.path.abspath(os.path.join(out_root, mst))
-            invoices = client.list_invoices(kind, start, end, include_mtt, progress=job.say)
-            job.say("Tìm thấy %d hoá đơn %s." % (len(invoices), "mua vào" if kind == "purchase" else "bán ra"))
-            with job.lock:
-                job.invoices = job.invoices + invoices
-                job.total += len(invoices) if want_xml else 0
-            if want_xml:
-                xml_dir = os.path.join(folder, "xml")
-                for inv in invoices:
-                    if job.cancel:
-                        job.say("Đã dừng theo yêu cầu.")
-                        break
-                    name = invoice_basename(inv)
-                    existing = os.path.join(xml_dir, name + ".xml")
-                    try:
-                        if os.path.exists(existing):
-                            path = existing
-                        else:
-                            path = save_xml(client.export_xml(inv), xml_dir, name)
-                            time.sleep(client.delay)
-                        inv["_xml"] = os.path.relpath(path, folder)
-                    except PortalError as e:
-                        inv["_xml"] = "Lỗi: %s" % e
-                        job.say("Không tải được XML %s/%s: %s" % (inv.get("khhdon"), inv.get("shdon"), e))
-                        if "hết hạn" in str(e):
-                            raise
-                    with job.lock:
-                        job.done += 1
-            paths = write_reports(invoices, folder, "bang-ke-%s_%s" % (label, period))
-            with job.lock:
-                job.files.extend(os.path.abspath(p) for p in paths)
-            job.say("Đã lưu bảng kê: %s" % ", ".join(os.path.basename(p) for p in paths))
+                job.current = mst
+            client = client_factory()
+            try:
+                login_company(job, client, company, solver)
+                store.update(mst, lambda c: c.update(loi=""))
+                if test_only:
+                    continue
+                for kind in kinds:
+                    if not company.get("vao" if kind == "purchase" else "ra", True):
+                        continue
+                    total, new, known = sync_kind(job, client, company, kind, start, end, include_mtt,
+                                                  want_xml, out_root)
+                    stamp = datetime.now().strftime("%d.%m.%y %H:%M")
+
+                    def upd(c, kind=kind, new=new, known=known, stamp=stamp):
+                        c.setdefault("lich_su", {})[kind] = {"moi": new, "luc": stamp}
+                        c.setdefault("so_hd", {})[kind] = known
+                    store.update(mst, upd)
+            except Cancelled:
+                job.say("Đã dừng theo yêu cầu.")
+                break
+            except Exception as e:  # ghi lỗi của DN này rồi chuyển sang DN tiếp theo
+                msg = str(e)
+                job.say("%s: LỖI %s" % (mst, msg))
+                store.update(mst, lambda c: c.update(loi=msg))
         job.say("Hoàn tất.")
-    except Exception as e:  # hiển thị mọi lỗi cho người dùng thay vì làm chết luồng
-        with job.lock:
-            job.error = str(e)
-        job.say("Lỗi: %s" % e)
     finally:
         with job.lock:
             job.running = False
+            job.current = None
+            job.need_captcha = None
 
 
 # ---------------------------------------------------------------------------
@@ -513,75 +908,120 @@ PAGE = r"""<!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Tải hoá đơn điện tử</title>
 <style>
-:root{--bg:#f4f6f9;--card:#fff;--fg:#1d2733;--mute:#66758a;--line:#dde3ea;--pri:#1f6fb2;--err:#c0392b;--ok:#1e8449}
-@media (prefers-color-scheme:dark){:root{--bg:#12161c;--card:#1b2129;--fg:#e6ebf1;--mute:#93a1b3;--line:#2c3540;--pri:#4b9be0;--err:#ff6b5b;--ok:#4cc38a}}
-*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--fg)}
-main{max-width:1100px;margin:0 auto;padding:16px}h1{font-size:22px;margin:8px 0 16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
-label{display:block;font-size:13px;color:var(--mute);margin:8px 0 4px}
-input[type=text],input[type=password],input[type=date]{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
-.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-button{padding:9px 16px;border:0;border-radius:6px;background:var(--pri);color:#fff;font:inherit;cursor:pointer}
-button.sec{background:transparent;color:var(--pri);border:1px solid var(--pri)}button:disabled{opacity:.5;cursor:default}
-.cap{display:flex;gap:8px;align-items:center}.cap .img{background:#fff;border-radius:6px;height:44px;min-width:150px;display:flex;align-items:center}
-.cap .img svg{height:44px;width:auto}.chk{display:flex;gap:16px;flex-wrap:wrap;margin:12px 0}.chk label{display:flex;gap:6px;align-items:center;color:var(--fg);margin:0;font-size:14px}
-.msg{margin-top:10px;font-size:14px}.err{color:var(--err)}.ok{color:var(--ok)}
-.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:10px 0}.bar i{display:block;height:100%;background:var(--pri);width:0}
-pre{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px;max-height:180px;overflow:auto;font-size:12px;margin:0}
-.stats{display:flex;gap:24px;flex-wrap:wrap;margin:8px 0}.stats b{display:block;font-size:18px}
-.tbl{overflow:auto;max-height:420px;border:1px solid var(--line);border-radius:6px}table{border-collapse:collapse;width:100%;font-size:13px}
-th,td{padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:left}th{position:sticky;top:0;background:var(--card)}
-td.n{text-align:right;font-variant-numeric:tabular-nums}.hide{display:none}small{color:var(--mute)}
-</style></head><body><main>
-<h1>Tải hoá đơn điện tử <small>hoadondientu.gdt.gov.vn</small></h1>
-
-<section class="card" id="login">
-  <div class="row">
-    <div><label>Tên đăng nhập (MST)</label><input type="text" id="u" autocomplete="username"></div>
-    <div><label>Mật khẩu</label><input type="password" id="p" autocomplete="current-password"></div>
-    <div><label>Mã captcha</label><div class="cap"><span class="img" id="capimg"></span>
-      <button class="sec" type="button" onclick="loadCaptcha()" title="Đổi captcha">↻</button></div>
-      <input type="text" id="c" style="margin-top:6px" placeholder="Nhập ký tự trong ảnh"></div>
+:root{--bg:#f4f6f9;--card:#fff;--fg:#1d2733;--mute:#66758a;--line:#dde3ea;--pri:#2b3a8c;--acc:#5b5fe0;--err:#c0392b;--ok:#1e8449;--v:#4361ee;--r:#d63447}
+@media (prefers-color-scheme:dark){:root{--bg:#12161c;--card:#1b2129;--fg:#e6ebf1;--mute:#93a1b3;--line:#2c3540;--pri:#3a4bb0;--acc:#8b8ff5;--err:#ff6b5b;--ok:#4cc38a;--v:#8aa2ff;--r:#ff7b8a}}
+*{box-sizing:border-box}body{margin:0;font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--fg)}
+header{background:var(--pri);color:#fff;padding:10px 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+header b{font-size:20px;letter-spacing:.5px}header small{opacity:.8}
+main{max-width:1400px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.top{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.stat{color:var(--fg);font-size:15px}.stat b{color:var(--acc)}
+input[type=text],input[type=password],input[type=date],textarea{padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
+input.search{flex:1;min-width:220px;background:#fffbe6;color:#333}
+button{padding:7px 14px;border:1px solid var(--acc);border-radius:6px;background:var(--acc);color:#fff;font:inherit;cursor:pointer}
+button.sec{background:transparent;color:var(--acc)}button.red{background:transparent;color:var(--err);border-color:var(--err)}
+button:disabled{opacity:.5;cursor:default}button.sm{padding:3px 9px;font-size:12px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+table{border-collapse:collapse;width:100%}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:13px;color:var(--mute);font-weight:600}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.dn{font-weight:600}.dn .m{color:var(--acc);font-weight:400}.loi{color:var(--err);font-size:12px}
+.v{color:var(--v);font-weight:600}.r{color:var(--r);font-weight:600}
+.note{border:0;background:transparent;width:100%;color:var(--mute);font-size:13px;padding:2px}
+.note:focus{background:var(--bg);color:var(--fg)}.tbl{overflow:auto}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9}
+.modal .card{width:min(560px,100%);max-height:90vh;overflow:auto;margin:0}
+label{display:block;font-size:13px;color:var(--mute);margin:8px 0 3px}.full{width:100%}
+.chk{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0}.chk label{display:flex;gap:6px;align-items:center;color:var(--fg);margin:0}
+.capimg{background:#fff;border-radius:6px;display:inline-block;padding:2px}.capimg svg{height:50px;width:auto;display:block}
+.prog{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:8px 0}.prog i{display:block;height:100%;background:var(--acc);width:0}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px;max-height:200px;overflow:auto;font-size:12px;margin:0;white-space:pre-wrap}
+.hide{display:none!important}.mute{color:var(--mute);font-size:12px}.err{color:var(--err)}.ok{color:var(--ok)}
+.hint{font-size:12px;color:var(--mute);margin-top:6px}
+</style></head><body>
+<header><b>Tải hoá đơn</b><small>hoadondientu.gdt.gov.vn</small><span style="flex:1"></span><small id="capStat"></small></header>
+<main>
+<section class="card">
+  <div class="top">
+    <div class="stat">Số doanh nghiệp: <b id="nDN">0</b> hiển thị; <b id="nAn">0</b> bị ẩn
+      <a href="#" id="toggleAn" class="mute">xem doanh nghiệp bị ẩn</a></div>
+    <input class="search" id="q" placeholder="nhập MST hoặc tên doanh nghiệp cần làm việc nhanh">
   </div>
-  <div style="margin-top:14px"><button id="btnLogin" onclick="login()">Đăng nhập</button></div>
-  <div class="msg" id="loginMsg"></div>
+  <div class="bar">
+    <button onclick="openEdit()">+ Thêm doanh nghiệp</button>
+    <button class="sec" onclick="show('mImport')">Nhập danh sách từ Excel</button>
+    <button class="red" onclick="openBatch()">Xử lý hàng loạt</button>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th><input type="checkbox" id="all"></th><th>Doanh nghiệp</th><th>Ghi chú công việc</th>
+      <th>Lịch sử đồng bộ</th><th>Ngày tạo</th><th class="n">Số HĐ<br>Mua vào</th><th class="n">Số HĐ<br>Bán ra</th>
+      <th class="n">Tổng HĐ</th><th></th></tr></thead>
+    <tbody id="rows"></tbody></table></div>
 </section>
 
-<section class="card hide" id="query">
-  <div class="msg ok" id="who"></div>
-  <div class="row">
-    <div><label>Từ ngày</label><input type="date" id="from"></div>
-    <div><label>Đến ngày</label><input type="date" id="to"></div>
+<section class="card hide" id="jobCard">
+  <div class="top"><b id="jobTitle">Đang xử lý</b><button class="red sm" id="btnStop" onclick="post('/api/stop',{})">Dừng</button></div>
+  <div class="prog"><i id="progI"></i></div>
+  <div id="capBox" class="card hide" style="border-color:var(--acc)">
+    <div>Nhập captcha cho <b id="capFor"></b>:</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">
+      <span class="capimg" id="capImg"></span><input type="text" id="capIn" placeholder="ký tự trong ảnh" autocomplete="off">
+      <button onclick="sendCap()">Gửi</button></div>
+    <div class="hint">Phần mềm ghi nhớ hình từng ký tự bạn gõ; sau vài lần sẽ tự giải captcha.</div>
   </div>
-  <div class="chk">
-    <label><input type="checkbox" id="kPurchase" checked> Hoá đơn mua vào</label>
-    <label><input type="checkbox" id="kSold" checked> Hoá đơn bán ra</label>
-    <label><input type="checkbox" id="mtt" checked> Gồm hoá đơn máy tính tiền</label>
-    <label><input type="checkbox" id="xml" checked> Tải file XML từng hoá đơn</label>
-  </div>
-  <button id="btnRun" onclick="run()">Tải hoá đơn</button>
-  <button id="btnStop" class="sec hide" onclick="stop()">Dừng</button>
-  <button class="sec" onclick="logout()">Đăng xuất</button>
-  <div class="msg" id="runMsg"></div>
-</section>
-
-<section class="card hide" id="result">
-  <div class="bar"><i id="barI"></i></div>
-  <div class="stats">
-    <div>Số hoá đơn<b id="sCount">0</b></div><div>Tiền chưa thuế<b id="sCt">0</b></div>
-    <div>Tiền thuế<b id="sT">0</b></div><div>Tổng thanh toán<b id="sTt">0</b></div>
-  </div>
-  <div class="msg" id="files"></div>
+  <div id="results"></div>
   <pre id="log"></pre>
-  <div class="tbl" style="margin-top:12px"><table id="tbl"></table></div>
-  <small>Bảng chỉ hiển thị tối đa 500 dòng; bảng kê Excel/CSV có đủ toàn bộ.</small>
 </section>
 </main>
+
+<div class="modal hide" id="mEdit"><div class="card">
+  <b id="editTitle">Doanh nghiệp</b>
+  <label>Mã số thuế</label><input type="text" class="full" id="eMst">
+  <label>Tên doanh nghiệp (hiển thị trong bảng kê)</label><input type="text" class="full" id="eTen">
+  <label>Mật khẩu trang hoadondientu.gdt.gov.vn</label><input type="password" class="full" id="ePw" autocomplete="new-password">
+  <div class="hint" id="ePwHint"></div>
+  <div class="chk">
+    <label><input type="checkbox" id="eVao"> Đồng bộ hoá đơn đầu vào</label>
+    <label><input type="checkbox" id="eRa"> Đồng bộ hoá đơn đầu ra</label>
+    <label><input type="checkbox" id="eAn"> Ẩn doanh nghiệp</label>
+  </div>
+  <div class="err" id="eErr"></div>
+  <div class="bar"><button onclick="saveEdit()">Lưu</button><button class="sec" onclick="saveEdit(true)">Lưu &amp; Test đăng nhập</button>
+    <span style="flex:1"></span><button class="red" id="eDel" onclick="delEdit()">Xoá</button><button class="sec" onclick="hide('mEdit')">Đóng</button></div>
+</div></div>
+
+<div class="modal hide" id="mImport"><div class="card">
+  <b>Nhập danh sách doanh nghiệp</b>
+  <div class="hint">Mỗi dòng: MST, Tên, Mật khẩu – copy 3 cột từ Excel dán vào (hoặc ngăn cách bằng dấu |). Mật khẩu có thể để trống.</div>
+  <textarea id="impText" rows="10" class="full" style="margin-top:8px" placeholder="0313046002	BẢO LỘC KT305	matkhau"></textarea>
+  <div class="err" id="impErr"></div>
+  <div class="bar"><button onclick="doImport()">Nhập</button><button class="sec" onclick="hide('mImport')">Đóng</button></div>
+</div></div>
+
+<div class="modal hide" id="mBatch"><div class="card">
+  <b>Xử lý hàng loạt</b>
+  <div class="hint" id="bWho"></div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap">
+    <div><label>Từ ngày</label><input type="date" id="bFrom"></div>
+    <div><label>Đến ngày</label><input type="date" id="bTo"></div>
+  </div>
+  <div class="chk">
+    <label><input type="checkbox" id="bVao" checked> Mua vào</label>
+    <label><input type="checkbox" id="bRa" checked> Bán ra</label>
+    <label><input type="checkbox" id="bMtt" checked> Gồm máy tính tiền</label>
+    <label><input type="checkbox" id="bXml" checked> Tải XML + chi tiết hàng hoá</label>
+  </div>
+  <div class="hint">Chỉ đồng bộ chiều đầu vào/đầu ra đang bật trong cài đặt từng doanh nghiệp.</div>
+  <div class="err" id="bErr"></div>
+  <div class="bar"><button onclick="runBatch()">Bắt đầu</button><button class="sec" onclick="hide('mBatch')">Đóng</button></div>
+</div></div>
+
 <script>
 const KEY = "__TOKEN__";
 const $ = id => document.getElementById(id);
-const fmt = n => Math.round(n).toLocaleString('vi-VN');
-let capKey = null, timer = null;
+const show = id => $(id).classList.remove('hide'), hide = id => $(id).classList.add('hide');
+const fmt = n => (n || 0).toLocaleString('en-US');
+let companies = [], showHidden = false, editing = null, batchMsts = [], timer = null;
 
 async function api(path, body) {
   const r = await fetch(path, {method: body ? 'POST' : 'GET', headers: {'X-App-Key': KEY, 'Content-Type': 'application/json'},
@@ -590,70 +1030,124 @@ async function api(path, body) {
   if (!r.ok || d.error) throw new Error(d.error || ('HTTP ' + r.status));
   return d;
 }
-async function loadCaptcha() {
-  $('capimg').textContent = '…';
-  try { const d = await api('/api/captcha'); capKey = d.key; $('capimg').innerHTML = d.content; $('c').value = ''; }
-  catch (e) { $('capimg').textContent = ''; $('loginMsg').className = 'msg err'; $('loginMsg').textContent = e.message; }
+const post = (p, b) => api(p, b);
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+function render() {
+  const q = $('q').value.trim().toLowerCase();
+  const vis = companies.filter(c => showHidden ? c.an : !c.an)
+    .filter(c => !q || c.mst.includes(q) || (c.ten || '').toLowerCase().includes(q));
+  $('nDN').textContent = companies.filter(c => !c.an).length; $('nAn').textContent = companies.filter(c => c.an).length;
+  $('toggleAn').textContent = showHidden ? 'xem doanh nghiệp đang hiển thị' : 'xem doanh nghiệp bị ẩn';
+  const tb = $('rows'); tb.innerHTML = '';
+  vis.forEach((c, i) => {
+    const tr = tb.insertRow();
+    const cb = el('input'); cb.type = 'checkbox'; cb.className = 'pick'; cb.value = c.mst; tr.insertCell().append(cb);
+    const td = tr.insertCell(); const dn = el('div', 'dn', String(i + 1).padStart(3, '0') + '. ' + (c.ten || '(chưa đặt tên)') + ' ');
+    dn.append(el('span', 'm', '(' + c.mst + ')')); td.append(dn);
+    if (!c.co_mk) td.append(el('div', 'loi', 'Chưa nhập mật khẩu'));
+    if (c.loi) td.append(el('div', 'loi', c.loi));
+    const note = el('input', 'note'); note.value = c.ghichu || ''; note.placeholder = 'nhập ghi chú công việc vào đây';
+    note.onchange = () => post('/api/company/save', {mst: c.mst, ghichu: note.value}); tr.insertCell().append(note);
+    const ls = tr.insertCell(), h = c.lich_su || {};
+    if (h.purchase) ls.append(el('div', 'v', 'V: ' + h.purchase.moi + ' - ' + h.purchase.luc));
+    if (h.sold) ls.append(el('div', 'r', 'R: ' + h.sold.moi + ' - ' + h.sold.luc));
+    tr.insertCell().textContent = c.tao || '';
+    const s = c.so_hd || {}, v = s.purchase || 0, r = s.sold || 0;
+    [v, r, v + r].forEach(n => { const x = tr.insertCell(); x.className = 'n'; x.textContent = fmt(n); });
+    const act = tr.insertCell(); act.style.whiteSpace = 'nowrap';
+    const b1 = el('button', 'sm', 'Tải'); b1.onclick = () => openBatch([c.mst]);
+    const b2 = el('button', 'sm sec', 'Sửa'); b2.onclick = () => openEdit(c); b2.style.marginLeft = '4px';
+    act.append(b1, b2);
+  });
 }
-async function login() {
-  $('btnLogin').disabled = true; $('loginMsg').className = 'msg'; $('loginMsg').textContent = 'Đang đăng nhập…';
+async function refresh() {
+  const s = await api('/api/state'); companies = s.companies; render();
+  $('capStat').textContent = s.captcha.count ? ('Captcha đã học ' + s.captcha.chars.length + ' ký tự') : '';
+  if (s.job.running || s.job.log.length) renderJob(s.job);
+  return s;
+}
+function openEdit(c) {
+  editing = c || null; $('eErr').textContent = '';
+  $('editTitle').textContent = c ? 'Cập nhật thông tin' : 'Thêm doanh nghiệp';
+  $('eMst').value = c ? c.mst : ''; $('eMst').disabled = !!c; $('eTen').value = c ? c.ten : ''; $('ePw').value = '';
+  $('ePwHint').textContent = c && c.co_mk ? 'Đã lưu mật khẩu – để trống nếu không đổi. Mật khẩu này khác mật khẩu đăng nhập phần mềm.' : 'Mật khẩu được mã hoá và chỉ lưu trên máy này.';
+  $('eVao').checked = c ? c.vao : true; $('eRa').checked = c ? c.ra : true; $('eAn').checked = c ? c.an : false;
+  $('eDel').classList.toggle('hide', !c); show('mEdit'); (c ? $('ePw') : $('eMst')).focus();
+}
+async function saveEdit(test) {
   try {
-    await api('/api/login', {username: $('u').value.trim(), password: $('p').value, captcha: $('c').value.trim(), key: capKey});
-    $('p').value = ''; showQuery($('u').value.trim());
-  } catch (e) { $('loginMsg').className = 'msg err'; $('loginMsg').textContent = e.message; loadCaptcha(); }
-  $('btnLogin').disabled = false;
+    const mst = $('eMst').value.trim();
+    await post('/api/company/save', {mst, ten: $('eTen').value, password: $('ePw').value,
+      vao: $('eVao').checked, ra: $('eRa').checked, an: $('eAn').checked});
+    hide('mEdit'); await refresh();
+    if (test) await start({msts: [mst], test: true});
+  } catch (e) { $('eErr').textContent = e.message; }
 }
-function showQuery(user) {
-  $('login').classList.add('hide'); $('query').classList.remove('hide');
-  $('who').textContent = 'Đã đăng nhập: ' + user;
+async function delEdit() {
+  if (!editing || !confirm('Xoá doanh nghiệp ' + editing.mst + ' khỏi danh sách? (Hoá đơn đã tải vẫn giữ nguyên)')) return;
+  await post('/api/company/delete', {mst: editing.mst}); hide('mEdit'); refresh();
 }
-async function logout() { await api('/api/logout', {}); location.reload(); }
-async function run() {
-  const kinds = [];
-  if ($('kPurchase').checked) kinds.push('purchase');
-  if ($('kSold').checked) kinds.push('sold');
-  $('runMsg').className = 'msg';
-  try {
-    await api('/api/run', {from: $('from').value, to: $('to').value, kinds, mtt: $('mtt').checked, xml: $('xml').checked});
-    $('runMsg').textContent = ''; $('result').classList.remove('hide'); poll();
-  } catch (e) { $('runMsg').className = 'msg err'; $('runMsg').textContent = e.message; }
+async function doImport() {
+  try { const d = await post('/api/company/import', {text: $('impText').value});
+    $('impErr').textContent = d.errors.join('\n'); if (!d.errors.length) { hide('mImport'); $('impText').value = ''; } refresh();
+  } catch (e) { $('impErr').textContent = e.message; }
 }
-async function stop() { await api('/api/stop', {}); }
+function openBatch(msts) {
+  batchMsts = msts || [...document.querySelectorAll('.pick:checked')].map(x => x.value);
+  $('bErr').textContent = '';
+  $('bWho').textContent = batchMsts.length ? ('Doanh nghiệp đã chọn: ' + batchMsts.length) : 'Chưa tích chọn doanh nghiệp nào → xử lý TẤT CẢ doanh nghiệp đang hiển thị.';
+  show('mBatch');
+}
+async function runBatch() {
+  const kinds = []; if ($('bVao').checked) kinds.push('purchase'); if ($('bRa').checked) kinds.push('sold');
+  const msts = batchMsts.length ? batchMsts : companies.filter(c => !c.an).map(c => c.mst);
+  try { await start({msts, kinds, from: $('bFrom').value, to: $('bTo').value, mtt: $('bMtt').checked, xml: $('bXml').checked});
+        hide('mBatch'); } catch (e) { $('bErr').textContent = e.message; }
+}
+async function start(body) { await post('/api/run', body); show('jobCard'); poll(); }
+async function sendCap() { const v = $('capIn').value.trim(); if (!v) return; $('capIn').value = ''; hide('capBox'); await post('/api/captcha', {answer: v}); poll(); }
+let lastCap = null;
+function renderJob(j) {
+  show('jobCard');
+  $('jobTitle').textContent = j.running ? ('Đang xử lý' + (j.current ? ' ' + j.current : '') + '…') : 'Kết quả lần chạy gần nhất';
+  $('btnStop').classList.toggle('hide', !j.running);
+  $('progI').style.width = (j.total ? Math.round(100 * j.done / j.total) : (j.running ? 5 : 100)) + '%';
+  if (j.need_captcha) {
+    const key = j.need_captcha.mst + j.need_captcha.svg.length + j.need_captcha.svg.slice(-40);
+    if (key !== lastCap) { lastCap = key; $('capFor').textContent = (j.need_captcha.ten || '') + ' (' + j.need_captcha.mst + ')';
+      $('capImg').innerHTML = j.need_captcha.svg; $('capIn').value = ''; show('capBox'); $('capIn').focus(); }
+  } else { hide('capBox'); lastCap = null; }
+  const res = $('results'); res.innerHTML = '';
+  j.results.forEach(r => res.append(el('div', 'ok', r.mst + ' ' + (r.ten || '') + ' – ' + r.loai + ': ' + r.so_hd + ' HĐ (' + r.moi + ' mới, ' + r.doi + ' đổi trạng thái) → ' + r.thu_muc)));
+  $('log').textContent = j.log.join('\n'); $('log').scrollTop = 1e9;
+}
 async function poll() {
   clearTimeout(timer);
-  let s; try { s = await api('/api/status'); } catch (e) { timer = setTimeout(poll, 2000); return; }
-  $('btnRun').disabled = s.running; $('btnStop').classList.toggle('hide', !s.running);
-  $('barI').style.width = (s.total ? Math.round(100 * s.done / s.total) : (s.running ? 5 : 100)) + '%';
-  $('sCount').textContent = s.count; $('sCt').textContent = fmt(s.sum_cthue); $('sT').textContent = fmt(s.sum_thue); $('sTt').textContent = fmt(s.sum_tt);
-  $('log').textContent = s.log.join('\n'); $('log').scrollTop = 1e9;
-  $('files').innerHTML = '';
-  if (s.folder) $('files').append('Thư mục lưu: ' + s.folder);
-  if (s.error) { const e = document.createElement('div'); e.className = 'err'; e.textContent = s.error; $('files').append(e);
-                 if (/đăng nhập/i.test(s.error)) { $('query').classList.add('hide'); $('login').classList.remove('hide'); loadCaptcha(); } }
-  const t = $('tbl'); t.innerHTML = '';
-  if (s.rows.length) {
-    const h = t.insertRow(); s.headers.forEach(x => { const th = document.createElement('th'); th.textContent = x; h.append(th); });
-    s.rows.forEach(r => { const tr = t.insertRow(); r.forEach(v => { const td = tr.insertCell();
-      if (typeof v === 'number') { td.className = 'n'; td.textContent = fmt(v); } else td.textContent = v; }); });
-  }
-  if (s.running) timer = setTimeout(poll, 1500);
+  let s; try { s = await refresh(); } catch (e) { timer = setTimeout(poll, 2000); return; }
+  if (s.job.running) timer = setTimeout(poll, 1500);
 }
-(async () => {
+$('q').oninput = render;
+$('toggleAn').onclick = e => { e.preventDefault(); showHidden = !showHidden; render(); };
+$('all').onchange = e => document.querySelectorAll('.pick').forEach(x => x.checked = e.target.checked);
+$('capIn').addEventListener('keydown', e => { if (e.key === 'Enter') sendCap(); });
+(() => {
   const now = new Date(), first = new Date(now.getFullYear(), now.getMonth() - 1, 1), last = new Date(now.getFullYear(), now.getMonth(), 0);
   const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  $('from').value = iso(first); $('to').value = iso(last);
-  $('c').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
-  const s = await api('/api/session').catch(() => ({}));
-  if (s.user) { showQuery(s.user); poll(); } else loadCaptcha();
+  $('bFrom').value = iso(first); $('bTo').value = iso(last);
+  poll();
 })();
 </script></body></html>
 """
 
 
 class App:
-    def __init__(self, client, out_root):
-        self.client = client
+    def __init__(self, out_root, client_factory=None):
         self.out_root = out_root
+        cfg = os.path.join(out_root, "_cau-hinh")
+        self.store = Store(os.path.join(cfg, "doanh-nghiep.json"))
+        self.solver = CaptchaSolver(os.path.join(cfg, "captcha-mau.json"))
+        self.client_factory = client_factory or HoaDonClient
         self.key = secrets.token_urlsafe(24)
         self.job = Job()
 
@@ -691,7 +1185,7 @@ def make_handler(app, port):
 
         def _body(self):
             n = int(self.headers.get("Content-Length") or 0)
-            if n > 100000:
+            if n > 2000000:
                 return {}
             try:
                 return json.loads(self.rfile.read(n).decode("utf-8") or "{}")
@@ -704,15 +1198,9 @@ def make_handler(app, port):
             path = self.path.split("?")[0]
             if path == "/":
                 return self._send(200, PAGE.replace("__TOKEN__", app.key).encode("utf-8"), "text/html; charset=utf-8")
-            if path == "/api/session":
-                return self._send(200, {"user": app.client.username if app.client.token else None})
-            if path == "/api/captcha":
-                try:
-                    return self._send(200, app.client.get_captcha())
-                except PortalError as e:
-                    return self._send(502, {"error": str(e)})
-            if path == "/api/status":
-                return self._send(200, app.job.snapshot())
+            if path == "/api/state":
+                return self._send(200, {"companies": app.store.public(), "job": app.job.snapshot(),
+                                        "captcha": {"count": app.solver.count(), "chars": app.solver.chars()}})
             self._send(404, {"error": "Không tìm thấy"})
 
         def do_POST(self):
@@ -720,40 +1208,54 @@ def make_handler(app, port):
                 return
             path = self.path.split("?")[0]
             data = self._body()
-            if path == "/api/login":
-                if not all(data.get(k) for k in ("username", "password", "captcha", "key")):
-                    return self._send(400, {"error": "Nhập đủ tên đăng nhập, mật khẩu và captcha"})
-                try:
-                    app.client.login(data["username"], data["password"], data["captcha"], data["key"])
-                    return self._send(200, {"user": app.client.username})
-                except PortalError as e:
-                    return self._send(400, {"error": str(e)})
-            if path == "/api/logout":
-                app.client.token = None
-                app.client.username = None
+            try:
+                return self._post(path, data)
+            except ValueError as e:
+                return self._send(400, {"error": str(e)})
+
+        def _post(self, path, data):
+            if path == "/api/company/save":
+                existing = app.store.get(str(data.get("mst", "")).strip())
+                if not existing and not data.get("password"):
+                    raise ValueError("Nhập mật khẩu trang hoadondientu.gdt.gov.vn")
+                fields = {k: data.get(k) for k in ("ghichu", "an")}
+                for k in ("vao", "ra"):
+                    fields[k] = data.get(k)
+                c = app.store.upsert(data.get("mst"), data.get("ten"), data.get("password") or None, **fields)
+                return self._send(200, {"mst": c["mst"]})
+            if path == "/api/company/delete":
+                app.store.delete(data.get("mst"))
                 return self._send(200, {"ok": True})
+            if path == "/api/company/import":
+                added, errors = app.store.import_text(data.get("text"))
+                return self._send(200, {"added": added, "errors": errors})
             if path == "/api/run":
-                if not app.client.token:
-                    return self._send(401, {"error": "Chưa đăng nhập"})
                 if app.job.running:
-                    return self._send(409, {"error": "Đang tải, vui lòng chờ"})
-                try:
+                    return self._send(409, {"error": "Đang xử lý, vui lòng chờ hoặc bấm Dừng"})
+                msts = [m for m in (data.get("msts") or []) if app.store.get(m)]
+                if not msts:
+                    raise ValueError("Chưa có doanh nghiệp nào để xử lý")
+                test = bool(data.get("test"))
+                start = end = None
+                kinds = []
+                if not test:
                     start, end = parse_date(data.get("from")), parse_date(data.get("to"))
                     if end < start:
                         raise ValueError("Ngày kết thúc phải sau ngày bắt đầu")
-                except ValueError as e:
-                    return self._send(400, {"error": str(e)})
-                kinds = [k for k in (data.get("kinds") or []) if k in ("purchase", "sold")]
-                if not kinds:
-                    return self._send(400, {"error": "Chọn ít nhất một loại hoá đơn"})
+                    kinds = [k for k in (data.get("kinds") or []) if k in ("purchase", "sold")]
+                    if not kinds:
+                        raise ValueError("Chọn ít nhất mua vào hoặc bán ra")
                 app.job = Job()
                 app.job.running = True
-                threading.Thread(target=run_job, daemon=True, args=(
-                    app.job, app.client, kinds, start, end, bool(data.get("mtt")), bool(data.get("xml")),
-                    app.out_root)).start()
+                threading.Thread(target=run_batch, daemon=True, args=(
+                    app.job, app.store, app.solver, msts, kinds, start, end, bool(data.get("mtt")),
+                    bool(data.get("xml")), app.out_root, test, app.client_factory)).start()
+                return self._send(200, {"ok": True})
+            if path == "/api/captcha":
+                app.job.answer(data.get("answer"))
                 return self._send(200, {"ok": True})
             if path == "/api/stop":
-                app.job.cancel = True
+                app.job.stop()
                 return self._send(200, {"ok": True})
             self._send(404, {"error": "Không tìm thấy"})
 
@@ -768,12 +1270,13 @@ def main(argv=None):
     ap.add_argument("--insecure", action="store_true", help="bỏ kiểm tra chứng chỉ SSL (chỉ dùng khi máy báo lỗi SSL)")
     args = ap.parse_args(argv)
 
-    client = HoaDonClient(verify_ssl=not args.insecure)
-    app = App(client, os.path.abspath(args.out))
+    app = App(os.path.abspath(args.out), lambda: HoaDonClient(verify_ssl=not args.insecure))
     server = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(app, args.port))
     url = "http://127.0.0.1:%d/" % args.port
     print("Phần mềm tải hoá đơn %s đang chạy tại %s" % (__version__, url))
     print("Hoá đơn lưu vào: %s" % app.out_root)
+    if os.name != "nt":
+        print("Lưu ý: ngoài Windows, mật khẩu lưu dạng mã hoá đơn giản – hãy bảo vệ thư mục _cau-hinh.")
     print("Đóng cửa sổ này (hoặc Ctrl+C) để thoát.")
     if not args.no_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
