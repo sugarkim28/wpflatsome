@@ -30,9 +30,10 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 
-BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn:30000")
+BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
+SITE_URL = "https://hoadondientu.gdt.gov.vn"
 PAGE_SIZE = 50
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 
@@ -148,11 +149,16 @@ class HoaDonClient:
         url = self.base_url + path
         if params:
             url += "?" + urllib.parse.urlencode(params, safe=":,;=/")
-        headers = {"User-Agent": USER_AGENT, "Accept": "application/json, text/plain, */*"}
+        # Giả lập trình duyệt đang mở trang của cổng (cổng kiểm tra Referer/Origin).
+        headers = {"User-Agent": USER_AGENT, "Accept": "application/json, text/plain, */*",
+                   "Accept-Language": "vi-VN,vi;q=0.9", "Sec-Fetch-Site": "same-origin",
+                   "Sec-Fetch-Mode": "cors", "Sec-Fetch-Dest": "empty",
+                   "Referer": SITE_URL + ("/" if not self.token else "/tra-cuu/tra-cuu-hoa-don")}
         data = None
         if body is not None:
             data = json.dumps(body).encode("utf-8")
             headers["Content-Type"] = "application/json"
+            headers["Origin"] = SITE_URL
         if self.token:
             headers["Authorization"] = "Bearer " + self.token
 
@@ -670,8 +676,11 @@ class CaptchaSolver:
             return sorted({t[0] for v in self.templates.values() for t in v})
 
     def _match(self, letters, rel):
+        cands = self.templates.get(letters, [])
+        if cands and len({c for c, _ in cands}) == 1:
+            return cands[0][0]  # chuỗi lệnh vẽ chỉ ứng với một ký tự → chắc chắn
         best, best_d = None, float("inf")
-        for ch, tpl in self.templates.get(letters, []):
+        for ch, tpl in cands:
             dd = _dist(rel, tpl)
             if dd < best_d:
                 best, best_d = ch, dd
@@ -705,9 +714,8 @@ class CaptchaSolver:
     def forget(self, svg):
         """Captcha tự giải bị cổng báo sai → bỏ các mẫu đã dùng để lần sau hỏi lại người dùng."""
         with self.lock:
-            for letters, rel, _ in captcha_glyphs(svg):
-                lst = self.templates.get(letters, [])
-                self.templates[letters] = [t for t in lst if _dist(rel, t[1]) > self.THRESHOLD]
+            for letters, _, _ in captcha_glyphs(svg):
+                self.templates.pop(letters, None)
             _save_json(self.path, self.templates)
 
 
