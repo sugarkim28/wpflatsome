@@ -20,11 +20,11 @@ import taihoadon as t
 
 # Hình ký tự giả (toạ độ tuyệt đối từ gốc 0,0); captcha dịch chuyển từng ký tự tới vị trí ngẫu nhiên.
 GLYPHS = {
-    "a": "M0 10 L5 0 L10 10 Z",
-    "b": "M0 0 L0 12 Q8 12 8 6 Q8 0 0 0 Z",
-    "c": "M9 1 Q0 -1 0 6 Q0 13 9 11",
-    "D": "M0 0 L0 12 Q11 12 11 6 Q11 0 0 0 Z",
-    "7": "M0 0 L9 0 L3 12",
+    "A": "M0 10 Q2 5 5 0 Q7 5 10 10 Z M3 7 Q5 6 7 7 Z",
+    "B": "M0 0 Q0 6 0 12 Q8 12 8 6 Q8 0 0 0 Z",
+    "C": "M9 1 Q0 -1 0 6 Q0 13 9 11 Q8 11 9 1 Z",
+    "D": "M0 0 Q0 6 0 12 Q11 12 11 6 Q11 0 0 0 Z",
+    "7": "M0 0 Q4 0 9 0 Q6 6 3 12 Z",
 }
 ACCOUNTS = {"0309999999": "pw1", "0101234567": "pw2"}
 STATE = {"tthai": 1}
@@ -46,7 +46,7 @@ def make_captcha(text):
              '<path d="M10 40 C60 5 120 45 190 10" stroke="#888" fill="none"/>']
     x = 12
     for ch in text:
-        parts.append('<path fill="#%06x" d="%s"/>' % (random.randint(0, 0x777777),
+        parts.append('<path fill="none" stroke="#%06x" d="%s"/>' % (random.randint(0, 0x777777),
                                                       shift(GLYPHS[ch], x + random.random() * 4, 15 + random.random() * 15)))
         x += 30
     parts.append("</svg>")
@@ -116,6 +116,8 @@ class FakePortal(BaseHTTPRequestHandler):
         if not auth.startswith("Bearer TOKEN-"):
             return self._json(401, {"message": "unauthorized"})
         mst = auth[len("Bearer TOKEN-"):]
+        if u.path.endswith(("/invoices/purchase", "/invoices/sold")) and "," in q.get("sort", ""):
+            return self._json(400, {"message": "Không hỗ trợ sắp xếp theo nhiều trường"})
         if u.path == "/query/invoices/purchase":
             if "ttxly==5" not in q["search"]:
                 return self._json(200, {"datas": [], "total": 0})
@@ -154,7 +156,7 @@ class AutoAnswer(threading.Thread):
                 for text in list(FakePortal.captchas.values()):
                     if make_captcha_text_matches(need["svg"], text):
                         self.asked += 1
-                        self.job.answer(text)
+                        self.job.answer(text.lower())  # người dùng gõ chữ thường vẫn được
                         break
             time.sleep(0.02)
 
@@ -207,14 +209,14 @@ class Tests(unittest.TestCase):
 
     def test_captcha_learning(self):
         solver = t.CaptchaSolver(os.path.join(self.tmp, "c.json"))
-        svg = make_captcha("abcD7")
+        svg = make_captcha("ABCD7")
         self.assertIsNone(solver.solve(svg))
-        self.assertTrue(solver.learn(svg, "abcD7"))
+        self.assertTrue(solver.learn(svg, "ABCD7"))
         for _ in range(20):
             text = "".join(random.choice(list(GLYPHS)) for _ in range(6))
             self.assertEqual(solver.solve(make_captcha(text)), text)
         # Đọc lại từ file
-        self.assertEqual(t.CaptchaSolver(os.path.join(self.tmp, "c.json")).solve(make_captcha("7Dcba")), "7Dcba")
+        self.assertEqual(t.CaptchaSolver(os.path.join(self.tmp, "c.json")).solve(make_captcha("7DCBA")), "7DCBA")
 
     def test_store_and_import(self):
         added, errors = self.app.store.import_text("0309999999\tCONG TY A\tpw1\n0101234567 | CONG TY B | pw2\nabc\tX\n")

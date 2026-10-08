@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.0.2"
+__version__ = "2.0.3"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -285,7 +285,7 @@ class HoaDonClient:
                         a.strftime("%d/%m/%Y"), b.strftime("%d/%m/%Y"), label))
                 state = None
                 while True:
-                    params = {"sort": "tdlap:desc,khmshdon:asc,shdon:desc", "size": PAGE_SIZE,
+                    params = {"sort": "tdlap:desc", "size": PAGE_SIZE,
                               "search": search_query(a, b, ttxly)}
                     if state:
                         params["state"] = state
@@ -676,11 +676,10 @@ def captcha_glyphs(svg):
     glyphs = []
     for m in _PATH_RE.finditer(svg or ""):
         attrs = dict(_ATTR_RE.findall(m.group(1)))
-        fill = attrs.get("fill", "").strip().lower()
         d = attrs.get("d", "")
-        if not d or not fill or fill == "none":
-            continue  # đường nhiễu chỉ có stroke
         letters = "".join(re.findall(r"[A-Za-z]", d))
+        if "Z" not in letters.upper():
+            continue  # đường nhiễu là nét cong hở; ký tự là hình khép kín (có Z), dù tô màu hay chỉ vẽ viền
         nums = [float(x) for x in _NUM_RE.findall(d)]
         if len(nums) < 4:
             continue
@@ -829,7 +828,7 @@ def login_company(job, client, company, solver):
         auto = text is not None
         if not auto:
             job.say("%s: cần nhập captcha" % company["mst"])
-            text = job.ask_captcha(company, cap["content"])
+            text = job.ask_captcha(company, cap["content"]).upper()  # captcha chỉ gồm A-Z, 0-9
         try:
             client.login(company["mst"], password, text, cap["key"])
         except PortalError as e:
