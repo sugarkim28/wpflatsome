@@ -18,6 +18,8 @@ Tải hàng loạt hoá đơn **mua vào / bán ra** từ cổng [hoadondientu.g
   - `Doi_TrangThai`: HĐ bị huỷ / thay thế / điều chỉnh so với lần đồng bộ trước.
   - Bán ra: `HoaDon_TongQuat` + `ChiTiet_HangHoa`.
 - Chạy lại không tải trùng XML; chỉ tải lại hoá đơn đổi trạng thái.
+- **Tab Hoá đơn** (giống màn hình Nibot): chọn doanh nghiệp, Mua vào / Bán ra / HĐ dịch vụ, lọc theo file (có/không XML, PDF), duyệt nội bộ, trạng thái HĐ, kết quả kiểm tra, ký hiệu, số HĐ, MST/tên/mặt hàng/ghi chú, kỳ (hôm nay, tháng, quý, năm). Bảng có dòng tổng, phân trang 10/20/50/100; sửa trực tiếp ghi chú, duyệt nội bộ, đánh dấu HĐ dịch vụ; mở XML / bản xem HTML / PDF. Nút **Đồng bộ** tải kỳ đang chọn; **Kết xuất** EXCEL.XLSX (mẫu Nibot), XML.ZIP, HTML.ZIP, PDF.ZIP theo đúng bộ lọc.
+- PDF: lưu nếu gói XML của cổng thuế có kèm. PDF gốc từ trang tra cứu của nhà cung cấp hoá đơn (VNPT, Viettel, MISA…) chưa hỗ trợ.
 
 ## Cài đặt & chạy
 

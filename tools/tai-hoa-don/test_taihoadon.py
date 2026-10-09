@@ -307,6 +307,34 @@ class Tests(unittest.TestCase):
         xml = next(hd for m, p, hd in h if p == "/query/invoices/export-xml")
         self.assertEqual(urllib.parse.unquote(xml["Action"]), "Xuất xml (hóa đơn mua vào)")
 
+    def test_invoice_store(self):
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        self.run_job(["0309999999"], kinds=("purchase",))
+        f = {"kind": "purchase", "from": "2026-09-01", "to": "2026-09-30"}
+        rows = t.query_invoices(self.tmp, "0309999999", f)
+        self.assertEqual(len(rows), 60)
+        r = rows[0]
+        self.assertEqual((r["mst"], r["tthai"], r["kq"], r["duyet"], r["mat_hang"]),
+                         ("0101234567", "HĐ Mới", "Đã cấp MST", "Chờ duyệt", "Giay A4; But bi"))
+        self.assertTrue(r["xml"].endswith(".xml"))
+        self.assertEqual(len(t.query_invoices(self.tmp, "0309999999", dict(f, shdon="5"))), 1)
+        self.assertEqual(len(t.query_invoices(self.tmp, "0309999999", dict(f, file="no_xml"))), 0)
+        # Ghi chú / duyệt / HĐ dịch vụ được giữ lại sau khi đồng bộ lại
+        t.update_invoice(self.tmp, "0309999999", "purchase", r["key"], note="da doi chieu", duyet="Đã duyệt", dv=True)
+        self.run_job(["0309999999"], kinds=("purchase",))
+        dv = t.query_invoices(self.tmp, "0309999999", dict(f, kind="purchase_dv"))
+        self.assertEqual([(x["key"], x["note"], x["duyet"]) for x in dv], [(r["key"], "da doi chieu", "Đã duyệt")])
+        self.assertEqual(len(t.query_invoices(self.tmp, "0309999999", dict(f, q="doi chieu"))), 1)
+        # Kết xuất theo bộ lọc
+        x = t.export_invoices(self.tmp, "0309999999", "A", dict(f, kind="purchase_dv"), "xlsx")
+        from openpyxl import load_workbook
+        tq = load_workbook(x)["HoaDon_TongQuat"]
+        self.assertEqual((tq["S5"].value, tq["T5"].value, tq["A6"].value), ("Đã duyệt", "da doi chieu", "Total"))
+        z = t.export_invoices(self.tmp, "0309999999", "A", f, "xml")
+        self.assertEqual(len(zipfile.ZipFile(z).namelist()), 60)
+        with self.assertRaises(ValueError):
+            t.export_invoices(self.tmp, "0309999999", "A", f, "pdf")
+
     def test_expired_token(self):
         c = t.HoaDonClient(self.base, delay=0)
         c.token = "bad"
@@ -336,6 +364,15 @@ class Tests(unittest.TestCase):
             self.assertTrue(st["companies"][0]["co_mk"])
             self.assertFalse(st["companies"][0]["ra"])
             self.assertNotIn("pw1", json.dumps(st))
+            # Mở file: cần khoá phiên, không cho đi ra ngoài thư mục DN
+            d = os.path.join(self.tmp, "0309999999")
+            os.makedirs(d, exist_ok=True)
+            open(os.path.join(d, "a.xml"), "w").write("<x/>")
+            q = lambda p, k=self.app.key: base + "/file?" + urllib.parse.urlencode({"k": k, "mst": "0309999999", "p": p})
+            self.assertEqual(urllib.request.urlopen(q("a.xml")).read(), b"<x/>")
+            for bad in (q("a.xml", "sai"), q("../_cau-hinh/doanh-nghiep.json")):
+                with self.assertRaises(urllib.error.HTTPError):
+                    urllib.request.urlopen(bad)
         finally:
             srv.shutdown()
             srv.server_close()

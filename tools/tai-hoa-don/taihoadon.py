@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -374,7 +374,7 @@ def save_xml(zip_bytes, folder, basename):
     with zf:
         for name in zf.namelist():
             ext = os.path.splitext(name)[1].lower()
-            if ext not in (".xml", ".html", ".htm"):
+            if ext not in (".xml", ".html", ".htm", ".pdf"):
                 continue
             target = os.path.join(folder, basename + ext)
             if ext == ".xml" and xml_path:
@@ -446,7 +446,8 @@ def write_reports(invoices, folder, basename, csv_only=True):
 LOAI_HD = {1: "V", 2: "B"}
 TTHAI_NIBOT = {1: "HĐ Mới", 2: "HĐ Thay thế", 3: "HĐ Điều chỉnh", 4: "HĐ Đã bị thay thế",
                5: "HĐ Đã bị điều chỉnh", 6: "HĐ Đã bị hủy"}
-TTXLY_NIBOT = {5: "Đã cấp MST", 6: "TCT k nhận mã", 8: "HĐ có mã từ máy tính tiền"}
+TTXLY_NIBOT = {0: "TCT đã nhận", 1: "Đang k.tra", 2: "CQT t.chối HĐ", 3: "HĐ đủ đ.kiện", 4: "HĐ k đủ đ.kiện",
+               5: "Đã cấp MST", 6: "TCT k nhận mã", 7: "Đã k.tra định kỳ", 8: "HĐ có mã từ máy tính tiền"}
 VAT_RATES = {"0", "5", "8", "10"}
 SMART_HEAD = ["NIBOT_GHICHU", "LCTG", "SR_HD", "SOCT", "NGAY_KY", "NGAYCT", "SO_HD", "NGAY_HD", "DIENGIAI",
               "HTTT", "TKNO", "MADTPNNO", "TKCO", "MADTPNCO", "MADMNO", "MADMCO", "TENDM", "MATHANG",
@@ -649,7 +650,8 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
                TTHAI_NIBOT.get(_num(inv.get("tthai")), inv.get("tthai")),
                TTXLY_NIBOT.get(_num(inv.get("ttxly")), inv.get("ttxly")),
                _float(inv.get("tgtcthue")), _float(inv.get("tgtthue")), _float(inv.get("ttcktmai")),
-               _float(inv.get("tgtphi")), _float(inv.get("tgtttbso")), "Chờ duyệt", _status_note(inv),
+               _float(inv.get("tgtphi")), _float(inv.get("tgtttbso")), inv.get("_duyet") or "Chờ duyệt",
+               " - ".join(x for x in (_status_note(inv), inv.get("_note")) if x),
                inv.get("_xml", "")]
         for i, v in enumerate(row, 1):
             c = ws.cell(row=r, column=i, value=v)
@@ -1225,9 +1227,7 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
     period = "%s_%s" % (start.strftime("%Y%m%d"), end.strftime("%Y%m%d"))
     base = os.path.join(out_root, safe_name(mst))
     folder = os.path.join(base, "%s_%s" % (label, period))
-    index_path = os.path.join(base, "_chi-muc.json")
-    index = _load_json(index_path, {})
-    known = index.setdefault(kind, {})
+    known = _load_json(index_file(out_root, mst), {}).get(kind, {})
 
     invoices = client.list_invoices(kind, start, end, include_mtt, progress=lambda m: job.say("%s: %s" % (mst, m)))
     new, changes = 0, []
@@ -1265,8 +1265,16 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
                     raise
             with job.lock:
                 job.done += 1
-        known[key] = {"tthai": tthai, "tdlap": inv.get("tdlap")}
-    _save_json(index_path, index)
+        entry = dict(old or {})
+        inv["_kind"] = kind
+        entry.update(tthai=tthai, tdlap=inv.get("tdlap"),
+                     inv={k: inv.get(k) for k in INV_FIELDS if inv.get(k) is not None})
+        if inv.get("_xmlinfo") is not None:
+            entry["xml"] = os.path.relpath(os.path.join(folder, inv["_xml"]), base)
+            names = [it["name"] for it in inv["_xmlinfo"]["items"] if it["name"]]
+            entry["mat_hang"] = "; ".join(names)[:500]
+        known[key] = entry
+    save_index_kind(out_root, mst, kind, known)
 
     paths = write_reports(invoices, folder, "bang-ke-%s_%s" % (label, period), csv_only=True)
     try:
@@ -1327,6 +1335,154 @@ def run_batch(job, store, solver, msts, kinds, start, end, include_mtt, want_xml
 
 
 # ---------------------------------------------------------------------------
+# Kho hoá đơn đã tải (HoaDon/<MST>/_chi-muc.json): xem, lọc, ghi chú, duyệt, kết xuất lại
+# ---------------------------------------------------------------------------
+
+INV_FIELDS = ("khmshdon", "khhdon", "shdon", "tdlap", "nky", "nbmst", "nbten", "nbdchi", "nmmst", "nmten", "nmdchi",
+              "thtttoan", "tgtcthue", "tgtthue", "ttcktmai", "tgtphi", "tgtttbso", "dvtte", "tthai", "ttxly",
+              "mhdon", "thttltsuat", "_prefix", "_nguon", "_kind")
+USER_FIELDS = ("note", "duyet", "dv")
+DUYET_OPTIONS = ("Chờ duyệt", "Đã duyệt", "Không duyệt")
+_INDEX_LOCK = threading.Lock()
+
+
+def company_dir(out_root, mst):
+    return os.path.join(out_root, safe_name(mst))
+
+
+def index_file(out_root, mst):
+    return os.path.join(company_dir(out_root, mst), "_chi-muc.json")
+
+
+def save_index_kind(out_root, mst, kind, entries):
+    """Ghi lại một loại HĐ của chỉ mục, giữ ghi chú/duyệt do người dùng sửa trong lúc đang đồng bộ."""
+    path = index_file(out_root, mst)
+    with _INDEX_LOCK:
+        cur = _load_json(path, {})
+        old = cur.get(kind, {})
+        for key, e in entries.items():
+            for f in USER_FIELDS:
+                if f in old.get(key, {}):
+                    e[f] = old[key][f]
+        cur[kind] = entries
+        _save_json(path, cur)
+
+
+def update_invoice(out_root, mst, kind, key, **fields):
+    path = index_file(out_root, mst)
+    with _INDEX_LOCK:
+        cur = _load_json(path, {})
+        e = cur.get(kind, {}).get(key)
+        if e is None:
+            raise ValueError("Không tìm thấy hoá đơn")
+        for f in USER_FIELDS:
+            if fields.get(f) is not None:
+                e[f] = fields[f]
+        _save_json(path, cur)
+
+
+def _sibling(base, rel, ext):
+    if not rel:
+        return ""
+    cand = os.path.splitext(rel)[0] + ext
+    return cand if os.path.exists(os.path.join(base, cand)) else ""
+
+
+def query_invoices(out_root, mst, f):
+    """Lọc hoá đơn trong kho theo bộ lọc của màn hình Hoá đơn. Trả về list dòng (dict)."""
+    kind = f.get("kind") or "purchase"
+    only_dv = kind.endswith("_dv")
+    kind = kind.replace("_dv", "")
+    base = company_dir(out_root, mst)
+    entries = _load_json(index_file(out_root, mst), {}).get(kind, {})
+    start = parse_date(f["from"]) if f.get("from") else None
+    end = parse_date(f["to"]) if f.get("to") else None
+    q = (f.get("q") or "").strip().lower()
+    rows = []
+    for key, e in entries.items():
+        inv = e.get("inv") or {}
+        d = invoice_date(inv) or invoice_date({"tdlap": e.get("tdlap")})
+        if (start and (not d or d < start)) or (end and (not d or d > end)):
+            continue
+        if only_dv and not e.get("dv"):
+            continue
+        xml = e.get("xml", "") if e.get("xml") and os.path.exists(os.path.join(base, e["xml"])) else ""
+        html, pdf = _sibling(base, xml, ".html"), _sibling(base, xml, ".pdf")
+        file_f = f.get("file") or ""
+        if (file_f == "no_xml" and xml) or (file_f == "xml" and not xml) or (file_f == "pdf" and not pdf) \
+                or (file_f == "no_pdf" and pdf) or (file_f == "xml_pdf" and not (xml and pdf)):
+            continue
+        duyet = e.get("duyet") or DUYET_OPTIONS[0]
+        if f.get("duyet") and f["duyet"] != duyet:
+            continue
+        tthai, ttxly = _num(e.get("tthai")), _num(inv.get("ttxly"))
+        if f.get("tthai") not in (None, "") and _num(f["tthai"]) != tthai:
+            continue
+        if f.get("kq") not in (None, "") and _num(f["kq"]) != ttxly:
+            continue
+        if f.get("khhdon") and f["khhdon"].upper() not in ("%s%s" % (inv.get("khmshdon") or "", inv.get("khhdon") or "")).upper():
+            continue
+        if f.get("shdon") and str(f["shdon"]).strip() != str(inv.get("shdon") or ""):
+            continue
+        mst_dt, ten_dt = ((inv.get("nbmst"), inv.get("nbten")) if kind == "purchase"
+                          else (inv.get("nmmst"), inv.get("nmten")))
+        if q and q not in " ".join(str(x or "") for x in (mst_dt, ten_dt, e.get("note"), e.get("mat_hang"))).lower():
+            continue
+        rows.append({
+            "key": key, "mst": str(mst_dt or ""), "ten": ten_dt or "", "ngay": d.strftime("%d/%m/%Y") if d else "",
+            "_sort": (d.isoformat() if d else "", _num(inv.get("shdon"))),
+            "khhdon": "%s%s" % (inv.get("khmshdon") or "", inv.get("khhdon") or ""), "shdon": str(inv.get("shdon") or ""),
+            "cthue": _float(inv.get("tgtcthue")), "thue": _float(inv.get("tgtthue")), "ck": _float(inv.get("ttcktmai")),
+            "phi": _float(inv.get("tgtphi")), "tt": _float(inv.get("tgtttbso")),
+            "tthai": TTHAI_NIBOT.get(tthai, ""), "kq": TTXLY_NIBOT.get(ttxly, "") if inv else "",
+            "duyet": duyet, "dv": bool(e.get("dv")), "mat_hang": e.get("mat_hang", ""), "note": e.get("note", ""),
+            "xml": xml, "html": html, "pdf": pdf})
+    rows.sort(key=lambda r: r.pop("_sort"))
+    return rows
+
+
+def export_invoices(out_root, mst, company_name, f, fmt):
+    """Kết xuất các HĐ đang lọc: 'xlsx' (mẫu Nibot) hoặc 'xml' / 'html' / 'pdf' (gói .zip). Trả về đường dẫn."""
+    kind = (f.get("kind") or "purchase").replace("_dv", "")
+    rows = query_invoices(out_root, mst, f)
+    if not rows:
+        raise ValueError("Không có hoá đơn nào để kết xuất")
+    base = company_dir(out_root, mst)
+    entries = _load_json(index_file(out_root, mst), {}).get(kind, {})
+    out_dir = os.path.join(base, "_ket-xuat")
+    os.makedirs(out_dir, exist_ok=True)
+    label = "MUA_VAO" if kind == "purchase" else "BAN_RA"
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    if fmt == "xlsx":
+        invoices = []
+        for r in rows:
+            e = entries[r["key"]]
+            inv = dict(e.get("inv") or {})
+            inv.setdefault("tthai", e.get("tthai"))
+            inv.setdefault("tdlap", e.get("tdlap"))
+            inv["_duyet"], inv["_note"] = r["duyet"], r["note"]
+            if r["xml"]:
+                inv["_xml"] = r["xml"]
+                inv["_xmlinfo"] = parse_invoice_xml(os.path.join(base, r["xml"]))
+            invoices.append(inv)
+        dates = [invoice_date(i) for i in invoices if invoice_date(i)]
+        start = parse_date(f["from"]) if f.get("from") else min(dates)
+        end = parse_date(f["to"]) if f.get("to") else max(dates)
+        path = os.path.join(out_dir, "%s_%s_%s.xlsx" % (label, mst, stamp))
+        return write_nibot_workbook(path, kind, invoices, mst, company_name, start, end)
+    if fmt not in ("xml", "html", "pdf"):
+        raise ValueError("Định dạng kết xuất không hợp lệ")
+    files = [r[fmt] for r in rows if r[fmt]]
+    if not files:
+        raise ValueError("Các hoá đơn đang lọc chưa có file %s" % fmt.upper())
+    path = os.path.join(out_dir, "%s_%s_%s_%s.zip" % (label, fmt.upper(), mst, stamp))
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        for rel in files:
+            z.write(os.path.join(base, rel), os.path.basename(rel))
+    return path
+
+
+# ---------------------------------------------------------------------------
 # Giao diện web chạy trên máy (127.0.0.1)
 # ---------------------------------------------------------------------------
 
@@ -1364,10 +1520,47 @@ label{display:block;font-size:13px;color:var(--mute);margin:8px 0 3px}.full{widt
 pre{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px;max-height:200px;overflow:auto;font-size:12px;margin:0;white-space:pre-wrap}
 .hide{display:none!important}.mute{color:var(--mute);font-size:12px}.err{color:var(--err)}.ok{color:var(--ok)}
 .hint{font-size:12px;color:var(--mute);margin-top:6px}
+nav{display:flex;gap:4px;margin-left:12px}nav a{color:#fff;opacity:.7;text-decoration:none;padding:6px 12px;border-radius:6px;font-weight:600}
+nav a.on{opacity:1;background:rgba(255,255,255,.15)}
+.flt{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:8px}
+.flt select,.flt input,select.sm{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit;width:100%}
+#hTbl td,#hTbl th{font-size:13px;padding:6px}#hTbl select{min-width:112px}#hTbl td.mh{max-width:260px;white-space:normal}
+#hTbl tfoot td{font-weight:700;color:var(--acc)}.pager{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.pager button{padding:3px 9px}.pager .cur{background:var(--err);border-color:var(--err)}a.lk{color:var(--acc);margin-right:6px}
 </style></head><body>
-<header><b>Tải hoá đơn</b><small>hoadondientu.gdt.gov.vn</small><span style="flex:1"></span><small id="capStat"></small></header>
+<header><b>Tải hoá đơn</b><nav><a href="#" id="navDN" class="on" onclick="tab('DN');return false">Doanh nghiệp</a>
+<a href="#" id="navHD" onclick="tab('HD');return false">Hoá đơn</a></nav><span style="flex:1"></span><small id="capStat"></small></header>
 <main>
-<section class="card">
+<section class="card hide" id="tabHD">
+  <div class="flt">
+    <select id="hMst" style="grid-column:span 2"></select>
+    <select id="hKind"><option value="purchase">Mua vào</option><option value="sold">Bán ra</option>
+      <option value="purchase_dv">Mua vào - HĐDV</option><option value="sold_dv">Bán ra - HĐDV</option></select>
+    <select id="hFile"><option value="">--Lọc file--</option><option value="no_xml">Không có XML</option><option value="xml">Có XML</option>
+      <option value="pdf">Có PDF</option><option value="no_pdf">Không có PDF</option><option value="xml_pdf">Có XML và PDF</option></select>
+    <select id="hDuyet"><option value="">--Duyệt n.bộ--</option><option>Chờ duyệt</option><option>Đã duyệt</option><option>Không duyệt</option></select>
+    <select id="hTthai"><option value="">--Trạng thái HĐ--</option></select>
+    <select id="hKq"><option value="">--K.quả k.tra--</option></select>
+  </div>
+  <div class="flt">
+    <input id="hKh" placeholder="Ký hiệu HĐ"><input id="hSo" placeholder="Số HĐ"><input id="hQ" placeholder="MST, tên DN, mặt hàng, ghi chú">
+    <select id="hPer"></select><input type="date" id="hFrom"><input type="date" id="hTo">
+  </div>
+  <div class="bar">
+    <button class="sec" onclick="syncInv()">Đồng bộ</button><button onclick="hPage=0;loadInv()">Tìm kiếm</button>
+    <span style="flex:1"></span>
+    <select class="sm" id="hExp" style="width:auto" onchange="exportInv(this.value);this.value=''">
+      <option value="">Kết xuất…</option><option value="xlsx">EXCEL.XLSX</option><option value="xml">XML.ZIP</option>
+      <option value="html">HTML.ZIP</option><option value="pdf">PDF.ZIP</option></select>
+  </div>
+  <div class="err" id="hErr"></div>
+  <div class="tbl"><table id="hTbl"><thead><tr><th id="hMstH">MST</th><th id="hTenH">Người bán</th><th>Ngày</th><th>Ký hiệu HĐ</th>
+    <th class="n">Số HĐ</th><th class="n">Tiền C.Thuế</th><th class="n">Tiền Thuế</th><th class="n">Tiền CK.TM</th><th class="n">Tiền phí</th>
+    <th class="n">Tiền T.Toán</th><th>T.thái HĐ</th><th>Kết quả k.tra</th><th>Duyệt Nội Bộ</th><th>HĐ DV</th><th>Mặt hàng</th>
+    <th>Ghi chú</th><th>Chi tiết</th></tr></thead><tbody id="hRows"></tbody><tfoot><tr id="hFoot"></tr></tfoot></table></div>
+  <div class="pager" id="hPager"></div>
+</section>
+<section class="card" id="tabDN">
   <div class="top">
     <div class="stat">Số doanh nghiệp: <b id="nDN">0</b> hiển thị; <b id="nAn">0</b> bị ẩn
       <a href="#" id="toggleAn" class="mute">xem doanh nghiệp bị ẩn</a></div>
@@ -1484,7 +1677,8 @@ function render() {
     const act = tr.insertCell(); act.style.whiteSpace = 'nowrap';
     const b1 = el('button', 'sm', 'Tải'); b1.onclick = () => openBatch([c.mst]);
     const b2 = el('button', 'sm sec', 'Sửa'); b2.onclick = () => openEdit(c); b2.style.marginLeft = '4px';
-    act.append(b1, b2);
+    const b3 = el('button', 'sm sec', 'Xem HĐ'); b3.onclick = () => { $('hMst').value = c.mst; tab('HD'); }; b3.style.marginLeft = '4px';
+    act.append(b1, b2, b3);
   });
 }
 async function refresh() {
@@ -1548,11 +1742,110 @@ function renderJob(j) {
   j.results.forEach(r => res.append(el('div', 'ok', r.mst + ' ' + (r.ten || '') + ' – ' + r.loai + ': ' + r.so_hd + ' HĐ (' + r.moi + ' mới, ' + r.doi + ' đổi trạng thái) → ' + r.thu_muc)));
   $('log').textContent = j.log.join('\n'); $('log').scrollTop = 1e9;
 }
+let wasRunning = false;
 async function poll() {
   clearTimeout(timer);
   let s; try { s = await refresh(); } catch (e) { timer = setTimeout(poll, 2000); return; }
+  if (wasRunning && !s.job.running && curTab === 'HD') loadInv();
+  wasRunning = s.job.running;
   if (s.job.running) timer = setTimeout(poll, 1500);
 }
+
+// ---- Tab Hoá đơn ----
+const TTHAI = ['', 'HĐ Mới', 'HĐ Thay thế', 'HĐ Điều chỉnh', 'HĐ Đã bị thay thế', 'HĐ Đã bị điều chỉnh', 'HĐ Đã bị hủy'];
+const KQ = ['TCT đã nhận', 'Đang k.tra', 'CQT t.chối HĐ', 'HĐ đủ đ.kiện', 'HĐ k đủ đ.kiện', 'Đã cấp MST', 'TCT k nhận mã', 'Đã k.tra định kỳ', 'HĐ có mã từ máy tính tiền'];
+TTHAI.forEach((t, i) => { if (t) $('hTthai').append(new Option(t, i)); });
+KQ.forEach((t, i) => $('hKq').append(new Option(t, i)));
+let curTab = 'DN', hRows = [], hPage = 0, hSize = 20;
+const isoD = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const PERIODS = [['', '--Tuỳ chọn ngày--'], ['today', 'Hôm nay'], ['month', 'Tháng này']]
+  .concat([...Array(12).keys()].map(i => ['m' + (i + 1), 'Tháng ' + (i + 1)]))
+  .concat([1, 2, 3, 4].map(i => ['q' + i, 'Quý ' + i])).concat([['year', 'Năm nay'], ['lastyear', 'Năm trước']]);
+PERIODS.forEach(([v, t]) => $('hPer').append(new Option(t, v)));
+$('hPer').onchange = () => {
+  const v = $('hPer').value, now = new Date(), y = now.getFullYear(); let a, b;
+  if (v === 'today') a = b = now;
+  else if (v === 'month') { a = new Date(y, now.getMonth(), 1); b = now; }
+  else if (v[0] === 'm') { const m = +v.slice(1) - 1; a = new Date(y, m, 1); b = new Date(y, m + 1, 0); }
+  else if (v[0] === 'q') { const q = +v.slice(1) - 1; a = new Date(y, q * 3, 1); b = new Date(y, q * 3 + 3, 0); }
+  else if (v === 'year') { a = new Date(y, 0, 1); b = now; }
+  else if (v === 'lastyear') { a = new Date(y - 1, 0, 1); b = new Date(y - 1, 11, 31); }
+  if (a) { $('hFrom').value = isoD(a); $('hTo').value = isoD(b); hPage = 0; loadInv(); }
+};
+function tab(t) {
+  curTab = t; $('navDN').classList.toggle('on', t === 'DN'); $('navHD').classList.toggle('on', t === 'HD');
+  $('tabDN').classList.toggle('hide', t !== 'DN'); $('tabHD').classList.toggle('hide', t !== 'HD');
+  if (t === 'HD') { fillMst(); loadInv(); }
+}
+function fillMst() {
+  const cur = $('hMst').value; $('hMst').innerHTML = '';
+  companies.filter(c => !c.an).forEach((c, i) => $('hMst').append(new Option(String(i + 1).padStart(3, '0') + '. ' + (c.ten || '') + ' (' + c.mst + ')', c.mst)));
+  if (cur) $('hMst').value = cur;
+}
+function hFilters() {
+  return {kind: $('hKind').value, file: $('hFile').value, duyet: $('hDuyet').value, tthai: $('hTthai').value, kq: $('hKq').value,
+          khhdon: $('hKh').value.trim(), shdon: $('hSo').value.trim(), q: $('hQ').value.trim(), from: $('hFrom').value, to: $('hTo').value};
+}
+async function loadInv() {
+  $('hErr').textContent = '';
+  if (!$('hMst').value) { hRows = []; renderInv(); return; }
+  try { hRows = (await post('/api/invoices', {mst: $('hMst').value, filters: hFilters()})).rows; }
+  catch (e) { $('hErr').textContent = e.message; hRows = []; }
+  renderInv();
+}
+function fileLink(rel, text) {
+  const a = el('a', 'lk', text); a.href = '/file?k=' + encodeURIComponent(KEY) + '&mst=' + encodeURIComponent($('hMst').value) + '&p=' + encodeURIComponent(rel);
+  a.target = '_blank'; return a;
+}
+function renderInv() {
+  const sold = $('hKind').value.startsWith('sold');
+  $('hTenH').textContent = sold ? 'Người mua' : 'Người bán';
+  const tb = $('hRows'); tb.innerHTML = '';
+  const pages = Math.max(1, Math.ceil(hRows.length / hSize)); hPage = Math.min(hPage, pages - 1);
+  hRows.slice(hPage * hSize, hPage * hSize + hSize).forEach(r => {
+    const tr = tb.insertRow();
+    [r.mst, r.ten, r.ngay, r.khhdon].forEach(v => tr.insertCell().textContent = v);
+    [r.shdon, fmt(r.cthue), fmt(r.thue), fmt(r.ck), fmt(r.phi), fmt(r.tt)].forEach(v => { const c = tr.insertCell(); c.className = 'n'; c.textContent = v; });
+    tr.insertCell().textContent = r.tthai; tr.insertCell().textContent = r.kq;
+    const sel = el('select', 'sm'); ['Chờ duyệt', 'Đã duyệt', 'Không duyệt'].forEach(o => sel.append(new Option(o, o))); sel.value = r.duyet;
+    sel.onchange = () => updInv(r, {duyet: sel.value}); tr.insertCell().append(sel);
+    const cb = el('input'); cb.type = 'checkbox'; cb.checked = r.dv; cb.onchange = () => updInv(r, {dv: cb.checked}); tr.insertCell().append(cb);
+    const mh = tr.insertCell(); mh.className = 'mh'; mh.textContent = r.mat_hang;
+    const note = el('input', 'note'); note.value = r.note; note.placeholder = 'ghi chú…'; note.onchange = () => updInv(r, {note: note.value});
+    tr.insertCell().append(note);
+    const ct = tr.insertCell(); ct.style.whiteSpace = 'nowrap';
+    if (r.xml) ct.append(fileLink(r.xml, 'XML')); if (r.html) ct.append(fileLink(r.html, 'Xem')); if (r.pdf) ct.append(fileLink(r.pdf, 'PDF'));
+  });
+  const sum = k => hRows.reduce((a, r) => a + r[k], 0);
+  const f = $('hFoot'); f.innerHTML = '';
+  const c0 = f.insertCell(); c0.colSpan = 5; c0.textContent = hRows.length + ' HĐ';
+  ['cthue', 'thue', 'ck', 'phi', 'tt'].forEach(k => { const c = f.insertCell(); c.className = 'n'; c.textContent = fmt(sum(k)); });
+  f.insertCell().colSpan = 7;
+  const pg = $('hPager'); pg.innerHTML = '';
+  [10, 20, 50, 100].forEach(n => { const b = el('button', 'sm sec' + (n === hSize ? ' cur' : ''), String(n)); if (n === hSize) b.style.color = '#fff';
+    b.onclick = () => { hSize = n; hPage = 0; renderInv(); }; pg.append(b); });
+  pg.append(el('span', 'mute', ' Tổng cộng: ' + hRows.length + ' hoá đơn - Trang ' + (hPage + 1) + '/' + pages + ' '));
+  const prev = el('button', 'sm sec', '‹'); prev.disabled = hPage === 0; prev.onclick = () => { hPage--; renderInv(); };
+  const next = el('button', 'sm sec', '›'); next.disabled = hPage >= pages - 1; next.onclick = () => { hPage++; renderInv(); };
+  pg.append(prev, next);
+}
+async function updInv(r, fields) {
+  try { await post('/api/invoice/update', Object.assign({mst: $('hMst').value, kind: $('hKind').value.replace('_dv', ''), key: r.key}, fields));
+        Object.assign(r, fields); } catch (e) { $('hErr').textContent = e.message; }
+}
+async function exportInv(fmtx) {
+  if (!fmtx) return; $('hErr').textContent = '';
+  try { const d = await post('/api/export', {mst: $('hMst').value, filters: hFilters(), fmt: fmtx}); window.open(d.url, '_blank'); }
+  catch (e) { $('hErr').textContent = e.message; }
+}
+async function syncInv() {
+  $('hErr').textContent = '';
+  if (!$('hFrom').value || !$('hTo').value) { $('hErr').textContent = 'Chọn khoảng ngày cần đồng bộ'; return; }
+  try { await start({msts: [$('hMst').value], kinds: [$('hKind').value.replace('_dv', '')], from: $('hFrom').value, to: $('hTo').value, mtt: true, xml: true}); }
+  catch (e) { $('hErr').textContent = e.message; }
+}
+['hKind', 'hFile', 'hDuyet', 'hTthai', 'hKq', 'hMst'].forEach(id => $(id).onchange = () => { hPage = 0; loadInv(); });
+['hKh', 'hSo', 'hQ'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { hPage = 0; loadInv(); } }));
 $('q').oninput = render;
 $('toggleAn').onclick = e => { e.preventDefault(); showHidden = !showHidden; render(); };
 $('all').onchange = e => document.querySelectorAll('.pick').forEach(x => x.checked = e.target.checked);
@@ -1561,6 +1854,7 @@ $('capIn').addEventListener('keydown', e => { if (e.key === 'Enter') sendCap(); 
   const now = new Date(), first = new Date(now.getFullYear(), now.getMonth() - 1, 1), last = new Date(now.getFullYear(), now.getMonth(), 0);
   const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   $('bFrom').value = iso(first); $('bTo').value = iso(last);
+  $('hPer').value = 'month'; $('hFrom').value = iso(new Date(now.getFullYear(), now.getMonth(), 1)); $('hTo').value = iso(now);
   poll();
 })();
 </script></body></html>
@@ -1627,7 +1921,34 @@ def make_handler(app, port):
             if path == "/api/state":
                 return self._send(200, {"companies": app.store.public(), "job": app.job.snapshot(),
                                         "captcha": {"count": app.solver.count(), "chars": app.solver.chars()}})
+            if path == "/file":
+                return self._file()
             self._send(404, {"error": "Không tìm thấy"})
+
+        def _file(self):
+            """Mở file đã tải (XML/HTML/PDF/Excel/ZIP) – chỉ trong thư mục của doanh nghiệp."""
+            q = dict(urllib.parse.parse_qsl(urllib.parse.urlparse(self.path).query))
+            if not secrets.compare_digest(q.get("k", ""), app.key) or not app.store.get(q.get("mst", "")):
+                return self._send(403, {"error": "Không có quyền"})
+            base = os.path.realpath(company_dir(app.out_root, q["mst"]))
+            full = os.path.realpath(os.path.join(base, q.get("p", "")))
+            if not full.startswith(base + os.sep) or not os.path.isfile(full):
+                return self._send(404, {"error": "Không tìm thấy file"})
+            ext = os.path.splitext(full)[1].lower()
+            ctype = {".xml": "application/xml", ".html": "text/html; charset=utf-8", ".htm": "text/html; charset=utf-8",
+                     ".pdf": "application/pdf", ".zip": "application/zip",
+                     ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}.get(ext, "application/octet-stream")
+            with open(full, "rb") as fh:
+                body = fh.read()
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            if ext in (".zip", ".xlsx"):
+                self.send_header("Content-Disposition", 'attachment; filename="%s"' % os.path.basename(full))
+            if ext in (".html", ".htm"):
+                self.send_header("Content-Security-Policy", "script-src 'none'")  # HTML hoá đơn chỉ để xem
+            self.end_headers()
+            self.wfile.write(body)
 
         def do_POST(self):
             if not self._guard():
@@ -1680,6 +2001,22 @@ def make_handler(app, port):
             if path == "/api/captcha":
                 app.job.answer(data.get("answer"))
                 return self._send(200, {"ok": True})
+            if path in ("/api/invoices", "/api/export", "/api/invoice/update"):
+                mst = data.get("mst", "")
+                company = app.store.get(mst)
+                if not company:
+                    raise ValueError("Chọn doanh nghiệp")
+                if path == "/api/invoices":
+                    return self._send(200, {"rows": query_invoices(app.out_root, mst, data.get("filters") or {})})
+                if path == "/api/invoice/update":
+                    if data.get("duyet") is not None and data["duyet"] not in DUYET_OPTIONS:
+                        raise ValueError("Trạng thái duyệt không hợp lệ")
+                    update_invoice(app.out_root, mst, data.get("kind"), data.get("key"), note=data.get("note"),
+                                   duyet=data.get("duyet"), dv=data.get("dv"))
+                    return self._send(200, {"ok": True})
+                out = export_invoices(app.out_root, mst, company.get("ten"), data.get("filters") or {}, data.get("fmt"))
+                rel = os.path.relpath(out, company_dir(app.out_root, mst))
+                return self._send(200, {"url": "/file?" + urllib.parse.urlencode({"k": app.key, "mst": mst, "p": rel})})
             if path == "/api/stop":
                 app.job.stop()
                 return self._send(200, {"ok": True})
