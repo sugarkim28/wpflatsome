@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.5.0"
+__version__ = "2.6.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -199,7 +199,8 @@ class HoaDonClient:
             except urllib.error.HTTPError as e:
                 content = e.read()
                 # Chỉ thử lại khi cổng quá tải; cổng đã trả thông báo cụ thể (vd "Không tồn tại hồ sơ gốc") thì không.
-                if e.code in (429, 500, 502, 503, 504) and attempt < retries and not self._error_message(content):
+                if e.code in (429, 500, 502, 503, 504) and attempt < retries and \
+                        NO_XML_MSG not in _plain(self._error_message(content) or ""):
                     time.sleep(2 ** attempt * 2)
                     continue
                 if e.code == 401:
@@ -322,30 +323,52 @@ class HoaDonClient:
                     progress("Tra %s %s → %s (%s)" % (
                         "mua vào" if kind == "purchase" else "bán ra",
                         a.strftime("%d/%m/%Y"), b.strftime("%d/%m/%Y"), label))
-                state = None
-                while True:
-                    params = {"sort": "tdlap:desc", "size": PAGE_SIZE,
-                              "search": search_query(a, b, ttxly)}
-                    if state:
-                        params["state"] = state
-                    data = self._request("GET", "%s/invoices/%s" % (prefix, kind), params=params)
-                    page = data.get("datas") or []
-                    for inv in page:
-                        key = (inv.get("nbmst"), inv.get("khmshdon"), inv.get("khhdon"), inv.get("shdon"))
-                        if key in seen:
-                            continue
-                        seen.add(key)
-                        inv["_prefix"] = prefix
-                        inv["_nguon"] = label
-                        inv["_kind"] = kind
-                        results.append(inv)
-                    state = data.get("state")
-                    if not page or not state or len(page) < PAGE_SIZE:
-                        break
-                    time.sleep(self.delay)
+                for inv in self._fetch_range(prefix, kind, a, b, ttxly, progress):
+                    key = (inv.get("nbmst"), inv.get("khmshdon"), inv.get("khhdon"), inv.get("shdon"))
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    inv["_prefix"] = prefix
+                    inv["_nguon"] = label
+                    inv["_kind"] = kind
+                    results.append(inv)
                 time.sleep(self.delay)
         results.sort(key=lambda i: (str(i.get("tdlap") or ""), str(i.get("khhdon") or ""), _num(i.get("shdon"))))
         return results
+
+    def _fetch_range(self, prefix, kind, a, b, ttxly, progress=None):
+        """Tra một khoảng ngày (có lật trang). Cổng quá tải (timeout) thì chia nhỏ theo tuần rồi tra lại."""
+        try:
+            out, state = [], None
+            while True:
+                params = {"sort": "tdlap:desc", "size": PAGE_SIZE, "search": search_query(a, b, ttxly)}
+                if state:
+                    params["state"] = state
+                data = self._request("GET", "%s/invoices/%s" % (prefix, kind), params=params, retries=2)
+                page = data.get("datas") or []
+                out.extend(page)
+                state = data.get("state")
+                if not page or not state or len(page) < PAGE_SIZE:
+                    return out
+                time.sleep(self.delay)
+        except PortalError as e:
+            busy = any(w in str(e).lower() for w in ("timeout", "quá tải", "http 5"))
+            if not busy or (b - a).days < 1:
+                if busy:
+                    raise PortalError("Cổng thuế đang quá tải, không trả được dữ liệu ngày %s – %s. Vui lòng đồng bộ "
+                                      "lại sau ít phút. (%s)" % (a.strftime("%d/%m/%Y"), b.strftime("%d/%m/%Y"), e))
+                raise
+            step = 7 if (b - a).days > 7 else 1
+            if progress:
+                progress("Cổng thuế quá tải, chia nhỏ %s – %s theo %s để tra lại" % (
+                    a.strftime("%d/%m/%Y"), b.strftime("%d/%m/%Y"), "tuần" if step == 7 else "ngày"))
+            out, cur = [], a
+            while cur <= b:
+                stop = min(cur + timedelta(days=step - 1), b)
+                out.extend(self._fetch_range(prefix, kind, cur, stop, ttxly, progress))
+                cur = stop + timedelta(days=1)
+                time.sleep(self.delay)
+            return out
 
     def _invoice_params(self, inv):
         return {"nbmst": inv.get("nbmst"), "khhdon": inv.get("khhdon"),
@@ -1639,7 +1662,14 @@ def render_invoice_html(out_root, mst, kind, key):
     if e is None:
         raise ValueError("Không tìm thấy hoá đơn")
     inv = e.get("inv") or {}
-    info = parse_invoice_xml(os.path.join(company_dir(out_root, mst), e["xml"])) if e.get("xml") else {}
+    xml_path = os.path.join(company_dir(out_root, mst), e["xml"]) if e.get("xml") else ""
+    if xml_path and os.path.exists(xml_path):
+        try:
+            with open(xml_path, "rb") as fh:
+                return render_xml_invoice(fh.read())
+        except ValueError:
+            pass
+    info = parse_invoice_xml(xml_path) if xml_path else {}
     nb, nm, tc, tong = info.get("nb", {}), info.get("nm", {}), info.get("ttchung", {}), info.get("tong", {})
     d = invoice_date(inv)
     m = lambda v: "{:,.0f}".format(_float(v)).replace(",", ".")
@@ -1780,6 +1810,177 @@ def export_invoices(out_root, mst, company_name, f, fmt):
 
 
 # ---------------------------------------------------------------------------
+# Tiện ích: đọc hoá đơn XML, kiểm tra MST hàng loạt, nối / tách file PDF
+# ---------------------------------------------------------------------------
+
+def read_invoice_xml(xml_bytes):
+    """Đọc toàn bộ nội dung hiển thị của một hoá đơn XML (chuẩn TT78/ND123)."""
+    import xml.etree.ElementTree as ET
+    try:
+        root = ET.fromstring(xml_bytes)
+    except ET.ParseError as e:
+        raise ValueError("File không phải XML hoá đơn hợp lệ (%s)" % e)
+
+    def find(el, name):
+        for c in el.iter():
+            if _local(c.tag) == name:
+                return c
+        return None
+
+    def flat(el):
+        return {_local(c.tag): (c.text or "").strip() for c in el if len(c) == 0} if el is not None else {}
+
+    dl = find(root, "DLHDon")
+    if dl is None:
+        raise ValueError("Không thấy phần dữ liệu hoá đơn (DLHDon) trong file XML")
+    tc, nd = find(dl, "TTChung"), find(dl, "NDHDon")
+    nb, nm, tt = (find(nd, n) if nd is not None else None for n in ("NBan", "NMua", "TToan"))
+    items = []
+    for el in dl.iter():
+        if _local(el.tag) == "HHDVu":
+            f = flat(el)
+            items.append({k: f.get(k, "") for k in ("STT", "TChat", "THHDVu", "DVTinh", "SLuong", "DGia", "TLCKhau",
+                                                    "STCKhau", "TSuat", "ThTien")})
+    rates = [flat(el) for el in dl.iter() if _local(el.tag) == "LTSuat"]
+    mccqt = find(root, "MCCQT")
+    sigs = [_local(el.tag) for el in root.iter() if _local(el.tag) == "Signature"]
+    info = {"ttchung": flat(tc), "nb": flat(nb), "nm": flat(nm), "tong": flat(tt), "items": items, "rates": rates,
+            "mccqt": (mccqt.text or "").strip() if mccqt is not None else "", "so_chu_ky": len(sigs),
+            "ttkhac": {}, "msttcgp": "", "dlhdon_id": dl.get("Id", "")}
+    info["msttcgp"] = info["ttchung"].get("MSTTCGP", "")
+    for el in dl.iter():
+        if _local(el.tag) == "TTin":
+            f = flat(el)
+            if f.get("TTruong") and f.get("DLieu"):
+                info["ttkhac"].setdefault(f["TTruong"], f["DLieu"])
+    return info
+
+
+def render_xml_invoice(xml_bytes, title_note=""):
+    """Bản thể hiện hoá đơn (HTML) dựng từ file XML – xem, in hoặc lưu PDF."""
+    import html as H
+    x = read_invoice_xml(xml_bytes)
+    tc, nb, nm, tong = x["ttchung"], x["nb"], x["nm"], x["tong"]
+    esc = lambda v: H.escape(str(v or ""))
+
+    def m(v):
+        if v in (None, ""):
+            return ""
+        f = _float(v)
+        return ("{:,.0f}" if f == int(f) else "{:,.2f}").format(f)
+    d = _to_dt(tc.get("NLap"))
+    ngay = "Ngày %02d tháng %02d năm %d" % (d.day, d.month, d.year) if d else esc(tc.get("NLap"))
+    rows = "".join(
+        "<tr><td class=c>%s</td><td>%s</td><td class=c>%s</td><td class=n>%s</td><td class=n>%s</td>"
+        "<td class=n>%s</td><td class=c>%s</td><td class=n>%s</td></tr>" % (
+            esc(it["STT"]), esc(it["THHDVu"]), esc(it["DVTinh"]), m(it["SLuong"]), m(it["DGia"]),
+            m(it["STCKhau"]) or "0", esc(it["TSuat"]), m(it["ThTien"]))
+        for it in x["items"])
+    rate_rows = "".join("<tr><td class=c>%s</td><td class=n>%s</td><td class=n>%s</td></tr>" % (
+        esc(r.get("TSuat")), m(r.get("ThTien")), m(r.get("TThue"))) for r in x["rates"])
+    lk = lookup_info(x)
+
+    def party(title, p):
+        rows_ = [("Tên " + title, p.get("Ten")), ("Mã số thuế", p.get("MST") or p.get("CCCDan")), ("Địa chỉ", p.get("DChi")),
+                 ("Điện thoại", p.get("SDThoai")), ("Số tài khoản", p.get("STKNHang"))]
+        return "".join("<div>%s: <b>%s</b></div>" % (k, esc(v)) for k, v in rows_ if v or k.startswith("Tên"))
+    tot = [("Tổng tiền chưa thuế", tong.get("TgTCThue")), ("Tổng tiền thuế", tong.get("TgTThue")),
+           ("Tổng tiền phí", tong.get("TgTPhi") or "0"), ("Tổng tiền CKTM", tong.get("TTCKTMai") or "0"),
+           ("Tổng tiền thanh toán", tong.get("TgTTTBSo"))]
+    sig = ("Có %d chữ ký số trong file (phần mềm chưa kiểm tra tính hợp lệ của chữ ký)" % x["so_chu_ky"]
+           if x["so_chu_ky"] else "Không có chữ ký số trong file")
+    return """<!doctype html><html lang=vi><head><meta charset=utf-8><title>%s %s-%s</title><style>
+body{font:14px/1.55 Arial,sans-serif;color:#111;max-width:960px;margin:16px auto;padding:0 16px;background:#fff}
+.top{display:grid;grid-template-columns:1fr auto;gap:12px;border-bottom:1px solid #ccc;padding-bottom:8px}
+h1{font-size:21px;margin:0;text-align:center}.c{text-align:center}.n{text-align:right}.sec{border-bottom:1px solid #ccc;padding:6px 0}
+table{border-collapse:collapse;width:100%%;margin-top:8px}td,th{border:1px solid #888;padding:4px 6px}th{background:#f3f3f3}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}.mute{color:#666;font-size:12px}.np{margin-bottom:8px}
+@media print{.np{display:none}}</style></head><body>
+<div class=np><button onclick="print()">In / Lưu PDF</button> <span class=mute>%s</span></div>
+<div class=top><div><h1>%s</h1><p class=c>%s<br>MCCQT: %s</p></div>
+<div>Mẫu số: <b>%s</b><br>Ký hiệu: <b>%s</b><br>Số: <b>%s</b></div></div>
+<div class=sec>%s</div><div class=sec>%s<div class=two><div>Hình thức thanh toán: <b>%s</b></div><div>Đơn vị tiền tệ: <b>%s</b></div></div></div>
+<table><tr><th>STT</th><th>Tên hàng hoá, dịch vụ</th><th>ĐVT</th><th>SL</th><th>Đơn giá</th><th>Tiền CK</th><th>Thuế suất</th><th>Thành tiền</th></tr>%s</table>
+<div class=two><table><tr><th>Thuế suất</th><th>Tổng tiền chưa thuế</th><th>Tiền thuế</th></tr>%s</table>
+<table>%s<tr><td colspan=2><b>Bằng chữ:</b> %s</td></tr></table></div>
+<p class=mute>%s<br>Nhà cung cấp HĐĐT: %s%s</p></body></html>""" % (
+        esc(tc.get("KHHDon")), esc(tc.get("SHDon")), esc(tc.get("THDon")), esc(title_note) or "Bản thể hiện dựng từ XML",
+        esc(tc.get("THDon") or "HÓA ĐƠN"), ngay, esc(x["mccqt"] or "(không mã)"), esc(tc.get("KHMSHDon")),
+        esc(tc.get("KHHDon")), esc(tc.get("SHDon")), party("người bán", nb), party("người mua", nm),
+        esc(tc.get("HTTToan")), esc(tc.get("DVTTe") or "VND"), rows, rate_rows,
+        "".join("<tr><td>%s</td><td class=n>%s</td></tr>" % (k, m(v)) for k, v in tot), esc(tong.get("TgTTTBChu")), sig,
+        esc(lk["ncc"]), (" – %s: %s" % (esc(lk["field"]), esc(lk["code"]))) if lk["code"] else "")
+
+
+def _pypdf():
+    try:
+        import pypdf
+        return pypdf
+    except ImportError:
+        raise ValueError("Chưa cài thư viện pypdf. Đóng phần mềm và chạy lại chay.bat (hoặc: pip install pypdf)")
+
+
+def merge_pdfs(files):
+    """files: list (tên, bytes) theo thứ tự → bytes PDF đã nối."""
+    pypdf = _pypdf()
+    if len(files) < 2:
+        raise ValueError("Chọn ít nhất 2 file PDF để nối")
+    w = pypdf.PdfWriter()
+    for name, data in files:
+        try:
+            r = pypdf.PdfReader(io.BytesIO(data))
+            for page in r.pages:
+                w.add_page(page)
+        except Exception as e:  # file hỏng / có mật khẩu
+            raise ValueError("Không đọc được file %s: %s" % (name, e))
+    out = io.BytesIO()
+    w.write(out)
+    return out.getvalue()
+
+
+def parse_page_ranges(text, total):
+    """'1-3, 5, 7-8' → [[1,2,3],[5],[7,8]]; để trống → mỗi trang một file."""
+    text = (text or "").strip()
+    if not text:
+        return [[i] for i in range(1, total + 1)]
+    groups = []
+    for part in re.split(r"[;,]", text):
+        part = part.strip()
+        if not part:
+            continue
+        m = re.fullmatch(r"(\d+)\s*-\s*(\d+)|(\d+)", part)
+        if not m:
+            raise ValueError("Khoảng trang không hợp lệ: %r (ví dụ đúng: 1-3, 5, 7-8)" % part)
+        a, b = (int(m.group(1)), int(m.group(2))) if m.group(1) else (int(m.group(3)), int(m.group(3)))
+        if not (1 <= a <= b <= total):
+            raise ValueError("Trang %s nằm ngoài file (file có %d trang)" % (part, total))
+        groups.append(list(range(a, b + 1)))
+    return groups
+
+
+def split_pdf(name, data, ranges_text):
+    """Tách PDF theo khoảng trang → bytes file .zip chứa các PDF con."""
+    pypdf = _pypdf()
+    try:
+        r = pypdf.PdfReader(io.BytesIO(data))
+        total = len(r.pages)
+    except Exception as e:
+        raise ValueError("Không đọc được file %s: %s" % (name, e))
+    base = os.path.splitext(os.path.basename(name or "file"))[0]
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for pages in parse_page_ranges(ranges_text, total):
+            w = pypdf.PdfWriter()
+            for p in pages:
+                w.add_page(r.pages[p - 1])
+            part = io.BytesIO()
+            w.write(part)
+            label = str(pages[0]) if len(pages) == 1 else "%d-%d" % (pages[0], pages[-1])
+            z.writestr("%s_trang_%s.pdf" % (base, label), part.getvalue())
+    return buf.getvalue()
+
+
+# ---------------------------------------------------------------------------
 # Giao diện web chạy trên máy (127.0.0.1)
 # ---------------------------------------------------------------------------
 
@@ -1824,6 +2025,9 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
 #hTbl td,#hTbl th{font-size:13px;padding:6px}#hTbl select{min-width:112px}#hTbl td.mh{max-width:260px;white-space:normal}
 #hTbl tfoot td{font-weight:700;color:var(--acc)}.pager{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
 .pager button{padding:3px 9px}
+.tools{display:grid;grid-template-columns:200px 1fr;gap:20px}@media(max-width:800px){.tools{grid-template-columns:1fr}}
+.tmenu a{display:block;padding:10px 12px;border-radius:8px;color:var(--fg);text-decoration:none;margin-bottom:4px;background:var(--bg)}
+.tmenu a.on{background:var(--pri);color:#fff}.tpane h3{margin:0 0 10px;color:var(--acc)}#mergeList li{margin:4px 0}
 .sync{display:grid;grid-template-columns:minmax(260px,360px) 1fr;gap:20px}@media(max-width:800px){.sync{grid-template-columns:1fr}}
 .sync label{margin-top:10px}.sync input,.sync select{width:100%}.sync .chk label{margin:0}.sync .chk input{width:auto}.bigbtn{display:block;width:100%;margin-top:8px;padding:10px;font-weight:600;border:0}
 .b-vao{background:#4361ee}.b-ra{background:#e5534b}.b-vr{background:#8c0f9d}.advice{background:#eef0ff;border:1px solid #c9ceff;border-radius:8px;padding:12px;margin-top:12px;color:#222;font-size:14px;line-height:1.7}
@@ -1832,8 +2036,37 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
 .crumb{font-size:13px;color:var(--mute);margin-bottom:10px}.crumb b{color:var(--fg)}#sTbl td,#sTbl th{font-size:13px;padding:5px}.pager .cur{background:var(--err);border-color:var(--err)}a.lk{color:var(--acc);margin-right:6px}
 </style></head><body>
 <header><b>Tải hoá đơn</b><nav><a href="#" id="navDN" class="on" onclick="tab('DN');return false">Doanh nghiệp</a>
-<a href="#" id="navHD" onclick="tab('HD');return false">Hoá đơn</a></nav><span style="flex:1"></span><small id="capStat"></small></header>
+<a href="#" id="navHD" onclick="tab('HD');return false">Hoá đơn</a>
+<a href="#" id="navTI" onclick="tab('TI');return false">Tiện ích</a></nav><span style="flex:1"></span><small id="capStat"></small></header>
 <main>
+<section class="card hide" id="tabTI">
+  <div class="tools">
+    <div class="tmenu">
+      <a href="#" data-t="xml" class="on">Đọc hoá đơn XML</a><a href="#" data-t="mst">Kiểm tra MST DN</a>
+      <a href="#" data-t="merge">Nối file PDF</a><a href="#" data-t="split">Tách file PDF</a>
+    </div>
+    <div>
+      <div class="tpane" id="t-xml"><h3>Đọc và xem hoá đơn XML</h3>
+        Chọn file hoá đơn XML: <input type="file" id="xmlFile" accept=".xml,text/xml">
+        <button class="sec sm hide" id="xmlPrint" onclick="$('xmlFrame').contentWindow.print()">In / Lưu PDF</button>
+        <div class="err" id="xmlErr"></div>
+        <iframe id="xmlFrame" class="hide" style="width:100%;height:75vh;border:1px solid var(--line);border-radius:8px;margin-top:10px;background:#fff"></iframe></div>
+      <div class="tpane hide" id="t-mst"><h3>Kiểm tra thông tin / tình trạng MST</h3>
+        <textarea id="mstText" rows="5" class="full" placeholder="Dán danh sách MST, mỗi dòng một MST (tối đa 200)"></textarea>
+        <div class="bar"><button onclick="toolMst()">Kiểm tra</button></div><div class="err" id="mstErr"></div>
+        <div class="tbl"><table id="mstTbl"></table></div></div>
+      <div class="tpane hide" id="t-merge"><h3>Nối nhiều file PDF thành một</h3>
+        <input type="file" id="mergeFiles" accept="application/pdf" multiple>
+        <div class="hint">Chọn các file theo đúng thứ tự muốn nối (có thể chọn thêm nhiều lần; kéo thứ tự bằng nút ↑ ↓).</div>
+        <ol id="mergeList"></ol><div class="bar"><button onclick="toolMerge()">Nối file</button>
+        <button class="sec" onclick="mergeQueue=[];renderMerge()">Xoá danh sách</button></div><div class="err" id="mergeErr"></div></div>
+      <div class="tpane hide" id="t-split"><h3>Tách file PDF</h3>
+        <input type="file" id="splitFile" accept="application/pdf">
+        <label>Khoảng trang (để trống = mỗi trang một file)</label><input type="text" id="splitRanges" placeholder="vd: 1-3, 4, 5-8">
+        <div class="bar"><button onclick="toolSplit()">Tách file</button></div><div class="err" id="splitErr"></div></div>
+    </div>
+  </div>
+</section>
 <section class="card hide" id="tabSYNC">
   <div class="crumb"><a href="#" onclick="tab('DN');return false">Doanh nghiệp</a> › <b id="sName"></b> › Đồng bộ</div>
   <div class="sync">
@@ -2101,6 +2334,54 @@ async function poll() {
   if (s.job.running) timer = setTimeout(poll, 1500);
 }
 
+// ---- Tiện ích ----
+document.querySelectorAll('.tmenu a').forEach(a => a.onclick = ev => { ev.preventDefault();
+  document.querySelectorAll('.tmenu a').forEach(x => x.classList.toggle('on', x === a));
+  document.querySelectorAll('.tpane').forEach(p => p.classList.toggle('hide', p.id !== 't-' + a.dataset.t)); });
+const readB64 = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(f); });
+function download(name, b64, type) {
+  const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  const a = el('a'); a.href = URL.createObjectURL(new Blob([u], {type})); a.download = name; document.body.append(a); a.click(); a.remove();
+}
+$('xmlFile').onchange = async () => {
+  const f = $('xmlFile').files[0]; if (!f) return; $('xmlErr').textContent = '';
+  try { const d = await post('/api/tool/xml-view', {data: await readB64(f)});
+        $('xmlFrame').srcdoc = d.html; show('xmlFrame'); show('xmlPrint'); }
+  catch (e) { $('xmlErr').textContent = e.message; hide('xmlFrame'); hide('xmlPrint'); }
+};
+async function toolMst() {
+  $('mstErr').textContent = 'Đang kiểm tra…'; const t = $('mstTbl'); t.innerHTML = '';
+  try { const d = await post('/api/tool/mst', {text: $('mstText').value}); $('mstErr').textContent = '';
+    const h = t.insertRow(); ['MST', 'Tên người nộp thuế', 'Tình trạng', 'Địa chỉ', 'Cơ quan thuế'].forEach(x => { const th = el('th', '', x); h.append(th); });
+    d.rows.forEach(r => { const tr = t.insertRow(); tr.insertCell().textContent = r.mst; tr.insertCell().textContent = r.ten || r.loi;
+      const s = tr.insertCell(); s.textContent = r.tthai_text; s.className = r.tthai_text === 'Đang hoạt động' ? 'ok' : 'err';
+      tr.insertCell().textContent = r.dia_chi; tr.insertCell().textContent = r.cqt; });
+  } catch (e) { $('mstErr').textContent = e.message; }
+}
+let mergeQueue = [];
+function renderMerge() {
+  const ol = $('mergeList'); ol.innerHTML = '';
+  mergeQueue.forEach((f, i) => { const li = el('li', '', f.name + ' ');
+    const up = el('button', 'sm sec', '↑'); up.onclick = () => { if (i) { [mergeQueue[i - 1], mergeQueue[i]] = [mergeQueue[i], mergeQueue[i - 1]]; renderMerge(); } };
+    const dn = el('button', 'sm sec', '↓'); dn.onclick = () => { if (i < mergeQueue.length - 1) { [mergeQueue[i + 1], mergeQueue[i]] = [mergeQueue[i], mergeQueue[i + 1]]; renderMerge(); } };
+    const rm = el('button', 'sm red', '×'); rm.onclick = () => { mergeQueue.splice(i, 1); renderMerge(); };
+    li.append(up, dn, rm); ol.append(li); });
+}
+$('mergeFiles').onchange = () => { mergeQueue.push(...$('mergeFiles').files); $('mergeFiles').value = ''; renderMerge(); };
+async function toolMerge() {
+  $('mergeErr').textContent = 'Đang nối…';
+  try { const files = []; for (const f of mergeQueue) files.push({name: f.name, data: await readB64(f)});
+        const d = await post('/api/tool/pdf-merge', {files}); download(d.name, d.data, 'application/pdf'); $('mergeErr').textContent = ''; }
+  catch (e) { $('mergeErr').textContent = e.message; }
+}
+async function toolSplit() {
+  const f = $('splitFile').files[0]; if (!f) { $('splitErr').textContent = 'Chọn file PDF'; return; }
+  $('splitErr').textContent = 'Đang tách…';
+  try { const d = await post('/api/tool/pdf-split', {name: f.name, data: await readB64(f), ranges: $('splitRanges').value});
+        download(d.name, d.data, 'application/zip'); $('splitErr').textContent = ''; }
+  catch (e) { $('splitErr').textContent = e.message; }
+}
+
 // ---- Trang Đồng bộ ----
 let syncMst = '', syncRange = null, syncRows = [];
 const SPER = [['today', 'Hôm nay'], ['week', '1 tuần'], ['month', 'Tháng này']]
@@ -2201,7 +2482,8 @@ $('hPer').onchange = () => {
 function tab(t) {
   curTab = t; $('navDN').classList.toggle('on', t === 'DN'); $('navHD').classList.toggle('on', t === 'HD');
   $('tabDN').classList.toggle('hide', t !== 'DN'); $('tabHD').classList.toggle('hide', t !== 'HD');
-  $('tabSYNC').classList.toggle('hide', t !== 'SYNC');
+  $('tabSYNC').classList.toggle('hide', t !== 'SYNC'); $('tabTI').classList.toggle('hide', t !== 'TI');
+  $('navTI').classList.toggle('on', t === 'TI');
   if (t === 'HD') { fillMst(); loadInv(); }
 }
 function fillMst() {
@@ -2412,6 +2694,37 @@ def make_handler(app, port):
             except ValueError as e:
                 return self._send(400, {"error": str(e)})
 
+        def _tool(self, name, data):
+            import base64
+
+            def b64(v):
+                try:
+                    return base64.b64decode(v or "", validate=True)
+                except ValueError:
+                    raise ValueError("Dữ liệu file không hợp lệ")
+            if name == "xml-view":
+                return self._send(200, {"html": render_xml_invoice(b64(data.get("data")))})
+            if name == "mst":
+                msts = [m for m in re.split(r"[\s,;]+", data.get("text") or "") if m][:200]
+                client, rows = app.client_factory(), []
+                for m in msts:
+                    try:
+                        d = client.lookup_company(m)
+                        rows.append(dict(d, loi=""))
+                    except (PortalError, ValueError) as e:
+                        rows.append({"mst": m, "ten": "", "dia_chi": "", "cqt": "", "tthai_text": "", "loi": str(e)})
+                return self._send(200, {"rows": rows})
+            if name == "pdf-merge":
+                files = [(f.get("name"), b64(f.get("data"))) for f in (data.get("files") or [])]
+                out = merge_pdfs(files)
+                return self._send(200, {"name": "noi_file_%s.pdf" % datetime.now().strftime("%Y%m%d_%H%M%S"),
+                                        "data": base64.b64encode(out).decode()})
+            if name == "pdf-split":
+                out = split_pdf(data.get("name"), b64(data.get("data")), data.get("ranges"))
+                base = os.path.splitext(os.path.basename(data.get("name") or "file"))[0]
+                return self._send(200, {"name": "%s_tach.zip" % safe_name(base), "data": base64.b64encode(out).decode()})
+            self._send(404, {"error": "Không tìm thấy"})
+
         def _post(self, path, data):
             if path == "/api/company/save":
                 existing = app.store.get(str(data.get("mst", "")).strip())
@@ -2422,6 +2735,8 @@ def make_handler(app, port):
                     fields[k] = data.get(k)
                 c = app.store.upsert(data.get("mst"), data.get("ten"), data.get("password") or None, **fields)
                 return self._send(200, {"mst": c["mst"]})
+            if path.startswith("/api/tool/"):
+                return self._tool(path[len("/api/tool/"):], data)
             if path == "/api/mst-lookup":
                 try:
                     return self._send(200, app.client_factory().lookup_company(data.get("mst")))

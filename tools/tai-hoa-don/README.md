@@ -19,6 +19,8 @@ Tải hàng loạt hoá đơn **mua vào / bán ra** từ cổng [hoadondientu.g
   - `Doi_TrangThai`: HĐ bị huỷ / thay thế / điều chỉnh so với lần đồng bộ trước.
   - Bán ra: `HoaDon_TongQuat` + `ChiTiet_HangHoa`.
 - Chạy lại không tải trùng XML; chỉ tải lại hoá đơn đổi trạng thái.
+- **Cổng quá tải** (lỗi "Row retrieval response timeout…"): tự thử lại, rồi chia nhỏ khoảng ngày theo tuần / ngày để tra.
+- **Tab Tiện ích**: đọc và xem hoá đơn XML bất kỳ (in / lưu PDF), kiểm tra MST hàng loạt (tên, tình trạng, địa chỉ, cơ quan thuế), nối nhiều file PDF, tách file PDF theo khoảng trang (cần `pypdf`, chay.bat tự cài).
 - **Màn hình Đồng bộ** (nút *Đồng bộ* ở mỗi doanh nghiệp hoặc tab Hoá đơn): chọn kỳ (hôm nay, 1 tuần, tháng, quý), 3 nút Đồng bộ ĐẦU VÀO / ĐẦU RA / VÀO-RA; bên phải hiện từng bước (chứng thực, số HĐ tìm thấy, tiến độ tải XML, thời gian) và bảng kết quả từng hoá đơn (Mới / Đổi trạng thái / Đã có, OK / lỗi).
 - **Giữ phiên đăng nhập**: trong lúc phần mềm còn mở, đồng bộ lại cùng doanh nghiệp không phải nhập captcha cho tới khi phiên của cổng hết hạn (tự đăng nhập lại khi hết hạn).
 - **Tải nhanh hơn**: tải 4 file XML cùng lúc; HĐ đã có XML thì bỏ qua.

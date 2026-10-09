@@ -4,6 +4,7 @@ import io
 import json
 import os
 import random
+import re
 import shutil
 import tempfile
 import threading
@@ -27,7 +28,7 @@ GLYPHS = {
     "7": "M0 0 Q4 0 9 0 Q6 6 3 12 Z",
 }
 ACCOUNTS = {"0309999999": "pw1", "0101234567": "pw2"}
-STATE = {"tthai": 1, "k_invoice": False}
+STATE = {"tthai": 1, "k_invoice": False, "timeout_months": False}
 
 
 def shift(d, dx, dy):
@@ -129,6 +130,10 @@ class FakePortal(BaseHTTPRequestHandler):
         mst = auth[len("Bearer TOKEN-"):]
         if u.path.endswith(("/invoices/purchase", "/invoices/sold")) and "," in q.get("sort", ""):
             return self._json(400, {"message": "Không hỗ trợ sắp xếp theo nhiều trường"})
+        if STATE["timeout_months"] and u.path.endswith("/invoices/purchase"):
+            a, b = re.findall(r"(\d\d)/(\d\d)/(\d{4})", q["search"])[:2]
+            if (date(int(b[2]), int(b[1]), int(b[0])) - date(int(a[2]), int(a[1]), int(a[0]))).days > 7:
+                return self._json(500, {"message": "Row retrieval response timeout of 10000, missing responses from nodes"})
         if u.path == "/query/invoices/purchase":
             if "ttxly==5" not in q["search"]:
                 return self._json(200, {"datas": [], "total": 0})
@@ -204,6 +209,7 @@ class Tests(unittest.TestCase):
         FakePortal.calls, FakePortal.captchas, FakePortal.logins, FakePortal.headers = [], {}, [], []
         STATE["tthai"] = 1
         STATE["k_invoice"] = False
+        STATE["timeout_months"] = False
         self.app = t.App(self.tmp, lambda: t.HoaDonClient(self.base, delay=0))
 
     def tearDown(self):
@@ -391,7 +397,7 @@ class Tests(unittest.TestCase):
         page = t.render_invoice_html(self.tmp, "0309999999", "purchase", r["key"])
         for txt in ("HÓA ĐƠN GIÁ TRỊ GIA TĂNG", "So 1 Le Loi", "Giay A4", "But bi", "MISA99ABC"):
             self.assertIn(txt, page)
-        self.assertNotIn("Ghi chu giao hang", page)
+        self.assertIn("Ghi chu giao hang", page)  # dòng ghi chú hiển thị như hoá đơn gốc
 
     def test_session_reuse_and_progress(self):
         """Đồng bộ lần 2 dùng lại phiên đăng nhập: không hỏi captcha, không gọi authenticate."""
@@ -439,6 +445,51 @@ class Tests(unittest.TestCase):
         self.run_job(["0309999999"], kinds=("purchase",), start=date(2026, 10, 1), end=date(2026, 10, 31))
         self.assertEqual(xml_calls(), 1, "lần sau không hỏi lại XML của HĐ không mã")
 
+    def test_portal_timeout_splits_range(self):
+        """Cổng timeout khi tra cả tháng → tự chia theo tuần, vẫn lấy đủ hoá đơn."""
+        STATE["timeout_months"] = True
+        c = t.HoaDonClient(self.base, delay=0)
+        c.token = "TOKEN-0309999999"
+        import unittest.mock as m
+        with m.patch("time.sleep"):
+            invs = c.list_invoices("purchase", date(2026, 10, 1), date(2026, 10, 31), include_mtt=False)
+        self.assertEqual([i["shdon"] for i in invs], [99])
+
+    def test_tools_xml_view(self):
+        page = t.render_xml_invoice((XML % (5, 5)).encode("utf-8"))
+        for txt in ("HÓA ĐƠN GIÁ TRỊ GIA TĂNG", "Cong ty Ban", "So 1 Le Loi", "Cong ty Mua", "Giay A4", "But bi",
+                    "100,000", "TM/CK", "MISA meInvoice", "MISA5ABC", "Không có chữ ký số"):
+            self.assertIn(txt, page)
+        with self.assertRaises(ValueError):
+            t.render_xml_invoice(b"khong phai xml")
+        with self.assertRaises(ValueError):
+            t.render_xml_invoice(b"<a><b/></a>")
+
+    def test_tools_pdf(self):
+        import pypdf
+
+        def pdf(n):
+            w = pypdf.PdfWriter()
+            for _ in range(n):
+                w.add_blank_page(width=200, height=200)
+            b = io.BytesIO()
+            w.write(b)
+            return b.getvalue()
+        merged = t.merge_pdfs([("a.pdf", pdf(2)), ("b.pdf", pdf(3))])
+        self.assertEqual(len(pypdf.PdfReader(io.BytesIO(merged)).pages), 5)
+        with self.assertRaises(ValueError):
+            t.merge_pdfs([("a.pdf", pdf(1))])
+        with self.assertRaisesRegex(ValueError, "b.pdf"):
+            t.merge_pdfs([("a.pdf", pdf(1)), ("b.pdf", b"hong")])
+        self.assertEqual(t.parse_page_ranges("1-3, 5", 6), [[1, 2, 3], [5]])
+        self.assertEqual(t.parse_page_ranges("", 2), [[1], [2]])
+        for bad in ("0-2", "4-9", "a"):
+            with self.assertRaises(ValueError):
+                t.parse_page_ranges(bad, 5)
+        z = zipfile.ZipFile(io.BytesIO(t.split_pdf("hoa don.pdf", merged, "1-2, 5")))
+        self.assertEqual(sorted(z.namelist()), ["hoa don_trang_1-2.pdf", "hoa don_trang_5.pdf"])
+        self.assertEqual(len(pypdf.PdfReader(io.BytesIO(z.read("hoa don_trang_1-2.pdf"))).pages), 2)
+
     def test_expired_token(self):
         c = t.HoaDonClient(self.base, delay=0)
         c.token = "bad"
@@ -465,6 +516,11 @@ class Tests(unittest.TestCase):
             self.assertEqual(self.app.store.get("0309999999")["ten"], "CÔNG TY TNHH MUA")   # tự lấy tên theo MST
             self.assertEqual(len(d["errors"]), 1)                                          # MST không tra được
             self.assertEqual(call("/api/mst-lookup", {"mst": "0309999999"})["ten"], "CÔNG TY TNHH MUA")
+            rows = call("/api/tool/mst", {"text": "0309999999\n0101234567"})["rows"]
+            self.assertEqual([(r["ten"], bool(r["loi"])) for r in rows], [("CÔNG TY TNHH MUA", False), ("", True)])
+            import base64
+            v = call("/api/tool/xml-view", {"data": base64.b64encode((XML % (7, 7)).encode()).decode()})
+            self.assertIn("Giay A4", v["html"])
             call("/api/company/save", {"mst": "0309999999", "ten": "A", "password": "pw1", "vao": True, "ra": False})
             call("/api/company/save", {"mst": "0309999999", "ghichu": "goi lai"})
             st = call("/api/state")
