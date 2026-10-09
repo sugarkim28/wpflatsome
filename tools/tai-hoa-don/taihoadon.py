@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.8.2"
+__version__ = "2.8.3"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -618,6 +618,8 @@ MISA_WWW, MISA_APEX, MISA_DL = "https://www.meinvoice.vn", "https://meinvoice.vn
 
 def misa_pdf(code):
     """MISA meInvoice – tải PDF gốc bằng mã tra cứu, không cần tài khoản. Thử lần lượt:
+    0) đúng link nút "Tải hóa đơn dạng PDF" của trang tra cứu (Default.js của MISA):
+       /tra-cuu/DownloadHandler.ashx?Type=pdf&Code=<mã> – không cần mã ext;
     1) mở trang tra cứu ?sc=<mã> như trình duyệt (giữ cookie) và lấy link DownloadHandler.ashx có sẵn trong trang;
     2) lấy mã thời gian 'ext' từ GetRequestTimeEnCode (theo tài liệu MISA) rồi dựng link
        www.meinvoice.vn/tra-cuu/tra-cuu/DownloadHandler.ashx?Type=pdf&Viewer=1&ext=<ext>&Code=<mã>
@@ -639,7 +641,10 @@ def misa_pdf(code):
             raise PortalError("Không kết nối được meinvoice.vn: %s" % getattr(e, "reason", e))
 
     urls, diag = [], []
-    page = get(lookup, referer=MISA_WWW + "/tra-cuu/").decode("utf-8", "replace")
+    page = get(lookup, referer=MISA_WWW + "/tra-cuu/").decode("utf-8", "replace")  # lấy cookie như trình duyệt
+    direct = get(MISA_WWW + "/tra-cuu/DownloadHandler.ashx?Type=pdf&Code=" + urllib.parse.quote(code))
+    if direct[:4] == b"%PDF":
+        return direct
     for link in re.findall(r"DownloadHandler\.ashx\?[^\"'<>\s]+", page, re.I):
         urls.append(urllib.parse.urljoin(MISA_WWW + "/tra-cuu/", "tra-cuu/" + H.unescape(link)))
     exts = []

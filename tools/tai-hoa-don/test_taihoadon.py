@@ -495,7 +495,7 @@ class Tests(unittest.TestCase):
 
     def test_misa_original_pdf(self):
         """MISA giả mô phỏng trang tra cứu thật: ext có dấu '_' (J1V4E6D_), link DownloadHandler trong trang."""
-        state = {"link_in_page": False, "calls": []}
+        state = {"link_in_page": False, "calls": [], "direct": False}
 
         class FakeMisa(BaseHTTPRequestHandler):
             def log_message(self, *a):
@@ -509,6 +509,9 @@ class Tests(unittest.TestCase):
                 if u.path == "/tra-cuu/" and state["link_in_page"]:
                     body = ('<iframe src="tra-cuu/DownloadHandler.ashx?Type=pdf&amp;Viewer=1&amp;ext=PAGE1234&amp;Code=%s">'
                             % q.get("sc")).encode()
+                elif u.path == "/tra-cuu/DownloadHandler.ashx" and state["direct"] and q.get("Type") == "pdf" \
+                        and q.get("Code") == "MISA99ABC" and "ext" not in q:
+                    body, ctype = b"%PDF-1.4 truc tiep", "application/pdf"
                 elif u.path == "/tra-cuu/GetRequestTimeEnCode":
                     body = b'"J1V4E6D_"'
                 elif u.path == "/tra-cuu/tra-cuu/DownloadHandler.ashx" and q.get("Code") == "MISA99ABC" \
@@ -525,6 +528,10 @@ class Tests(unittest.TestCase):
         import unittest.mock as m
         try:
             with m.patch.multiple(t, MISA_WWW=base, MISA_APEX=base, MISA_DL=base):
+                state["direct"] = True
+                self.assertEqual(t.misa_pdf("MISA99ABC"), b"%PDF-1.4 truc tiep")      # link nút "Tải PDF" của MISA
+                self.assertTrue(state["calls"][-1].startswith("/tra-cuu/DownloadHandler.ashx?Type=pdf&Code=MISA99ABC"))
+                state["direct"] = False
                 self.assertEqual(t.misa_pdf("MISA99ABC"), b"%PDF-1.4 misa goc")       # qua GetRequestTimeEnCode
                 state["link_in_page"] = True
                 self.assertEqual(t.misa_pdf("MISA99ABC"), b"%PDF-1.4 misa goc")       # qua link có sẵn trong trang
