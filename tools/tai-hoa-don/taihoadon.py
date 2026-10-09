@@ -32,11 +32,12 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.4.0"
+__version__ = "2.4.1"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
 XML_WORKERS = 4  # số file XML tải cùng lúc
+NO_XML_MSG = "khongtontaihosogoc"  # cổng báo HĐ không có XML gốc (HĐ không mã), dạng đã bỏ dấu
 # Cổng có tường lửa nhận dạng hành vi: đăng nhập chỉ mang header tối giản như trình duyệt gọi qua proxy
 # của trang; tra cứu/tải XML mang header của trang tra cứu (Action, End-Point). Gửi sai bộ → 403
 # "Hệ thống phát hiện hành vi không hợp lệ".
@@ -123,10 +124,14 @@ def search_query(start, end, ttxly=None):
 
 
 def invoice_date(inv):
+    """Ngày lập theo giờ Việt Nam (cổng trả giờ UTC, vd 2026-10-01T17:00:00Z = 02/10/2026)."""
     raw = str(inv.get("tdlap") or "")
-    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", raw)
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?", raw)
     if m:
-        return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        d = datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4) or 0), int(m.group(5) or 0))
+        if m.group(4) and re.search(r"(Z|[+-]00:?00)$", raw):
+            d += timedelta(hours=7)
+        return d.date()
     m = re.match(r"(\d{2})/(\d{2})/(\d{4})", raw)
     if m:
         return date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
@@ -192,7 +197,8 @@ class HoaDonClient:
                 break
             except urllib.error.HTTPError as e:
                 content = e.read()
-                if e.code in (429, 500, 502, 503, 504) and attempt < retries:
+                # Chỉ thử lại khi cổng quá tải; cổng đã trả thông báo cụ thể (vd "Không tồn tại hồ sơ gốc") thì không.
+                if e.code in (429, 500, 502, 503, 504) and attempt < retries and not self._error_message(content):
                     time.sleep(2 ** attempt * 2)
                     continue
                 if e.code == 401:
@@ -1357,7 +1363,9 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
             status[key] = "Đã có"
         if want_xml:
             existing = os.path.join(xml_dir, invoice_basename(inv) + ".xml")
-            if os.path.exists(existing) and status[key] != "Đổi trạng thái":
+            if (old or {}).get("no_xml") and status[key] != "Đổi trạng thái":
+                inv["_noxml"] = True  # đã biết cổng không có XML gốc của HĐ này
+            elif os.path.exists(existing) and status[key] != "Đổi trạng thái":
                 inv["_xml"] = os.path.relpath(existing, folder)
                 inv["_xmlinfo"] = parse_invoice_xml(existing)
             else:
@@ -1374,8 +1382,11 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
             inv["_xml"] = os.path.relpath(path, folder)
             inv["_xmlinfo"] = parse_invoice_xml(path)
         except PortalError as e:
-            inv["_xml"] = "Lỗi: %s" % e
-            errors[invoice_key(inv)] = str(e)
+            if NO_XML_MSG in _plain(str(e)):
+                inv["_noxml"] = True  # HĐ không mã: cổng chỉ có dữ liệu tổng hợp, không có file XML gốc
+            else:
+                inv["_xml"] = "Lỗi: %s" % e
+                errors[invoice_key(inv)] = str(e)
         with job.lock:
             job.done += 1
 
@@ -1397,13 +1408,16 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
         d = invoice_date(inv)
         rows.append({"loai": loai, "ngay": d.strftime("%d/%m/%Y") if d else "", "mau": str(inv.get("khmshdon") or ""),
                      "kh": inv.get("khhdon") or "", "so": str(inv.get("shdon") or ""), "dongbo": status[key],
-                     "ketqua": ("Lỗi XML: " + errors[key]) if key in errors else "OK"})
+                     "ketqua": ("Lỗi XML: " + errors[key]) if key in errors else
+                     ("OK (HĐ không có XML gốc)" if inv.get("_noxml") else "OK")})
         old = known.get(key)
         tthai = _num(inv.get("tthai"))
         entry = dict(old or {})
         inv["_kind"] = kind
         entry.update(tthai=tthai, tdlap=inv.get("tdlap"),
                      inv={k: inv.get(k) for k in INV_FIELDS if inv.get(k) is not None})
+        if inv.get("_noxml"):
+            entry["no_xml"] = True
         if inv.get("_xmlinfo") is not None:
             entry["xml"] = os.path.relpath(os.path.join(folder, inv["_xml"]), base)
             names = [it["name"] for it in inv["_xmlinfo"]["items"] if it["name"]]
@@ -1793,8 +1807,7 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
       </div>
       <div class="steps" id="sSteps"></div>
       <div class="prog"><i id="sProg"></i></div>
-      <div class="bar"><input id="sFilter" placeholder="Lọc theo ký hiệu, số, kết quả…" style="flex:1">
-        <button class="sec" onclick="openInvoicesFromSync()">Xem hoá đơn</button></div>
+      <div class="bar"><span style="flex:1"></span><button class="sec" onclick="openInvoicesFromSync()">Xem hoá đơn</button></div>
       <div class="tbl" style="max-height:460px"><table id="sTbl"><thead><tr><th>Loại HĐ</th><th>Ngày lập</th><th>Mẫu số</th>
         <th>Ký hiệu</th><th class="n">Số HĐ</th><th>Loại đồng bộ</th><th>Kết quả đồng bộ</th></tr></thead><tbody id="sRows"></tbody></table></div>
     </div>
@@ -2087,16 +2100,15 @@ function renderSync(j) {
   syncRows = j.rows || []; renderSyncRows();
 }
 function renderSyncRows() {
-  const q = $('sFilter').value.trim().toLowerCase(), tb = $('sRows'); tb.innerHTML = '';
-  syncRows.filter(r => !q || Object.values(r).join(' ').toLowerCase().includes(q)).slice(0, 1000).forEach(r => {
+  const tb = $('sRows'); tb.innerHTML = '';
+  syncRows.slice(0, 1500).forEach(r => {
     const tr = tb.insertRow();
     [r.loai, r.ngay, r.mau, r.kh].forEach(v => tr.insertCell().textContent = v);
     const so = tr.insertCell(); so.className = 'n'; so.textContent = r.so;
     tr.insertCell().textContent = r.dongbo;
-    const k = tr.insertCell(); k.textContent = r.ketqua; k.className = r.ketqua === 'OK' ? 'ok' : 'err';
+    const k = tr.insertCell(); k.textContent = r.ketqua; k.className = r.ketqua.startsWith('OK') ? 'ok' : 'err';
   });
 }
-$('sFilter').oninput = renderSyncRows;
 $('sCapIn').addEventListener('keydown', e => { if (e.key === 'Enter') sendCap('sCapIn'); });
 
 // ---- Tab Hoá đơn ----

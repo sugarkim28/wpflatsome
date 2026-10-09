@@ -27,7 +27,7 @@ GLYPHS = {
     "7": "M0 0 Q4 0 9 0 Q6 6 3 12 Z",
 }
 ACCOUNTS = {"0309999999": "pw1", "0101234567": "pw2"}
-STATE = {"tthai": 1}
+STATE = {"tthai": 1, "k_invoice": False}
 
 
 def shift(d, dx, dy):
@@ -130,9 +130,16 @@ class FakePortal(BaseHTTPRequestHandler):
                 all_ = [make_invoice(i, "2026-09-%02d" % (i % 28 + 1), mst) for i in range(1, 61)]
                 page = all_[50:] if q.get("state") == "S2" else all_[:50]
                 return self._json(200, {"datas": page, "total": 60, "state": None if q.get("state") else "S2"})
-            return self._json(200, {"datas": [make_invoice(99, "2026-10-02", mst)], "total": 1})
+            datas = [make_invoice(99, "2026-10-02", mst)]
+            if STATE["k_invoice"]:  # HĐ không mã: cổng không có XML gốc
+                k = make_invoice(100, "2026-10-01", mst)
+                k.update(khhdon="K26THA", tdlap="2026-10-01T17:00:00Z", ttxly=6)
+                datas.append(k)
+            return self._json(200, {"datas": datas, "total": len(datas)})
         if u.path in ("/query/invoices/sold", "/sco-query/invoices/purchase", "/sco-query/invoices/sold"):
             return self._json(200, {"datas": [], "total": 0})
+        if u.path == "/query/invoices/export-xml" and q.get("khhdon", "").startswith("K"):
+            return self._json(500, {"message": "Không tồn tại hồ sơ gốc của hóa đơn."})
         if u.path == "/query/invoices/export-xml":
             buf = io.BytesIO()
             with zipfile.ZipFile(buf, "w") as z:
@@ -190,6 +197,7 @@ class Tests(unittest.TestCase):
         self.tmp = tempfile.mkdtemp()
         FakePortal.calls, FakePortal.captchas, FakePortal.logins, FakePortal.headers = [], {}, [], []
         STATE["tthai"] = 1
+        STATE["k_invoice"] = False
         self.app = t.App(self.tmp, lambda: t.HoaDonClient(self.base, delay=0))
 
     def tearDown(self):
@@ -384,6 +392,24 @@ class Tests(unittest.TestCase):
         clients["0309999999"].login_at = 0
         run()
         self.assertEqual(len(FakePortal.logins), logins + 1)
+
+    def test_no_original_xml_and_vn_date(self):
+        self.assertEqual(t.invoice_date({"tdlap": "2026-10-01T17:00:00Z"}), date(2026, 10, 2))
+        self.assertEqual(t.invoice_date({"tdlap": "2026-10-01T16:59:00Z"}), date(2026, 10, 1))
+        self.assertEqual(t.invoice_date({"tdlap": "2026-10-01"}), date(2026, 10, 1))
+        STATE["k_invoice"] = True
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        start = time.time()
+        job, _ = self.run_job(["0309999999"], kinds=("purchase",), start=date(2026, 10, 1), end=date(2026, 10, 31))
+        self.assertLess(time.time() - start, 5, "không được thử lại khi cổng báo không có XML gốc")
+        rows = {r["so"]: r for r in job.snapshot()["rows"]}
+        self.assertEqual(rows["100"]["ketqua"], "OK (HĐ không có XML gốc)")
+        self.assertEqual(rows["100"]["ngay"], "02/10/2026")
+        self.assertEqual(rows["99"]["ketqua"], "OK")
+        xml_calls = lambda: sum(1 for p, q in FakePortal.calls if p.endswith("export-xml") and q["khhdon"].startswith("K"))
+        self.assertEqual(xml_calls(), 1)
+        self.run_job(["0309999999"], kinds=("purchase",), start=date(2026, 10, 1), end=date(2026, 10, 31))
+        self.assertEqual(xml_calls(), 1, "lần sau không hỏi lại XML của HĐ không mã")
 
     def test_expired_token(self):
         c = t.HoaDonClient(self.base, delay=0)
