@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.0.4"
+__version__ = "3.1.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -674,8 +674,201 @@ def misa_pdf(code):
                       "trang tải trả: %s)" % (code, len(urls), " | ".join(diag) or "rỗng", " | ".join(got) or "rỗng"))
 
 
-# MST nhà cung cấp → hàm tải PDF gốc. Nhà cung cấp có captcha ở trang tra cứu (Viettel, VNPT…) chưa tự động được.
-PDF_FETCHERS = {"0101243150": misa_pdf}
+# ---- EasyInvoice (SoftDreams): trang tra cứu riêng của từng người bán, captcha 4 chữ số ----
+
+def png_pixels(data):
+    """Giải mã PNG 8-bit (xám / RGB / RGBA, không xen kẽ) chỉ bằng thư viện chuẩn → (rộng, cao, hàng điểm ảnh RGB)."""
+    import struct
+    import zlib
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        raise ValueError("không phải ảnh PNG")
+    pos, idat, w, h, ctype = 8, b"", 0, 0, 0
+    while pos + 8 <= len(data):
+        n, typ = struct.unpack(">I4s", data[pos:pos + 8])
+        chunk = data[pos + 8:pos + 8 + n]
+        pos += 12 + n
+        if typ == b"IHDR":
+            w, h, depth, ctype, _, _, inter = struct.unpack(">IIBBBBB", chunk)
+            if depth != 8 or inter or ctype not in (0, 2, 4, 6):
+                raise ValueError("định dạng PNG chưa hỗ trợ")
+        elif typ == b"IDAT":
+            idat += chunk
+        elif typ == b"IEND":
+            break
+    bpp = {0: 1, 2: 3, 4: 2, 6: 4}[ctype]
+    raw = zlib.decompress(idat)
+    stride = w * bpp
+    rows, prev, i = [], bytearray(stride), 0
+    for _ in range(h):
+        f, line = raw[i], bytearray(raw[i + 1:i + 1 + stride])
+        i += 1 + stride
+        for x in range(stride):
+            a = line[x - bpp] if x >= bpp else 0
+            b = prev[x]
+            c = prev[x - bpp] if x >= bpp else 0
+            if f == 1:
+                line[x] = (line[x] + a) & 255
+            elif f == 2:
+                line[x] = (line[x] + b) & 255
+            elif f == 3:
+                line[x] = (line[x] + ((a + b) >> 1)) & 255
+            elif f == 4:
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                line[x] = (line[x] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        prev = line
+        if ctype in (0, 4):
+            rows.append([(line[k * bpp],) * 3 for k in range(w)])
+        else:
+            rows.append([tuple(line[k * bpp:k * bpp + 3]) for k in range(w)])
+    return w, h, rows
+
+
+# Mẫu chữ số của captcha EasyInvoice (chữ trắng font có chân trên nền xám): lưới 10x14 điểm, dạng hex.
+# Tạo từ font Liberation Serif (cùng số đo với Times New Roman) và từ captcha thật đã kiểm chứng.
+EASY_DIGITS = {
+    "0": "1e0cce1f87c0f03c0f03c0f03e1f87738fc 1e18c61b06c1f07c1f07c1f07c1b86639fc 1f0ce63f87c1f07c1f07c1f07e1d8f73cfe 1f1cf61f87e1f03c0f03c0f87e1d8773cfe 1f1ff61d03c0701c0701c0701c0d877fcfe 3f1ce60b83e0f83e0f83e0f83e0d82738fc",
+    "1": "060f8ee0380e0380e0380e0380e0380e3ff 0e0f8ee0380e0380e0380e0380e0380e3ff 0e0f8fe0781e0781e0781e0781e0781e3ff 0e1f86e0380e0380e0380e0380e0380e3ff 0f1fcef03c0f03c0f03c0f03c0f03c0f3ff 1e3f806018060180601806018060181e1ff 1e3f81e018060180601806018060181e1ff",
+    "2": "1e0fe63c0300c020080c00000000007ffff 1f1ff41c0300c0701c0e0f0781c3c0fffff 7e10e41906018060380c06070381c0fffff 7f18e41d0701c070180c06070381c0fffff 7f19f43d0701c070381e0f078181c0fffff 7f38ec380f0380e0381c0e07038180fffff 7f38ec3c0300c0f0381e0f0783c1e0fffff",
+    "3": "0f0fe01c010180e0f80f0040100401e1ffe 1f1fe01c030180e1f80f00c0300c03c1ff6 1f1ff61c0301c7f1f80700c0300d07ffffe 1f1ff61c0301c7f1f80700c0300f07ffffe 3e3fec1c030187e1f00600c0300e07ffbfc 7e10e419060180e1f00e01c0380e07c3ffe 7e30c818060380e1f07e0380781e07c3bfe 7f19e43d0f03c1e1f81e01c0781e07c3ffe 7f19f43d0701c0f1f87f03c0700f07c3fff 7f38ec380e0381e1f00e00c03c0f03e3bfc",
+    "4": "02018020080200802008023ffffc0802008 0301c0f034390c471104fffffffc0401004 0301c0f03c0f04c331cc633ffffc0c0300c 0380e0783e1b8ee3b98e43bffffc0e0380e 0380e0783e1b8ee3b98e63bffffc0e0380e 0380e0783e1f86e338ce63bfffffff0380e 0381e0783e1b86e1388e43bffffc0e0380e",
+    "5": "0fcfe601c0fe3fc0f8060040100000c03e0 7f9fc40100401f87f80e01c0781e07c3bfe 7f9fe40100401007f00601c0380f07c3ffe 7f9fe40100401007f00f01c0781f07c3ffe 7f9fe60180601807f00e00c03c0f03e39fc 7fdff40100401007fc0f01c0700f0763dff",
+    "6": "0f8c260b80e037cffb03c0f83e0d8371cfe 0f9fe781c0c037cffb07c0f03c0dcf7f9fc 1f8c660980c037cffb87c1f03e0f87718fe 1f8e3707c0e0380ffb8fe0f83e0dc370c7c 1fce370d80e0380fffcfe1f8360dc779cff 1fce770d80e03fefff07c1f87e1d8773cff",
+    "7": "fffff80e060180c060180c030180c030180 fffff81a060300c060100c060180c030180 fffffc0a060300c060180c03018060300c0 fffffc0c020380c070180e0301c060380c0 fffffc0f0e0381c070380c070380e0781c0",
+    "8": "1f1cee3f87e1dcf7f9cee1f07c1f87e3dff 1f1cfe1f8761dcf7fdcfe1f07c0f87f3dff 3e18c61b06e198e7f1fee3b07c1f07e19fe 3f186c0701f1dfe7e0fc63b07c0701e05fc 3f186c0701f1dfe7e0fc63b07c0701e1dfe 3f18ee1f87e1d8e7f986c0f03c0f03e1dfe 3f1cee0f83e0dce3f1cee0f83e0f83f38fc",
+    "9": "1e08441b02c0b03c0d861f806030181c1e0 1f1ffe1f0380701e0dff1ec0300c1f7f9fc 1f3cfe1f07c1f07f3dff3fc0701f0fc7bfe 3e18cc1b06c1f07e1dff3fc0601a0ec73fc 3e18cc1f07c0f03c0dc73ec0701e06c3bfc 3f1dee3f07c1f07e1dcf3fc0703e0fc7bfc 3f3cee0b83e0f83f0dfb00c0303f0ee73f8",
+}
+
+
+def _easy_glyphs(data, thr=200):
+    """Tách các chữ số (điểm ảnh gần trắng) theo cột; đường nhiễu màu xám bị loại."""
+    w, h, rows = png_pixels(data)
+    on = [[min(p) > thr for p in r] for r in rows]
+    cols = [any(on[y][x] for y in range(h)) for x in range(w)]
+    out, x = [], 0
+    while x < w:
+        if not cols[x]:
+            x += 1
+            continue
+        s = x
+        while x < w and cols[x]:
+            x += 1
+        ys = [y for y in range(h) if any(on[y][s:x])]
+        if ys and (x - s) * (ys[-1] - ys[0] + 1) >= 20:
+            out.append([r[s:x] for r in on[ys[0]:ys[-1] + 1]])
+    return out
+
+
+def _easy_norm(g, W=10, H=14):
+    gh, gw = len(g), len(g[0])
+    return int("".join("1" if any(g[min(gh - 1, int((y + dy / 3) * gh / H))][min(gw - 1, int((x + dx / 3) * gw / W))]
+                                  for dy in range(3) for dx in range(3)) else "0"
+                       for y in range(H) for x in range(W)), 2)
+
+
+def solve_easy_captcha(data, max_dist=34):
+    """Đọc captcha EasyInvoice → chuỗi 4 chữ số, hoặc None nếu không chắc chắn (khi đó lấy captcha khác)."""
+    try:
+        glyphs = _easy_glyphs(data)
+    except (ValueError, KeyError):
+        return None
+    if len(glyphs) != 4:
+        return None
+    templates = [(int(hx, 16), d) for d, hs in EASY_DIGITS.items() for hx in hs.split()]
+    text = ""
+    for g in glyphs:
+        v = _easy_norm(g)
+        dist, d = min((bin(v ^ t).count("1"), d) for t, d in templates)
+        if dist > max_dist:
+            return None
+        text += d
+    return text
+
+
+EASY_BASE_RE = r"https?://[\w-]+\.easyinvoice\.(com\.)?vn"
+
+
+def easyinvoice_pdf(tra_cuu, tries=8):
+    """EasyInvoice: mở trang tra cứu của người bán, tự giải captcha, tra bằng mã tra cứu rồi bấm
+    "Tải PDF & đính kèm" như trình duyệt: gửi HTML hoá đơn lên /Invoice/DownloadPdfAndFileAttachFromAvailableHtml,
+    nhận fileGuid và tải /Invoice/Download (PDF, hoặc ZIP gồm PDF + file đính kèm)."""
+    import base64
+    import html as H
+    base = (tra_cuu.get("url") or "").rstrip("/")
+    code = tra_cuu.get("code") or ""
+    if not re.fullmatch(EASY_BASE_RE, base):
+        raise PortalError("Không xác định được trang tra cứu EasyInvoice của người bán")
+    jar = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+
+    def call(path, form=None, ajax=False):
+        headers = {"User-Agent": UA_LOGIN, "Accept": "*/*", "Accept-Language": "vi-VN,vi;q=0.9", "Referer": base + "/"}
+        if ajax:
+            headers["X-Requested-With"] = "XMLHttpRequest"
+        body = urllib.parse.urlencode(form).encode() if form is not None else None
+        if body is not None:
+            headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
+            headers["Origin"] = base
+        try:
+            with opener.open(urllib.request.Request(base + path, data=body, headers=headers), timeout=60) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            return e.read() or b""
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            raise PortalError("Không kết nối được %s: %s" % (base, getattr(e, "reason", e)))
+
+    last = ""
+    for _ in range(tries):
+        page = call("/").decode("utf-8", "replace")
+        form = re.search(r'<form[^>]*id="Search"[^>]*>(.*?)</form>', page, re.S | re.I)
+        fields = {}
+        for tag in re.findall(r"<input[^>]*>", form.group(1) if form else page):
+            name = re.search(r'name="([^"]*)"', tag)
+            if name:
+                val = re.search(r'value="([^"]*)"', tag)
+                fields[name.group(1)] = H.unescape(val.group(1)) if val else ""
+        cap = solve_easy_captcha(call("/Captcha/Show"))
+        if not cap:
+            last = "không đọc được captcha"
+            continue
+        fields.update(FKey=code, Capcha=cap)
+        res = call("/Search/Search", fields).decode("utf-8", "replace")
+        token = re.search(r"downloadPdfAndFileAttachFromAvailableHtml\('([^']+)'\)", res)
+        if not token:
+            msg = re.search(r'id="msg"[^>]*value="([^"]*)"', res) or re.search(r'value="([^"]*)"[^>]*id="msg"', res)
+            last = H.unescape(msg.group(1)) if msg else "trang tra cứu không trả kết quả"
+            if re.search(r"x[aá]c th[ựu]c|captcha|capcha", _plain(last) + last.lower()):
+                continue  # đọc sai captcha → thử captcha khác
+            raise PortalError("EasyInvoice: %s" % last)
+        inv = re.search(r'id="InvData"[^>]*value="([^"]*)"', res) or re.search(r'value="([^"]*)"[^>]*id="InvData"', res)
+        try:
+            html_doc = json.loads(H.unescape(inv.group(1))).get("str", "") if inv else ""
+        except ValueError:
+            html_doc = ""
+        html_doc = re.sub(r"^\s*<\?xml[^>]*\?>", "", html_doc)
+        js = call("/Invoice/DownloadPdfAndFileAttachFromAvailableHtml",
+                  {"token": token.group(1), "html": base64.b64encode(html_doc.encode("utf-8")).decode()}, ajax=True)
+        try:
+            j = json.loads(js.decode("utf-8", "replace"))
+        except ValueError:
+            raise PortalError("EasyInvoice không trả mã file PDF")
+        if j.get("msg"):
+            raise PortalError("EasyInvoice: %s" % j["msg"])
+        data = call("/Invoice/Download?" + urllib.parse.urlencode({"fileGuid": j.get("fileGuid", ""),
+                                                                   "fileName": j.get("fileName", "")}))
+        if data[:4] == b"%PDF":
+            return data
+        if data[:2] == b"PK":
+            with zipfile.ZipFile(io.BytesIO(data)) as z:
+                for n in z.namelist():
+                    if n.lower().endswith(".pdf"):
+                        return z.read(n)
+        raise PortalError("EasyInvoice trả file không phải PDF")
+    raise PortalError("EasyInvoice: thử %d lần chưa được (%s)" % (tries, last))
+
+
+# MST nhà cung cấp → hàm tải PDF gốc (nhận thông tin tra cứu). Viettel, VNPT… chưa tự động được.
+PDF_FETCHERS = {"0101243150": lambda t: misa_pdf(t["code"]), "0105987432": easyinvoice_pdf}
 
 
 # Link tải PDF gốc mà trình duyệt của người dùng mở được (MISA chặn chương trình tự động nhưng không chặn trình duyệt).
@@ -775,7 +968,7 @@ def fetch_original_pdf(out_root, mst, kind, key):
     ok, prov = can_fetch_pdf(e.get("tra_cuu"))
     if not ok:
         raise ValueError("Chưa hỗ trợ tự tải PDF gốc của nhà cung cấp này – bấm 'Tra cứu' để tải tay rồi '+PDF'")
-    return attach_pdf(out_root, mst, kind, key, PDF_FETCHERS[prov](e["tra_cuu"]["code"]))
+    return attach_pdf(out_root, mst, kind, key, PDF_FETCHERS[prov](e["tra_cuu"]))
 
 
 def parse_invoice_xml(xml_path):
@@ -2242,7 +2435,8 @@ def query_invoices(out_root, mst, f):
             "duyet": duyet, "dv": bool(e.get("dv")), "mat_hang": e.get("mat_hang", ""), "note": e.get("note", ""),
             "xml": xml, "html": html, "pdf": pdf or (e.get("pdf") if e.get("pdf") and
                                                      os.path.exists(os.path.join(base, e["pdf"])) else ""),
-            "tra_cuu": e.get("tra_cuu") or {}, "pdf_url": browser_pdf_url(e.get("tra_cuu"))})
+            "tra_cuu": e.get("tra_cuu") or {}, "pdf_url": browser_pdf_url(e.get("tra_cuu")),
+            "can_fetch": can_fetch_pdf(e.get("tra_cuu"))[0]})
     rows.sort(key=lambda r: r.pop("_sort"))
     return rows
 
@@ -3214,10 +3408,13 @@ function renderInv() {
         if (t.url) window.open(t.url, '_blank'); else prompt((t.ncc || '') + ' – mã tra cứu', t.code); };
       ct.append(a);
     }
-    if (!r.pdf && r.pdf_url) {
-      const g = el('a', 'lk', 'Tải PDF gốc'); g.href = '#'; g.title = 'Trình duyệt tải PDF gốc từ ' + t.ncc + ' rồi phần mềm tự gắn';
+    if (!r.pdf && (r.pdf_url || r.can_fetch)) {
+      const g = el('a', 'lk', 'Tải PDF gốc'); g.href = '#'; g.title = 'Tải PDF gốc từ ' + t.ncc + ' rồi tự gắn vào hoá đơn';
       g.onclick = async ev => { ev.preventDefault();
-        if (me.server) { try { await post('/api/invoice/fetch-pdf', {mst: $('hMst').value, kind, key: r.key}); loadInv(); return; } catch (e) {} }
+        if (me.server || !r.pdf_url) {  // máy chủ / phần mềm tự tải (EasyInvoice tự giải captcha)
+          g.textContent = 'Đang tải…'; $('hErr').textContent = '';
+          try { await post('/api/invoice/fetch-pdf', {mst: $('hMst').value, kind, key: r.key}); loadInv(); return; }
+          catch (e) { g.textContent = 'Tải PDF gốc'; if (!r.pdf_url) { $('hErr').textContent = r.shdon + ': ' + e.message; return; } } }
         browserDownload([r.pdf_url]); };
       ct.append(g);
     }
@@ -3257,16 +3454,24 @@ $('hImpFiles').onchange = async () => {
 };
 async function bulkPdf() {
   const sel = hRows.filter(r => hSel.has(r.key)), src = sel.length ? sel : hRows;
-  let need = src.filter(r => !r.pdf && r.pdf_url);
-  if (!need.length) { $('hErr').textContent = 'Không có hoá đơn nào cần tải PDF gốc (hiện tự tải được: MISA). Nhà cung cấp khác: bấm "Tra cứu" rồi "Gắn PDF gốc có sẵn".'; return; }
-  if (me.server) {  // bản web: máy chủ thử tải trước, phần còn lại để trình duyệt tải về máy
-    const b = $('hBulkPdf'); b.disabled = true; b.textContent = 'Máy chủ đang tải ' + need.length + ' PDF…';
-    try { const f = hFilters(false); f.keys = need.map(r => r.key);
-      const d = await post('/api/invoice/fetch-pdf-bulk', {mst: $('hMst').value, filters: f});
-      if (d.ok) { await loadInv(); need = hRows.filter(r => f.keys.includes(r.key) && !r.pdf && r.pdf_url); }
-    } catch (e) {}
+  let need = src.filter(r => !r.pdf && (r.pdf_url || r.can_fetch));
+  if (!need.length) { $('hErr').textContent = 'Không có hoá đơn nào cần tải PDF gốc (hiện tự tải được: MISA, EasyInvoice). Nhà cung cấp khác: bấm "Tra cứu" rồi "Gắn PDF gốc có sẵn".'; return; }
+  // Phần mềm tự tải trước (EasyInvoice; bản web: cả MISA), từng nhóm 10 HĐ; MISA bản máy: trình duyệt tải.
+  const auto = need.filter(r => r.can_fetch && (me.server || !r.pdf_url)), errs = [];
+  if (auto.length) {
+    const b = $('hBulkPdf'); b.disabled = true; let done = 0;
+    for (let i = 0; i < auto.length; i += 10) {
+      b.textContent = 'Đang tải PDF gốc ' + Math.min(i + 10, auto.length) + '/' + auto.length + '…';
+      try { const f = hFilters(false); f.keys = auto.slice(i, i + 10).map(r => r.key);
+        const d = await post('/api/invoice/fetch-pdf-bulk', {mst: $('hMst').value, filters: f}); done += d.ok; errs.push(...d.errors); }
+      catch (e) { errs.push(e.message); }
+    }
     b.disabled = false; b.textContent = 'Tải HĐ gốc hàng loạt';
-    if (!need.length) { $('hErr').innerHTML = ''; $('hErr').append(el('div', 'ok', 'Đã tải và gắn PDF gốc.')); return; }
+    await loadInv();
+    const keys = new Set(need.map(r => r.key)); need = hRows.filter(r => keys.has(r.key) && !r.pdf && r.pdf_url);
+    $('hErr').innerHTML = ''; $('hErr').append(el('div', 'ok', 'Đã tải và gắn ' + done + '/' + auto.length + ' PDF gốc.'));
+    errs.slice(0, 10).forEach(x => $('hErr').append(el('div', 'err', x)));
+    if (!need.length) return;
   }
   browserDownload(need.map(r => r.pdf_url));
 }

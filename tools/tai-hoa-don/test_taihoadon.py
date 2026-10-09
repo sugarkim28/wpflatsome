@@ -879,6 +879,83 @@ class Tests(unittest.TestCase):
         finally:
             t._FERNET = None
 
+    def test_easyinvoice_captcha(self):
+        d = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data")
+        for name in ("1588", "3493", "2360", "4891", "8531"):
+            with open(os.path.join(d, "easy_%s.png" % name), "rb") as f:
+                self.assertEqual(t.solve_easy_captcha(f.read()), name)
+        self.assertIsNone(t.solve_easy_captcha(b"khong phai anh"))
+
+    def test_easyinvoice_pdf(self):
+        """Trang tra cứu EasyInvoice giả: captcha 4 số, /Search/Search, tải PDF qua fileGuid."""
+        import html as H
+        d = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data")
+        caps = [open(os.path.join(d, "easy_%s.png" % n), "rb").read() for n in ("1588", "3493")]
+        seen = {"posts": [], "n": 0}
+
+        class Easy(BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def _out(self, body, ctype="text/html; charset=utf-8", cookie=None):
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                if cookie:
+                    self.send_header("Set-Cookie", cookie)
+                self.end_headers()
+                self.wfile.write(body)
+
+            def do_GET(self):
+                if self.path == "/":
+                    return self._out(b'<form action="/Search/Search" id="Search" method="post">'
+                                     b'<input id="typeSearch" name="typeSearch" type="hidden" value="fKeySearch">'
+                                     b'<input id="iFkey" name="FKey" value=""><input id="Capcha" name="Capcha" value="">'
+                                     b'</form>', cookie="ASP.NET_SessionId=abc; path=/")
+                if self.path == "/Captcha/Show":
+                    seen["cap"] = ("1588", "3493")[seen["n"] % 2]
+                    seen["n"] += 1
+                    return self._out(caps[(seen["n"] - 1) % 2], "image/png")
+                if self.path.startswith("/Invoice/Download?fileGuid=g1"):
+                    return self._out(b"%PDF-1.4 easy goc", "application/pdf")
+                self.send_error(404)
+
+            def do_POST(self):
+                form = dict(urllib.parse.parse_qsl(self.rfile.read(int(self.headers["Content-Length"])).decode()))
+                seen["posts"].append((self.path, form))
+                if "ASP.NET_SessionId=abc" not in (self.headers.get("Cookie") or ""):
+                    return self._out(b'<input id="msg" name="msg" value="Phi&#234;n h&#7871;t h&#7841;n">')
+                if self.path == "/Search/Search":
+                    if form.get("Capcha") != seen["cap"]:
+                        return self._out('<input id="msg" name="msg" value="Mã xác thực không đúng">'.encode())
+                    if form.get("FKey") != "HIUOVGNMC":
+                        return self._out('<input id="msg" name="msg" value="Không tìm thấy hóa đơn">'.encode())
+                    inv = H.escape(json.dumps({"str": "<?xml version=\"1.0\"?><html><body>HOA DON</body></html>"}))
+                    return self._out(('<input id="InvData" name="InvData" type="hidden" value="%s">'
+                                      '<button onclick="downloadPdfAndFileAttachFromAvailableHtml(\'TOK/123+\');">'
+                                      % inv).encode())
+                if self.path == "/Invoice/DownloadPdfAndFileAttachFromAvailableHtml":
+                    import base64
+                    ok = form.get("token") == "TOK/123+" and base64.b64decode(form["html"]).decode() == \
+                        "<html><body>HOA DON</body></html>"
+                    return self._out(json.dumps({"fileGuid": "g1" if ok else "", "fileName": "a.pdf",
+                                                 "msg": "" if ok else "sai"}).encode(), "application/json")
+                self.send_error(404)
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), Easy)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        old = t.EASY_BASE_RE
+        t.EASY_BASE_RE = r"http://127\.0\.0\.1:\d+"
+        try:
+            url = "http://127.0.0.1:%d" % srv.server_port
+            self.assertEqual(t.easyinvoice_pdf({"url": url, "code": "HIUOVGNMC"}), b"%PDF-1.4 easy goc")
+            self.assertEqual(seen["posts"][0][1]["typeSearch"], "fKeySearch")
+            with self.assertRaisesRegex(t.PortalError, "Không tìm thấy"):
+                t.easyinvoice_pdf({"url": url, "code": "SAI"})
+            self.assertTrue(t.can_fetch_pdf({"ncc_mst": "0105987432", "code": "X"})[0])
+        finally:
+            t.EASY_BASE_RE = old
+            srv.shutdown()
+            srv.server_close()
+
 
 if __name__ == "__main__":
     unittest.main()
