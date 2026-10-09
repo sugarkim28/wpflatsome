@@ -357,6 +357,34 @@ class Tests(unittest.TestCase):
             self.assertIn(txt, page)
         self.assertNotIn("Ghi chu giao hang", page)
 
+    def test_session_reuse_and_progress(self):
+        """Đồng bộ lần 2 dùng lại phiên đăng nhập: không hỏi captcha, không gọi authenticate."""
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        clients = {}
+
+        def run():
+            job = t.Job()
+            job.running = True
+            helper = AutoAnswer(job)
+            helper.start()
+            t.run_batch(job, self.app.store, self.app.solver, ["0309999999"], ["purchase"], date(2026, 10, 1),
+                        date(2026, 10, 31), True, True, self.tmp, False, self.app.client_factory, clients)
+            return job, helper
+        job1, h1 = run()
+        snap = job1.snapshot()
+        self.assertEqual((snap["phase"], snap["found"], len(snap["rows"])), ("đồng bộ xong", {"purchase": 1}, 1))
+        self.assertEqual(snap["rows"][0]["dongbo"], "Mới")
+        self.assertTrue(snap["auth"].startswith("thành công"))
+        logins = len(FakePortal.logins)
+        job2, h2 = run()
+        self.assertEqual((h2.asked, len(FakePortal.logins)), (0, logins))
+        self.assertEqual(job2.snapshot()["rows"][0]["dongbo"], "Đã có")
+        self.assertIn("dùng lại phiên", job2.snapshot()["auth"])
+        # Token hết hạn → đăng nhập lại
+        clients["0309999999"].login_at = 0
+        run()
+        self.assertEqual(len(FakePortal.logins), logins + 1)
+
     def test_expired_token(self):
         c = t.HoaDonClient(self.base, delay=0)
         c.token = "bad"

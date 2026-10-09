@@ -32,10 +32,11 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.3.0"
+__version__ = "2.4.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
+XML_WORKERS = 4  # số file XML tải cùng lúc
 # Cổng có tường lửa nhận dạng hành vi: đăng nhập chỉ mang header tối giản như trình duyệt gọi qua proxy
 # của trang; tra cứu/tải XML mang header của trang tra cứu (Action, End-Point). Gửi sai bộ → 403
 # "Hệ thống phát hiện hành vi không hợp lệ".
@@ -141,7 +142,7 @@ def safe_name(text):
 # ---------------------------------------------------------------------------
 
 class HoaDonClient:
-    def __init__(self, base_url=BASE_URL, timeout=60, verify_ssl=True, delay=0.4):
+    def __init__(self, base_url=BASE_URL, timeout=60, verify_ssl=True, delay=0.15):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.delay = delay
@@ -257,7 +258,22 @@ class HoaDonClient:
             raise PortalError(data.get("message") or "Đăng nhập không thành công.")
         self.token = token
         self.username = username
+        self.login_at = time.time()
         return token
+
+    def token_valid(self, margin=120):
+        """Token còn hạn? Đọc 'exp' trong JWT; không đọc được thì coi hạn 30 phút kể từ lúc đăng nhập."""
+        if not self.token:
+            return False
+        import base64
+        try:
+            part = self.token.split(".")[1]
+            exp = json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4))).get("exp")
+        except (IndexError, ValueError, AttributeError):
+            exp = None
+        if not exp:
+            exp = getattr(self, "login_at", 0) + 1800
+        return time.time() < exp - margin
 
     # -- Tra cứu -------------------------------------------------------------
     def _sources(self, kind, include_mtt):
@@ -1182,6 +1198,20 @@ class CaptchaSolver:
             _save_json(self.path, self.templates)
         return True
 
+    def save_sample(self, svg, answer):
+        """Lưu vài captcha gần nhất (ảnh + đáp án) vào _cau-hinh/captcha-mau/ để chẩn đoán khi không tự học được."""
+        try:
+            folder = os.path.join(os.path.dirname(self.path), "captcha-mau")
+            os.makedirs(folder, exist_ok=True)
+            files = sorted(os.listdir(folder))
+            for old in files[:-19]:
+                os.remove(os.path.join(folder, old))
+            with open(os.path.join(folder, "%s_%s.svg" % (datetime.now().strftime("%Y%m%d%H%M%S%f"), safe_name(answer))),
+                      "w", encoding="utf-8") as fh:
+                fh.write(svg)
+        except OSError:
+            pass
+
     def forget(self, svg):
         """Captcha tự giải bị cổng báo sai → bỏ các mẫu đã dùng để lần sau hỏi lại người dùng."""
         with self.lock:
@@ -1212,6 +1242,12 @@ class Job:
         self.need_captcha = None
         self._answer = None
         self._event = threading.Event()
+        self.started = time.time()
+        self.finished = None
+        self.auth = ""          # trạng thái chứng thực tài khoản
+        self.found = {}         # {'purchase': n, 'sold': n}
+        self.rows = []          # kết quả đồng bộ từng hoá đơn
+        self.phase = "chờ đồng bộ"
 
     def say(self, msg):
         with self.lock:
@@ -1244,22 +1280,33 @@ class Job:
         with self.lock:
             return {"running": self.running, "log": list(self.log), "done": self.done, "total": self.total,
                     "current": self.current, "results": list(self.results), "files": list(self.files),
-                    "need_captcha": self.need_captcha}
+                    "need_captcha": self.need_captcha, "auth": self.auth, "found": dict(self.found),
+                    "rows": self.rows[-1500:], "phase": self.phase,
+                    "elapsed": round((self.finished or time.time()) - self.started, 1)}
 
 
 def login_company(job, client, company, solver):
     """Đăng nhập một doanh nghiệp: tự giải captcha nếu đã học, không thì hỏi người dùng.
     Sai mật khẩu → dừng ngay (không thử lại để tránh bị khoá tài khoản)."""
+    if client.token_valid() and client.username == company["mst"]:
+        job.auth = "thành công (dùng lại phiên đăng nhập)"
+        job.say("%s: dùng lại phiên đăng nhập còn hạn" % company["mst"])
+        return
     password = unprotect(company.get("pw"))
     if not password:
         raise PortalError("Chưa nhập mật khẩu hoadondientu.gdt.gov.vn")
+    job.auth = "đang đăng nhập"
     for _ in range(4):
         cap = client.get_captcha()
         text = solver.solve(cap["content"])
         auto = text is not None
         if not auto:
-            job.say("%s: cần nhập captcha" % company["mst"])
+            glyphs = captcha_glyphs(cap["content"])
+            unknown = sum(1 for g in glyphs if g[0] not in solver.templates)
+            job.say("%s: cần nhập captcha (ảnh có %d ký tự, %d ký tự chưa học)" % (company["mst"], len(glyphs), unknown))
+            job.auth = "chờ nhập captcha"
             text = job.ask_captcha(company, cap["content"]).upper()  # captcha chỉ gồm A-Z, 0-9
+            solver.save_sample(cap["content"], text)
         try:
             client.login(company["mst"], password, text, cap["key"])
         except PortalError as e:
@@ -1269,8 +1316,9 @@ def login_company(job, client, company, solver):
                 job.say("%s: captcha sai, thử lại" % company["mst"])
                 continue
             raise
-        if not auto:
-            solver.learn(cap["content"], text)
+        if not auto and not solver.learn(cap["content"], text):
+            job.say("Không học được captcha này (số ký tự trong ảnh khác số ký tự đã gõ) – đã lưu mẫu để kiểm tra")
+        job.auth = "thành công" + (" (tự giải captcha)" if auto else "")
         job.say("%s: đăng nhập thành công%s" % (company["mst"], " (tự giải captcha)" if auto else ""))
         return
     raise PortalError("Nhập sai captcha quá nhiều lần")
@@ -1284,42 +1332,74 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
     folder = os.path.join(base, "%s_%s" % (label, period))
     known = _load_json(index_file(out_root, mst), {}).get(kind, {})
 
+    job.phase = "đang tra danh sách hoá đơn"
     invoices = client.list_invoices(kind, start, end, include_mtt, progress=lambda m: job.say("%s: %s" % (mst, m)))
-    new, changes = 0, []
+    loai = "Mua vào" if kind == "purchase" else "Bán ra"
     with job.lock:
-        job.total += len(invoices) if want_xml else 0
+        job.found[kind] = len(invoices)
+    job.phase = "đang đồng bộ hoá đơn"
+    new, changes, todo, status = 0, [], [], {}
+    xml_dir = os.path.join(folder, "xml")
     for inv in invoices:
-        if job.cancel:
-            raise Cancelled()
         key = invoice_key(inv)
         old = known.get(key)
         tthai = _num(inv.get("tthai"))
         if old is None:
             new += 1
+            status[key] = "Mới"
         elif old.get("tthai") != tthai:
+            status[key] = "Đổi trạng thái"
             changes.append(_inv_head(inv)[:5] + [TTHAI_LABELS.get(old.get("tthai"), old.get("tthai")),
                                                  TTHAI_LABELS.get(tthai, tthai)])
             job.say("%s: HĐ %s/%s đổi trạng thái → %s" % (mst, inv.get("khhdon"), inv.get("shdon"),
                                                           TTHAI_LABELS.get(tthai, tthai)))
+        else:
+            status[key] = "Đã có"
         if want_xml:
-            xml_dir = os.path.join(folder, "xml")
-            name = invoice_basename(inv)
-            existing = os.path.join(xml_dir, name + ".xml")
-            try:
-                if os.path.exists(existing) and (old or {}).get("tthai") == tthai:
-                    path = existing
-                else:
-                    path = save_xml(client.export_xml(inv), xml_dir, name)
-                    time.sleep(client.delay)
-                inv["_xml"] = os.path.relpath(path, folder)
-                inv["_xmlinfo"] = parse_invoice_xml(path)
-            except PortalError as e:
-                inv["_xml"] = "Lỗi: %s" % e
-                job.say("%s: không tải được XML %s/%s: %s" % (mst, inv.get("khhdon"), inv.get("shdon"), e))
-                if "hết hạn" in str(e):
-                    raise
-            with job.lock:
-                job.done += 1
+            existing = os.path.join(xml_dir, invoice_basename(inv) + ".xml")
+            if os.path.exists(existing) and status[key] != "Đổi trạng thái":
+                inv["_xml"] = os.path.relpath(existing, folder)
+                inv["_xmlinfo"] = parse_invoice_xml(existing)
+            else:
+                todo.append(inv)
+    errors = {}
+    with job.lock:
+        job.total += len(todo)
+
+    def fetch(inv):
+        if job.cancel:
+            return
+        try:
+            path = save_xml(client.export_xml(inv), xml_dir, invoice_basename(inv))
+            inv["_xml"] = os.path.relpath(path, folder)
+            inv["_xmlinfo"] = parse_invoice_xml(path)
+        except PortalError as e:
+            inv["_xml"] = "Lỗi: %s" % e
+            errors[invoice_key(inv)] = str(e)
+        with job.lock:
+            job.done += 1
+
+    if todo:
+        # Tải XML song song (vừa phải để cổng không chặn).
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=XML_WORKERS) as pool:
+            list(pool.map(fetch, todo))
+    if job.cancel:
+        raise Cancelled()
+    if any("hết hạn" in m for m in errors.values()):
+        raise PortalError("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.")
+    for key, msg in errors.items():
+        job.say("%s: không tải được XML %s: %s" % (mst, key.split("|", 2)[-1].replace("|", "/"), msg))
+
+    rows = []
+    for inv in invoices:
+        key = invoice_key(inv)
+        d = invoice_date(inv)
+        rows.append({"loai": loai, "ngay": d.strftime("%d/%m/%Y") if d else "", "mau": str(inv.get("khmshdon") or ""),
+                     "kh": inv.get("khhdon") or "", "so": str(inv.get("shdon") or ""), "dongbo": status[key],
+                     "ketqua": ("Lỗi XML: " + errors[key]) if key in errors else "OK"})
+        old = known.get(key)
+        tthai = _num(inv.get("tthai"))
         entry = dict(old or {})
         inv["_kind"] = kind
         entry.update(tthai=tthai, tdlap=inv.get("tdlap"),
@@ -1330,6 +1410,8 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
             entry["mat_hang"] = "; ".join(names)[:500]
             entry["tra_cuu"] = lookup_info(inv["_xmlinfo"])
         known[key] = entry
+    with job.lock:
+        job.rows.extend(rows)
     save_index_kind(out_root, mst, kind, known)
 
     paths = write_reports(invoices, folder, "bang-ke-%s_%s" % (label, period), csv_only=True)
@@ -1347,8 +1429,10 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
 
 
 def run_batch(job, store, solver, msts, kinds, start, end, include_mtt, want_xml, out_root,
-              test_only=False, client_factory=None):
+              test_only=False, client_factory=None, clients=None):
+    """clients: dict MST → HoaDonClient để giữ phiên đăng nhập giữa các lần đồng bộ (không phải nhập lại captcha)."""
     client_factory = client_factory or HoaDonClient
+    clients = {} if clients is None else clients
     try:
         for mst in msts:
             if job.cancel:
@@ -1358,8 +1442,11 @@ def run_batch(job, store, solver, msts, kinds, start, end, include_mtt, want_xml
                 continue
             with job.lock:
                 job.current = mst
-            client = client_factory()
+            client = clients.get(mst)
+            if client is None:
+                client = clients[mst] = client_factory()
             try:
+                job.phase = "đang chứng thực tài khoản"
                 login_company(job, client, company, solver)
                 store.update(mst, lambda c: c.update(loi=""))
                 if test_only:
@@ -1367,8 +1454,17 @@ def run_batch(job, store, solver, msts, kinds, start, end, include_mtt, want_xml
                 for kind in kinds:
                     if not company.get("vao" if kind == "purchase" else "ra", True):
                         continue
-                    total, new, known = sync_kind(job, client, company, kind, start, end, include_mtt,
-                                                  want_xml, out_root)
+                    try:
+                        total, new, known = sync_kind(job, client, company, kind, start, end, include_mtt,
+                                                      want_xml, out_root)
+                    except PortalError as e:
+                        if "hết hạn" not in str(e):
+                            raise
+                        job.say("%s: phiên hết hạn, đăng nhập lại" % mst)
+                        client.token = None
+                        login_company(job, client, company, solver)
+                        total, new, known = sync_kind(job, client, company, kind, start, end, include_mtt,
+                                                      want_xml, out_root)
                     stamp = datetime.now().strftime("%d.%m.%y %H:%M")
 
                     def upd(c, kind=kind, new=new, known=known, stamp=stamp):
@@ -1380,11 +1476,17 @@ def run_batch(job, store, solver, msts, kinds, start, end, include_mtt, want_xml
                 break
             except Exception as e:  # ghi lỗi của DN này rồi chuyển sang DN tiếp theo
                 msg = str(e)
+                if not job.auth.startswith("thành công"):
+                    job.auth = "thất bại – " + msg
                 job.say("%s: LỖI %s" % (mst, msg))
                 store.update(mst, lambda c: c.update(loi=msg))
         job.say("Hoàn tất.")
+        job.phase = "đồng bộ xong" if not job.cancel else "đã dừng"
     finally:
         with job.lock:
+            job.finished = time.time()
+            if job.phase not in ("đồng bộ xong", "đã dừng"):
+                job.phase = "lỗi"
             job.running = False
             job.current = None
             job.need_captcha = None
@@ -1651,11 +1753,53 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
 .flt select,.flt input,select.sm{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit;width:100%}
 #hTbl td,#hTbl th{font-size:13px;padding:6px}#hTbl select{min-width:112px}#hTbl td.mh{max-width:260px;white-space:normal}
 #hTbl tfoot td{font-weight:700;color:var(--acc)}.pager{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
-.pager button{padding:3px 9px}.pager .cur{background:var(--err);border-color:var(--err)}a.lk{color:var(--acc);margin-right:6px}
+.pager button{padding:3px 9px}
+.sync{display:grid;grid-template-columns:minmax(260px,360px) 1fr;gap:20px}@media(max-width:800px){.sync{grid-template-columns:1fr}}
+.sync label{margin-top:10px}.sync input,.sync select{width:100%}.sync .chk label{margin:0}.sync .chk input{width:auto}.bigbtn{display:block;width:100%;margin-top:8px;padding:10px;font-weight:600;border:0}
+.b-vao{background:#4361ee}.b-ra{background:#e5534b}.b-vr{background:#8c0f9d}.advice{background:#eef0ff;border:1px solid #c9ceff;border-radius:8px;padding:12px;margin-top:12px;color:#222;font-size:14px;line-height:1.7}
+.advice h4{color:#5503ca;margin:0 0 6px}.badge{display:inline-block;padding:2px 8px;border-radius:5px;color:#fff;font-size:12px;background:#6c757d}
+.badge.run{background:#f0a500}.badge.ok{background:#1e8449}.badge.bad{background:#c0392b}.steps{line-height:1.9;margin:10px 0}
+.crumb{font-size:13px;color:var(--mute);margin-bottom:10px}.crumb b{color:var(--fg)}#sTbl td,#sTbl th{font-size:13px;padding:5px}.pager .cur{background:var(--err);border-color:var(--err)}a.lk{color:var(--acc);margin-right:6px}
 </style></head><body>
 <header><b>Tải hoá đơn</b><nav><a href="#" id="navDN" class="on" onclick="tab('DN');return false">Doanh nghiệp</a>
 <a href="#" id="navHD" onclick="tab('HD');return false">Hoá đơn</a></nav><span style="flex:1"></span><small id="capStat"></small></header>
 <main>
+<section class="card hide" id="tabSYNC">
+  <div class="crumb"><a href="#" onclick="tab('DN');return false">Doanh nghiệp</a> › <b id="sName"></b> › Đồng bộ</div>
+  <div class="sync">
+    <div>
+      <label>Chọn khoảng thời gian</label><div style="display:flex;gap:8px"><select id="sPer"></select>
+        <input type="number" id="sYear" style="width:90px"></div>
+      <label>Từ ngày</label><input type="date" id="sFrom"><label>Đến ngày</label><input type="date" id="sTo">
+      <div class="chk"><label><input type="checkbox" id="sMtt" checked> Gồm máy tính tiền</label>
+        <label><input type="checkbox" id="sXml" checked> Tải XML</label></div>
+      <button class="bigbtn b-vao" onclick="runSync(['purchase'])">Đồng bộ HĐĐT ĐẦU VÀO</button>
+      <button class="bigbtn b-ra" onclick="runSync(['sold'])">Đồng bộ HĐĐT ĐẦU RA</button>
+      <button class="bigbtn b-vr" onclick="runSync(['purchase','sold'])">Đồng bộ HĐĐT VÀO/RA</button>
+      <div class="advice"><h4>KHUYẾN CÁO SỬ DỤNG HIỆU QUẢ</h4>
+        <b>Nên bấm Đồng bộ trước khi kiểm tra số liệu vì:</b><br>
+        1. Có hoá đơn người bán ký trễ, hoặc hoá đơn không mã (ký hiệu K) gửi lên cơ quan thuế trễ 15–45 ngày – đồng bộ lại để lấy <b>đủ số lượng hoá đơn</b>.<br>
+        2. Hoá đơn tải về là HĐ mới nhưng sau đó người bán huỷ / điều chỉnh / thay thế – đồng bộ lại để có <b>trạng thái mới nhất</b>.<br>
+        <b style="color:#1f3fb0">Hoá đơn đã tải rồi sẽ không tải lại XML, nên đồng bộ nhiều lần không tốn thời gian.</b></div>
+    </div>
+    <div>
+      <div>Trạng thái: <span class="badge" id="sBadge">chờ đồng bộ</span> <button class="red sm hide" id="sStop" onclick="post('/api/stop',{})">Dừng</button></div>
+      <div id="sCapBox" class="card hide" style="border-color:var(--acc);margin-top:10px">
+        <div>Nhập captcha:</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">
+          <span class="capimg" id="sCapImg"></span><input type="text" id="sCapIn" placeholder="ký tự trong ảnh" autocomplete="off">
+          <button onclick="sendCap('sCapIn')">Gửi</button></div>
+        <div class="hint">Chỉ cần nhập khi đăng nhập lần đầu hoặc khi phiên đã hết hạn.</div>
+      </div>
+      <div class="steps" id="sSteps"></div>
+      <div class="prog"><i id="sProg"></i></div>
+      <div class="bar"><input id="sFilter" placeholder="Lọc theo ký hiệu, số, kết quả…" style="flex:1">
+        <button class="sec" onclick="openInvoicesFromSync()">Xem hoá đơn</button></div>
+      <div class="tbl" style="max-height:460px"><table id="sTbl"><thead><tr><th>Loại HĐ</th><th>Ngày lập</th><th>Mẫu số</th>
+        <th>Ký hiệu</th><th class="n">Số HĐ</th><th>Loại đồng bộ</th><th>Kết quả đồng bộ</th></tr></thead><tbody id="sRows"></tbody></table></div>
+    </div>
+  </div>
+</section>
 <section class="card hide" id="tabHD">
   <div class="flt">
     <select id="hMst" style="grid-column:span 2"></select>
@@ -1672,7 +1816,7 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
     <select id="hPer"></select><input type="date" id="hFrom"><input type="date" id="hTo">
   </div>
   <div class="bar">
-    <button class="sec" onclick="syncInv()">Đồng bộ</button><button onclick="hPage=0;loadInv()">Tìm kiếm</button>
+    <button class="sec" onclick="openSync($('hMst').value)">Đồng bộ</button><button onclick="hPage=0;loadInv()">Tìm kiếm</button>
     <span style="flex:1"></span>
     <select class="sm" id="hExp" style="width:auto" onchange="exportInv(this.value);this.value=''">
       <option value="">Kết xuất…</option><option value="xlsx">EXCEL.XLSX</option><option value="xml">XML.ZIP</option>
@@ -1800,7 +1944,7 @@ function render() {
     const s = c.so_hd || {}, v = s.purchase || 0, r = s.sold || 0;
     [v, r, v + r].forEach(n => { const x = tr.insertCell(); x.className = 'n'; x.textContent = fmt(n); });
     const act = tr.insertCell(); act.style.whiteSpace = 'nowrap';
-    const b1 = el('button', 'sm', 'Tải'); b1.onclick = () => openBatch([c.mst]);
+    const b1 = el('button', 'sm', 'Đồng bộ'); b1.onclick = () => openSync(c.mst);
     const b2 = el('button', 'sm sec', 'Sửa'); b2.onclick = () => openEdit(c); b2.style.marginLeft = '4px';
     const b3 = el('button', 'sm sec', 'Xem HĐ'); b3.onclick = () => { $('hMst').value = c.mst; tab('HD'); }; b3.style.marginLeft = '4px';
     act.append(b1, b2, b3);
@@ -1851,9 +1995,11 @@ async function runBatch() {
         hide('mBatch'); } catch (e) { $('bErr').textContent = e.message; }
 }
 async function start(body) { await post('/api/run', body); show('jobCard'); poll(); }
-async function sendCap() { const v = $('capIn').value.trim(); if (!v) return; $('capIn').value = ''; hide('capBox'); await post('/api/captcha', {answer: v}); poll(); }
+async function sendCap(id) { id = id || 'capIn'; const v = $(id).value.trim(); if (!v) return; $(id).value = ''; hide('capBox'); hide('sCapBox');
+  await post('/api/captcha', {answer: v}); poll(); }
 let lastCap = null;
 function renderJob(j) {
+  if (curTab === 'SYNC') { hide('jobCard'); renderSync(j); return; }
   show('jobCard');
   $('jobTitle').textContent = j.running ? ('Đang xử lý' + (j.current ? ' ' + j.current : '') + '…') : 'Kết quả lần chạy gần nhất';
   $('btnStop').classList.toggle('hide', !j.running);
@@ -1875,6 +2021,83 @@ async function poll() {
   wasRunning = s.job.running;
   if (s.job.running) timer = setTimeout(poll, 1500);
 }
+
+// ---- Trang Đồng bộ ----
+let syncMst = '', syncRange = null, syncRows = [];
+const SPER = [['today', 'Hôm nay'], ['week', '1 tuần'], ['month', 'Tháng này']]
+  .concat([...Array(12).keys()].map(i => ['m' + (i + 1), 'Tháng ' + (i + 1)])).concat([1, 2, 3, 4].map(i => ['q' + i, 'Quý ' + i]));
+SPER.forEach(([v, t]) => $('sPer').append(new Option(t, v)));
+function sPeriod() {
+  const v = $('sPer').value, now = new Date(), y = +$('sYear').value || now.getFullYear(); let a, b;
+  if (v === 'today') a = b = now;
+  else if (v === 'week') { a = new Date(now); a.setDate(now.getDate() - 7); b = now; }
+  else if (v === 'month') { a = new Date(now.getFullYear(), now.getMonth(), 1); b = now; }
+  else if (v[0] === 'm') { const m = +v.slice(1) - 1; a = new Date(y, m, 1); b = new Date(y, m + 1, 0); }
+  else { const q = +v.slice(1) - 1; a = new Date(y, q * 3, 1); b = new Date(y, q * 3 + 3, 0); }
+  if (b > now) b = now;
+  $('sFrom').value = isoD(a); $('sTo').value = isoD(b);
+  $('sYear').classList.toggle('hide', ['today', 'week', 'month'].includes(v));
+}
+$('sPer').onchange = sPeriod; $('sYear').onchange = sPeriod;
+function openSync(mst) {
+  if (!mst) return;
+  syncMst = mst; const c = companies.find(x => x.mst === mst) || {};
+  $('sName').textContent = (c.ten || '') + ' (' + mst + ')';
+  if (!$('sFrom').value) { $('sYear').value = new Date().getFullYear(); $('sPer').value = 'week'; sPeriod(); }
+  tab('SYNC'); poll();
+}
+async function runSync(kinds) {
+  syncRange = [$('sFrom').value, $('sTo').value];
+  try { await start({msts: [syncMst], kinds, from: syncRange[0], to: syncRange[1], mtt: $('sMtt').checked, xml: $('sXml').checked}); }
+  catch (e) { alert(e.message); }
+}
+function openInvoicesFromSync() {
+  $('hMst').value = syncMst; tab('HD'); $('hMst').value = syncMst;
+  if (syncRange) { $('hPer').value = ''; $('hFrom').value = syncRange[0]; $('hTo').value = syncRange[1]; }
+  hPage = 0; loadInv();
+}
+const vnd = s => s ? s.split('-').reverse().join('/') : '';
+function renderSync(j) {
+  const b = $('sBadge');
+  const phase = j.running ? (j.need_captcha ? 'chờ nhập captcha' : j.phase) : (j.log.length ? j.phase : 'chờ đồng bộ');
+  b.textContent = phase; b.className = 'badge ' + (j.running ? 'run' : phase === 'đồng bộ xong' ? 'ok' : phase === 'lỗi' ? 'bad' : '');
+  $('sStop').classList.toggle('hide', !j.running);
+  if (j.need_captcha) {
+    const key = j.need_captcha.svg.length + j.need_captcha.svg.slice(-40);
+    if (key !== lastCap) { lastCap = key; $('sCapImg').innerHTML = j.need_captcha.svg; $('sCapIn').value = ''; show('sCapBox'); $('sCapIn').focus(); }
+  } else { hide('sCapBox'); lastCap = null; }
+  const st = $('sSteps'); st.innerHTML = '';
+  const line = (html) => { const d = el('div'); d.innerHTML = html; st.append(d); };
+  const esc = t => String(t).replace(/[&<>"]/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[ch]));
+  if (j.auth || j.running) {
+    line('1. Chứng thực tài khoản: <b>' + esc(j.auth || 'đang chờ') + '</b>');
+    const f = j.found || {};
+    if ('purchase' in f || 'sold' in f) {
+      line('2. Từ ngày ' + vnd((syncRange || [])[0]) + ' đến ngày ' + vnd((syncRange || [])[1]) + ' có:');
+      if ('purchase' in f) line('&nbsp;&nbsp;- <b>' + f.purchase + '</b> hoá đơn mua vào');
+      if ('sold' in f) line('&nbsp;&nbsp;- <b>' + f.sold + '</b> hoá đơn bán ra');
+      line('3. Đồng bộ hoá đơn: <b>' + (j.running ? 'đang chạy' + (j.total ? ' – XML ' + j.done + '/' + j.total : '') : esc(j.phase)) + '</b>');
+      line('&nbsp;&nbsp;- Tổng số HĐ: <b>' + ((f.purchase || 0) + (f.sold || 0)) + '</b> hoá đơn');
+    }
+    line('&nbsp;&nbsp;- Thời gian xử lý: ' + j.elapsed + ' giây');
+    const errs = j.log.filter(x => x.includes('LỖI'));
+    if (errs.length) line('<span class="err">' + esc(errs[errs.length - 1]) + '</span>');
+  }
+  $('sProg').style.width = (j.total ? Math.round(100 * j.done / j.total) : (j.running ? 5 : (j.log.length ? 100 : 0))) + '%';
+  syncRows = j.rows || []; renderSyncRows();
+}
+function renderSyncRows() {
+  const q = $('sFilter').value.trim().toLowerCase(), tb = $('sRows'); tb.innerHTML = '';
+  syncRows.filter(r => !q || Object.values(r).join(' ').toLowerCase().includes(q)).slice(0, 1000).forEach(r => {
+    const tr = tb.insertRow();
+    [r.loai, r.ngay, r.mau, r.kh].forEach(v => tr.insertCell().textContent = v);
+    const so = tr.insertCell(); so.className = 'n'; so.textContent = r.so;
+    tr.insertCell().textContent = r.dongbo;
+    const k = tr.insertCell(); k.textContent = r.ketqua; k.className = r.ketqua === 'OK' ? 'ok' : 'err';
+  });
+}
+$('sFilter').oninput = renderSyncRows;
+$('sCapIn').addEventListener('keydown', e => { if (e.key === 'Enter') sendCap('sCapIn'); });
 
 // ---- Tab Hoá đơn ----
 const TTHAI = ['', 'HĐ Mới', 'HĐ Thay thế', 'HĐ Điều chỉnh', 'HĐ Đã bị thay thế', 'HĐ Đã bị điều chỉnh', 'HĐ Đã bị hủy'];
@@ -1900,6 +2123,7 @@ $('hPer').onchange = () => {
 function tab(t) {
   curTab = t; $('navDN').classList.toggle('on', t === 'DN'); $('navHD').classList.toggle('on', t === 'HD');
   $('tabDN').classList.toggle('hide', t !== 'DN'); $('tabHD').classList.toggle('hide', t !== 'HD');
+  $('tabSYNC').classList.toggle('hide', t !== 'SYNC');
   if (t === 'HD') { fillMst(); loadInv(); }
 }
 function fillMst() {
@@ -1983,12 +2207,6 @@ async function exportInv(fmtx) {
   try { const d = await post('/api/export', {mst: $('hMst').value, filters: hFilters(), fmt: fmtx}); window.open(d.url, '_blank'); }
   catch (e) { $('hErr').textContent = e.message; }
 }
-async function syncInv() {
-  $('hErr').textContent = '';
-  if (!$('hFrom').value || !$('hTo').value) { $('hErr').textContent = 'Chọn khoảng ngày cần đồng bộ'; return; }
-  try { await start({msts: [$('hMst').value], kinds: [$('hKind').value.replace('_dv', '')], from: $('hFrom').value, to: $('hTo').value, mtt: true, xml: true}); }
-  catch (e) { $('hErr').textContent = e.message; }
-}
 ['hKind', 'hFile', 'hDuyet', 'hTthai', 'hKq', 'hMst'].forEach(id => $(id).onchange = () => { hPage = 0; loadInv(); });
 ['hKh', 'hSo', 'hQ'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { hPage = 0; loadInv(); } }));
 $('q').oninput = render;
@@ -2013,6 +2231,7 @@ class App:
         self.store = Store(os.path.join(cfg, "doanh-nghiep.json"))
         self.solver = CaptchaSolver(os.path.join(cfg, "captcha-mau.json"))
         self.client_factory = client_factory or HoaDonClient
+        self.clients = {}  # MST → client đã đăng nhập (giữ phiên)
         self.key = secrets.token_urlsafe(24)
         self.job = Job()
 
@@ -2150,7 +2369,7 @@ def make_handler(app, port):
                 app.job.running = True
                 threading.Thread(target=run_batch, daemon=True, args=(
                     app.job, app.store, app.solver, msts, kinds, start, end, bool(data.get("mtt")),
-                    bool(data.get("xml")), app.out_root, test, app.client_factory)).start()
+                    bool(data.get("xml")), app.out_root, test, app.client_factory, app.clients)).start()
                 return self._send(200, {"ok": True})
             if path == "/api/captcha":
                 app.job.answer(data.get("answer"))

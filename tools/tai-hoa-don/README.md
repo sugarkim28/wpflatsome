@@ -18,6 +18,10 @@ Tải hàng loạt hoá đơn **mua vào / bán ra** từ cổng [hoadondientu.g
   - `Doi_TrangThai`: HĐ bị huỷ / thay thế / điều chỉnh so với lần đồng bộ trước.
   - Bán ra: `HoaDon_TongQuat` + `ChiTiet_HangHoa`.
 - Chạy lại không tải trùng XML; chỉ tải lại hoá đơn đổi trạng thái.
+- **Màn hình Đồng bộ** (nút *Đồng bộ* ở mỗi doanh nghiệp hoặc tab Hoá đơn): chọn kỳ (hôm nay, 1 tuần, tháng, quý), 3 nút Đồng bộ ĐẦU VÀO / ĐẦU RA / VÀO-RA; bên phải hiện từng bước (chứng thực, số HĐ tìm thấy, tiến độ tải XML, thời gian) và bảng kết quả từng hoá đơn (Mới / Đổi trạng thái / Đã có, OK / lỗi).
+- **Giữ phiên đăng nhập**: trong lúc phần mềm còn mở, đồng bộ lại cùng doanh nghiệp không phải nhập captcha cho tới khi phiên của cổng hết hạn (tự đăng nhập lại khi hết hạn).
+- **Tải nhanh hơn**: tải 4 file XML cùng lúc; HĐ đã có XML thì bỏ qua.
+- Captcha bạn gõ được lưu (20 mẫu gần nhất) ở `HoaDon/_cau-hinh/captcha-mau/` để chẩn đoán nếu phần mềm chưa tự giải được.
 - **Tab Hoá đơn** (giống màn hình Nibot): chọn doanh nghiệp, Mua vào / Bán ra / HĐ dịch vụ, lọc theo file (có/không XML, PDF), duyệt nội bộ, trạng thái HĐ, kết quả kiểm tra, ký hiệu, số HĐ, MST/tên/mặt hàng/ghi chú, kỳ (hôm nay, tháng, quý, năm). Bảng có dòng tổng, phân trang 10/20/50/100; sửa trực tiếp ghi chú, duyệt nội bộ, đánh dấu HĐ dịch vụ; mở XML / bản xem HTML / PDF. Nút **Đồng bộ** tải kỳ đang chọn; **Kết xuất** EXCEL.XLSX (mẫu Nibot), XML.ZIP, HTML.ZIP, PDF.ZIP theo đúng bộ lọc.
 - **PDF / hoá đơn gốc**:
   - Phần mềm đọc trong XML nhà cung cấp hoá đơn (trường `MSTTCGP`) và mã tra cứu: MISA (`TransactionID`), Viettel (`Mã số bí mật`), BKAV (`InvoiceGUID`), VNPT/MobiFone/Thái Sơn/FAST… Nút **Tra cứu** chép sẵn mã rồi mở trang tra cứu của nhà cung cấp (Viettel cần thêm MST bên bán – hiện khi rê chuột).
