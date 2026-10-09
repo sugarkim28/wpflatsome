@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.8.0"
+__version__ = "2.8.1"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -613,31 +613,58 @@ def _http_get(url, timeout=30):
         raise PortalError("Không kết nối được trang của nhà cung cấp: %s" % getattr(e, "reason", e))
 
 
+MISA_WWW, MISA_APEX, MISA_DL = "https://www.meinvoice.vn", "https://meinvoice.vn", "https://download.meinvoice.vn"
+
+
 def misa_pdf(code):
-    """MISA meInvoice – theo tài liệu công khai của MISA: lấy mã thời gian 'ext' từ GetRequestTimeEnCode,
-    rồi tải downloadhandler.ashx?type=pdf&code=<mã tra cứu>&ext=<ext>. Không cần tài khoản."""
-    raw = _http_get("https://meinvoice.vn/tra-cuu/GetRequestTimeEnCode").decode("utf-8", "replace")
+    """MISA meInvoice – tải PDF gốc bằng mã tra cứu, không cần tài khoản. Thử lần lượt:
+    1) mở trang tra cứu ?sc=<mã> như trình duyệt (giữ cookie) và lấy link DownloadHandler.ashx có sẵn trong trang;
+    2) lấy mã thời gian 'ext' từ GetRequestTimeEnCode (theo tài liệu MISA) rồi dựng link
+       www.meinvoice.vn/tra-cuu/tra-cuu/DownloadHandler.ashx?Type=pdf&Viewer=1&ext=<ext>&Code=<mã>
+       (dạng thấy trong trang tra cứu thật, ext có thể chứa '_' – vd J1V4E6D_) và download.meinvoice.vn."""
+    import html as H
+    jar = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    lookup = MISA_WWW + "/tra-cuu/?sc=" + urllib.parse.quote(code)
+
+    def get(url, referer=lookup):
+        req = urllib.request.Request(url, headers={"User-Agent": UA_LOGIN, "Accept": "*/*", "Referer": referer,
+                                                   "Accept-Language": "vi-VN,vi;q=0.9"})
+        try:
+            with opener.open(req, timeout=30) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as e:
+            return e.read() or b""
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            raise PortalError("Không kết nối được meinvoice.vn: %s" % getattr(e, "reason", e))
+
+    urls, diag = [], []
+    page = get(lookup, referer=MISA_WWW + "/tra-cuu/").decode("utf-8", "replace")
+    for link in re.findall(r"DownloadHandler\.ashx\?[^\"'<>\s]+", page, re.I):
+        urls.append(urllib.parse.urljoin(MISA_WWW + "/tra-cuu/", "tra-cuu/" + H.unescape(link)))
     exts = []
-    plain = re.sub(r"<[^>]+>", "", raw).strip().strip('"')
-    if re.fullmatch(r"[A-Za-z0-9]{8}", plain):
-        exts.append(plain)
-    if len(raw) >= 63:
-        exts.append(raw[55:63])  # cách lấy trong mã mẫu của MISA (Substring(55, 8))
-    exts += [m for m in re.findall(r"\b[A-Z0-9]{8}\b", plain)[:3]]
+    for src in (MISA_WWW + "/tra-cuu/GetRequestTimeEnCode", MISA_APEX + "/tra-cuu/GetRequestTimeEnCode"):
+        raw = get(src).decode("utf-8", "replace")
+        diag.append(re.sub(r"\s+", " ", raw)[:80])
+        plain = re.sub(r"<[^>]+>", "", raw).strip().strip('"')
+        if re.fullmatch(r"[\w-]{8}", plain):
+            exts.append(plain)
+        if len(raw) >= 63:
+            exts.append(raw[55:63])  # cách lấy trong mã mẫu của MISA (Substring(55, 8))
+        exts += re.findall(r"(?<![\w-])[\w-]{8}(?![\w-])", plain)[:3]
+        if exts:
+            break
     q = urllib.parse.quote(code)
-    tried = []
     for ext in dict.fromkeys(exts):
         e = urllib.parse.quote(ext)
-        for url in ("https://download.meinvoice.vn/downloadhandler.ashx?type=pdf&code=%s&viewer=1&ext=%s" % (q, e),
-                    "https://www.meinvoice.vn/tra-cuu/tra-cuu/DownloadHandler.ashx?Type=pdf&Viewer=1&ext=%s&Code=%s" % (e, q)):
-            tried.append(url)
-            try:
-                data = _http_get(url)
-            except PortalError:
-                continue
-            if data[:4] == b"%PDF":
-                return data
-    raise PortalError("MISA không trả file PDF cho mã tra cứu %s (đã thử %d đường dẫn)" % (code, len(tried)))
+        urls.append(MISA_WWW + "/tra-cuu/tra-cuu/DownloadHandler.ashx?Type=pdf&Viewer=1&ext=%s&Code=%s" % (e, q))
+        urls.append(MISA_DL + "/downloadhandler.ashx?type=pdf&code=%s&viewer=1&ext=%s" % (q, e))
+    for url in dict.fromkeys(urls):
+        data = get(url)
+        if data[:4] == b"%PDF":
+            return data
+    raise PortalError("MISA không trả file PDF cho mã tra cứu %s (đã thử %d đường dẫn; GetRequestTimeEnCode trả: %s)"
+                      % (code, len(urls), " | ".join(diag) or "rỗng"))
 
 
 # MST nhà cung cấp → hàm tải PDF gốc. Nhà cung cấp có captcha ở trang tra cứu (Viettel, VNPT…) chưa tự động được.

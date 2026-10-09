@@ -491,35 +491,59 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(pypdf.PdfReader(io.BytesIO(z.read("hoa don_trang_1-2.pdf"))).pages), 2)
 
     def test_misa_original_pdf(self):
-        import unittest.mock as m
-        calls = []
+        """MISA giả mô phỏng trang tra cứu thật: ext có dấu '_' (J1V4E6D_), link DownloadHandler trong trang."""
+        state = {"link_in_page": False, "calls": []}
 
-        def fake_get(url, timeout=30):
-            calls.append(url)
-            if url.endswith("GetRequestTimeEnCode"):
-                return b'"AB12CD34"'
-            if "ext=AB12CD34" in url and "code=MISA99ABC" in url:
-                return b"%PDF-1.4 misa goc"
-            return b"<html>not found</html>"
-        self.app.store.import_text("0309999999\tA\tpw1\n")
-        with m.patch.object(t, "_http_get", fake_get), m.patch("time.sleep"):
-            job = t.Job()
-            job.running = True
-            job.want_pdf = True
-            helper = AutoAnswer(job)
-            helper.start()
-            t.run_batch(job, self.app.store, self.app.solver, ["0309999999"], ["purchase"], date(2026, 10, 1),
-                        date(2026, 10, 31), True, True, self.tmp, False, self.app.client_factory)
-        self.assertEqual(job.snapshot()["rows"][0]["ketqua"], "OK + PDF gốc")
-        r = t.query_invoices(self.tmp, "0309999999", {"kind": "purchase", "file": "pdf"})
-        self.assertEqual(len(r), 1)
-        with open(os.path.join(self.tmp, "0309999999", r[0]["pdf"]), "rb") as fh:
-            self.assertEqual(fh.read(), b"%PDF-1.4 misa goc")
-        self.assertTrue(calls[1].startswith("https://download.meinvoice.vn/downloadhandler.ashx?type=pdf&code=MISA99ABC"))
-        # Không phải PDF → báo lỗi rõ ràng
-        with m.patch.object(t, "_http_get", lambda u, timeout=30: b'"ZZZZZZZZ"' if "Time" in u else b"<html/>"):
-            with self.assertRaisesRegex(t.PortalError, "MISA không trả file PDF"):
-                t.misa_pdf("XYZ")
+        class FakeMisa(BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_GET(self):
+                u = urllib.parse.urlparse(self.path)
+                q = dict(urllib.parse.parse_qsl(u.query))
+                state["calls"].append(self.path)
+                body, ctype = b"<html>not found</html>", "text/html"
+                if u.path == "/tra-cuu/" and state["link_in_page"]:
+                    body = ('<iframe src="tra-cuu/DownloadHandler.ashx?Type=pdf&amp;Viewer=1&amp;ext=PAGE1234&amp;Code=%s">'
+                            % q.get("sc")).encode()
+                elif u.path == "/tra-cuu/GetRequestTimeEnCode":
+                    body = b'"J1V4E6D_"'
+                elif u.path == "/tra-cuu/tra-cuu/DownloadHandler.ashx" and q.get("Code") == "MISA99ABC" \
+                        and q.get("ext") in ("J1V4E6D_", "PAGE1234"):
+                    body, ctype = b"%PDF-1.4 misa goc", "application/pdf"
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), FakeMisa)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        base = "http://127.0.0.1:%d" % srv.server_port
+        import unittest.mock as m
+        try:
+            with m.patch.multiple(t, MISA_WWW=base, MISA_APEX=base, MISA_DL=base):
+                self.assertEqual(t.misa_pdf("MISA99ABC"), b"%PDF-1.4 misa goc")       # qua GetRequestTimeEnCode
+                state["link_in_page"] = True
+                self.assertEqual(t.misa_pdf("MISA99ABC"), b"%PDF-1.4 misa goc")       # qua link có sẵn trong trang
+                self.assertIn("ext=PAGE1234", state["calls"][-1])
+                with self.assertRaisesRegex(t.PortalError, "GetRequestTimeEnCode trả"):
+                    t.misa_pdf("SAIMA")
+                # Đồng bộ kèm tải PDF gốc
+                self.app.store.import_text("0309999999\tA\tpw1\n")
+                job = t.Job()
+                job.running = True
+                job.want_pdf = True
+                helper = AutoAnswer(job)
+                helper.start()
+                with m.patch("time.sleep"):
+                    t.run_batch(job, self.app.store, self.app.solver, ["0309999999"], ["purchase"], date(2026, 10, 1),
+                                date(2026, 10, 31), True, True, self.tmp, False, self.app.client_factory)
+            self.assertEqual(job.snapshot()["rows"][0]["ketqua"], "OK + PDF gốc")
+            r = t.query_invoices(self.tmp, "0309999999", {"kind": "purchase", "file": "pdf"})
+            self.assertEqual(len(r), 1)
+        finally:
+            srv.shutdown()
+            srv.server_close()
         self.assertFalse(t.can_fetch_pdf({"ncc": "Viettel S-Invoice", "ncc_mst": "0100109106", "code": "A"})[0])
 
     def test_match_pdf_text(self):
