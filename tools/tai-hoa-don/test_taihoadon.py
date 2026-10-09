@@ -837,6 +837,40 @@ class Tests(unittest.TestCase):
         t.release_mst("0309999999", a)
         self.assertNotIn("0309999999", t.busy_msts())
 
+    def test_web_behind_nginx(self):
+        """FASTPANEL/nginx đổi Host thành 127.0.0.1, tên miền thật ở X-Forwarded-Host."""
+        t.set_secret_key(os.path.join(self.tmp, "_cau-hinh", "khoa.key"))
+        try:
+            app = t.App(self.tmp, lambda: t.HoaDonClient(self.base, delay=0), server=True)
+            app.allowed_hosts, app.trust_proxy = {"hoadon.congty.vn"}, True
+            app.users.upsert("boss", role="admin", password="matkhau-boss")
+            srv = ThreadingHTTPServer(("127.0.0.1", 0), t.make_handler(app, 0))
+            threading.Thread(target=srv.serve_forever, daemon=True).start()
+            base = "http://127.0.0.1:%d" % srv.server_port
+
+            def login(fwd_host, origin):
+                req = urllib.request.Request(base + "/api/login", data=json.dumps(
+                    {"username": "boss", "password": "matkhau-boss"}).encode(), headers={
+                    "X-Forwarded-Host": fwd_host, "X-Forwarded-Proto": "https", "Origin": origin,
+                    "X-Forwarded-For": "1.2.3.4", "Content-Type": "application/json"})
+                try:
+                    r = urllib.request.urlopen(req)
+                    return r.status, r.headers.get("Set-Cookie", "")
+                except urllib.error.HTTPError as e:
+                    return e.code, ""
+            try:
+                code, cookie = login("hoadon.congty.vn", "https://hoadon.congty.vn")
+                self.assertEqual(code, 200)
+                self.assertIn("Secure", cookie)
+                self.assertIn("HttpOnly", cookie)
+                self.assertEqual(login("evil.com", "https://evil.com")[0], 403)                 # tên miền lạ
+                self.assertEqual(login("hoadon.congty.vn", "https://evil.com")[0], 403)         # trang khác gọi vào
+            finally:
+                srv.shutdown()
+                srv.server_close()
+        finally:
+            t._FERNET = None
+
 
 if __name__ == "__main__":
     unittest.main()

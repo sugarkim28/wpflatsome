@@ -52,7 +52,35 @@ Cùng một file `taihoadon.py`, chạy với `--server` thành **bản web**: m
 - **Chuông thông báo**: HĐ đổi trạng thái (bị huỷ, thay thế, điều chỉnh), HĐ mới và lỗi của lượt tự động – mỗi người chỉ thấy thông báo của DN mình phụ trách.
 - **PDF gốc MISA**: máy chủ thử tải trước; nếu MISA chặn, trình duyệt của bạn tải về máy rồi bấm *Gắn PDF gốc có sẵn* chọn các file vừa tải (bản web không nhìn thấy thư mục Downloads trên máy bạn).
 
-### Cài đặt (khoảng 10 phút)
+### Cài trên VPS có FASTPANEL (khuyên dùng nếu VPS đã cài FASTPANEL)
+
+FASTPANEL đã có nginx + SSL, nên **không dùng Docker/Caddy** (sẽ tranh cổng 80/443). App chạy nền bằng systemd ở `127.0.0.1:8765`, FASTPANEL làm site *Reverse proxy* có HTTPS.
+
+1. **Tên miền**: tạo bản ghi A `hoadon.congty.vn` → IP VPS.
+2. **Cài app** (SSH vào VPS bằng root):
+   ```bash
+   git clone https://github.com/sugarkim28/wpflatsome.git   # hoặc chép thư mục tai-hoa-don lên bằng WinSCP
+   sudo bash wpflatsome/tools/tai-hoa-don/web/fastpanel/cai-dat.sh hoadon.congty.vn
+   ```
+   Cuối màn hình in **tài khoản quản trị đầu tiên** (`admin` + mật khẩu). Ghi lại.
+3. **FASTPANEL** → *Tạo site* → chọn mẫu **Reverse proxy** → tên miền `hoadon.congty.vn`, địa chỉ chuyển tiếp (proxy) **`http://127.0.0.1:8765`** → tạo.
+4. Trong site vừa tạo: **SSL** → *Let's Encrypt* → cấp chứng chỉ, bật **chuyển hướng HTTP → HTTPS**.
+5. Site → **Cấu hình nginx**: dán nội dung file `web/fastpanel/nginx-them.conf` vào khối `server { … }` (tăng giới hạn upload 80 MB, thời gian chờ 15 phút, chuyển đúng tên miền / HTTPS cho app) → Lưu.
+6. Mở `https://hoadon.congty.vn` → đăng nhập `admin` → **đổi mật khẩu** → thêm doanh nghiệp, người dùng.
+
+| Việc | Lệnh |
+|---|---|
+| Cập nhật phiên bản mới | `cd wpflatsome && git pull && sudo bash tools/tai-hoa-don/web/fastpanel/cai-dat.sh` |
+| Xem nhật ký | `journalctl -u taihoadon -f` |
+| Dừng / chạy lại | `systemctl stop taihoadon` / `systemctl restart taihoadon` |
+| Quên mật khẩu quản trị | `sudo bash tools/tai-hoa-don/web/fastpanel/dat-mat-khau.sh admin` |
+| Sao lưu (giữ 14 bản, vào `/root/sao-luu-taihoadon`) | `sudo bash tools/tai-hoa-don/web/fastpanel/sao-luu.sh` – hằng ngày: `crontab -e` → `30 23 * * * bash /root/wpflatsome/tools/tai-hoa-don/web/fastpanel/sao-luu.sh` |
+
+Dữ liệu nằm ở `/var/lib/taihoadon` (thay cho `web/data` của cách Docker), cấu hình ở `/etc/taihoadon.env`. Nếu FASTPANEL có mục *Backup*, thêm thư mục `/var/lib/taihoadon` vào sao lưu.
+
+Lỗi thường gặp: *502 Bad Gateway* → app chưa chạy (`systemctl status taihoadon`); *Host không hợp lệ* → tên miền trong `/etc/taihoadon.env` khác tên miền site, sửa rồi `systemctl restart taihoadon`; gắn nhiều PDF báo *413* → chưa dán `nginx-them.conf`.
+
+### Cài trên VPS trống bằng Docker (khoảng 10 phút)
 
 Cần: một VPS Ubuntu 22.04/24.04 (khuyên dùng **VPS đặt tại Việt Nam** – cổng thuế và trang tra cứu nhà cung cấp ổn định hơn với IP trong nước; 2 CPU, 2 GB RAM, ổ 40 GB+ tuỳ số hoá đơn) và một tên miền con (vd `hoadon.congty.vn`) có bản ghi **A** trỏ về IP VPS.
 
