@@ -865,6 +865,14 @@ class Tests(unittest.TestCase):
                 self.assertIn("HttpOnly", cookie)
                 self.assertEqual(login("evil.com", "https://evil.com")[0], 403)                 # tên miền lạ
                 self.assertEqual(login("hoadon.congty.vn", "https://evil.com")[0], 403)         # trang khác gọi vào
+                # FASTPANEL gửi Host 127.0.0.1:cổng, không có X-Forwarded-Host → vẫn đăng nhập được từ đúng tên miền
+                req = urllib.request.Request(base + "/api/login", data=json.dumps(
+                    {"username": "boss", "password": "matkhau-boss"}).encode(),
+                    headers={"Origin": "https://hoadon.congty.vn", "Content-Type": "application/json"})
+                self.assertEqual(urllib.request.urlopen(req).status, 200)
+                req.add_header("Origin", "https://evil.com")
+                with self.assertRaises(urllib.error.HTTPError):
+                    urllib.request.urlopen(req)
             finally:
                 srv.shutdown()
                 srv.server_close()

@@ -3,6 +3,8 @@
 # Lần đầu tự tạo môi trường Python và cài thư viện (mất 1–3 phút), các lần sau chạy ngay.
 cd "$(dirname "$0")" || exit 1
 set -a; . ./taihoadon.env; set +a
+[ -n "$SERVICE_PORT" ] && TAIHOADON_PORT="$SERVICE_PORT"   # cổng FASTPANEL cấp cho backend Systemd
+export TAIHOADON_PORT
 export TAIHOADON_SERVER=1 TAIHOADON_DATA="$PWD/data" TAIHOADON_BIND=127.0.0.1 TAIHOADON_TRUST_PROXY=1
 mkdir -p data && chmod 700 data
 if [ ! -x venv/bin/python ] || [ ! -f venv/.da-cai ]; then

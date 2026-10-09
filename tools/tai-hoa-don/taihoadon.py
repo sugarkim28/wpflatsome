@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.0.2"
+__version__ = "3.0.3"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -3616,6 +3616,14 @@ def make_handler(app, port):
                 return self.headers["X-Forwarded-Host"].split(",")[0].strip()
             return self.headers.get("Host") or ""
 
+        def _host_ok(self):
+            if self._public_host().rsplit(":", 1)[0].lower() in app.allowed_hosts:
+                return True
+            # nginx của bảng điều khiển (FASTPANEL…) có thể gửi Host 127.0.0.1:cổng – chấp nhận khi app chỉ nghe trong máy
+            host = (self.headers.get("Host") or "").rsplit(":", 1)[0]
+            return (app.trust_proxy and not self.headers.get("X-Forwarded-Host")
+                    and host in ("127.0.0.1", "localhost") and self.client_address[0] == "127.0.0.1")
+
         def _ip(self):
             if app.trust_proxy and self.headers.get("X-Forwarded-For"):
                 return self.headers["X-Forwarded-For"].split(",")[-1].strip()
@@ -3642,7 +3650,7 @@ def make_handler(app, port):
             self._extra = []
             host = self.headers.get("Host") or ""
             if app.server:
-                if app.allowed_hosts and self._public_host().rsplit(":", 1)[0].lower() not in app.allowed_hosts:
+                if app.allowed_hosts and not self._host_ok():
                     self._send(403, {"error": "Host không hợp lệ"})
                     return False
                 self.user, self.csrf = app.session_user(self._cookie(COOKIE))
@@ -3765,7 +3773,9 @@ def make_handler(app, port):
                 if not app.server:
                     return self._send(200, {"ok": True})
                 origin = self.headers.get("Origin")
-                if origin and urllib.parse.urlparse(origin).netloc.lower() != self._public_host().lower():
+                o = urllib.parse.urlparse(origin or "")
+                if origin and o.netloc.lower() != self._public_host().lower() \
+                        and (o.hostname or "").lower() not in app.allowed_hosts:
                     return self._send(403, {"error": "Yêu cầu không hợp lệ"})
                 name = str(data.get("username") or "").strip().lower()[:60]
                 ip = self._ip()
