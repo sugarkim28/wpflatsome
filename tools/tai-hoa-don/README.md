@@ -31,6 +31,8 @@ Tải hàng loạt hoá đơn **mua vào / bán ra** từ cổng [hoadondientu.g
   - Nút **In**: bản thể hiện dựng từ XML (in hoặc "Lưu thành PDF" trong trình duyệt) cho mọi hoá đơn.
   - **Tự tải PDF gốc – MISA meInvoice**: dùng mã tra cứu (`TransactionID`) theo cách tải công khai trong tài liệu của MISA (không cần tài khoản): nút *Tải PDF gốc* ở từng hoá đơn, nút *Tải HĐ gốc hàng loạt* ở tab Hoá đơn, hoặc tích *Tải PDF gốc (MISA)* khi đồng bộ.
   - Viettel, VNPT…: trang tra cứu bắt nhập captcha nên chưa tự động – dùng *Tra cứu* (chép sẵn mã) rồi *+PDF*.
+  - **Gắn PDF gốc có sẵn** (tab Hoá đơn): chọn cùng lúc nhiều file PDF hoá đơn đã có trên máy – phần mềm đọc ký hiệu, số hoá đơn, MST trong PDF và tự gắn vào đúng hoá đơn (chỉ gắn khi khớp chắc chắn một hoá đơn; báo rõ file nào không khớp).
+  - Nút *Tra cứu*: MISA mở thẳng đúng hoá đơn (`?sc=<mã>`); EasyInvoice mở trang tra cứu riêng của người bán (`<MST>hd.easyinvoice.com.vn`).
 
 ## Cài đặt & chạy
 

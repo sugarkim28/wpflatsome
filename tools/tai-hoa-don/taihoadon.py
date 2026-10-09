@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.7.0"
+__version__ = "2.8.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -557,7 +557,8 @@ def _to_dt(v):
 
 # Nhà cung cấp giải pháp HĐĐT (MSTTCGP trong XML) → (tên, trang tra cứu hoá đơn gốc).
 PROVIDERS = {
-    "0101243150": ("MISA meInvoice", "https://www.meinvoice.vn/tra-cuu/"),
+    "0101243150": ("MISA meInvoice", "https://www.meinvoice.vn/tra-cuu/?sc="),  # ?sc=<mã> mở thẳng hoá đơn
+    "0105987432": ("EasyInvoice (SoftDreams)", "http://{nbmst}hd.easyinvoice.com.vn"),  # trang riêng từng người bán
     "0100109106": ("Viettel S-Invoice", "https://vinvoice.viettel.vn/utilities/invoice-search"),
     "0100684378": ("VNPT Invoice", ""),
     "0101360697": ("BKAV eHoadon", "https://van.ehoadon.vn/Lookup?InvoiceGUID="),
@@ -592,6 +593,9 @@ def lookup_info(info):
         field, code = "InvoiceGUID", info.get("dlhdon_id", "")
     if url.endswith("=") and code:
         url += urllib.parse.quote(code)
+    elif url.endswith("=") or "{nbmst}" in url:
+        url = url.split("?")[0] if url.endswith("=") else url
+    url = url.replace("{nbmst}", (info.get("nb") or {}).get("MST", "").split("-")[0])
     return {"ncc": name or (("MST " + mst) if mst else ""), "url": url, "field": field, "code": code,
             "ncc_mst": mst.split("-")[0]}
 
@@ -1734,6 +1738,74 @@ def attach_pdf(out_root, mst, kind, key, data):
     return rel
 
 
+def _pdf_text(data):
+    import pypdf
+    try:
+        r = pypdf.PdfReader(io.BytesIO(data))
+        return "\n".join((p.extract_text() or "") for p in r.pages[:3])
+    except Exception as e:
+        raise ValueError("Không đọc được PDF: %s" % e)
+
+
+def match_pdf_text(text, entries_by_kind):
+    """Tìm hoá đơn trong kho khớp với nội dung PDF: cùng ký hiệu, MST người bán/mua có trong PDF, và số hoá đơn có
+    trong PDF. Chấm điểm số hoá đơn: đứng sau nhãn "Số:"/"Số (No.):" hoặc trước "(No)" = 4; in dạng 0000xxxx = 3; số dài ≥ 6
+    chữ số = 2; số ngắn bất kỳ = 1 (dễ trùng số nhà, số tiền). Chỉ trả về hoá đơn có điểm cao nhất duy nhất."""
+    flat = re.sub(r"\s+", " ", text or "")
+    # Số có dấu chấm/phẩy ngăn cách (số tiền 308.448) không được tách thành 308 và 448.
+    tokens = [t for t in re.findall(r"\d[\d.,]*\d|\d", flat) if t.isdigit() and len(t) <= 10]
+    score = {}
+    for tkn in tokens:
+        n = int(tkn)
+        s_ = 3 if (tkn.startswith("0") and len(tkn) >= 7) else (2 if len(tkn) >= 6 else 1)
+        score[n] = max(score.get(n, 0), s_)
+    for m in re.finditer(r"Số\s*(?:\(No\.?\)\s*:?|:)\s*0*(\d{1,10})(?![\d.,]\d)|(?<![\d.,])(\d{1,10})\s*\(No\)", flat):
+        n = int(m.group(1) or m.group(2))
+        score[n] = 4  # đúng vị trí nhãn số hoá đơn – hơn số nhắc tới trong nội dung (vd HĐ bị điều chỉnh)
+    msts = set(re.findall(r"(?<!\d)(\d{10}(?:-\d{3})?)(?!\d)", flat))
+    msts |= {re.sub(r"\s", "", m) for m in re.findall(r"(?<!\d)((?:\d ){9}\d)(?!\d)", flat)}
+    msts |= {m.split("-")[0] for m in msts}
+    khs = {k[-6:] for k in re.findall(r"(?<![A-Z0-9])[12]?[CK]\d{2}[A-Z]{2,3}(?![A-Z0-9])", flat)}
+    found = []
+    for kind, entries in entries_by_kind.items():
+        for key in entries:
+            nbmst, _, khhdon, shdon = (key.split("|") + ["", "", "", ""])[:4]
+            sc = score.get(_num(shdon), 0)
+            if str(khhdon)[-6:] not in khs or not sc:
+                continue
+            inv = entries[key].get("inv") or {}
+            parties = {p for p in (str(nbmst), str(inv.get("nmmst") or "")) if p}
+            if parties & msts or {p.split("-")[0] for p in parties} & msts:
+                found.append((sc, kind, key))
+    if not found:
+        return []
+    best = max(f[0] for f in found)
+    return [(k, key) for sc, k, key in found if sc == best]
+
+
+def import_pdfs(out_root, mst, files):
+    """Gắn hàng loạt PDF gốc có sẵn trên máy vào đúng hoá đơn (đọc ký hiệu, số, MST trong PDF)."""
+    idx = _load_json(index_file(out_root, mst), {})
+    results = []
+    for name, data in files:
+        try:
+            if not data.startswith(b"%PDF"):
+                raise ValueError("không phải file PDF")
+            hits = match_pdf_text(_pdf_text(data), {k: idx.get(k, {}) for k in ("purchase", "sold")})
+            if not hits:
+                raise ValueError("không khớp hoá đơn nào trong kho (đã đồng bộ kỳ này chưa?)")
+            if len(hits) > 1:
+                raise ValueError("khớp %d hoá đơn, không chắc gắn vào đâu" % len(hits))
+            kind, key = hits[0]
+            attach_pdf(out_root, mst, kind, key, data)
+            nb, _, kh, so = key.split("|")
+            results.append({"file": name, "ok": True, "hd": "%s %s – %s" % (
+                "Mua vào" if kind == "purchase" else "Bán ra", kh, so)})
+        except ValueError as e:
+            results.append({"file": name, "ok": False, "loi": str(e)})
+    return results
+
+
 def render_invoice_html(out_root, mst, kind, key):
     """Bản thể hiện hoá đơn dựng từ XML (in hoặc lưu PDF từ trình duyệt)."""
     import html as H
@@ -2200,6 +2272,8 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
   <div class="bar">
     <button class="sec" onclick="openSync($('hMst').value)">Đồng bộ</button><button onclick="hPage=0;loadInv()">Tìm kiếm</button>
     <button class="sec" id="hBulkPdf" onclick="bulkPdf()">Tải HĐ gốc hàng loạt</button>
+    <button class="sec" id="hImpPdf" onclick="$('hImpFiles').click()" title="Chọn các file PDF hoá đơn gốc có sẵn trên máy – phần mềm tự gắn vào đúng hoá đơn">Gắn PDF gốc có sẵn</button>
+    <input type="file" id="hImpFiles" accept="application/pdf" multiple class="hide">
     <span style="flex:1"></span>
     <select class="sm" id="hExp" style="width:auto" onchange="exportInv(this.value);this.value=''">
       <option value="">Kết xuất…</option><option value="xlsx">EXCEL.XLSX</option><option value="xml">XML.ZIP</option>
@@ -2647,6 +2721,18 @@ function renderInv() {
   const next = el('button', 'sm sec', '›'); next.disabled = hPage >= pages - 1; next.onclick = () => { hPage++; renderInv(); };
   pg.append(prev, next);
 }
+$('hImpFiles').onchange = async () => {
+  const fs = [...$('hImpFiles').files]; $('hImpFiles').value = ''; if (!fs.length) return;
+  const b = $('hImpPdf'); b.disabled = true; b.textContent = 'Đang gắn ' + fs.length + ' file…'; $('hErr').textContent = '';
+  try { const files = []; for (const f of fs) files.push({name: f.name, data: await readB64(f)});
+    const d = await post('/api/invoice/pdf-import', {mst: $('hMst').value, files});
+    const ok = d.results.filter(r => r.ok), bad = d.results.filter(r => !r.ok);
+    $('hErr').innerHTML = ''; $('hErr').append(el('div', 'ok', 'Đã gắn ' + ok.length + '/' + d.results.length + ' file PDF.'));
+    bad.forEach(r => $('hErr').append(el('div', 'err', r.file + ': ' + r.loi)));
+    loadInv(); }
+  catch (e) { $('hErr').textContent = e.message; }
+  b.disabled = false; b.textContent = 'Gắn PDF gốc có sẵn';
+};
 async function bulkPdf() {
   const b = $('hBulkPdf'); b.disabled = true; b.textContent = 'Đang tải PDF gốc…'; $('hErr').textContent = '';
   try { const d = await post('/api/invoice/fetch-pdf-bulk', {mst: $('hMst').value, filters: hFilters()});
@@ -2883,13 +2969,22 @@ def make_handler(app, port):
                 app.job.answer(data.get("answer"))
                 return self._send(200, {"ok": True})
             if path in ("/api/invoices", "/api/export", "/api/invoice/update", "/api/invoice/pdf",
-                        "/api/invoice/fetch-pdf", "/api/invoice/fetch-pdf-bulk"):
+                        "/api/invoice/fetch-pdf", "/api/invoice/fetch-pdf-bulk", "/api/invoice/pdf-import"):
                 mst = data.get("mst", "")
                 company = app.store.get(mst)
                 if not company:
                     raise ValueError("Chọn doanh nghiệp")
                 if path == "/api/invoices":
                     return self._send(200, {"rows": query_invoices(app.out_root, mst, data.get("filters") or {})})
+                if path == "/api/invoice/pdf-import":
+                    import base64
+                    files = []
+                    for f in (data.get("files") or [])[:500]:
+                        try:
+                            files.append((f.get("name"), base64.b64decode(f.get("data") or "", validate=True)))
+                        except ValueError:
+                            files.append((f.get("name"), b""))
+                    return self._send(200, {"results": import_pdfs(app.out_root, mst, files)})
                 if path == "/api/invoice/fetch-pdf":
                     try:
                         return self._send(200, {"pdf": fetch_original_pdf(app.out_root, mst, data.get("kind"), data.get("key"))})

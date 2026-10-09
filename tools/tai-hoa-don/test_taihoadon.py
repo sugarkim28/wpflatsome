@@ -382,7 +382,7 @@ class Tests(unittest.TestCase):
         self.run_job(["0309999999"], kinds=("purchase",), start=date(2026, 10, 1), end=date(2026, 10, 31))
         f = {"kind": "purchase", "from": "2026-10-01", "to": "2026-10-31"}
         r = t.query_invoices(self.tmp, "0309999999", f)[0]
-        self.assertEqual(r["tra_cuu"], {"ncc": "MISA meInvoice", "url": "https://www.meinvoice.vn/tra-cuu/",
+        self.assertEqual(r["tra_cuu"], {"ncc": "MISA meInvoice", "url": "https://www.meinvoice.vn/tra-cuu/?sc=MISA99ABC",
                                         "field": "TransactionID", "code": "MISA99ABC", "ncc_mst": "0101243150"})
         # Viettel: "Mã số bí mật"
         self.assertEqual(t.lookup_info({"msttcgp": "0100109106", "ttkhac": {"Mã số bí mật": "X1Y2"}})["code"], "X1Y2")
@@ -521,6 +521,33 @@ class Tests(unittest.TestCase):
             with self.assertRaisesRegex(t.PortalError, "MISA không trả file PDF"):
                 t.misa_pdf("XYZ")
         self.assertFalse(t.can_fetch_pdf({"ncc": "Viettel S-Invoice", "ncc_mst": "0100109106", "code": "A"})[0])
+
+    def test_match_pdf_text(self):
+        """Gắn PDF có sẵn: các bẫy gặp trên PDF thật (số tiền 308.448, địa chỉ 'Số 412', HĐ điều chỉnh nhắc số HĐ cũ)."""
+        buyer = "0309999999"
+
+        def ent(nb, kh, so):
+            return {"%s|1|%s|%d" % (nb, kh, so): {"inv": {"nbmst": nb, "nmmst": buyer}}}
+        entries = {}
+        for nb, kh, so in [("0101111111", "C26TYY", 178), ("0101111111", "C26TYY", 308), ("0101111111", "C26TYY", 288),
+                           ("0102222222", "C26TSG", 7647), ("0102222222", "C26TSG", 412), ("0103333333", "K26TAB", 51680635),
+                           ("0103333333", "K26TAB", 414)]:
+            entries.update(ent(nb, kh, so))
+        m = lambda text: [k.split("|")[3] for _, k in t.match_pdf_text(text, {"purchase": entries})]
+        misa = "CÔNG TY A 0101111111 (Sign): 1C26TYY 00000178(No): Ký hiệu ... Cộng tiền hàng 308.448 Mã số thuế %s" % buyer
+        self.assertEqual(m(misa), ["178"])
+        dc = ("0101111111 (Sign): 1C26TYY 00000308(No): Ký hiệu ... Điều chỉnh cho hoá đơn 1C26TYY số 00000288 %s" % buyer)
+        self.assertEqual(m(dc), ["308"])
+        viettel = "Địa chỉ: Số 412 Nguyễn Thị Minh Khai Mã số thuế: 0 1 0 2 2 2 2 2 2 2 Ký hiệu (Serial): 1C26TSG Số (No.): 7647 MST %s" % buyer
+        self.assertEqual(m(viettel), ["7647"])
+        bhx = "Mã số thuế: 0103333333 HÓA ĐƠN 51680635GIÁ TRỊ GIA TĂNG Số: Ký hiệu: 1K26TAB CỬA HÀNG BHX SỐ 414 %s" % buyer
+        self.assertEqual(m(bhx), ["51680635"])
+        self.assertEqual(m("Ký hiệu 1C26TYY Số: 999 MST 0101111111"), [])  # số không có trong kho
+        self.assertEqual(m("Ký hiệu 1C26TYY Số: 178 MST 0109999999"), [])  # MST không khớp
+
+    def test_easyinvoice_lookup(self):
+        lk = t.lookup_info({"msttcgp": "0105987432", "ttkhac": {"Mã tra cứu": "8D3VYYQYD"}, "nb": {"MST": "0308783233"}})
+        self.assertEqual((lk["ncc"], lk["url"], lk["code"]), ("EasyInvoice (SoftDreams)", "http://0308783233hd.easyinvoice.com.vn", "8D3VYYQYD"))
 
     def test_expired_token(self):
         c = t.HoaDonClient(self.base, delay=0)
