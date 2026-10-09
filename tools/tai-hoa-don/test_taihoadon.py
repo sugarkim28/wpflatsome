@@ -579,6 +579,29 @@ class Tests(unittest.TestCase):
         self.assertEqual(m("Ký hiệu 1C26TYY Số: 999 MST 0101111111"), [])  # số không có trong kho
         self.assertEqual(m("Ký hiệu 1C26TYY Số: 178 MST 0109999999"), [])  # MST không khớp
 
+    def test_scan_downloads(self):
+        """Trình duyệt tải PDF gốc về Downloads → phần mềm tự gắn vào đúng hoá đơn."""
+        import unittest.mock as m
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        self.run_job(["0309999999"], kinds=("purchase",), start=date(2026, 10, 1), end=date(2026, 10, 31))
+        row = t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"})[0]
+        self.assertTrue(row["pdf_url"].endswith("/tra-cuu/DownloadHandler.ashx?Type=pdf&Code=MISA99ABC"))
+        dl = os.path.join(self.tmp, "Downloads")
+        os.makedirs(dl)
+        since = time.time()
+        old = os.path.join(dl, "cu.pdf")
+        open(old, "wb").write(b"%PDF cu")
+        os.utime(old, (since - 3600, since - 3600))                    # file cũ: bỏ qua
+        open(os.path.join(dl, "MISA99ABC.pdf"), "wb").write(b"%PDF moi")
+        open(os.path.join(dl, "ghi chu.txt"), "w").write("x")
+        texts = {b"%PDF moi": "Ký hiệu 1C26TAA Số: 99 Mã số thuế 0101234567", b"%PDF cu": "Số: 99 1C26TAA 0101234567"}
+        seen = set()
+        with m.patch.object(t, "_pdf_text", lambda data: texts[data]):
+            res = t.scan_downloads(self.tmp, "0309999999", dl, since, seen)
+            self.assertEqual([(r["file"], r["ok"]) for r in res], [("MISA99ABC.pdf", True)])
+            self.assertEqual(t.scan_downloads(self.tmp, "0309999999", dl, since, seen), [])   # không đọc lại
+        self.assertTrue(t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"})[0]["pdf"])
+
     def test_easyinvoice_lookup(self):
         lk = t.lookup_info({"msttcgp": "0105987432", "ttkhac": {"Mã tra cứu": "8D3VYYQYD"}, "nb": {"MST": "0308783233"}})
         self.assertEqual((lk["ncc"], lk["url"], lk["code"]), ("EasyInvoice (SoftDreams)", "http://0308783233hd.easyinvoice.com.vn", "8D3VYYQYD"))

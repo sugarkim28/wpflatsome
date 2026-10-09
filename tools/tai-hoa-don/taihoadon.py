@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.8.3"
+__version__ = "2.9.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -676,6 +676,53 @@ def misa_pdf(code):
 
 # MST nhà cung cấp → hàm tải PDF gốc. Nhà cung cấp có captcha ở trang tra cứu (Viettel, VNPT…) chưa tự động được.
 PDF_FETCHERS = {"0101243150": misa_pdf}
+
+
+# Link tải PDF gốc mà trình duyệt của người dùng mở được (MISA chặn chương trình tự động nhưng không chặn trình duyệt).
+PDF_BROWSER_URLS = {"0101243150": lambda code: MISA_WWW + "/tra-cuu/DownloadHandler.ashx?Type=pdf&Code=" +
+                    urllib.parse.quote(code)}
+
+
+def browser_pdf_url(tra_cuu):
+    ok, prov = can_fetch_pdf(tra_cuu)
+    return PDF_BROWSER_URLS[prov](tra_cuu["code"]) if ok and prov in PDF_BROWSER_URLS else ""
+
+
+def default_downloads_dir():
+    """Thư mục Downloads của người dùng (Windows: theo cài đặt của Windows nếu đọc được)."""
+    if os.name == "nt":
+        try:
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                                r"Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders") as k:
+                return winreg.QueryValueEx(k, "{374DE290-123F-4565-9164-39C4925E467B}")[0]
+        except OSError:
+            pass
+    return os.path.join(os.path.expanduser("~"), "Downloads")
+
+
+def scan_downloads(out_root, mst, folder, since, seen):
+    """Gắn các PDF mới xuất hiện trong thư mục Downloads (sau thời điểm 'since') vào đúng hoá đơn.
+    seen: tập (đường dẫn, mtime) đã xử lý để không đọc lại."""
+    files = []
+    try:
+        names = os.listdir(folder)
+    except OSError:
+        return []
+    for name in names:
+        path = os.path.join(folder, name)
+        if not name.lower().endswith(".pdf") or not os.path.isfile(path):
+            continue
+        mt = os.path.getmtime(path)
+        if mt < since - 5 or (path, mt) in seen:
+            continue
+        seen.add((path, mt))
+        try:
+            with open(path, "rb") as fh:
+                files.append((name, fh.read()))
+        except OSError:
+            continue
+    return import_pdfs(out_root, mst, files) if files else []
 
 
 def can_fetch_pdf(tra_cuu):
@@ -1951,7 +1998,7 @@ def query_invoices(out_root, mst, f):
             "duyet": duyet, "dv": bool(e.get("dv")), "mat_hang": e.get("mat_hang", ""), "note": e.get("note", ""),
             "xml": xml, "html": html, "pdf": pdf or (e.get("pdf") if e.get("pdf") and
                                                      os.path.exists(os.path.join(base, e["pdf"])) else ""),
-            "tra_cuu": e.get("tra_cuu") or {}})
+            "tra_cuu": e.get("tra_cuu") or {}, "pdf_url": browser_pdf_url(e.get("tra_cuu"))})
     rows.sort(key=lambda r: r.pop("_sort"))
     return rows
 
@@ -2263,8 +2310,7 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
         <input type="number" id="sYear" style="width:90px"></div>
       <label>Từ ngày</label><input type="date" id="sFrom"><label>Đến ngày</label><input type="date" id="sTo">
       <div class="chk"><label><input type="checkbox" id="sMtt" checked> Gồm máy tính tiền</label>
-        <label><input type="checkbox" id="sXml" checked> Tải XML</label>
-        <label><input type="checkbox" id="sPdf"> Tải PDF gốc (MISA)</label></div>
+        <label><input type="checkbox" id="sXml" checked> Tải XML</label></div>
       <button class="bigbtn b-vao" onclick="runSync(['purchase'])">Đồng bộ HĐĐT ĐẦU VÀO</button>
       <button class="bigbtn b-ra" onclick="runSync(['sold'])">Đồng bộ HĐĐT ĐẦU RA</button>
       <button class="bigbtn b-vr" onclick="runSync(['purchase','sold'])">Đồng bộ HĐĐT VÀO/RA</button>
@@ -2602,7 +2648,7 @@ function openSync(mst) {
 async function runSync(kinds) {
   syncRange = [$('sFrom').value, $('sTo').value];
   try { await start({msts: [syncMst], kinds, from: syncRange[0], to: syncRange[1], mtt: $('sMtt').checked, xml: $('sXml').checked,
-                     pdf: $('sPdf').checked}); }
+                     pdf: false}); }
   catch (e) { alert(e.message); }
 }
 function openInvoicesFromSync() {
@@ -2740,11 +2786,9 @@ function renderInv() {
         if (t.url) window.open(t.url, '_blank'); else prompt((t.ncc || '') + ' – mã tra cứu', t.code); };
       ct.append(a);
     }
-    if (!r.pdf && t.code && (t.ncc_mst === '0101243150' || (t.ncc || '').startsWith('MISA'))) {
-      const g = el('a', 'lk', 'Tải PDF gốc'); g.href = '#'; g.title = 'Tự tải PDF gốc từ ' + t.ncc + ' bằng mã ' + t.code;
-      g.onclick = async ev => { ev.preventDefault(); g.textContent = 'Đang tải…';
-        try { await post('/api/invoice/fetch-pdf', {mst: $('hMst').value, kind, key: r.key}); loadInv(); }
-        catch (e) { g.textContent = 'Tải PDF gốc'; $('hErr').textContent = e.message + ' – có thể bấm "Tra cứu" để tải tay.'; } };
+    if (!r.pdf && r.pdf_url) {
+      const g = el('a', 'lk', 'Tải PDF gốc'); g.href = '#'; g.title = 'Trình duyệt tải PDF gốc từ ' + t.ncc + ' rồi phần mềm tự gắn';
+      g.onclick = ev => { ev.preventDefault(); browserDownload([r.pdf_url]); };
       ct.append(g);
     }
     const up = el('a', 'lk', r.pdf ? '↻PDF' : '+PDF'); up.href = '#'; up.title = 'Gắn file PDF gốc đã tải từ trang tra cứu';
@@ -2781,14 +2825,37 @@ $('hImpFiles').onchange = async () => {
   catch (e) { $('hErr').textContent = e.message; }
   b.disabled = false; b.textContent = 'Gắn PDF gốc có sẵn';
 };
-async function bulkPdf() {
-  const b = $('hBulkPdf'); b.disabled = true; b.textContent = 'Đang tải PDF gốc…'; $('hErr').textContent = '';
-  try { const d = await post('/api/invoice/fetch-pdf-bulk', {mst: $('hMst').value, filters: hFilters(true)});
-        $('hErr').textContent = d.total ? ('Đã tải ' + d.ok + '/' + d.total + ' PDF gốc.' + (d.errors.length ? ' Lỗi: ' + d.errors.join('; ') : ''))
-                                        : 'Không có hoá đơn nào cần tải PDF gốc (hiện hỗ trợ tự động: MISA).';
-        loadInv(); }
-  catch (e) { $('hErr').textContent = e.message; }
-  b.disabled = false; b.textContent = 'Tải HĐ gốc hàng loạt';
+function bulkPdf() {
+  const sel = hRows.filter(r => hSel.has(r.key)), src = sel.length ? sel : hRows;
+  const urls = src.filter(r => !r.pdf && r.pdf_url).map(r => r.pdf_url);
+  if (!urls.length) { $('hErr').textContent = 'Không có hoá đơn nào cần tải PDF gốc (hiện tự tải được: MISA). Nhà cung cấp khác: bấm "Tra cứu" rồi "Gắn PDF gốc có sẵn".'; return; }
+  browserDownload(urls);
+}
+// Trình duyệt tải PDF gốc về thư mục Downloads (MISA chặn chương trình tự động nhưng không chặn trình duyệt);
+// phần mềm theo dõi Downloads và tự gắn file mới vào đúng hoá đơn.
+let scanTimer = null;
+function browserDownload(urls) {
+  const since = Date.now() / 1000;
+  urls.forEach((u, i) => setTimeout(() => {
+    const f = el('iframe'); f.style.display = 'none'; f.src = u; document.body.append(f); setTimeout(() => f.remove(), 120000);
+  }, i * 1200));
+  $('hErr').innerHTML = ''; $('hErr').append(el('div', 'ok', 'Trình duyệt đang tải ' + urls.length + ' PDF gốc về thư mục Downloads… ' +
+    '(nếu Chrome hỏi "tải nhiều tệp", chọn Cho phép). Phần mềm sẽ tự gắn khi file về.'));
+  const box = el('div', 'mute'); $('hErr').append(box);
+  urls.slice(0, 50).forEach(u => { const a = el('a', 'lk', 'link'); a.href = u; a.target = '_blank'; box.append(a); });
+  if (urls.length) box.prepend('Nếu không thấy tải, bấm từng link: ');
+  let tries = 0, attached = 0; clearInterval(scanTimer);
+  scanTimer = setInterval(async () => {
+    tries++;
+    try { const d = await post('/api/invoice/scan-downloads', {mst: $('hMst').value, since});
+      const ok = d.results.filter(r => r.ok); attached += ok.length;
+      if (ok.length) { loadInv(); }
+      $('hBulkPdf').textContent = attached ? ('Đã gắn ' + attached + '/' + urls.length + ' PDF') : 'Đang chờ file tải về…';
+      if (attached >= urls.length || tries > 20 + urls.length * 2) { clearInterval(scanTimer); $('hBulkPdf').textContent = 'Tải HĐ gốc hàng loạt';
+        if (attached < urls.length) $('hErr').append(el('div', 'err', 'Mới gắn được ' + attached + '/' + urls.length +
+          ' file. Kiểm tra thư mục tải về (' + d.folder + ') hoặc dùng "Gắn PDF gốc có sẵn".')); }
+    } catch (e) { clearInterval(scanTimer); $('hErr').append(el('div', 'err', e.message)); }
+  }, 3000);
 }
 async function updInv(r, fields) {
   try { await post('/api/invoice/update', Object.assign({mst: $('hMst').value, kind: $('hKind').value.replace('_dv', ''), key: r.key}, fields));
@@ -2825,6 +2892,8 @@ class App:
         self.solver = CaptchaSolver(os.path.join(cfg, "captcha-mau.json"))
         self.client_factory = client_factory or HoaDonClient
         self.clients = {}  # MST → client đã đăng nhập (giữ phiên)
+        self.downloads = default_downloads_dir()  # nơi trình duyệt lưu PDF gốc tải về
+        self.seen_downloads = set()
         self.key = secrets.token_urlsafe(24)
         self.job = Job()
 
@@ -3017,13 +3086,17 @@ def make_handler(app, port):
                 app.job.answer(data.get("answer"))
                 return self._send(200, {"ok": True})
             if path in ("/api/invoices", "/api/export", "/api/invoice/update", "/api/invoice/pdf",
-                        "/api/invoice/fetch-pdf", "/api/invoice/fetch-pdf-bulk", "/api/invoice/pdf-import"):
+                        "/api/invoice/fetch-pdf", "/api/invoice/fetch-pdf-bulk", "/api/invoice/pdf-import",
+                        "/api/invoice/scan-downloads"):
                 mst = data.get("mst", "")
                 company = app.store.get(mst)
                 if not company:
                     raise ValueError("Chọn doanh nghiệp")
                 if path == "/api/invoices":
                     return self._send(200, {"rows": query_invoices(app.out_root, mst, data.get("filters") or {})})
+                if path == "/api/invoice/scan-downloads":
+                    res = scan_downloads(app.out_root, mst, app.downloads, float(data.get("since") or 0), app.seen_downloads)
+                    return self._send(200, {"results": res, "folder": app.downloads})
                 if path == "/api/invoice/pdf-import":
                     import base64
                     files = []
@@ -3082,9 +3155,12 @@ def main(argv=None):
     ap.add_argument("--out", default=os.path.join(os.getcwd(), "HoaDon"), help="thư mục lưu (mặc định ./HoaDon)")
     ap.add_argument("--no-browser", action="store_true", help="không tự mở trình duyệt")
     ap.add_argument("--insecure", action="store_true", help="bỏ kiểm tra chứng chỉ SSL (chỉ dùng khi máy báo lỗi SSL)")
+    ap.add_argument("--downloads", help="thư mục trình duyệt lưu file tải về (mặc định: Downloads của Windows)")
     args = ap.parse_args(argv)
 
     app = App(os.path.abspath(args.out), lambda: HoaDonClient(verify_ssl=not args.insecure))
+    if args.downloads:
+        app.downloads = os.path.abspath(args.downloads)
     server = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(app, args.port))
     url = "http://127.0.0.1:%d/" % args.port
     print("Phần mềm tải hoá đơn %s đang chạy tại %s" % (__version__, url))
