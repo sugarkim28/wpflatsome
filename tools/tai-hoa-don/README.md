@@ -5,10 +5,11 @@ Tải hàng loạt hoá đơn **mua vào / bán ra** từ cổng [hoadondientu.g
 ## Tính năng
 
 - **Danh sách doanh nghiệp** giống Nibot: tìm nhanh theo MST/tên, ghi chú công việc, lịch sử đồng bộ (V: mua vào, R: bán ra), số HĐ mua vào / bán ra / tổng, ẩn doanh nghiệp.
-- **Nhập danh sách từ Excel**: copy 3 cột *MST – Tên – Mật khẩu* dán vào là xong.
+- **Nhập danh sách từ Excel**: copy 3 cột *MST – Tên – Mật khẩu* dán vào là xong; để trống tên thì tự lấy tên theo MST.
+- **Lấy tên DN** theo MST khi thêm doanh nghiệp (tên, địa chỉ, cơ quan thuế, tình trạng – từ API công khai của cổng).
 - Mỗi doanh nghiệp bật/tắt đồng bộ đầu vào, đầu ra; nút **Lưu & Test đăng nhập**.
 - **Xử lý hàng loạt**: chọn các DN (hoặc tất cả), khoảng ngày → phần mềm lần lượt đăng nhập và tải. DN nào lỗi (sai mật khẩu…) được ghi lỗi đỏ dưới tên rồi chuyển sang DN tiếp theo. Sai mật khẩu thì **không thử lại** để tránh bị cổng khoá tài khoản.
-- **Captcha tự học**: vài lần đầu bạn gõ captcha, phần mềm ghi nhớ hình từng ký tự; sau đó tự giải. Số ký tự đã học hiện góc trên bên phải.
+- **Tự giải captcha**: có sẵn bảng nhận dạng 30 ký tự của font captcha cổng thuế (đã thử trên captcha thật) – thường không phải gõ. Nếu cổng đổi font, phần mềm hỏi bạn và tự học thêm.
 - Tra hoá đơn có mã, không mã, máy tính tiền. Khoảng ngày bất kỳ (tự chia theo tháng, tự lật trang).
 - **File Excel theo mẫu Nibot** (`MUA_VAO_<MST>_<kỳ>.xlsx`, `BAN_RA_<MST>_<kỳ>.xlsx`), số liệu chi tiết đọc từ XML:
   - `HoaDon_TongQuat`: loại HĐ, người bán/mua, địa chỉ, ngày, HTTT, ký hiệu, số, trạng thái, kết quả kiểm tra, tiền chưa thuế/thuế/CK TM/phí/thanh toán, dòng Total.
@@ -21,7 +22,6 @@ Tải hàng loạt hoá đơn **mua vào / bán ra** từ cổng [hoadondientu.g
 - **Màn hình Đồng bộ** (nút *Đồng bộ* ở mỗi doanh nghiệp hoặc tab Hoá đơn): chọn kỳ (hôm nay, 1 tuần, tháng, quý), 3 nút Đồng bộ ĐẦU VÀO / ĐẦU RA / VÀO-RA; bên phải hiện từng bước (chứng thực, số HĐ tìm thấy, tiến độ tải XML, thời gian) và bảng kết quả từng hoá đơn (Mới / Đổi trạng thái / Đã có, OK / lỗi).
 - **Giữ phiên đăng nhập**: trong lúc phần mềm còn mở, đồng bộ lại cùng doanh nghiệp không phải nhập captcha cho tới khi phiên của cổng hết hạn (tự đăng nhập lại khi hết hạn).
 - **Tải nhanh hơn**: tải 4 file XML cùng lúc; HĐ đã có XML thì bỏ qua.
-- Captcha bạn gõ được lưu (20 mẫu gần nhất) ở `HoaDon/_cau-hinh/captcha-mau/` để chẩn đoán nếu phần mềm chưa tự giải được.
 - **Tab Hoá đơn** (giống màn hình Nibot): chọn doanh nghiệp, Mua vào / Bán ra / HĐ dịch vụ, lọc theo file (có/không XML, PDF), duyệt nội bộ, trạng thái HĐ, kết quả kiểm tra, ký hiệu, số HĐ, MST/tên/mặt hàng/ghi chú, kỳ (hôm nay, tháng, quý, năm). Bảng có dòng tổng, phân trang 10/20/50/100; sửa trực tiếp ghi chú, duyệt nội bộ, đánh dấu HĐ dịch vụ; mở XML / bản xem HTML / PDF. Nút **Đồng bộ** tải kỳ đang chọn; **Kết xuất** EXCEL.XLSX (mẫu Nibot), XML.ZIP, HTML.ZIP, PDF.ZIP theo đúng bộ lọc.
 - **PDF / hoá đơn gốc**:
   - Phần mềm đọc trong XML nhà cung cấp hoá đơn (trường `MSTTCGP`) và mã tra cứu: MISA (`TransactionID`), Viettel (`Mã số bí mật`), BKAV (`InvoiceGUID`), VNPT/MobiFone/Thái Sơn/FAST… Nút **Tra cứu** chép sẵn mã rồi mở trang tra cứu của nhà cung cấp (Viettel cần thêm MST bên bán – hiện khi rê chuột).

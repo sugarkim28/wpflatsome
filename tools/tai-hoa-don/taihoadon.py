@@ -32,11 +32,12 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.4.1"
+__version__ = "2.5.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
 XML_WORKERS = 4  # số file XML tải cùng lúc
+MST_STATUS = {"00": "Đang hoạt động"}  # mã khác: hiện nguyên mã
 NO_XML_MSG = "khongtontaihosogoc"  # cổng báo HĐ không có XML gốc (HĐ không mã), dạng đã bỏ dấu
 # Cổng có tường lửa nhận dạng hành vi: đăng nhập chỉ mang header tối giản như trình duyệt gọi qua proxy
 # của trang; tra cứu/tải XML mang header của trang tra cứu (Action, End-Point). Gửi sai bộ → 403
@@ -242,6 +243,22 @@ class HoaDonClient:
             self._request("GET", "", raw=True, retries=1, profile="portal", url=self.site_url + "/")
         except PortalError:
             pass
+
+    def lookup_company(self, mst):
+        """Tra thông tin người nộp thuế theo MST (API công khai của cổng, không cần đăng nhập)."""
+        mst = re.sub(r"\s+", "", str(mst or ""))
+        if not re.fullmatch(r"\d{10}(-\d{3})?", mst):
+            raise ValueError("MST không hợp lệ")
+        self._visit_portal()
+        d = self._request("GET", "/category/public/dsdkts/%s/manager" % mst, profile="login", retries=1)
+        if not isinstance(d, dict) or not d.get("tennnt"):
+            msg = d.get("message") if isinstance(d, dict) else None
+            raise PortalError(msg or "Không tìm thấy MST %s" % mst)
+        dia_chi = ", ".join(x for x in (d.get("dctsdchi"), d.get("dctsxaten"), d.get("dctshuyenten"),
+                                        d.get("dctstinhten")) if x)
+        tthai = str(d.get("tthai") or "")
+        return {"mst": mst, "ten": d.get("tennnt", "").strip(), "dia_chi": dia_chi, "cqt": d.get("tencqt", ""),
+                "tthai": tthai, "tthai_text": MST_STATUS.get(tthai, "mã " + tthai if tthai else "")}
 
     def get_captcha(self):
         """Trả về {'key': ..., 'content': '<svg ...>'}."""
@@ -1124,15 +1141,52 @@ _ATTR_RE = re.compile(r'([\w:-]+)\s*=\s*"([^"]*)"')
 _NUM_RE = re.compile(r"-?\d*\.?\d+(?:e-?\d+)?", re.I)
 
 
+# Chữ ký M/Q/Z của 30 ký tự trong font captcha của cổng (đã kiểm chứng trên captcha thật; captcha không dùng
+# I, L, O, U, 0, 1). Bảng giống bảng trong công cụ cộng đồng hddt-downloader-windows. Ký tự lạ vẫn tự học thêm.
+CAPTCHA_SIGNATURES = {
+    "MQQQQQZMQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQZMQQZ": "A",
+    "MQQQQQQQQQZMQQQQQQZMQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQZMQQQQQQQQZMQQQQQQQQZ": "B",
+    "MQQQQQQQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQQQQZ": "C",
+    "MQQQQQQQQZMQQQQQQQQQQZMQQQQQQQQQQQQQQQZMQQQQQQQZ": "D",
+    "MQQQQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQQQQQQQZ": "E",
+    "MQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQZ": "F",
+    "MQQQQQQQQQQQQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQZ": "G",
+    "MQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQQQQZ": "H",
+    "MQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQZ": "J",
+    "MQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQZ": "K",
+    "MQQQQQQQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQQQQQZ": "M",
+    "MQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQZ": "N",
+    "MQQQQQQZMQQQQQQQQQQZMQQQQQQQQQQQQQQQZMQQQQQQQQZ": "P",
+    "MQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQQZMQQQQQQQQQQQQZ": "Q",
+    "MQQQQQQZMQQQQQQQQQQQQZMQQQQQQQQQQQQQQQZMQQQQQQQQZ": "R",
+    "MQQQQQQQQQQQQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQZ": "S",
+    "MQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQZ": "T",
+    "MQQQQQQQQQQZMQQQQQQQQQQQQQQQQZ": "V",
+    "MQQQQQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQQQQQQQZ": "W",
+    "MQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQZ": "X",
+    "MQQQQQQQQQZMQQQQQQQQQQQQQZ": "Y",
+    "MQQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQZ": "Z",
+    "MQQQQQQQQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQQQQQQQQQZ": "2",
+    "MQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQZ": "3",
+    "MQQQQZMQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQZMQQQQQZ": "4",
+    "MQQQQQQQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQZ": "5",
+    "MQQQQQQQQQZMQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQZMQQQQQQQQZ": "6",
+    "MQQQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQQZ": "7",
+    "MQQQQQQQQZMQQQQQQQZMQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQQZMQQQQQQQQQZMQQQQQQQZ": "8",
+    "MQQQQQQQQZMQQQQQQQQQQQQQQQQQZMQQQQQQQQQQQQQQQQQQQQZMQQQQQQQQQQQZ": "9",
+}
+
+
 def captcha_glyphs(svg):
     """Trả về [(chữ lệnh, toạ độ tương đối, x trái)] của các ký tự, xếp từ trái sang phải."""
     glyphs = []
     for m in _PATH_RE.finditer(svg or ""):
         attrs = dict(_ATTR_RE.findall(m.group(1)))
         d = attrs.get("d", "")
-        letters = "".join(re.findall(r"[A-Za-z]", d))
-        if "Z" not in letters.upper():
+        letters = "".join(re.findall(r"[A-Za-z]", d)).upper()
+        if "Z" not in letters:
             continue  # đường nhiễu là nét cong hở; ký tự là hình khép kín (có Z), dù tô màu hay chỉ vẽ viền
+        letters = re.sub(r"[^MQZ]", "", letters)  # bỏ L (nét rung ngẫu nhiên), giữ chữ ký M/Q/Z của ký tự
         nums = [float(x) for x in _NUM_RE.findall(d)]
         if len(nums) < 4:
             continue
@@ -1162,11 +1216,11 @@ class CaptchaSolver:
 
     def count(self):
         with self.lock:
-            return sum(len(v) for v in self.templates.values())
+            return sum(len(v) for v in self.templates.values()) + len(CAPTCHA_SIGNATURES)
 
     def chars(self):
         with self.lock:
-            return sorted({t[0] for v in self.templates.values() for t in v})
+            return sorted({t[0] for v in self.templates.values() for t in v} | set(CAPTCHA_SIGNATURES.values()))
 
     def _match(self, letters, rel):
         cands = self.templates.get(letters, [])
@@ -1186,7 +1240,7 @@ class CaptchaSolver:
         out = []
         with self.lock:
             for letters, rel, _ in glyphs:
-                ch = self._match(letters, rel)
+                ch = self._match(letters, rel) or CAPTCHA_SIGNATURES.get(letters)
                 if ch is None:
                     return None
                 out.append(ch)
@@ -1302,9 +1356,10 @@ def login_company(job, client, company, solver):
     if not password:
         raise PortalError("Chưa nhập mật khẩu hoadondientu.gdt.gov.vn")
     job.auth = "đang đăng nhập"
+    auto_failed = False
     for _ in range(4):
         cap = client.get_captcha()
-        text = solver.solve(cap["content"])
+        text = None if auto_failed else solver.solve(cap["content"])
         auto = text is not None
         if not auto:
             glyphs = captcha_glyphs(cap["content"])
@@ -1319,6 +1374,7 @@ def login_company(job, client, company, solver):
             if "captcha" in str(e).lower():
                 if auto:
                     solver.forget(cap["content"])
+                    auto_failed = True  # tự giải sai → lần sau hỏi người dùng
                 job.say("%s: captcha sai, thử lại" % company["mst"])
                 continue
             raise
@@ -1877,8 +1933,10 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
 
 <div class="modal hide" id="mEdit"><div class="card">
   <b id="editTitle">Doanh nghiệp</b>
-  <label>Mã số thuế</label><input type="text" class="full" id="eMst">
-  <label>Tên doanh nghiệp (hiển thị trong bảng kê)</label><input type="text" class="full" id="eTen">
+  <label>Mã số thuế – tên đăng nhập trang hoadondientu.gdt.gov.vn</label>
+  <div style="display:flex;gap:8px"><input type="text" id="eMst" style="flex:1"><button type="button" class="sec" id="eLookup" onclick="lookupMst()">Lấy tên DN</button></div>
+  <div class="hint" id="eInfo"></div>
+  <label>Tên doanh nghiệp (hiển thị trong bảng kê – theo giấy phép hoặc tên gợi nhớ)</label><input type="text" class="full" id="eTen">
   <label>Mật khẩu trang hoadondientu.gdt.gov.vn</label><input type="password" class="full" id="ePw" autocomplete="new-password">
   <div class="hint" id="ePwHint"></div>
   <div class="chk">
@@ -1893,7 +1951,7 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
 
 <div class="modal hide" id="mImport"><div class="card">
   <b>Nhập danh sách doanh nghiệp</b>
-  <div class="hint">Mỗi dòng: MST, Tên, Mật khẩu – copy 3 cột từ Excel dán vào (hoặc ngăn cách bằng dấu |). Mật khẩu có thể để trống.</div>
+  <div class="hint">Mỗi dòng: MST, Tên, Mật khẩu – copy 3 cột từ Excel dán vào (hoặc ngăn cách bằng dấu |). Để trống tên thì phần mềm tự lấy tên theo MST; mật khẩu có thể để trống.</div>
   <textarea id="impText" rows="10" class="full" style="margin-top:8px" placeholder="0313046002	BẢO LỘC KT305	matkhau"></textarea>
   <div class="err" id="impErr"></div>
   <div class="bar"><button onclick="doImport()">Nhập</button><button class="sec" onclick="hide('mImport')">Đóng</button></div>
@@ -1973,9 +2031,17 @@ function openEdit(c) {
   editing = c || null; $('eErr').textContent = '';
   $('editTitle').textContent = c ? 'Cập nhật thông tin' : 'Thêm doanh nghiệp';
   $('eMst').value = c ? c.mst : ''; $('eMst').disabled = !!c; $('eTen').value = c ? c.ten : ''; $('ePw').value = '';
+  $('eInfo').textContent = ''; $('eLookup').classList.toggle('hide', !!c);
   $('ePwHint').textContent = c && c.co_mk ? 'Đã lưu mật khẩu – để trống nếu không đổi. Mật khẩu này khác mật khẩu đăng nhập phần mềm.' : 'Mật khẩu được mã hoá và chỉ lưu trên máy này.';
   $('eVao').checked = c ? c.vao : true; $('eRa').checked = c ? c.ra : true; $('eAn').checked = c ? c.an : false;
   $('eDel').classList.toggle('hide', !c); show('mEdit'); (c ? $('ePw') : $('eMst')).focus();
+}
+async function lookupMst() {
+  const mst = $('eMst').value.trim(); if (!mst) return;
+  $('eInfo').textContent = 'Đang tra cứu…'; $('eErr').textContent = '';
+  try { const d = await post('/api/mst-lookup', {mst});
+        $('eTen').value = d.ten; $('eInfo').textContent = [d.dia_chi, d.cqt, d.tthai_text && ('Tình trạng: ' + d.tthai_text)].filter(Boolean).join(' · '); }
+  catch (e) { $('eInfo').textContent = ''; $('eErr').textContent = e.message; }
 }
 async function saveEdit(test) {
   try {
@@ -2225,6 +2291,7 @@ $('q').oninput = render;
 $('toggleAn').onclick = e => { e.preventDefault(); showHidden = !showHidden; render(); };
 $('all').onchange = e => document.querySelectorAll('.pick').forEach(x => x.checked = e.target.checked);
 $('capIn').addEventListener('keydown', e => { if (e.key === 'Enter') sendCap(); });
+$('eMst').addEventListener('change', () => { if (!editing && !$('eTen').value.trim()) lookupMst(); });
 (() => {
   const now = new Date(), first = new Date(now.getFullYear(), now.getMonth() - 1, 1), last = new Date(now.getFullYear(), now.getMonth(), 0);
   const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -2355,11 +2422,26 @@ def make_handler(app, port):
                     fields[k] = data.get(k)
                 c = app.store.upsert(data.get("mst"), data.get("ten"), data.get("password") or None, **fields)
                 return self._send(200, {"mst": c["mst"]})
+            if path == "/api/mst-lookup":
+                try:
+                    return self._send(200, app.client_factory().lookup_company(data.get("mst")))
+                except PortalError as e:
+                    raise ValueError(str(e))
             if path == "/api/company/delete":
                 app.store.delete(data.get("mst"))
                 return self._send(200, {"ok": True})
             if path == "/api/company/import":
                 added, errors = app.store.import_text(data.get("text"))
+                client, filled = None, 0
+                for c in app.store.public():
+                    if c["ten"] or filled >= 100:
+                        continue
+                    try:
+                        client = client or app.client_factory()
+                        app.store.upsert(c["mst"], client.lookup_company(c["mst"])["ten"])
+                        filled += 1
+                    except (PortalError, ValueError) as e:
+                        errors.append("%s: không lấy được tên (%s)" % (c["mst"], e))
                 return self._send(200, {"added": added, "errors": errors})
             if path == "/api/run":
                 if app.job.running:

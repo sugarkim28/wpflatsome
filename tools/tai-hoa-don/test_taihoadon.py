@@ -112,6 +112,12 @@ class FakePortal(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             return self.wfile.write(body)
+        if u.path.startswith("/category/public/dsdkts/"):
+            mst = u.path.split("/")[4]
+            if mst == "0309999999":
+                return self._json(200, {"mst": mst, "tennnt": "CÔNG TY TNHH MUA", "tthai": "00", "tencqt": "Thuế TP HCM",
+                                        "dctsdchi": "So 2 Hai Ba Trung", "dctsxaten": "Phường Bến Nghé", "dctstinhten": "TP HCM"})
+            return self._json(400, {"message": "Không tìm thấy thông tin MST"})
         if u.path == "/captcha":
             text = "".join(random.sample(list(GLYPHS), len(GLYPHS)))
             key = "K%d" % len(FakePortal.calls)
@@ -230,6 +236,28 @@ class Tests(unittest.TestCase):
             self.assertEqual(solver.solve(make_captcha(text)), text)
         # Đọc lại từ file
         self.assertEqual(t.CaptchaSolver(os.path.join(self.tmp, "c.json")).solve(make_captcha("7DCBA")), "7DCBA")
+
+    def test_real_captcha_builtin_table(self):
+        """Captcha thật của cổng: giải ngay bằng bảng chữ ký có sẵn, không cần học."""
+        solver = t.CaptchaSolver(os.path.join(self.tmp, "c.json"))
+        folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data")
+        for name in sorted(os.listdir(folder)):
+            if name.startswith("captcha_"):
+                svg = open(os.path.join(folder, name), encoding="utf-8").read()
+                self.assertEqual(solver.solve(svg), name[8:-4])
+
+    def test_mst_lookup(self):
+        c = t.HoaDonClient(self.base, delay=0)
+        d = c.lookup_company("0309999999")
+        self.assertEqual((d["ten"], d["tthai_text"]), ("CÔNG TY TNHH MUA", "Đang hoạt động"))
+        self.assertIn("Phường Bến Nghé", d["dia_chi"])
+        with self.assertRaisesRegex(t.PortalError, "Không tìm thấy"):
+            c.lookup_company("0101234567")
+        with self.assertRaises(ValueError):
+            c.lookup_company("123")
+        # Nhập danh sách bỏ trống tên → tự lấy tên
+        added, errors = self.app.store.import_text("0309999999\t\tpw1\n")
+        self.assertEqual(self.app.store.get("0309999999")["ten"], "")
 
     def test_store_and_import(self):
         added, errors = self.app.store.import_text("0309999999\tCONG TY A\tpw1\n0101234567 | CONG TY B | pw2\nabc\tX\n")
@@ -433,6 +461,10 @@ class Tests(unittest.TestCase):
             with self.assertRaises(urllib.error.HTTPError) as cm:
                 call("/api/state", key=False)
             self.assertEqual(cm.exception.code, 403)
+            d = call("/api/company/import", {"text": "0309999999\t\tpw1\n0101234567\t\tpw2"})
+            self.assertEqual(self.app.store.get("0309999999")["ten"], "CÔNG TY TNHH MUA")   # tự lấy tên theo MST
+            self.assertEqual(len(d["errors"]), 1)                                          # MST không tra được
+            self.assertEqual(call("/api/mst-lookup", {"mst": "0309999999"})["ten"], "CÔNG TY TNHH MUA")
             call("/api/company/save", {"mst": "0309999999", "ten": "A", "password": "pw1", "vao": True, "ra": False})
             call("/api/company/save", {"mst": "0309999999", "ghichu": "goi lai"})
             st = call("/api/state")
