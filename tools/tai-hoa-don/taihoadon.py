@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.0.3"
+__version__ = "3.0.4"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -2511,7 +2511,7 @@ main{max-width:1400px;margin:0 auto;padding:16px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
 .top{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
 .stat{color:var(--fg);font-size:15px}.stat b{color:var(--acc)}
-input[type=text],input[type=password],input[type=date],textarea{padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
+input[type=text],input[type=search],input[type=password],input[type=date],textarea{padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
 input.search{flex:1;min-width:220px;background:#fffbe6;color:#333}
 button{padding:7px 14px;border:1px solid var(--acc);border-radius:6px;background:var(--acc);color:#fff;font:inherit;cursor:pointer}
 button.sec{background:transparent;color:var(--acc)}button.red{background:transparent;color:var(--err);border-color:var(--err)}
@@ -2656,7 +2656,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     <select id="hKq"><option value="">--K.quả k.tra--</option></select>
   </div>
   <div class="flt">
-    <input id="hKh" placeholder="Ký hiệu HĐ"><input id="hSo" placeholder="Số HĐ"><input id="hQ" placeholder="MST, tên DN, mặt hàng, ghi chú">
+    <input id="hKh" autocomplete="off" placeholder="Ký hiệu HĐ"><input id="hSo" autocomplete="off" placeholder="Số HĐ"><input id="hQ" type="search" autocomplete="off" placeholder="MST, tên DN, mặt hàng, ghi chú">
     <select id="hPer"></select><input type="date" id="hFrom"><input type="date" id="hTo">
   </div>
   <div class="bar">
@@ -2681,7 +2681,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
   <div class="top">
     <div class="stat">Số doanh nghiệp: <b id="nDN">0</b> hiển thị; <b id="nAn">0</b> bị ẩn
       <a href="#" id="toggleAn" class="mute">xem doanh nghiệp bị ẩn</a></div>
-    <input class="search" id="q" placeholder="nhập MST hoặc tên doanh nghiệp cần làm việc nhanh">
+    <input class="search" id="q" type="search" name="tim-doanh-nghiep" autocomplete="off" placeholder="nhập MST hoặc tên doanh nghiệp cần làm việc nhanh">
   </div>
   <div class="bar">
     <button class="adm" onclick="openEdit()">+ Thêm doanh nghiệp</button>
@@ -2737,7 +2737,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
   <div class="hint" id="uPwHint"></div>
   <div class="chk"><label><input type="checkbox" id="uActive" checked> Đang hoạt động (bỏ tích để khoá tài khoản)</label></div>
   <div id="uMstBox"><label>Doanh nghiệp được giao (<span id="uCnt">0</span>)</label>
-    <div style="display:flex;gap:6px;margin-bottom:6px"><input type="text" id="uQ" placeholder="lọc MST / tên" style="flex:1">
+    <div style="display:flex;gap:6px;margin-bottom:6px"><input type="search" id="uQ" autocomplete="off" placeholder="lọc MST / tên" style="flex:1">
       <button class="sm sec" type="button" onclick="uPickAll(true)">Chọn hết đang lọc</button><button class="sm sec" type="button" onclick="uPickAll(false)">Bỏ chọn</button></div>
     <div class="ulist" id="uList"></div></div>
   <div class="err" id="uEditErr"></div>
@@ -3625,6 +3625,8 @@ def make_handler(app, port):
                     and host in ("127.0.0.1", "localhost") and self.client_address[0] == "127.0.0.1")
 
         def _ip(self):
+            if app.trust_proxy and self.headers.get("CF-Connecting-IP"):  # tên miền đi qua Cloudflare
+                return self.headers["CF-Connecting-IP"].strip()
             if app.trust_proxy and self.headers.get("X-Forwarded-For"):
                 return self.headers["X-Forwarded-For"].split(",")[-1].strip()
             return self.client_address[0]
