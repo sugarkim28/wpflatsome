@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.1.0"
+__version__ = "3.1.1"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -2742,6 +2742,7 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
 .advice h4{color:#5503ca;margin:0 0 6px}.badge{display:inline-block;padding:2px 8px;border-radius:5px;color:#fff;font-size:12px;background:#6c757d}
 .badge.run{background:#f0a500}.badge.ok{background:#1e8449}.badge.bad{background:#c0392b}.steps{line-height:1.9;margin:10px 0}
 .staff .adm,.local .srv{display:none!important}
+.pw{-webkit-text-security:disc;text-security:disc}
 .me{display:flex;gap:8px;align-items:center;font-size:13px}.me a{color:#fff;opacity:.85;text-decoration:none;cursor:pointer}.me a:hover{opacity:1;text-decoration:underline}
 .bell{position:relative;background:transparent;border:0;color:#fff;font-size:18px;padding:2px 6px}.bell i{position:absolute;top:-4px;right:-4px;background:#e5534b;color:#fff;
 font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;text-align:center}
@@ -2910,7 +2911,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
   <div style="display:flex;gap:8px"><input type="text" id="eMst" style="flex:1"><button type="button" class="sec" id="eLookup" onclick="lookupMst()">Lấy tên DN</button></div>
   <div class="hint" id="eInfo"></div>
   <label>Tên doanh nghiệp (hiển thị trong bảng kê – theo giấy phép hoặc tên gợi nhớ)</label><input type="text" class="full" id="eTen">
-  <label>Mật khẩu trang hoadondientu.gdt.gov.vn</label><input type="password" class="full" id="ePw" autocomplete="new-password">
+  <label>Mật khẩu trang hoadondientu.gdt.gov.vn</label><input type="text" class="full pw" id="ePw" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
   <div class="hint" id="ePwHint"></div>
   <div class="chk">
     <label><input type="checkbox" id="eVao"> Đồng bộ hoá đơn đầu vào</label>
@@ -2927,7 +2928,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
   <label>Tên đăng nhập</label><input type="text" class="full" id="uName" autocomplete="off">
   <label>Họ tên</label><input type="text" class="full" id="uTen">
   <label>Vai trò</label><select id="uRole" class="sm"><option value="staff">Nhân viên – chỉ các DN được giao</option><option value="admin">Quản trị – tất cả DN, quản lý người dùng</option></select>
-  <label>Mật khẩu đăng nhập phần mềm</label><input type="password" class="full" id="uPw" autocomplete="new-password">
+  <label>Mật khẩu đăng nhập phần mềm</label><input type="text" class="full pw" id="uPw" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
   <div class="hint" id="uPwHint"></div>
   <div class="chk"><label><input type="checkbox" id="uActive" checked> Đang hoạt động (bỏ tích để khoá tài khoản)</label></div>
   <div id="uMstBox"><label>Doanh nghiệp được giao (<span id="uCnt">0</span>)</label>
@@ -2941,9 +2942,9 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
 
 <div class="modal hide" id="mPw"><div class="card">
   <b>Đổi mật khẩu đăng nhập</b>
-  <label>Mật khẩu hiện tại</label><input type="password" class="full" id="pOld" autocomplete="current-password">
-  <label>Mật khẩu mới (tối thiểu 8 ký tự)</label><input type="password" class="full" id="pNew" autocomplete="new-password">
-  <label>Nhập lại mật khẩu mới</label><input type="password" class="full" id="pNew2" autocomplete="new-password">
+  <label>Mật khẩu hiện tại</label><input type="text" class="full pw" id="pOld" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
+  <label>Mật khẩu mới (tối thiểu 8 ký tự)</label><input type="text" class="full pw" id="pNew" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
+  <label>Nhập lại mật khẩu mới</label><input type="text" class="full pw" id="pNew2" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
   <div class="err" id="pErr"></div>
   <div class="bar"><button onclick="savePw()">Đổi mật khẩu</button><button class="sec" onclick="hide('mPw')">Đóng</button></div>
 </div></div>
@@ -2977,6 +2978,10 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
 <script>
 const KEY = "__TOKEN__";
 const $ = id => document.getElementById(id);
+// Ô mật khẩu trong trang làm việc là ô chữ che bằng CSS: Chrome không coi trang là form đăng nhập nên không tự điền
+// tên/mật khẩu đăng nhập web vào ô tìm kiếm và ô mật khẩu cổng thuế. Trình duyệt không hỗ trợ che → dùng ô mật khẩu.
+if (!(window.CSS && (CSS.supports('-webkit-text-security', 'disc') || CSS.supports('text-security', 'disc'))))
+  document.querySelectorAll('input.pw').forEach(i => { i.type = 'password'; i.autocomplete = 'new-password'; });
 const show = id => $(id).classList.remove('hide'), hide = id => $(id).classList.add('hide');
 const fmt = n => (n || 0).toLocaleString('en-US');
 let me = {role: 'admin', server: false}, companies = [], showHidden = false, editing = null, batchMsts = [], timer = null;
