@@ -372,6 +372,9 @@ class Tests(unittest.TestCase):
         from openpyxl import load_workbook
         tq = load_workbook(x)["HoaDon_TongQuat"]
         self.assertEqual((tq["S5"].value, tq["T5"].value, tq["A6"].value), ("Đã duyệt", "da doi chieu", "Total"))
+        two = [x["key"] for x in rows[:2]]
+        self.assertEqual(len(t.query_invoices(self.tmp, "0309999999", dict(f, keys=two))), 2)  # chỉ các dòng đã chọn
+        self.assertEqual(len(zipfile.ZipFile(t.export_invoices(self.tmp, "0309999999", "A", dict(f, keys=two), "xml")).namelist()), 2)
         z = t.export_invoices(self.tmp, "0309999999", "A", f, "xml")
         self.assertEqual(len(zipfile.ZipFile(z).namelist()), 60)
         with self.assertRaises(ValueError):

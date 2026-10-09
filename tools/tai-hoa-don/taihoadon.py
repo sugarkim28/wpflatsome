@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.8.1"
+__version__ = "2.8.2"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -659,12 +659,14 @@ def misa_pdf(code):
         e = urllib.parse.quote(ext)
         urls.append(MISA_WWW + "/tra-cuu/tra-cuu/DownloadHandler.ashx?Type=pdf&Viewer=1&ext=%s&Code=%s" % (e, q))
         urls.append(MISA_DL + "/downloadhandler.ashx?type=pdf&code=%s&viewer=1&ext=%s" % (q, e))
+    got = []
     for url in dict.fromkeys(urls):
         data = get(url)
         if data[:4] == b"%PDF":
             return data
-    raise PortalError("MISA không trả file PDF cho mã tra cứu %s (đã thử %d đường dẫn; GetRequestTimeEnCode trả: %s)"
-                      % (code, len(urls), " | ".join(diag) or "rỗng"))
+        got.append(re.sub(r"\s+", " ", re.sub(rb"<[^>]+>", b" ", data[:600]).decode("utf-8", "replace")).strip()[:70])
+    raise PortalError("MISA không trả file PDF cho mã tra cứu %s (đã thử %d đường dẫn; GetRequestTimeEnCode trả: %s; "
+                      "trang tải trả: %s)" % (code, len(urls), " | ".join(diag) or "rỗng", " | ".join(got) or "rỗng"))
 
 
 # MST nhà cung cấp → hàm tải PDF gốc. Nhà cung cấp có captcha ở trang tra cứu (Viettel, VNPT…) chưa tự động được.
@@ -1899,8 +1901,11 @@ def query_invoices(out_root, mst, f):
     start = parse_date(f["from"]) if f.get("from") else None
     end = parse_date(f["to"]) if f.get("to") else None
     q = (f.get("q") or "").strip().lower()
+    only = set(f.get("keys") or [])  # các dòng người dùng đã tích chọn
     rows = []
     for key, e in entries.items():
+        if only and key not in only:
+            continue
         inv = e.get("inv") or {}
         d = invoice_date(inv) or invoice_date({"tdlap": e.get("tdlap")})
         if (start and (not d or d < start)) or (end and (not d or d > end)):
@@ -2298,6 +2303,7 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
   </div>
   <div class="bar">
     <button class="sec" onclick="openSync($('hMst').value)">Đồng bộ</button><button onclick="hPage=0;loadInv()">Tìm kiếm</button>
+    <span class="mute" id="hSelInfo"></span>
     <button class="sec" id="hBulkPdf" onclick="bulkPdf()">Tải HĐ gốc hàng loạt</button>
     <button class="sec" id="hImpPdf" onclick="$('hImpFiles').click()" title="Chọn các file PDF hoá đơn gốc có sẵn trên máy – phần mềm tự gắn vào đúng hoá đơn">Gắn PDF gốc có sẵn</button>
     <input type="file" id="hImpFiles" accept="application/pdf" multiple class="hide">
@@ -2307,7 +2313,7 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
       <option value="html">HTML.ZIP</option><option value="pdf">PDF.ZIP</option></select>
   </div>
   <div class="err" id="hErr"></div>
-  <div class="tbl"><table id="hTbl"><thead><tr><th id="hMstH">MST</th><th id="hTenH">Người bán</th><th>Ngày</th><th>Ký hiệu HĐ</th>
+  <div class="tbl"><table id="hTbl"><thead><tr><th title="chọn tất cả"><input type="checkbox" id="hAll"></th><th id="hMstH">MST</th><th id="hTenH">Người bán</th><th>Ngày</th><th>Ký hiệu HĐ</th>
     <th class="n">Số HĐ</th><th class="n">Tiền C.Thuế</th><th class="n">Tiền Thuế</th><th class="n">Tiền CK.TM</th><th class="n">Tiền phí</th>
     <th class="n">Tiền T.Toán</th><th>T.thái HĐ</th><th>Kết quả k.tra</th><th>Duyệt Nội Bộ</th><th>HĐ DV</th><th>Mặt hàng</th>
     <th>Ghi chú</th><th>Chi tiết</th></tr></thead><tbody id="hRows"></tbody><tfoot><tr id="hFoot"></tr></tfoot></table></div>
@@ -2646,7 +2652,7 @@ const TTHAI = ['', 'HĐ Mới', 'HĐ Thay thế', 'HĐ Điều chỉnh', 'HĐ Đ
 const KQ = ['TCT đã nhận', 'Đang k.tra', 'CQT t.chối HĐ', 'HĐ đủ đ.kiện', 'HĐ k đủ đ.kiện', 'Đã cấp MST', 'TCT k nhận mã', 'Đã k.tra định kỳ', 'HĐ có mã từ máy tính tiền'];
 TTHAI.forEach((t, i) => { if (t) $('hTthai').append(new Option(t, i)); });
 KQ.forEach((t, i) => $('hKq').append(new Option(t, i)));
-let curTab = 'DN', hRows = [], hPage = 0, hSize = 20;
+let curTab = 'DN', hRows = [], hPage = 0, hSize = 20, hSel = new Set();
 const isoD = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 const PERIODS = [['', '--Tuỳ chọn ngày--'], ['today', 'Hôm nay'], ['month', 'Tháng này']]
   .concat([...Array(12).keys()].map(i => ['m' + (i + 1), 'Tháng ' + (i + 1)]))
@@ -2674,8 +2680,15 @@ function fillMst() {
   companies.filter(c => !c.an).forEach((c, i) => $('hMst').append(new Option(String(i + 1).padStart(3, '0') + '. ' + (c.ten || '') + ' (' + c.mst + ')', c.mst)));
   if (cur) $('hMst').value = cur;
 }
-function hFilters() {
-  return {kind: $('hKind').value, file: $('hFile').value, duyet: $('hDuyet').value, tthai: $('hTthai').value, kq: $('hKq').value,
+function selInfo() {
+  const n = hRows.filter(r => hSel.has(r.key)).length;
+  $('hSelInfo').textContent = n ? ('Đã chọn ' + n + ' HĐ – tải gốc / kết xuất chỉ các HĐ này') : '';
+  $('hAll').checked = n > 0 && n === hRows.length;
+}
+$('hAll').onchange = () => { hSel = new Set($('hAll').checked ? hRows.map(r => r.key) : []); renderInv(); };
+function hFilters(useSel) {
+  const keys = useSel ? hRows.filter(r => hSel.has(r.key)).map(r => r.key) : [];
+  return {keys, kind: $('hKind').value, file: $('hFile').value, duyet: $('hDuyet').value, tthai: $('hTthai').value, kq: $('hKq').value,
           khhdon: $('hKh').value.trim(), shdon: $('hSo').value.trim(), q: $('hQ').value.trim(), from: $('hFrom').value, to: $('hTo').value};
 }
 async function loadInv() {
@@ -2694,8 +2707,11 @@ function renderInv() {
   $('hTenH').textContent = sold ? 'Người mua' : 'Người bán';
   const tb = $('hRows'); tb.innerHTML = '';
   const pages = Math.max(1, Math.ceil(hRows.length / hSize)); hPage = Math.min(hPage, pages - 1);
+  selInfo();
   hRows.slice(hPage * hSize, hPage * hSize + hSize).forEach(r => {
     const tr = tb.insertRow();
+    const pick = el('input'); pick.type = 'checkbox'; pick.checked = hSel.has(r.key);
+    pick.onchange = () => { pick.checked ? hSel.add(r.key) : hSel.delete(r.key); selInfo(); }; tr.insertCell().append(pick);
     [r.mst, r.ten, r.ngay, r.khhdon].forEach(v => tr.insertCell().textContent = v);
     [r.shdon, fmt(r.cthue), fmt(r.thue), fmt(r.ck), fmt(r.phi), fmt(r.tt)].forEach(v => { const c = tr.insertCell(); c.className = 'n'; c.textContent = v; });
     tr.insertCell().textContent = r.tthai; tr.insertCell().textContent = r.kq;
@@ -2737,7 +2753,7 @@ function renderInv() {
   });
   const sum = k => hRows.reduce((a, r) => a + r[k], 0);
   const f = $('hFoot'); f.innerHTML = '';
-  const c0 = f.insertCell(); c0.colSpan = 5; c0.textContent = hRows.length + ' HĐ';
+  const c0 = f.insertCell(); c0.colSpan = 6; c0.textContent = hRows.length + ' HĐ';
   ['cthue', 'thue', 'ck', 'phi', 'tt'].forEach(k => { const c = f.insertCell(); c.className = 'n'; c.textContent = fmt(sum(k)); });
   f.insertCell().colSpan = 7;
   const pg = $('hPager'); pg.innerHTML = '';
@@ -2762,7 +2778,7 @@ $('hImpFiles').onchange = async () => {
 };
 async function bulkPdf() {
   const b = $('hBulkPdf'); b.disabled = true; b.textContent = 'Đang tải PDF gốc…'; $('hErr').textContent = '';
-  try { const d = await post('/api/invoice/fetch-pdf-bulk', {mst: $('hMst').value, filters: hFilters()});
+  try { const d = await post('/api/invoice/fetch-pdf-bulk', {mst: $('hMst').value, filters: hFilters(true)});
         $('hErr').textContent = d.total ? ('Đã tải ' + d.ok + '/' + d.total + ' PDF gốc.' + (d.errors.length ? ' Lỗi: ' + d.errors.join('; ') : ''))
                                         : 'Không có hoá đơn nào cần tải PDF gốc (hiện hỗ trợ tự động: MISA).';
         loadInv(); }
@@ -2775,10 +2791,10 @@ async function updInv(r, fields) {
 }
 async function exportInv(fmtx) {
   if (!fmtx) return; $('hErr').textContent = '';
-  try { const d = await post('/api/export', {mst: $('hMst').value, filters: hFilters(), fmt: fmtx}); window.open(d.url, '_blank'); }
+  try { const d = await post('/api/export', {mst: $('hMst').value, filters: hFilters(true), fmt: fmtx}); window.open(d.url, '_blank'); }
   catch (e) { $('hErr').textContent = e.message; }
 }
-['hKind', 'hFile', 'hDuyet', 'hTthai', 'hKq', 'hMst'].forEach(id => $(id).onchange = () => { hPage = 0; loadInv(); });
+['hKind', 'hFile', 'hDuyet', 'hTthai', 'hKq', 'hMst'].forEach(id => $(id).onchange = () => { hPage = 0; if (id === 'hMst' || id === 'hKind') hSel.clear(); loadInv(); });
 ['hKh', 'hSo', 'hQ'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { hPage = 0; loadInv(); } }));
 $('q').oninput = render;
 $('toggleAn').onclick = e => { e.preventDefault(); showHidden = !showHidden; render(); };
