@@ -1,0 +1,31 @@
+CÀI BẢN WEB TẢI HOÁ ĐƠN TRÊN FASTPANEL – KHÔNG CẦN SSH
+=====================================================
+
+Thư mục này gồm: taihoadon.py, chay.sh, taihoadon.env, nginx-them.conf
+
+1. DNS: bản ghi A  taihoadon  →  IP của VPS (tên miền tinhoc119.com).
+
+2. FASTPANEL → Tạo site → mẫu "Systemd"
+   - Tên miền: taihoadon.tinhoc119.com (nếu form có hỏi)
+   - Sau khi tạo, mở "Trình quản lý file" của site, tạo thư mục  taihoadon
+     NGOÀI thư mục web công khai (vd /var/www/<tên-user>/data/taihoadon, KHÔNG để trong .../www/...)
+   - Tải lên 4 file trong gói này vào thư mục đó.
+   - Lệnh chạy (Command / ExecStart):
+         /bin/bash /var/www/<tên-user>/data/taihoadon/chay.sh
+     (thay đường dẫn đúng như Trình quản lý file hiển thị)
+   - Nếu form hỏi cổng (port): 8765
+   - Lưu / Khởi động dịch vụ. Lần đầu chờ 1–3 phút để cài thư viện Python.
+
+3. Nếu mẫu Systemd KHÔNG tự gắn tên miền: tạo thêm site mẫu "Reverse proxy"
+   tên miền taihoadon.tinhoc119.com, chuyển tiếp tới  http://127.0.0.1:8765
+
+4. Site có tên miền → SSL → Let's Encrypt → bật chuyển hướng HTTPS.
+   Cấu hình nginx của site → dán nội dung nginx-them.conf vào khối server { } → Lưu.
+
+5. Trong Trình quản lý file mở  taihoadon/data/_cau-hinh/MAT-KHAU-ADMIN-BAN-DAU.txt
+   → lấy mật khẩu admin. Mở https://taihoadon.tinhoc119.com, đăng nhập,
+   ĐỔI MẬT KHẨU rồi XOÁ file txt đó.
+
+Cập nhật bản mới: tải đè taihoadon.py → khởi động lại dịch vụ trong FASTPANEL.
+Sao lưu: thư mục taihoadon/data (gồm cả khoá-bi-mat.key) – thêm vào Backup của FASTPANEL.
+Lỗi 502: dịch vụ chưa chạy xong / lỗi → xem log dịch vụ trong FASTPANEL.

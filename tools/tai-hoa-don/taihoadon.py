@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.0.1"
+__version__ = "3.0.2"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -4069,6 +4069,11 @@ def main(argv=None):
             print("Tạo tài khoản quản trị đầu tiên: %s" % name)
             if not os.environ.get("TAIHOADON_ADMIN_PASSWORD"):
                 print("Mật khẩu: %s   (đăng nhập rồi đổi ngay)" % pw)
+                # để xem được qua Trình quản lý file của bảng điều khiển khi không có SSH; xoá file sau khi đăng nhập
+                note = os.path.join(cfg, "MAT-KHAU-ADMIN-BAN-DAU.txt")
+                fd = os.open(note, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    f.write("Tên đăng nhập: %s\nMật khẩu: %s\nĐăng nhập, đổi mật khẩu rồi XOÁ file này.\n" % (name, pw))
             print("=" * 60)
     server = ThreadingHTTPServer((host, args.port), make_handler(app, args.port))
     if app.server:
