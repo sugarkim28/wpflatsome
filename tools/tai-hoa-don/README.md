@@ -29,7 +29,8 @@ Tải hàng loạt hoá đơn **mua vào / bán ra** từ cổng [hoadondientu.g
   - Phần mềm đọc trong XML nhà cung cấp hoá đơn (trường `MSTTCGP`) và mã tra cứu: MISA (`TransactionID`), Viettel (`Mã số bí mật`), BKAV (`InvoiceGUID`), VNPT/MobiFone/Thái Sơn/FAST… Nút **Tra cứu** chép sẵn mã rồi mở trang tra cứu của nhà cung cấp (Viettel cần thêm MST bên bán – hiện khi rê chuột).
   - Tải PDF ở trang đó rồi bấm **+PDF** để gắn vào hoá đơn → lọc "Có PDF", kết xuất PDF.ZIP dùng được file này.
   - Nút **In**: bản thể hiện dựng từ XML (in hoặc "Lưu thành PDF" trong trình duyệt) cho mọi hoá đơn.
-  - Chưa tự động tải PDF gốc: MISA chỉ cho tải qua API có tài khoản bên bán, Viettel bắt nhập captcha ở trang tra cứu.
+  - **Tự tải PDF gốc – MISA meInvoice**: dùng mã tra cứu (`TransactionID`) theo cách tải công khai trong tài liệu của MISA (không cần tài khoản): nút *Tải PDF gốc* ở từng hoá đơn, nút *Tải HĐ gốc hàng loạt* ở tab Hoá đơn, hoặc tích *Tải PDF gốc (MISA)* khi đồng bộ.
+  - Viettel, VNPT…: trang tra cứu bắt nhập captcha nên chưa tự động – dùng *Tra cứu* (chép sẵn mã) rồi *+PDF*.
 
 ## Cài đặt & chạy
 

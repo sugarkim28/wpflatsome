@@ -383,7 +383,7 @@ class Tests(unittest.TestCase):
         f = {"kind": "purchase", "from": "2026-10-01", "to": "2026-10-31"}
         r = t.query_invoices(self.tmp, "0309999999", f)[0]
         self.assertEqual(r["tra_cuu"], {"ncc": "MISA meInvoice", "url": "https://www.meinvoice.vn/tra-cuu/",
-                                        "field": "TransactionID", "code": "MISA99ABC"})
+                                        "field": "TransactionID", "code": "MISA99ABC", "ncc_mst": "0101243150"})
         # Viettel: "Mã số bí mật"
         self.assertEqual(t.lookup_info({"msttcgp": "0100109106", "ttkhac": {"Mã số bí mật": "X1Y2"}})["code"], "X1Y2")
         # Gắn PDF gốc
@@ -489,6 +489,38 @@ class Tests(unittest.TestCase):
         z = zipfile.ZipFile(io.BytesIO(t.split_pdf("hoa don.pdf", merged, "1-2, 5")))
         self.assertEqual(sorted(z.namelist()), ["hoa don_trang_1-2.pdf", "hoa don_trang_5.pdf"])
         self.assertEqual(len(pypdf.PdfReader(io.BytesIO(z.read("hoa don_trang_1-2.pdf"))).pages), 2)
+
+    def test_misa_original_pdf(self):
+        import unittest.mock as m
+        calls = []
+
+        def fake_get(url, timeout=30):
+            calls.append(url)
+            if url.endswith("GetRequestTimeEnCode"):
+                return b'"AB12CD34"'
+            if "ext=AB12CD34" in url and "code=MISA99ABC" in url:
+                return b"%PDF-1.4 misa goc"
+            return b"<html>not found</html>"
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        with m.patch.object(t, "_http_get", fake_get), m.patch("time.sleep"):
+            job = t.Job()
+            job.running = True
+            job.want_pdf = True
+            helper = AutoAnswer(job)
+            helper.start()
+            t.run_batch(job, self.app.store, self.app.solver, ["0309999999"], ["purchase"], date(2026, 10, 1),
+                        date(2026, 10, 31), True, True, self.tmp, False, self.app.client_factory)
+        self.assertEqual(job.snapshot()["rows"][0]["ketqua"], "OK + PDF gốc")
+        r = t.query_invoices(self.tmp, "0309999999", {"kind": "purchase", "file": "pdf"})
+        self.assertEqual(len(r), 1)
+        with open(os.path.join(self.tmp, "0309999999", r[0]["pdf"]), "rb") as fh:
+            self.assertEqual(fh.read(), b"%PDF-1.4 misa goc")
+        self.assertTrue(calls[1].startswith("https://download.meinvoice.vn/downloadhandler.ashx?type=pdf&code=MISA99ABC"))
+        # Không phải PDF → báo lỗi rõ ràng
+        with m.patch.object(t, "_http_get", lambda u, timeout=30: b'"ZZZZZZZZ"' if "Time" in u else b"<html/>"):
+            with self.assertRaisesRegex(t.PortalError, "MISA không trả file PDF"):
+                t.misa_pdf("XYZ")
+        self.assertFalse(t.can_fetch_pdf({"ncc": "Viettel S-Invoice", "ncc_mst": "0100109106", "code": "A"})[0])
 
     def test_expired_token(self):
         c = t.HoaDonClient(self.base, delay=0)

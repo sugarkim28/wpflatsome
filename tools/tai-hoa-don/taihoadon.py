@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.6.0"
+__version__ = "2.7.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -592,7 +592,69 @@ def lookup_info(info):
         field, code = "InvoiceGUID", info.get("dlhdon_id", "")
     if url.endswith("=") and code:
         url += urllib.parse.quote(code)
-    return {"ncc": name or (("MST " + mst) if mst else ""), "url": url, "field": field, "code": code}
+    return {"ncc": name or (("MST " + mst) if mst else ""), "url": url, "field": field, "code": code,
+            "ncc_mst": mst.split("-")[0]}
+
+
+# ---------------------------------------------------------------------------
+# Tải PDF gốc từ trang tra cứu của nhà cung cấp (bằng mã tra cứu trong XML)
+# ---------------------------------------------------------------------------
+
+def _http_get(url, timeout=30):
+    req = urllib.request.Request(url, headers={"User-Agent": UA_LOGIN, "Accept": "*/*"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.read()
+    except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+        raise PortalError("Không kết nối được trang của nhà cung cấp: %s" % getattr(e, "reason", e))
+
+
+def misa_pdf(code):
+    """MISA meInvoice – theo tài liệu công khai của MISA: lấy mã thời gian 'ext' từ GetRequestTimeEnCode,
+    rồi tải downloadhandler.ashx?type=pdf&code=<mã tra cứu>&ext=<ext>. Không cần tài khoản."""
+    raw = _http_get("https://meinvoice.vn/tra-cuu/GetRequestTimeEnCode").decode("utf-8", "replace")
+    exts = []
+    plain = re.sub(r"<[^>]+>", "", raw).strip().strip('"')
+    if re.fullmatch(r"[A-Za-z0-9]{8}", plain):
+        exts.append(plain)
+    if len(raw) >= 63:
+        exts.append(raw[55:63])  # cách lấy trong mã mẫu của MISA (Substring(55, 8))
+    exts += [m for m in re.findall(r"\b[A-Z0-9]{8}\b", plain)[:3]]
+    q = urllib.parse.quote(code)
+    tried = []
+    for ext in dict.fromkeys(exts):
+        e = urllib.parse.quote(ext)
+        for url in ("https://download.meinvoice.vn/downloadhandler.ashx?type=pdf&code=%s&viewer=1&ext=%s" % (q, e),
+                    "https://www.meinvoice.vn/tra-cuu/tra-cuu/DownloadHandler.ashx?Type=pdf&Viewer=1&ext=%s&Code=%s" % (e, q)):
+            tried.append(url)
+            try:
+                data = _http_get(url)
+            except PortalError:
+                continue
+            if data[:4] == b"%PDF":
+                return data
+    raise PortalError("MISA không trả file PDF cho mã tra cứu %s (đã thử %d đường dẫn)" % (code, len(tried)))
+
+
+# MST nhà cung cấp → hàm tải PDF gốc. Nhà cung cấp có captcha ở trang tra cứu (Viettel, VNPT…) chưa tự động được.
+PDF_FETCHERS = {"0101243150": misa_pdf}
+
+
+def can_fetch_pdf(tra_cuu):
+    t = tra_cuu or {}
+    mst = t.get("ncc_mst") or ("0101243150" if str(t.get("ncc", "")).startswith("MISA") else "")
+    return bool(t.get("code")) and mst in PDF_FETCHERS, mst
+
+
+def fetch_original_pdf(out_root, mst, kind, key):
+    """Tải PDF gốc của một hoá đơn trong kho rồi gắn vào hoá đơn. Trả về đường dẫn tương đối."""
+    e = _load_json(index_file(out_root, mst), {}).get(kind, {}).get(key)
+    if e is None:
+        raise ValueError("Không tìm thấy hoá đơn")
+    ok, prov = can_fetch_pdf(e.get("tra_cuu"))
+    if not ok:
+        raise ValueError("Chưa hỗ trợ tự tải PDF gốc của nhà cung cấp này – bấm 'Tra cứu' để tải tay rồi '+PDF'")
+    return attach_pdf(out_root, mst, kind, key, PDF_FETCHERS[prov](e["tra_cuu"]["code"]))
 
 
 def parse_invoice_xml(xml_path):
@@ -1503,9 +1565,26 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
             entry["mat_hang"] = "; ".join(names)[:500]
             entry["tra_cuu"] = lookup_info(inv["_xmlinfo"])
         known[key] = entry
+    save_index_kind(out_root, mst, kind, known)
+    if getattr(job, "want_pdf", False):
+        by_key = {invoice_key(i): r for i, r in zip(invoices, rows)}
+        base_dir = company_dir(out_root, mst)
+        todo = [k for k in by_key if can_fetch_pdf(known[k].get("tra_cuu"))[0] and not (
+            known[k].get("pdf") and os.path.exists(os.path.join(base_dir, known[k]["pdf"])))]
+        if todo:
+            job.say("%s: tải PDF gốc %d hoá đơn" % (mst, len(todo)))
+        for k in todo:
+            if job.cancel:
+                raise Cancelled()
+            try:
+                fetch_original_pdf(out_root, mst, kind, k)
+                by_key[k]["ketqua"] += " + PDF gốc"
+            except (PortalError, ValueError) as e:
+                by_key[k]["ketqua"] += " (PDF gốc: lỗi)"
+                job.say("%s: không tải được PDF gốc %s: %s" % (mst, k.split("|", 2)[-1].replace("|", "/"), e))
+            time.sleep(0.3)
     with job.lock:
         job.rows.extend(rows)
-    save_index_kind(out_root, mst, kind, known)
 
     paths = write_reports(invoices, folder, "bang-ke-%s_%s" % (label, period), csv_only=True)
     try:
@@ -1592,7 +1671,7 @@ def run_batch(job, store, solver, msts, kinds, start, end, include_mtt, want_xml
 INV_FIELDS = ("khmshdon", "khhdon", "shdon", "tdlap", "nky", "nbmst", "nbten", "nbdchi", "nmmst", "nmten", "nmdchi",
               "thtttoan", "tgtcthue", "tgtthue", "ttcktmai", "tgtphi", "tgtttbso", "dvtte", "tthai", "ttxly",
               "mhdon", "thttltsuat", "_prefix", "_nguon", "_kind")
-USER_FIELDS = ("note", "duyet", "dv")
+USER_FIELDS = ("note", "duyet", "dv", "pdf")
 DUYET_OPTIONS = ("Chờ duyệt", "Đã duyệt", "Không duyệt")
 _INDEX_LOCK = threading.Lock()
 
@@ -2075,7 +2154,8 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
         <input type="number" id="sYear" style="width:90px"></div>
       <label>Từ ngày</label><input type="date" id="sFrom"><label>Đến ngày</label><input type="date" id="sTo">
       <div class="chk"><label><input type="checkbox" id="sMtt" checked> Gồm máy tính tiền</label>
-        <label><input type="checkbox" id="sXml" checked> Tải XML</label></div>
+        <label><input type="checkbox" id="sXml" checked> Tải XML</label>
+        <label><input type="checkbox" id="sPdf"> Tải PDF gốc (MISA)</label></div>
       <button class="bigbtn b-vao" onclick="runSync(['purchase'])">Đồng bộ HĐĐT ĐẦU VÀO</button>
       <button class="bigbtn b-ra" onclick="runSync(['sold'])">Đồng bộ HĐĐT ĐẦU RA</button>
       <button class="bigbtn b-vr" onclick="runSync(['purchase','sold'])">Đồng bộ HĐĐT VÀO/RA</button>
@@ -2119,6 +2199,7 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
   </div>
   <div class="bar">
     <button class="sec" onclick="openSync($('hMst').value)">Đồng bộ</button><button onclick="hPage=0;loadInv()">Tìm kiếm</button>
+    <button class="sec" id="hBulkPdf" onclick="bulkPdf()">Tải HĐ gốc hàng loạt</button>
     <span style="flex:1"></span>
     <select class="sm" id="hExp" style="width:auto" onchange="exportInv(this.value);this.value=''">
       <option value="">Kết xuất…</option><option value="xlsx">EXCEL.XLSX</option><option value="xml">XML.ZIP</option>
@@ -2408,7 +2489,8 @@ function openSync(mst) {
 }
 async function runSync(kinds) {
   syncRange = [$('sFrom').value, $('sTo').value];
-  try { await start({msts: [syncMst], kinds, from: syncRange[0], to: syncRange[1], mtt: $('sMtt').checked, xml: $('sXml').checked}); }
+  try { await start({msts: [syncMst], kinds, from: syncRange[0], to: syncRange[1], mtt: $('sMtt').checked, xml: $('sXml').checked,
+                     pdf: $('sPdf').checked}); }
   catch (e) { alert(e.message); }
 }
 function openInvoicesFromSync() {
@@ -2536,6 +2618,13 @@ function renderInv() {
         if (t.url) window.open(t.url, '_blank'); else prompt((t.ncc || '') + ' – mã tra cứu', t.code); };
       ct.append(a);
     }
+    if (!r.pdf && t.code && (t.ncc_mst === '0101243150' || (t.ncc || '').startsWith('MISA'))) {
+      const g = el('a', 'lk', 'Tải PDF gốc'); g.href = '#'; g.title = 'Tự tải PDF gốc từ ' + t.ncc + ' bằng mã ' + t.code;
+      g.onclick = async ev => { ev.preventDefault(); g.textContent = 'Đang tải…';
+        try { await post('/api/invoice/fetch-pdf', {mst: $('hMst').value, kind, key: r.key}); loadInv(); }
+        catch (e) { g.textContent = 'Tải PDF gốc'; $('hErr').textContent = e.message + ' – có thể bấm "Tra cứu" để tải tay.'; } };
+      ct.append(g);
+    }
     const up = el('a', 'lk', r.pdf ? '↻PDF' : '+PDF'); up.href = '#'; up.title = 'Gắn file PDF gốc đã tải từ trang tra cứu';
     up.onclick = ev => { ev.preventDefault(); const fi = el('input'); fi.type = 'file'; fi.accept = 'application/pdf';
       fi.onchange = async () => { const f = fi.files[0]; if (!f) return;
@@ -2557,6 +2646,15 @@ function renderInv() {
   const prev = el('button', 'sm sec', '‹'); prev.disabled = hPage === 0; prev.onclick = () => { hPage--; renderInv(); };
   const next = el('button', 'sm sec', '›'); next.disabled = hPage >= pages - 1; next.onclick = () => { hPage++; renderInv(); };
   pg.append(prev, next);
+}
+async function bulkPdf() {
+  const b = $('hBulkPdf'); b.disabled = true; b.textContent = 'Đang tải PDF gốc…'; $('hErr').textContent = '';
+  try { const d = await post('/api/invoice/fetch-pdf-bulk', {mst: $('hMst').value, filters: hFilters()});
+        $('hErr').textContent = d.total ? ('Đã tải ' + d.ok + '/' + d.total + ' PDF gốc.' + (d.errors.length ? ' Lỗi: ' + d.errors.join('; ') : ''))
+                                        : 'Không có hoá đơn nào cần tải PDF gốc (hiện hỗ trợ tự động: MISA).';
+        loadInv(); }
+  catch (e) { $('hErr').textContent = e.message; }
+  b.disabled = false; b.textContent = 'Tải HĐ gốc hàng loạt';
 }
 async function updInv(r, fields) {
   try { await post('/api/invoice/update', Object.assign({mst: $('hMst').value, kind: $('hKind').value.replace('_dv', ''), key: r.key}, fields));
@@ -2776,6 +2874,7 @@ def make_handler(app, port):
                         raise ValueError("Chọn ít nhất mua vào hoặc bán ra")
                 app.job = Job()
                 app.job.running = True
+                app.job.want_pdf = bool(data.get("pdf"))
                 threading.Thread(target=run_batch, daemon=True, args=(
                     app.job, app.store, app.solver, msts, kinds, start, end, bool(data.get("mtt")),
                     bool(data.get("xml")), app.out_root, test, app.client_factory, app.clients)).start()
@@ -2783,13 +2882,33 @@ def make_handler(app, port):
             if path == "/api/captcha":
                 app.job.answer(data.get("answer"))
                 return self._send(200, {"ok": True})
-            if path in ("/api/invoices", "/api/export", "/api/invoice/update", "/api/invoice/pdf"):
+            if path in ("/api/invoices", "/api/export", "/api/invoice/update", "/api/invoice/pdf",
+                        "/api/invoice/fetch-pdf", "/api/invoice/fetch-pdf-bulk"):
                 mst = data.get("mst", "")
                 company = app.store.get(mst)
                 if not company:
                     raise ValueError("Chọn doanh nghiệp")
                 if path == "/api/invoices":
                     return self._send(200, {"rows": query_invoices(app.out_root, mst, data.get("filters") or {})})
+                if path == "/api/invoice/fetch-pdf":
+                    try:
+                        return self._send(200, {"pdf": fetch_original_pdf(app.out_root, mst, data.get("kind"), data.get("key"))})
+                    except PortalError as e:
+                        raise ValueError(str(e))
+                if path == "/api/invoice/fetch-pdf-bulk":
+                    f = data.get("filters") or {}
+                    kind = (f.get("kind") or "purchase").replace("_dv", "")
+                    rows = [r for r in query_invoices(app.out_root, mst, f)
+                            if not r["pdf"] and can_fetch_pdf(r.get("tra_cuu"))[0]][:300]
+                    ok, errs = 0, []
+                    for r in rows:
+                        try:
+                            fetch_original_pdf(app.out_root, mst, kind, r["key"])
+                            ok += 1
+                        except (PortalError, ValueError) as e:
+                            errs.append("%s/%s: %s" % (r["khhdon"], r["shdon"], e))
+                        time.sleep(0.3)
+                    return self._send(200, {"ok": ok, "total": len(rows), "errors": errs[:20]})
                 if path == "/api/invoice/pdf":
                     import base64
                     try:
