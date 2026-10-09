@@ -42,11 +42,58 @@ Tải hàng loạt hoá đơn **mua vào / bán ra** từ cổng [hoadondientu.g
 3. Trình duyệt mở `http://127.0.0.1:8765` → **Thêm doanh nghiệp** hoặc **Nhập danh sách từ Excel** → **Xử lý hàng loạt**.
 4. Khi khung *Nhập captcha* hiện ra, gõ ký tự trong ảnh rồi Enter.
 
+## Bản web trên VPS (nhiều nhân viên)
+
+Cùng một file `taihoadon.py`, chạy với `--server` thành **bản web**: mọi người làm việc qua trình duyệt tại `https://tên-miền-của-bạn`, dữ liệu nằm chung trên máy chủ.
+
+- **Đăng nhập & phân quyền**: *Quản trị* thấy tất cả doanh nghiệp, thêm/xoá/nhập DN, quản lý người dùng; *Nhân viên* chỉ thấy và đồng bộ các DN được giao (tab **Quản trị** → *Thêm người dùng* → tích các DN). Khoá tài khoản hoặc đặt lại mật khẩu thì phiên của người đó bị đăng xuất ngay.
+- Mỗi người một lượt đồng bộ riêng, chạy song song (mặc định tối đa 4 lượt cùng lúc trên máy chủ); hai người không đồng bộ trùng một DN cùng lúc.
+- **Đồng bộ tự động hằng ngày** (tab Quản trị): đến giờ đặt sẵn, máy chủ tự đồng bộ mua vào + bán ra cho mọi DN đang hiển thị, tự giải captcha. Kỳ mặc định: tháng này, tới ngày 20 thì gồm cả tháng trước (kịp kê khai).
+- **Chuông thông báo**: HĐ đổi trạng thái (bị huỷ, thay thế, điều chỉnh), HĐ mới và lỗi của lượt tự động – mỗi người chỉ thấy thông báo của DN mình phụ trách.
+- **PDF gốc MISA**: máy chủ thử tải trước; nếu MISA chặn, trình duyệt của bạn tải về máy rồi bấm *Gắn PDF gốc có sẵn* chọn các file vừa tải (bản web không nhìn thấy thư mục Downloads trên máy bạn).
+
+### Cài đặt (khoảng 10 phút)
+
+Cần: một VPS Ubuntu 22.04/24.04 (khuyên dùng **VPS đặt tại Việt Nam** – cổng thuế và trang tra cứu nhà cung cấp ổn định hơn với IP trong nước; 2 CPU, 2 GB RAM, ổ 40 GB+ tuỳ số hoá đơn) và một tên miền con (vd `hoadon.congty.vn`) có bản ghi **A** trỏ về IP VPS.
+
+```bash
+# trên VPS, đăng nhập root
+git clone https://github.com/sugarkim28/wpflatsome.git && cd wpflatsome/tools/tai-hoa-don/web   # hoặc chép thư mục tai-hoa-don lên VPS bằng WinSCP
+sudo bash cai-dat.sh          # hỏi tên miền, cài Docker, chạy app + Caddy (HTTPS tự động)
+```
+
+Cuối màn hình in ra **tài khoản quản trị đầu tiên** (`admin` + mật khẩu ngẫu nhiên) → mở `https://tên-miền`, đăng nhập, **đổi mật khẩu ngay**, rồi thêm doanh nghiệp (hoặc *Nhập danh sách từ Excel*) và người dùng.
+
+Chuyển dữ liệu từ bản chạy trên máy: chép thư mục `HoaDon` của bạn vào `web/data` (trước khi chạy lần đầu, hoặc dừng app rồi chép), rồi `sudo chown -R 1000:1000 data`. Mật khẩu DN lưu bằng DPAPI của Windows không giải được trên máy chủ → nhập lại mật khẩu (dùng *Nhập danh sách từ Excel* cho nhanh).
+
+| Việc | Lệnh (trong thư mục `web`) |
+|---|---|
+| Xem nhật ký / mật khẩu quản trị ban đầu | `docker compose logs app` |
+| Quên mật khẩu quản trị | `docker compose exec app python taihoadon.py --set-password admin` |
+| Cập nhật phiên bản mới | `git pull && docker compose up -d --build` |
+| Dừng / chạy lại | `docker compose down` / `docker compose up -d` |
+| Sao lưu (giữ 14 bản) | `./sao-luu.sh` – hằng ngày: `crontab -e` → `30 23 * * * /đường/dẫn/web/sao-luu.sh` |
+
+Cấu hình trong `web/.env`: `DOMAIN`, `TAIHOADON_ADMIN_USER`, `TAIHOADON_ADMIN_PASSWORD`, `TAIHOADON_MAX_JOBS`.
+
+### Bảo mật bản web
+
+- HTTPS bắt buộc (Caddy tự lấy chứng chỉ Let's Encrypt). Cookie phiên `HttpOnly`, `Secure`, `SameSite`; mọi lệnh có khoá chống giả mạo (CSRF); chỉ nhận đúng tên miền đã cấu hình.
+- Mật khẩu người dùng băm PBKDF2-SHA256 (200.000 vòng). Đăng nhập sai 8 lần trong 15 phút → tạm khoá theo IP và theo tên đăng nhập. Nhật ký đăng nhập / thao tác quản trị: `data/_cau-hinh/nhat-ky.log`.
+- Mật khẩu cổng thuế của DN mã hoá AES (Fernet) bằng khoá `data/_cau-hinh/khoa-bi-mat.key` (tạo tự động, quyền 600). **Sao lưu giữ cả khoá này** – mất khoá thì phải nhập lại mật khẩu DN; ai có bản sao lưu là đọc được mật khẩu, hãy cất bản sao lưu cẩn thận.
+- Thư mục `data` chỉ chủ sở hữu đọc được (700); app chạy bằng người dùng thường trong container.
+- Nhiều DN đăng nhập từ cùng một IP: phần mềm đã giãn cách và giới hạn số lượt chạy cùng lúc; nếu cổng thuế báo chặn, giảm `TAIHOADON_MAX_JOBS` xuống 2.
+
+Chạy bản web không dùng Docker: `pip install openpyxl pypdf cryptography` rồi `python3 taihoadon.py --server --domain hoadon.congty.vn --trust-proxy` sau một reverse proxy HTTPS (Caddy/Nginx) trỏ về cổng 8765.
+
 ## Nơi lưu
 
 ```
 HoaDon/_cau-hinh/doanh-nghiep.json      danh sách DN (mật khẩu đã mã hoá)
 HoaDon/_cau-hinh/captcha-mau.json       mẫu captcha đã học
+HoaDon/_cau-hinh/nguoi-dung.json        (bản web) người dùng, mật khẩu đã băm, DN được giao
+HoaDon/_cau-hinh/khoa-bi-mat.key        (bản web) khoá mã hoá mật khẩu DN – sao lưu cùng dữ liệu
+HoaDon/_cau-hinh/thong-bao.json, cai-dat.json, nhat-ky.log   (bản web) thông báo, lịch tự động, nhật ký
 HoaDon/<MST>/mua-vao_20260901_20260930/
     MUA_VAO_<MST>_20260901_20260930.xlsx      Excel theo mẫu Nibot
     bang-ke-mua-vao_20260901_20260930.csv
@@ -63,10 +110,13 @@ HoaDon/<MST>/_chi-muc.json              hoá đơn đã biết (để đếm HĐ
 | `--port 8765` | Cổng giao diện trên máy |
 | `--no-browser` | Không tự mở trình duyệt |
 | `--insecure` | Bỏ kiểm tra chứng chỉ SSL – chỉ dùng khi máy báo lỗi SSL với cổng thuế |
+| `--server` | Bản web nhiều người dùng (xem mục *Bản web trên VPS*) |
+| `--domain`, `--trust-proxy`, `--bind`, `--max-jobs` | Tên miền được phép, chạy sau Caddy/Nginx, địa chỉ lắng nghe, số lượt đồng bộ cùng lúc |
+| `--set-password TÊN` | Tạo / đặt lại mật khẩu quản trị rồi thoát |
 
 ## Bảo mật
 
-- Giao diện chỉ mở trên `127.0.0.1` (máy của bạn), có khoá phiên chống trang web khác gọi vào.
+- Bản chạy trên máy: giao diện chỉ mở trên `127.0.0.1` (máy của bạn), có khoá phiên chống trang web khác gọi vào. Bản web: xem *Bảo mật bản web* ở trên.
 - Mật khẩu chỉ lưu trên máy: trên Windows được mã hoá bằng DPAPI (chỉ tài khoản Windows đang dùng giải được); mật khẩu không bao giờ gửi ngược ra giao diện.
 - Trên macOS/Linux mật khẩu chỉ được mã hoá đơn giản – hãy bảo vệ thư mục `_cau-hinh`.
 
@@ -82,4 +132,4 @@ HoaDon/<MST>/_chi-muc.json              hoá đơn đã biết (để đếm HĐ
 python -m unittest test_taihoadon.py
 ```
 
-Kiểm thử chạy với một cổng giả lập: captcha SVG (học rồi tự giải), đăng nhập nhiều DN, sai mật khẩu, phân trang, chia tháng, XML, chi tiết hàng hoá, phát hiện HĐ bị huỷ, giao diện.
+Kiểm thử chạy với một cổng giả lập: captcha SVG (học rồi tự giải), đăng nhập nhiều DN, sai mật khẩu, phân trang, chia tháng, XML, chi tiết hàng hoá, phát hiện HĐ bị huỷ, giao diện; bản web: đăng nhập, CSRF, phân quyền nhân viên, khoá tài khoản, giới hạn đăng nhập sai, đồng bộ tự động, thông báo.

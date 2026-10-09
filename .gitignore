@@ -3,3 +3,6 @@ wp-content/themes/flatsome/
 *.zip
 .DS_Store
 __pycache__/
+tools/tai-hoa-don/web/.env
+tools/tai-hoa-don/web/data/
+tools/tai-hoa-don/web/sao-luu/

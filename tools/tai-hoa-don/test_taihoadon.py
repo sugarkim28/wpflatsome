@@ -192,6 +192,31 @@ def make_captcha_text_matches(svg, text):
     return all(t._dist(g[1], ref[ch]) < 0.5 for g, ch in zip(glyphs, text))
 
 
+
+class mock_answer:
+    """Trả lời captcha cho lượt đồng bộ của một người dùng trên App (như AutoAnswer)."""
+    def __init__(self, app, username):
+        self.app, self.username, self.stop = app, username, False
+
+    def __enter__(self):
+        def loop():
+            while not self.stop:
+                job = self.app.jobs.get(self.username)
+                cap = job and job.need_captcha
+                if cap:
+                    for text in list(FakePortal.captchas.values()):
+                        if make_captcha_text_matches(cap["svg"], text):
+                            job.answer(text)
+                            break
+                time.sleep(0.02)
+        self.th = threading.Thread(target=loop, daemon=True)
+        self.th.start()
+        return self
+
+    def __exit__(self, *a):
+        self.stop = True
+        self.th.join(1)
+
 class Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -667,6 +692,150 @@ class Tests(unittest.TestCase):
         finally:
             srv.shutdown()
             srv.server_close()
+
+    def test_web_server_mode(self):
+        """Bản web: đăng nhập, CSRF, nhân viên chỉ thấy DN được giao, quản trị quản lý người dùng."""
+        t.set_secret_key(os.path.join(self.tmp, "_cau-hinh", "khoa.key"))
+        try:
+            app = t.App(self.tmp, lambda: t.HoaDonClient(self.base, delay=0), server=True)
+            app.store.import_text("0309999999\tA\tpw1\n0101234567\tB\tpw2\n")
+            self.assertTrue(app.store.get("0309999999")["pw"].startswith("fernet:"))
+            self.assertEqual(t.unprotect(app.store.get("0309999999")["pw"]), "pw1")
+            app.users.upsert("boss", ten="Sếp", role="admin", password="matkhau-boss")
+            app.users.upsert("nv1", ten="Lan", role="staff", password="matkhau-nv1", msts=["0309999999"])
+            self.assertNotIn("matkhau", open(app.users.path, encoding="utf-8").read())
+            with self.assertRaises(ValueError):          # không được mất quản trị cuối cùng
+                app.users.upsert("boss", role="staff")
+            srv = ThreadingHTTPServer(("127.0.0.1", 0), t.make_handler(app, 0))
+            threading.Thread(target=srv.serve_forever, daemon=True).start()
+            base = "http://127.0.0.1:%d" % srv.server_port
+            import http.cookiejar
+
+            class S:
+                def __init__(s):
+                    s.op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+                    s.key = ""
+
+                def login(s, u, pw):
+                    s.call("/api/login", {"username": u, "password": pw})
+                    page = s.op.open(base + "/").read().decode()
+                    s.key = re.search(r'const KEY = "([^"]+)"', page).group(1)
+
+                def call(s, path, body=None, key=None):
+                    req = urllib.request.Request(base + path, data=json.dumps(body).encode() if body is not None else None,
+                                                 headers={"X-App-Key": s.key if key is None else key,
+                                                          "Content-Type": "application/json"})
+                    return json.loads(s.op.open(req).read())
+
+                def code(s, *a, **k):
+                    try:
+                        s.call(*a, **k)
+                        return 200
+                    except urllib.error.HTTPError as e:
+                        return e.code
+            try:
+                anon = S()
+                self.assertIn("Đăng nhập", anon.op.open(base + "/").read().decode())   # chưa đăng nhập → trang đăng nhập
+                self.assertEqual(anon.code("/api/state"), 401)
+                self.assertEqual(anon.code("/api/login", {"username": "nv1", "password": "sai-mat-khau"}), 401)
+                nv, boss = S(), S()
+                nv.login("nv1", "matkhau-nv1")
+                boss.login("boss", "matkhau-boss")
+                self.assertEqual(nv.code("/api/state", key="sai"), 403)                # thiếu khoá CSRF
+                st = nv.call("/api/state")
+                self.assertEqual([c["mst"] for c in st["companies"]], ["0309999999"])
+                self.assertEqual(st["me"]["role"], "staff")
+                self.assertEqual(len(boss.call("/api/state")["companies"]), 2)
+                self.assertEqual(nv.code("/api/invoices", {"mst": "0101234567"}), 403)
+                self.assertEqual(nv.code("/api/company/delete", {"mst": "0309999999"}), 403)
+                self.assertEqual(nv.code("/api/company/save", {"mst": "0101234567", "ghichu": "x"}), 403)
+                self.assertEqual(nv.code("/api/users", {}), 403)
+                self.assertEqual(nv.code("/api/company/save", {"mst": "0309999999", "ghichu": "goi lai"}), 200)
+                d = os.path.join(self.tmp, "0101234567")
+                os.makedirs(d, exist_ok=True)
+                open(os.path.join(d, "a.xml"), "w").write("<x/>")
+                f = base + "/file?" + urllib.parse.urlencode({"mst": "0101234567", "p": "a.xml"})
+                self.assertEqual(boss.op.open(f).read(), b"<x/>")
+                for who in (nv, anon):
+                    with self.assertRaises(urllib.error.HTTPError):
+                        who.op.open(f)
+                # Đồng bộ: nhân viên chỉ chạy được DN của mình
+                self.assertEqual(nv.code("/api/run", {"msts": ["0101234567"], "test": True}), 400)
+                with mock_answer(app, "nv1"):
+                    nv.call("/api/run", {"msts": ["0309999999"], "test": True})
+                    for _ in range(100):
+                        if not nv.call("/api/state")["job"]["running"]:
+                            break
+                        time.sleep(0.05)
+                self.assertIn("đăng nhập thành công", "\n".join(nv.call("/api/state")["job"]["log"]))
+                self.assertFalse(boss.call("/api/state")["job"]["log"])                # mỗi người một lượt riêng
+                # Quản trị giao thêm DN cho nhân viên, khoá tài khoản thì phiên bị huỷ
+                boss.call("/api/user/save", {"username": "nv1", "msts": ["0309999999", "0101234567"]})
+                self.assertEqual(len(nv.call("/api/state")["companies"]), 2)
+                self.assertEqual(boss.code("/api/user/save", {"username": "nv1", "password": "x", "create": True}), 400)
+                boss.call("/api/user/save", {"username": "nv1", "active": False})
+                self.assertEqual(nv.code("/api/state"), 401)
+                self.assertEqual(S().code("/api/login", {"username": "nv1", "password": "matkhau-nv1"}), 401)
+                # Đổi mật khẩu
+                self.assertEqual(boss.code("/api/me/password", {"old": "sai", "new": "matkhau-moi-1"}), 400)
+                boss.call("/api/me/password", {"old": "matkhau-boss", "new": "matkhau-moi-1"})
+                S().login("boss", "matkhau-moi-1")
+                # Đăng nhập sai nhiều lần → tạm khoá
+                bad = S()
+                codes = [bad.code("/api/login", {"username": "boss", "password": "sai"}) for _ in range(t.LOGIN_MAX + 1)]
+                self.assertEqual(codes[-1], 429)
+                boss.call("/api/logout", {})
+                self.assertEqual(boss.code("/api/state"), 401)
+            finally:
+                srv.shutdown()
+                srv.server_close()
+        finally:
+            t._FERNET = None
+
+    def test_auto_sync_and_notices(self):
+        self.assertEqual(t.auto_range("auto", date(2026, 10, 9)), (date(2026, 9, 1), date(2026, 10, 9)))
+        self.assertEqual(t.auto_range("auto", date(2026, 10, 25)), (date(2026, 10, 1), date(2026, 10, 25)))
+        self.assertEqual(t.auto_range("2month", date(2026, 1, 25)), (date(2025, 12, 1), date(2026, 1, 25)))
+        self.assertEqual(t.auto_range("7", date(2026, 10, 9)), (date(2026, 10, 2), date(2026, 10, 9)))
+        self.app.store.import_text("0309999999\tA\tpw1\n0101234567\tB\tSAI\n")
+        # Captcha của cổng giả không có trong bảng có sẵn → dạy trước để lượt tự động tự giải
+        self.run_job(["0309999999"], kinds=("purchase",), test=True)
+        app = t.App(self.tmp, lambda: t.HoaDonClient(self.base, delay=0), server=True)
+        app.users.upsert("boss", role="admin", password="matkhau-boss")
+        nv = app.users.upsert("nv1", role="staff", password="matkhau-nv1", msts=["0101234567"])
+        job = app.run_auto(wait=True)
+        log = "\n".join(job.log)
+        self.assertIn("tự giải captcha", log)
+        self.assertNotIn("ask", log)
+        self.assertTrue(app.settings()["auto"]["lan_cuoi"])
+        boss = app.users.get("boss")
+        texts = [n["text"] for n in app.notices_for(boss)["items"]]
+        self.assertTrue(any("HĐ mới" in x and "0309999999" in x for x in texts), texts)
+        self.assertTrue(any("lỗi" in x and "0101234567" in x for x in texts), texts)
+        mine = app.notices_for(nv)                                             # nhân viên chỉ thấy DN của mình
+        self.assertTrue(mine["items"] and all(n["mst"] == "0101234567" for n in mine["items"]))
+        app.mark_read(nv)
+        self.assertEqual(app.notices_for(nv)["unread"], 0)
+        self.assertGreater(app.notices_for(boss)["unread"], 0)
+        # HĐ đổi trạng thái → thông báo cho cả lượt đồng bộ tay
+        STATE["tthai"] = 6
+        job, _ = app.start_job(boss, ["0309999999"], ["purchase"], date(2026, 9, 1), date(2026, 10, 31))
+        helper = AutoAnswer(job)
+        helper.start()
+        _.join(30)
+        self.assertTrue(any("đổi trạng thái" in n["text"] for n in app.notices_for(boss)["items"]))
+
+    def test_mst_busy(self):
+        a, b = t.Job(), t.Job()
+        self.assertTrue(t.claim_mst("0309999999", a))
+        self.assertFalse(t.claim_mst("0309999999", b))
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        b.running = True
+        t.run_batch(b, self.app.store, self.app.solver, ["0309999999"], [], None, None, True, True, self.tmp, True,
+                    self.app.client_factory)
+        self.assertIn("đang được người khác đồng bộ", "\n".join(b.log))
+        t.release_mst("0309999999", a)
+        self.assertNotIn("0309999999", t.busy_msts())
 
 
 if __name__ == "__main__":

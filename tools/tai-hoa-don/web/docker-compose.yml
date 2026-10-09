@@ -1,0 +1,32 @@
+# Bản web Tải hoá đơn: app (Python) + Caddy (HTTPS tự động bằng Let's Encrypt)
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: web/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TAIHOADON_DOMAIN: ${DOMAIN}
+    volumes:
+      - ./data:/data            # toàn bộ dữ liệu: DN, người dùng, hoá đơn, khoá bí mật → sao lưu thư mục này
+    expose:
+      - "8765"
+
+  caddy:
+    image: caddy:2.8.4
+    restart: unless-stopped
+    depends_on: [app]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

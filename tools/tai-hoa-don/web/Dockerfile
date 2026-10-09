@@ -1,0 +1,15 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 TZ=Asia/Ho_Chi_Minh \
+    TAIHOADON_SERVER=1 TAIHOADON_DATA=/data TAIHOADON_TRUST_PROXY=1 TAIHOADON_PORT=8765
+
+RUN apt-get update && apt-get install -y --no-install-recommends tzdata \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir openpyxl==3.1.5 pypdf==5.1.0 cryptography==43.0.3 \
+    && useradd -m -u 1000 app && mkdir /data && chown app /data
+
+WORKDIR /app
+COPY taihoadon.py .
+USER app
+EXPOSE 8765
+CMD ["python", "taihoadon.py", "--server"]
