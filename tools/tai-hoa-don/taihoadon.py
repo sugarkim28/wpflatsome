@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.9.0"
+__version__ = "2.9.1"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -701,14 +701,50 @@ def default_downloads_dir():
     return os.path.join(os.path.expanduser("~"), "Downloads")
 
 
-def scan_downloads(out_root, mst, folder, since, seen):
-    """Gắn các PDF mới xuất hiện trong thư mục Downloads (sau thời điểm 'since') vào đúng hoá đơn.
+def browser_download_settings(base=None):
+    """Đọc cài đặt tải xuống của Chrome / Edge (mọi hồ sơ người dùng): thư mục lưu và có bật
+    'Hỏi vị trí lưu từng tệp' không. base: thư mục LOCALAPPDATA (để kiểm thử)."""
+    base = base or os.environ.get("LOCALAPPDATA") or ""
+    dirs, prompt = [], False
+    for app_dir in (os.path.join(base, "Google", "Chrome", "User Data"), os.path.join(base, "Microsoft", "Edge", "User Data")):
+        try:
+            profiles = [d for d in os.listdir(app_dir) if d == "Default" or d.startswith("Profile ")]
+        except OSError:
+            continue
+        for prof in profiles:
+            prefs = _load_json(os.path.join(app_dir, prof, "Preferences"), {})
+            dl = prefs.get("download") or {}
+            if dl.get("default_directory"):
+                dirs.append(dl["default_directory"])
+            if dl.get("prompt_for_download"):
+                prompt = True
+    return {"dirs": list(dict.fromkeys(dirs)), "prompt": prompt}
+
+
+def watch_dirs(app):
+    """Các thư mục có thể chứa PDF trình duyệt vừa tải: thư mục cấu hình, thư mục tải của Chrome/Edge, Downloads, Desktop."""
+    st = browser_download_settings()
+    cands = [app.downloads] + st["dirs"] + [default_downloads_dir(), os.path.join(os.path.expanduser("~"), "Desktop")]
+    return [d for d in dict.fromkeys(os.path.abspath(c) for c in cands if c) if os.path.isdir(d)], st["prompt"]
+
+
+def scan_downloads(out_root, mst, folders, since, seen):
+    """Gắn các PDF mới xuất hiện trong các thư mục tải về (sau thời điểm 'since') vào đúng hoá đơn.
     seen: tập (đường dẫn, mtime) đã xử lý để không đọc lại."""
     files = []
-    try:
-        names = os.listdir(folder)
-    except OSError:
-        return []
+    if isinstance(folders, str):
+        folders = [folders]
+    for folder in folders:
+        try:
+            names = os.listdir(folder)
+        except OSError:
+            continue
+        files += _new_pdfs(folder, names, since, seen)
+    return import_pdfs(out_root, mst, files) if files else []
+
+
+def _new_pdfs(folder, names, since, seen):
+    files = []
     for name in names:
         path = os.path.join(folder, name)
         if not name.lower().endswith(".pdf") or not os.path.isfile(path):
@@ -722,7 +758,7 @@ def scan_downloads(out_root, mst, folder, since, seen):
                 files.append((name, fh.read()))
         except OSError:
             continue
-    return import_pdfs(out_root, mst, files) if files else []
+    return files
 
 
 def can_fetch_pdf(tra_cuu):
@@ -2833,8 +2869,16 @@ function bulkPdf() {
 }
 // Trình duyệt tải PDF gốc về thư mục Downloads (MISA chặn chương trình tự động nhưng không chặn trình duyệt);
 // phần mềm theo dõi Downloads và tự gắn file mới vào đúng hoá đơn.
-let scanTimer = null;
-function browserDownload(urls) {
+let scanTimer = null, promptOk = false;
+async function browserDownload(urls) {
+  if (urls.length > 1 && !promptOk) {
+    try { const d = await post('/api/invoice/scan-downloads', {mst: $('hMst').value, info_only: true});
+      if (d.prompt && !confirm('Chrome/Edge đang bật "Hỏi vị trí lưu từng tệp trước khi tải xuống" nên sẽ hiện hộp thoại Lưu cho TỪNG file.\n\n' +
+          'Tắt một lần: mở tab mới, gõ  chrome://settings/downloads  (Edge: edge://settings/downloads)  rồi TẮT mục ' +
+          '"Hỏi vị trí lưu từng tệp trước khi tải xuống".\n\nBấm OK để vẫn tải (phải bấm Lưu từng file), Cancel để đi tắt trước.')) return;
+      promptOk = true;
+    } catch (e) {}
+  }
   const since = Date.now() / 1000;
   urls.forEach((u, i) => setTimeout(() => {
     const f = el('iframe'); f.style.display = 'none'; f.src = u; document.body.append(f); setTimeout(() => f.remove(), 120000);
@@ -2844,17 +2888,17 @@ function browserDownload(urls) {
   const box = el('div', 'mute'); $('hErr').append(box);
   urls.slice(0, 50).forEach(u => { const a = el('a', 'lk', 'link'); a.href = u; a.target = '_blank'; box.append(a); });
   if (urls.length) box.prepend('Nếu không thấy tải, bấm từng link: ');
-  let tries = 0, attached = 0; clearInterval(scanTimer);
+  let tries = 0, attached = 0; clearInterval(scanTimer); $('hBulkPdf').disabled = true;
   scanTimer = setInterval(async () => {
     tries++;
     try { const d = await post('/api/invoice/scan-downloads', {mst: $('hMst').value, since});
       const ok = d.results.filter(r => r.ok); attached += ok.length;
       if (ok.length) { loadInv(); }
       $('hBulkPdf').textContent = attached ? ('Đã gắn ' + attached + '/' + urls.length + ' PDF') : 'Đang chờ file tải về…';
-      if (attached >= urls.length || tries > 20 + urls.length * 2) { clearInterval(scanTimer); $('hBulkPdf').textContent = 'Tải HĐ gốc hàng loạt';
+      if (attached >= urls.length || tries > 20 + urls.length * 3) { clearInterval(scanTimer); $('hBulkPdf').textContent = 'Tải HĐ gốc hàng loạt'; $('hBulkPdf').disabled = false;
         if (attached < urls.length) $('hErr').append(el('div', 'err', 'Mới gắn được ' + attached + '/' + urls.length +
           ' file. Kiểm tra thư mục tải về (' + d.folder + ') hoặc dùng "Gắn PDF gốc có sẵn".')); }
-    } catch (e) { clearInterval(scanTimer); $('hErr').append(el('div', 'err', e.message)); }
+    } catch (e) { clearInterval(scanTimer); $('hBulkPdf').disabled = false; $('hErr').append(el('div', 'err', e.message)); }
   }, 3000);
 }
 async function updInv(r, fields) {
@@ -3095,8 +3139,11 @@ def make_handler(app, port):
                 if path == "/api/invoices":
                     return self._send(200, {"rows": query_invoices(app.out_root, mst, data.get("filters") or {})})
                 if path == "/api/invoice/scan-downloads":
-                    res = scan_downloads(app.out_root, mst, app.downloads, float(data.get("since") or 0), app.seen_downloads)
-                    return self._send(200, {"results": res, "folder": app.downloads})
+                    folders, prompt = watch_dirs(app)
+                    if data.get("info_only"):
+                        return self._send(200, {"folders": folders, "prompt": prompt})
+                    res = scan_downloads(app.out_root, mst, folders, float(data.get("since") or 0), app.seen_downloads)
+                    return self._send(200, {"results": res, "folder": ", ".join(folders), "prompt": prompt})
                 if path == "/api/invoice/pdf-import":
                     import base64
                     files = []

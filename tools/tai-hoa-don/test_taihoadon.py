@@ -602,6 +602,17 @@ class Tests(unittest.TestCase):
             self.assertEqual(t.scan_downloads(self.tmp, "0309999999", dl, since, seen), [])   # không đọc lại
         self.assertTrue(t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"})[0]["pdf"])
 
+    def test_browser_download_settings(self):
+        base = os.path.join(self.tmp, "LocalAppData")
+        chrome = os.path.join(base, "Google", "Chrome", "User Data")
+        for prof, prefs in (("Default", {"download": {"default_directory": "C:\\Users\\A\\Desktop", "prompt_for_download": True}}),
+                            ("Profile 1", {"download": {"default_directory": "D:\\TaiVe"}}), ("System Profile", {})):
+            os.makedirs(os.path.join(chrome, prof))
+            t._save_json(os.path.join(chrome, prof, "Preferences"), prefs)
+        st = t.browser_download_settings(base)
+        self.assertEqual(st, {"dirs": ["C:\\Users\\A\\Desktop", "D:\\TaiVe"], "prompt": True})
+        self.assertEqual(t.browser_download_settings(os.path.join(self.tmp, "khong-co")), {"dirs": [], "prompt": False})
+
     def test_easyinvoice_lookup(self):
         lk = t.lookup_info({"msttcgp": "0105987432", "ttkhac": {"Mã tra cứu": "8D3VYYQYD"}, "nb": {"MST": "0308783233"}})
         self.assertEqual((lk["ncc"], lk["url"], lk["code"]), ("EasyInvoice (SoftDreams)", "http://0308783233hd.easyinvoice.com.vn", "8D3VYYQYD"))
