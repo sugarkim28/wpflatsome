@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "2.2.0"
+__version__ = "2.3.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -493,10 +493,51 @@ def _to_dt(v):
     return None
 
 
+# Nhà cung cấp giải pháp HĐĐT (MSTTCGP trong XML) → (tên, trang tra cứu hoá đơn gốc).
+PROVIDERS = {
+    "0101243150": ("MISA meInvoice", "https://www.meinvoice.vn/tra-cuu/"),
+    "0100109106": ("Viettel S-Invoice", "https://vinvoice.viettel.vn/utilities/invoice-search"),
+    "0100684378": ("VNPT Invoice", ""),
+    "0101360697": ("BKAV eHoadon", "https://van.ehoadon.vn/Lookup?InvoiceGUID="),
+    "0100686209": ("MobiFone Invoice", "http://tracuuhoadon.mobifoneinvoice.vn/trang-chu"),
+    "0101300842": ("Thái Sơn E-invoice", "https://einvoice.vn/tra-cuu"),
+    "0100727825": ("FAST e-Invoice", "https://einvoice.fast.com.vn/"),
+}
+# Tên trường "mã tra cứu" trong phần thông tin khác (TTKhac) của XML, đã bỏ dấu, chữ thường, bỏ khoảng trắng.
+LOOKUP_FIELDS = ("transactionid", "masobimat", "reservationcode", "matracuu", "fkey", "keysearch", "matc",
+                 "searchkey", "magiaodich")
+
+
+def _plain(text):
+    import unicodedata
+    t = unicodedata.normalize("NFD", str(text or "")).replace("đ", "d").replace("Đ", "D")
+    return "".join(c for c in t if unicodedata.category(c) != "Mn").lower().replace(" ", "").replace("_", "")
+
+
+def lookup_info(info):
+    """{'ncc', 'url', 'field', 'code'} để tra cứu hoá đơn gốc trên trang của nhà cung cấp."""
+    mst = info.get("msttcgp", "")
+    name, url = PROVIDERS.get(mst.split("-")[0], ("", ""))
+    field = code = ""
+    for want in LOOKUP_FIELDS:
+        for k, v in info.get("ttkhac", {}).items():
+            if _plain(k) == want and v:
+                field, code = k, v
+                break
+        if code:
+            break
+    if mst.startswith("0101360697") and not code:
+        field, code = "InvoiceGUID", info.get("dlhdon_id", "")
+    if url.endswith("=") and code:
+        url += urllib.parse.quote(code)
+    return {"ncc": name or (("MST " + mst) if mst else ""), "url": url, "field": field, "code": code}
+
+
 def parse_invoice_xml(xml_path):
     """Đọc XML hoá đơn → {'items': [...], 'rates': [...], 'httt', 'nb_dchi', 'nm_dchi', 'nky'}."""
     import xml.etree.ElementTree as ET
-    info = {"items": [], "rates": [], "httt": "", "nb_dchi": "", "nm_dchi": "", "nky": None}
+    info = {"items": [], "rates": [], "httt": "", "nb_dchi": "", "nm_dchi": "", "nky": None, "msttcgp": "",
+            "ttkhac": {}, "dlhdon_id": "", "nb": {}, "nm": {}, "ttchung": {}, "tong": {}}
     try:
         root = ET.parse(xml_path).getroot()
     except (ET.ParseError, OSError):
@@ -542,6 +583,20 @@ def parse_invoice_xml(xml_path):
         elif tag == "LTSuat":
             info["rates"].append({"rate": norm_rate(text(el, "TSuat")), "base": _float(text(el, "ThTien")),
                                   "tax": _float(text(el, "TThue"))})
+        elif tag == "MSTTCGP" and not info["msttcgp"]:
+            info["msttcgp"] = (el.text or "").strip()
+        elif tag == "TTin":
+            k, v = text(el, "TTruong"), text(el, "DLieu")
+            if k and v:
+                info["ttkhac"].setdefault(k, v)
+        elif tag == "DLHDon" and not info["dlhdon_id"]:
+            info["dlhdon_id"] = el.get("Id", "")
+        if tag in ("NBan", "NMua"):
+            info["nb" if tag == "NBan" else "nm"] = {_local(c.tag): (c.text or "").strip() for c in el if len(c) == 0}
+        elif tag == "TTChung":
+            info["ttchung"] = {_local(c.tag): (c.text or "").strip() for c in el if len(c) == 0}
+        elif tag == "TToan":
+            info["tong"] = {_local(c.tag): (c.text or "").strip() for c in el if len(c) == 0}
     return info
 
 
@@ -1273,6 +1328,7 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
             entry["xml"] = os.path.relpath(os.path.join(folder, inv["_xml"]), base)
             names = [it["name"] for it in inv["_xmlinfo"]["items"] if it["name"]]
             entry["mat_hang"] = "; ".join(names)[:500]
+            entry["tra_cuu"] = lookup_info(inv["_xmlinfo"])
         known[key] = entry
     save_index_kind(out_root, mst, kind, known)
 
@@ -1381,6 +1437,71 @@ def update_invoice(out_root, mst, kind, key, **fields):
         _save_json(path, cur)
 
 
+def attach_pdf(out_root, mst, kind, key, data):
+    """Gắn file PDF gốc (người dùng tải từ trang tra cứu) vào hoá đơn."""
+    if not data.startswith(b"%PDF"):
+        raise ValueError("File không phải PDF")
+    base = company_dir(out_root, mst)
+    path = index_file(out_root, mst)
+    with _INDEX_LOCK:
+        cur = _load_json(path, {})
+        e = cur.get(kind, {}).get(key)
+        if e is None:
+            raise ValueError("Không tìm thấy hoá đơn")
+        if e.get("xml"):
+            rel = os.path.splitext(e["xml"])[0] + ".pdf"
+        else:
+            rel = os.path.join("pdf", invoice_basename(e.get("inv") or {}) + ".pdf")
+        os.makedirs(os.path.dirname(os.path.join(base, rel)), exist_ok=True)
+        with open(os.path.join(base, rel), "wb") as fh:
+            fh.write(data)
+        e["pdf"] = rel
+        _save_json(path, cur)
+    return rel
+
+
+def render_invoice_html(out_root, mst, kind, key):
+    """Bản thể hiện hoá đơn dựng từ XML (in hoặc lưu PDF từ trình duyệt)."""
+    import html as H
+    e = _load_json(index_file(out_root, mst), {}).get(kind, {}).get(key)
+    if e is None:
+        raise ValueError("Không tìm thấy hoá đơn")
+    inv = e.get("inv") or {}
+    info = parse_invoice_xml(os.path.join(company_dir(out_root, mst), e["xml"])) if e.get("xml") else {}
+    nb, nm, tc, tong = info.get("nb", {}), info.get("nm", {}), info.get("ttchung", {}), info.get("tong", {})
+    d = invoice_date(inv)
+    m = lambda v: "{:,.0f}".format(_float(v)).replace(",", ".")
+    esc = lambda v: H.escape(str(v or ""))
+    rows = "".join("<tr><td>%d</td><td>%s</td><td>%s</td><td class=n>%s</td><td class=n>%s</td><td class=n>%s</td>"
+                   "<td class=n>%s</td></tr>" % (i, esc(it["name"]), esc(it["unit"]), ("%g" % it["qty"]) if it["qty"] else "",
+                                                 m(it["price"]) if it["price"] else "", esc(it["rate"]), m(it["amount"]))
+                   for i, it in enumerate(invoice_lines(dict(inv, _xmlinfo=info)), 1))
+    tcu = e.get("tra_cuu") or {}
+    party = lambda title, p, mst_, ten, dchi: (
+        "<div class=box><b>%s</b><br>Tên: %s<br>MST: %s<br>Địa chỉ: %s</div>" % (title, esc(p.get("Ten") or ten),
+                                                                          esc(p.get("MST") or mst_), esc(p.get("DChi") or dchi)))
+    return """<!doctype html><html lang=vi><head><meta charset=utf-8><title>HĐ %s-%s</title><style>
+body{font:14px/1.5 Arial,sans-serif;color:#111;max-width:900px;margin:20px auto;padding:0 16px}h1{text-align:center;font-size:20px;margin:4px}
+.c{text-align:center}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}.box{border:1px solid #999;padding:8px}
+table{border-collapse:collapse;width:100%%}td,th{border:1px solid #999;padding:5px}.n{text-align:right}.mute{color:#666;font-size:12px}
+@media print{.np{display:none}}</style></head><body>
+<p class=np><button onclick="print()">In / Lưu PDF</button> <span class=mute>Bản thể hiện dựng từ XML – không thay thế bản PDF gốc của người bán.</span></p>
+<h1>%s</h1><p class=c>Ký hiệu: <b>%s%s</b> &nbsp; Số: <b>%s</b> &nbsp; Ngày: <b>%s</b><br>Mã CQT: %s</p>
+<div class=grid>%s%s</div><p>Hình thức thanh toán: %s</p>
+<table><tr><th>STT</th><th>Tên hàng hoá, dịch vụ</th><th>ĐVT</th><th>SL</th><th>Đơn giá</th><th>TS</th><th>Thành tiền</th></tr>%s
+<tr><td colspan=6 class=n>Cộng tiền hàng</td><td class=n>%s</td></tr><tr><td colspan=6 class=n>Tiền thuế GTGT</td><td class=n>%s</td></tr>
+<tr><td colspan=6 class=n><b>Tổng tiền thanh toán</b></td><td class=n><b>%s</b></td></tr></table>
+<p>Số tiền viết bằng chữ: %s</p><p class=mute>Nhà cung cấp HĐĐT: %s %s</p></body></html>""" % (
+        esc(inv.get("khhdon")), esc(inv.get("shdon")), esc(tc.get("THDon") or "HÓA ĐƠN"),
+        esc(inv.get("khmshdon")), esc(inv.get("khhdon")), esc(inv.get("shdon")), d.strftime("%d/%m/%Y") if d else "",
+        esc(inv.get("mhdon")), party("Người bán", nb, inv.get("nbmst"), inv.get("nbten"), inv.get("nbdchi")),
+        party("Người mua", nm, inv.get("nmmst"), inv.get("nmten"), inv.get("nmdchi")),
+        esc(tc.get("HTTToan") or inv.get("thtttoan")), rows, m(tong.get("TgTCThue") or inv.get("tgtcthue")),
+        m(tong.get("TgTThue") or inv.get("tgtthue")), m(tong.get("TgTTTBSo") or inv.get("tgtttbso")),
+        esc(tong.get("TgTTTBChu")), esc(tcu.get("ncc")),
+        ("– %s: %s" % (esc(tcu.get("field")), esc(tcu.get("code")))) if tcu.get("code") else "")
+
+
 def _sibling(base, rel, ext):
     if not rel:
         return ""
@@ -1409,6 +1530,8 @@ def query_invoices(out_root, mst, f):
         xml = e.get("xml", "") if e.get("xml") and os.path.exists(os.path.join(base, e["xml"])) else ""
         html, pdf = _sibling(base, xml, ".html"), _sibling(base, xml, ".pdf")
         file_f = f.get("file") or ""
+        if not pdf and e.get("pdf") and os.path.exists(os.path.join(base, e["pdf"])):
+            pdf = e["pdf"]
         if (file_f == "no_xml" and xml) or (file_f == "xml" and not xml) or (file_f == "pdf" and not pdf) \
                 or (file_f == "no_pdf" and pdf) or (file_f == "xml_pdf" and not (xml and pdf)):
             continue
@@ -1436,7 +1559,9 @@ def query_invoices(out_root, mst, f):
             "phi": _float(inv.get("tgtphi")), "tt": _float(inv.get("tgtttbso")),
             "tthai": TTHAI_NIBOT.get(tthai, ""), "kq": TTXLY_NIBOT.get(ttxly, "") if inv else "",
             "duyet": duyet, "dv": bool(e.get("dv")), "mat_hang": e.get("mat_hang", ""), "note": e.get("note", ""),
-            "xml": xml, "html": html, "pdf": pdf})
+            "xml": xml, "html": html, "pdf": pdf or (e.get("pdf") if e.get("pdf") and
+                                                     os.path.exists(os.path.join(base, e["pdf"])) else ""),
+            "tra_cuu": e.get("tra_cuu") or {}})
     rows.sort(key=lambda r: r.pop("_sort"))
     return rows
 
@@ -1814,7 +1939,27 @@ function renderInv() {
     const note = el('input', 'note'); note.value = r.note; note.placeholder = 'ghi chú…'; note.onchange = () => updInv(r, {note: note.value});
     tr.insertCell().append(note);
     const ct = tr.insertCell(); ct.style.whiteSpace = 'nowrap';
-    if (r.xml) ct.append(fileLink(r.xml, 'XML')); if (r.html) ct.append(fileLink(r.html, 'Xem')); if (r.pdf) ct.append(fileLink(r.pdf, 'PDF'));
+    if (r.xml) ct.append(fileLink(r.xml, 'XML')); if (r.html) ct.append(fileLink(r.html, 'HTML')); if (r.pdf) ct.append(fileLink(r.pdf, 'PDF'));
+    const kind = $('hKind').value.replace('_dv', '');
+    const v = el('a', 'lk', 'In'); v.target = '_blank'; v.title = 'Bản thể hiện dựng từ XML – in hoặc lưu PDF';
+    v.href = '/view?' + new URLSearchParams({k: KEY, mst: $('hMst').value, kind, key: r.key}); ct.append(v);
+    const t = r.tra_cuu || {};
+    if (t.url || t.code) {
+      const a = el('a', 'lk', 'Tra cứu'); a.href = '#';
+      a.title = (t.ncc || '') + (t.code ? '\n' + t.field + ': ' + t.code + ' (đã chép, dán vào trang tra cứu)' : '') +
+                (t.ncc && t.ncc.startsWith('Viettel') ? '\nMST bên bán: ' + r.mst : '');
+      a.onclick = ev => { ev.preventDefault(); if (t.code && navigator.clipboard) navigator.clipboard.writeText(t.code).catch(() => {});
+        if (t.url) window.open(t.url, '_blank'); else prompt((t.ncc || '') + ' – mã tra cứu', t.code); };
+      ct.append(a);
+    }
+    const up = el('a', 'lk', r.pdf ? '↻PDF' : '+PDF'); up.href = '#'; up.title = 'Gắn file PDF gốc đã tải từ trang tra cứu';
+    up.onclick = ev => { ev.preventDefault(); const fi = el('input'); fi.type = 'file'; fi.accept = 'application/pdf';
+      fi.onchange = async () => { const f = fi.files[0]; if (!f) return;
+        const b64 = await new Promise(res => { const rd = new FileReader(); rd.onload = () => res(String(rd.result).split(',')[1]); rd.readAsDataURL(f); });
+        try { await post('/api/invoice/pdf', {mst: $('hMst').value, kind, key: r.key, data: b64}); loadInv(); }
+        catch (e) { $('hErr').textContent = e.message; } };
+      fi.click(); };
+    ct.append(up);
   });
   const sum = k => hRows.reduce((a, r) => a + r[k], 0);
   const f = $('hFoot'); f.innerHTML = '';
@@ -1905,7 +2050,7 @@ def make_handler(app, port):
 
         def _body(self):
             n = int(self.headers.get("Content-Length") or 0)
-            if n > 2000000:
+            if n > 30000000:
                 return {}
             try:
                 return json.loads(self.rfile.read(n).decode("utf-8") or "{}")
@@ -1923,6 +2068,15 @@ def make_handler(app, port):
                                         "captcha": {"count": app.solver.count(), "chars": app.solver.chars()}})
             if path == "/file":
                 return self._file()
+            if path == "/view":
+                q = dict(urllib.parse.parse_qsl(urllib.parse.urlparse(self.path).query))
+                if not secrets.compare_digest(q.get("k", ""), app.key) or not app.store.get(q.get("mst", "")):
+                    return self._send(403, {"error": "Không có quyền"})
+                try:
+                    page = render_invoice_html(app.out_root, q["mst"], q.get("kind"), q.get("key"))
+                except (ValueError, OSError) as e:
+                    return self._send(404, {"error": str(e)})
+                return self._send(200, page.encode("utf-8"), "text/html; charset=utf-8")
             self._send(404, {"error": "Không tìm thấy"})
 
         def _file(self):
@@ -2001,13 +2155,20 @@ def make_handler(app, port):
             if path == "/api/captcha":
                 app.job.answer(data.get("answer"))
                 return self._send(200, {"ok": True})
-            if path in ("/api/invoices", "/api/export", "/api/invoice/update"):
+            if path in ("/api/invoices", "/api/export", "/api/invoice/update", "/api/invoice/pdf"):
                 mst = data.get("mst", "")
                 company = app.store.get(mst)
                 if not company:
                     raise ValueError("Chọn doanh nghiệp")
                 if path == "/api/invoices":
                     return self._send(200, {"rows": query_invoices(app.out_root, mst, data.get("filters") or {})})
+                if path == "/api/invoice/pdf":
+                    import base64
+                    try:
+                        raw = base64.b64decode(data.get("data") or "", validate=True)
+                    except ValueError:
+                        raise ValueError("Dữ liệu file không hợp lệ")
+                    return self._send(200, {"pdf": attach_pdf(app.out_root, mst, data.get("kind"), data.get("key"), raw)})
                 if path == "/api/invoice/update":
                     if data.get("duyet") is not None and data["duyet"] not in DUYET_OPTIONS:
                         raise ValueError("Trạng thái duyệt không hợp lệ")

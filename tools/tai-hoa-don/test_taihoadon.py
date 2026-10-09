@@ -70,7 +70,7 @@ XML = ('<?xml version="1.0" encoding="UTF-8"?><HDon><DLHDon><NDHDon>'
        '<HHDVu><TChat>4</TChat><STT>3</STT><THHDVu>Ghi chu giao hang</THHDVu></HHDVu>'
        '</DSHHDVu><TToan><THTTLTSuat><LTSuat><TSuat>10%%</TSuat><ThTien>100000</ThTien><TThue>10000</TThue></LTSuat>'
        '<LTSuat><TSuat>8%%</TSuat><ThTien>50000</ThTien><TThue>4000</TThue></LTSuat></THTTLTSuat></TToan>'
-       '</NDHDon><TTChung><HTTToan>TM/CK</HTTToan></TTChung></DLHDon><SHDon>%s</SHDon></HDon>')
+       '</NDHDon><TTChung><THDon>HÓA ĐƠN GIÁ TRỊ GIA TĂNG</THDon><HTTToan>TM/CK</HTTToan><MSTTCGP>0101243150</MSTTCGP><TTKhac><TTin><TTruong>TransactionID</TTruong><KDLieu>string</KDLieu><DLieu>MISA%sABC</DLieu></TTin></TTKhac></TTChung></DLHDon><SHDon>%s</SHDon></HDon>')
 
 
 class FakePortal(BaseHTTPRequestHandler):
@@ -136,7 +136,7 @@ class FakePortal(BaseHTTPRequestHandler):
         if u.path == "/query/invoices/export-xml":
             buf = io.BytesIO()
             with zipfile.ZipFile(buf, "w") as z:
-                z.writestr("invoice.xml", XML % q["shdon"])
+                z.writestr("invoice.xml", XML % (q["shdon"], q["shdon"]))
                 z.writestr("details.js", "x")
             data = buf.getvalue()
             self.send_response(200)
@@ -334,6 +334,28 @@ class Tests(unittest.TestCase):
         self.assertEqual(len(zipfile.ZipFile(z).namelist()), 60)
         with self.assertRaises(ValueError):
             t.export_invoices(self.tmp, "0309999999", "A", f, "pdf")
+
+    def test_lookup_pdf_view(self):
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        self.run_job(["0309999999"], kinds=("purchase",), start=date(2026, 10, 1), end=date(2026, 10, 31))
+        f = {"kind": "purchase", "from": "2026-10-01", "to": "2026-10-31"}
+        r = t.query_invoices(self.tmp, "0309999999", f)[0]
+        self.assertEqual(r["tra_cuu"], {"ncc": "MISA meInvoice", "url": "https://www.meinvoice.vn/tra-cuu/",
+                                        "field": "TransactionID", "code": "MISA99ABC"})
+        # Viettel: "Mã số bí mật"
+        self.assertEqual(t.lookup_info({"msttcgp": "0100109106", "ttkhac": {"Mã số bí mật": "X1Y2"}})["code"], "X1Y2")
+        # Gắn PDF gốc
+        with self.assertRaises(ValueError):
+            t.attach_pdf(self.tmp, "0309999999", "purchase", r["key"], b"not a pdf")
+        t.attach_pdf(self.tmp, "0309999999", "purchase", r["key"], b"%PDF-1.4 test")
+        self.assertEqual(len(t.query_invoices(self.tmp, "0309999999", dict(f, file="pdf"))), 1)
+        z = t.export_invoices(self.tmp, "0309999999", "A", f, "pdf")
+        self.assertEqual(len(zipfile.ZipFile(z).namelist()), 1)
+        # Bản in dựng từ XML
+        page = t.render_invoice_html(self.tmp, "0309999999", "purchase", r["key"])
+        for txt in ("HÓA ĐƠN GIÁ TRỊ GIA TĂNG", "So 1 Le Loi", "Giay A4", "But bi", "MISA99ABC"):
+            self.assertIn(txt, page)
+        self.assertNotIn("Ghi chu giao hang", page)
 
     def test_expired_token(self):
         c = t.HoaDonClient(self.base, delay=0)

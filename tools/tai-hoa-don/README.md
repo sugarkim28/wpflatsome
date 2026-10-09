@@ -19,7 +19,11 @@ Tải hàng loạt hoá đơn **mua vào / bán ra** từ cổng [hoadondientu.g
   - Bán ra: `HoaDon_TongQuat` + `ChiTiet_HangHoa`.
 - Chạy lại không tải trùng XML; chỉ tải lại hoá đơn đổi trạng thái.
 - **Tab Hoá đơn** (giống màn hình Nibot): chọn doanh nghiệp, Mua vào / Bán ra / HĐ dịch vụ, lọc theo file (có/không XML, PDF), duyệt nội bộ, trạng thái HĐ, kết quả kiểm tra, ký hiệu, số HĐ, MST/tên/mặt hàng/ghi chú, kỳ (hôm nay, tháng, quý, năm). Bảng có dòng tổng, phân trang 10/20/50/100; sửa trực tiếp ghi chú, duyệt nội bộ, đánh dấu HĐ dịch vụ; mở XML / bản xem HTML / PDF. Nút **Đồng bộ** tải kỳ đang chọn; **Kết xuất** EXCEL.XLSX (mẫu Nibot), XML.ZIP, HTML.ZIP, PDF.ZIP theo đúng bộ lọc.
-- PDF: lưu nếu gói XML của cổng thuế có kèm. PDF gốc từ trang tra cứu của nhà cung cấp hoá đơn (VNPT, Viettel, MISA…) chưa hỗ trợ.
+- **PDF / hoá đơn gốc**:
+  - Phần mềm đọc trong XML nhà cung cấp hoá đơn (trường `MSTTCGP`) và mã tra cứu: MISA (`TransactionID`), Viettel (`Mã số bí mật`), BKAV (`InvoiceGUID`), VNPT/MobiFone/Thái Sơn/FAST… Nút **Tra cứu** chép sẵn mã rồi mở trang tra cứu của nhà cung cấp (Viettel cần thêm MST bên bán – hiện khi rê chuột).
+  - Tải PDF ở trang đó rồi bấm **+PDF** để gắn vào hoá đơn → lọc "Có PDF", kết xuất PDF.ZIP dùng được file này.
+  - Nút **In**: bản thể hiện dựng từ XML (in hoặc "Lưu thành PDF" trong trình duyệt) cho mọi hoá đơn.
+  - Chưa tự động tải PDF gốc: MISA chỉ cho tải qua API có tài khoản bên bán, Viettel bắt nhập captcha ở trang tra cứu.
 
 ## Cài đặt & chạy
 
