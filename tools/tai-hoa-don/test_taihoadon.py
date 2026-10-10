@@ -576,6 +576,8 @@ class Tests(unittest.TestCase):
                 elif u.path == "/tra-cuu/tra-cuu/DownloadHandler.ashx" and q.get("Code") == "MISA99ABC" \
                         and q.get("ext") in ("J1V4E6D_", "PAGE1234"):
                     body, ctype = b"%PDF-1.4 misa goc", "application/pdf"
+                    if q.get("Type") == "xml":
+                        body, ctype = b'<?xml version="1.0"?><HDon><DLHDon>misa</DLHDon></HDon>', "text/xml"
                 self.send_response(200)
                 self.send_header("Content-Type", ctype)
                 self.send_header("Content-Length", str(len(body)))
@@ -607,9 +609,13 @@ class Tests(unittest.TestCase):
                 with m.patch("time.sleep"):
                     t.run_batch(job, self.app.store, self.app.solver, ["0309999999"], ["purchase"], date(2026, 10, 1),
                                 date(2026, 10, 31), True, True, self.tmp, False, self.app.client_factory)
-            self.assertEqual(job.snapshot()["rows"][0]["ketqua"], "OK + PDF gốc")
+            self.assertEqual(job.snapshot()["rows"][0]["ketqua"], "OK + PDF gốc + XML gốc")
             r = t.query_invoices(self.tmp, "0309999999", {"kind": "purchase", "file": "pdf"})
             self.assertEqual(len(r), 1)
+            self.assertTrue(r[0]["xml_goc"].endswith("_goc-ncc.xml"))
+            self.assertFalse(r[0]["need_goc"])
+            with open(os.path.join(t.company_dir(self.tmp, "0309999999"), r[0]["xml_goc"]), "rb") as fh:
+                self.assertIn(b"<DLHDon>misa</DLHDon>", fh.read())
         finally:
             srv.shutdown()
             srv.server_close()
@@ -951,6 +957,8 @@ class Tests(unittest.TestCase):
                     return self._out(caps[(seen["n"] - 1) % 2], "image/png")
                 if self.path.startswith("/Invoice/Download?fileGuid=g1"):
                     return self._out(b"%PDF-1.4 easy goc", "application/pdf")
+                if self.path == "/Search/DownloadXML?token=XT%2F9%2B":
+                    return self._out(b'<?xml version="1.0"?><HDon>easy</HDon>', "text/xml")
                 self.send_error(404)
 
             def do_POST(self):
@@ -966,6 +974,7 @@ class Tests(unittest.TestCase):
                     inv = H.escape(json.dumps({"str": "<?xml version=\"1.0\"?><html><body>HOA DON</body></html>"}))
                     return self._out(('<input id="InvData" name="InvData" type="hidden" value="%s">'
                                       '<button onclick="downloadPdfAndFileAttachFromAvailableHtml(\'TOK/123+\');">'
+                                      '<button onclick="downloadXML(\'XT/9+\')">Tải tệp XML</button>'
                                       % inv).encode())
                 if self.path == "/Invoice/DownloadPdfAndFileAttachFromAvailableHtml":
                     import base64
@@ -982,6 +991,8 @@ class Tests(unittest.TestCase):
             url = "http://127.0.0.1:%d" % srv.server_port
             self.assertEqual(t.easyinvoice_pdf({"url": url, "code": "HIUOVGNMC"}), b"%PDF-1.4 easy goc")
             self.assertEqual(seen["posts"][0][1]["typeSearch"], "fKeySearch")
+            got = t.easyinvoice_files({"url": url, "code": "HIUOVGNMC"})
+            self.assertEqual((got["pdf"], got["xml"]), (b"%PDF-1.4 easy goc", b'<?xml version="1.0"?><HDon>easy</HDon>'))
             with self.assertRaisesRegex(t.PortalError, "Không tìm thấy"):
                 t.easyinvoice_pdf({"url": url, "code": "SAI"})
             self.assertTrue(t.can_fetch_pdf({"ncc_mst": "0105987432", "code": "X"})[0])
@@ -1181,7 +1192,7 @@ class Tests(unittest.TestCase):
         self.app.store.import_text("0309999999\tA\tpw1\n")
         calls = []
 
-        def broken(t_):
+        def broken(t_, **kw):
             calls.append(t_["code"])
             raise t.PortalError("MISA chặn")
         job = t.Job()
@@ -1189,20 +1200,45 @@ class Tests(unittest.TestCase):
         job.want_pdf = True
         helper = AutoAnswer(job)
         helper.start()
-        with mock.patch.dict(t.PDF_FETCHERS, {"0101243150": broken}):
+        with mock.patch.dict(t.ORIGINAL_FETCHERS, {"0101243150": broken}):
             t.run_batch(job, self.app.store, self.app.solver, ["0309999999"], ["purchase"], date(2026, 9, 1),
                         date(2026, 10, 31), True, True, self.tmp, False, self.app.client_factory)
         helper.join(1)
         self.assertEqual(len(calls), 3, "lỗi 3 lần liên tiếp thì không thử tiếp các hoá đơn MISA còn lại")
         log = "\n".join(job.log)
         self.assertIn("bỏ qua PDF gốc của nhà cung cấp này", log)
-        self.assertTrue(any("PDF gốc: bỏ qua" in r["ketqua"] for r in job.rows))
+        self.assertTrue(any("HĐ gốc: bỏ qua" in r["ketqua"] for r in job.rows))
         with mock.patch.object(t, "find_browser", return_value=None):
             zp = t.export_invoices(self.tmp, "0309999999", "A", {"kind": "purchase"}, "all")
         names = zipfile.ZipFile(zp).namelist()
         self.assertEqual(sum(n.startswith("XML/") for n in names), 61)
         self.assertEqual(sum(n.startswith("PDF/") for n in names), 61)
         self.assertEqual(sum(n.endswith(".xlsx") for n in names), 1)
+
+    def test_import_original_xml(self):
+        """Gắn XML gốc tải tay từ trang tra cứu (kể cả trong ZIP): khớp theo MST bán, ký hiệu, số hoá đơn."""
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        job = t.Job()
+        job.running = True
+        helper = AutoAnswer(job)
+        helper.start()
+        t.run_batch(job, self.app.store, self.app.solver, ["0309999999"], ["purchase"], date(2026, 10, 1),
+                    date(2026, 10, 31), True, True, self.tmp, False, self.app.client_factory)
+        helper.join(1)
+        r = t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"})[0]
+        nb, mau, kh, so = r["key"].split("|")
+        xml = ('<?xml version="1.0" encoding="UTF-8"?><HDon><DLHDon><TTChung><KHMSHDon>%s</KHMSHDon><KHHDon>%s</KHHDon>'
+               '<SHDon>%s</SHDon></TTChung><NDHDon><NBan><Ten>X</Ten><MST>%s</MST></NBan></NDHDon></DLHDon></HDon>'
+               % (mau, kh, so, nb)).encode()
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("hoa-don.xml", xml)
+        res = t.import_pdfs(self.tmp, "0309999999", [("x.zip", buf.getvalue()),
+                                                    ("sai.xml", xml.replace(b"<SHDon>", b"<SHDon>9"))])
+        self.assertTrue(res[0]["ok"], res)
+        self.assertFalse(res[1]["ok"])
+        r = [x for x in t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"}) if x["key"] == r["key"]][0]
+        self.assertTrue(r["xml_goc"])
 
 
 if __name__ == "__main__":

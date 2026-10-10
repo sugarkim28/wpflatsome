@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.7.0"
+__version__ = "3.8.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -624,8 +624,37 @@ def _http_get(url, timeout=30):
 MISA_WWW, MISA_APEX, MISA_DL = "https://www.meinvoice.vn", "https://meinvoice.vn", "https://download.meinvoice.vn"
 
 
+def _is_xml(data):
+    head = data[:400].lstrip(b"\xef\xbb\xbf \r\n\t")
+    return head[:5] == b"<?xml" or head[:5] in (b"<HDon", b"<TDie") or b"<HDon" in data[:2000]
+
+
+def _pick_file(data, typ):
+    """Nội dung tải về → file đúng loại (PDF / XML), kể cả khi nằm trong ZIP. Không đúng loại thì trả None."""
+    ok = (lambda d: d[:4] == b"%PDF") if typ == "pdf" else _is_xml
+    if ok(data):
+        return data
+    if data[:2] == b"PK":
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as z:
+                for n in z.namelist():
+                    if n.lower().endswith("." + typ) and ok(z.read(n)):
+                        return z.read(n)
+        except zipfile.BadZipFile:
+            return None
+    return None
+
+
 def misa_pdf(code):
-    """MISA meInvoice – tải PDF gốc bằng mã tra cứu, không cần tài khoản. Thử lần lượt:
+    return misa_file(code, "pdf")
+
+
+def misa_xml(code):
+    return misa_file(code, "xml")
+
+
+def misa_file(code, typ="pdf"):
+    """MISA meInvoice – tải PDF (typ='pdf') hoặc XML (typ='xml') gốc bằng mã tra cứu, không cần tài khoản. Thử lần lượt:
     0) đúng link nút "Tải hóa đơn dạng PDF" của trang tra cứu (Default.js của MISA):
        /tra-cuu/DownloadHandler.ashx?Type=pdf&Code=<mã> – không cần mã ext;
     1) mở trang tra cứu ?sc=<mã> như trình duyệt (giữ cookie) và lấy link DownloadHandler.ashx có sẵn trong trang;
@@ -650,11 +679,12 @@ def misa_pdf(code):
 
     urls, diag = [], []
     page = get(lookup, referer=MISA_WWW + "/tra-cuu/").decode("utf-8", "replace")  # lấy cookie như trình duyệt
-    direct = get(MISA_WWW + "/tra-cuu/DownloadHandler.ashx?Type=pdf&Code=" + urllib.parse.quote(code))
-    if direct[:4] == b"%PDF":
+    direct = _pick_file(get(MISA_WWW + "/tra-cuu/DownloadHandler.ashx?Type=%s&Code=" % typ + urllib.parse.quote(code)), typ)
+    if direct:
         return direct
     for link in re.findall(r"DownloadHandler\.ashx\?[^\"'<>\s]+", page, re.I):
-        urls.append(urllib.parse.urljoin(MISA_WWW + "/tra-cuu/", "tra-cuu/" + H.unescape(link)))
+        link = re.sub(r"(?i)type=pdf", "Type=" + typ, H.unescape(link))
+        urls.append(urllib.parse.urljoin(MISA_WWW + "/tra-cuu/", "tra-cuu/" + link))
     exts = []
     for src in (MISA_WWW + "/tra-cuu/GetRequestTimeEnCode", MISA_APEX + "/tra-cuu/GetRequestTimeEnCode"):
         raw = get(src).decode("utf-8", "replace")
@@ -670,16 +700,18 @@ def misa_pdf(code):
     q = urllib.parse.quote(code)
     for ext in dict.fromkeys(exts):
         e = urllib.parse.quote(ext)
-        urls.append(MISA_WWW + "/tra-cuu/tra-cuu/DownloadHandler.ashx?Type=pdf&Viewer=1&ext=%s&Code=%s" % (e, q))
-        urls.append(MISA_DL + "/downloadhandler.ashx?type=pdf&code=%s&viewer=1&ext=%s" % (q, e))
+        urls.append(MISA_WWW + "/tra-cuu/tra-cuu/DownloadHandler.ashx?Type=%s&Viewer=1&ext=%s&Code=%s" % (typ, e, q))
+        urls.append(MISA_DL + "/downloadhandler.ashx?type=%s&code=%s&viewer=1&ext=%s" % (typ, q, e))
     got = []
     for url in dict.fromkeys(urls):
-        data = get(url)
-        if data[:4] == b"%PDF":
+        raw = get(url)
+        data = _pick_file(raw, typ)
+        if data:
             return data
+        data = raw
         got.append(re.sub(r"\s+", " ", re.sub(rb"<[^>]+>", b" ", data[:600]).decode("utf-8", "replace")).strip()[:70])
-    raise PortalError("MISA không trả file PDF cho mã tra cứu %s (đã thử %d đường dẫn; GetRequestTimeEnCode trả: %s; "
-                      "trang tải trả: %s)" % (code, len(urls), " | ".join(diag) or "rỗng", " | ".join(got) or "rỗng"))
+    raise PortalError("MISA không trả file %s cho mã tra cứu %s (đã thử %d đường dẫn; GetRequestTimeEnCode trả: %s; "
+                      "trang tải trả: %s)" % (typ.upper(), code, len(urls), " | ".join(diag) or "rỗng", " | ".join(got) or "rỗng"))
 
 
 # ---- EasyInvoice (SoftDreams): trang tra cứu riêng của từng người bán, captcha 4 chữ số ----
@@ -797,7 +829,17 @@ EASY_BASE_RE = r"https?://[\w-]+\.easyinvoice\.(com\.)?vn"
 
 
 def easyinvoice_pdf(tra_cuu, tries=8):
-    """EasyInvoice: mở trang tra cứu của người bán, tự giải captcha, tra bằng mã tra cứu rồi bấm
+    return easyinvoice_files(tra_cuu, tries, want_xml=False)["pdf"]
+
+
+EASY_XML_PATHS = ("/Invoice/DownloadXML?token=", "/Search/DownloadXML?token=", "/Invoice/DownloadXml?token=",
+                  "/Invoice/ExportXml?token=")
+
+
+def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
+    """Trả {'pdf': bytes|None, 'xml': bytes|None, 'xml_err': str}. Nút "Tải tệp XML" của trang tra cứu gọi
+    downloadXML('<token>') – thử các đường dẫn tải XML thường gặp với token đó.
+    EasyInvoice: mở trang tra cứu của người bán, tự giải captcha, tra bằng mã tra cứu rồi bấm
     "Tải PDF & đính kèm" như trình duyệt: gửi HTML hoá đơn lên /Invoice/DownloadPdfAndFileAttachFromAvailableHtml,
     nhận fileGuid và tải /Invoice/Download (PDF, hoặc ZIP gồm PDF + file đính kèm)."""
     import base64
@@ -854,6 +896,18 @@ def easyinvoice_pdf(tra_cuu, tries=8):
         except ValueError:
             html_doc = ""
         html_doc = re.sub(r"^\s*<\?xml[^>]*\?>", "", html_doc)
+        out = {"pdf": None, "xml": None, "xml_err": ""}
+        if want_xml:
+            xt = re.search(r"downloadXML\('([^']+)'\)", res)
+            for pth in (EASY_XML_PATHS if xt else ()):
+                got = _pick_file(call(pth + urllib.parse.quote(xt.group(1), safe="")), "xml")
+                if got:
+                    out["xml"] = got
+                    break
+            if not out["xml"]:
+                out["xml_err"] = "trang tra cứu không có nút Tải tệp XML" if not xt else "không tải được XML"
+        if not want_pdf:
+            return out
         js = call("/Invoice/DownloadPdfAndFileAttachFromAvailableHtml",
                   {"token": token.group(1), "html": base64.b64encode(html_doc.encode("utf-8")).decode()}, ajax=True)
         try:
@@ -864,13 +918,9 @@ def easyinvoice_pdf(tra_cuu, tries=8):
             raise PortalError("EasyInvoice: %s" % j["msg"])
         data = call("/Invoice/Download?" + urllib.parse.urlencode({"fileGuid": j.get("fileGuid", ""),
                                                                    "fileName": j.get("fileName", "")}))
-        if data[:4] == b"%PDF":
-            return data
-        if data[:2] == b"PK":
-            with zipfile.ZipFile(io.BytesIO(data)) as z:
-                for n in z.namelist():
-                    if n.lower().endswith(".pdf"):
-                        return z.read(n)
+        out["pdf"] = _pick_file(data, "pdf")
+        if out["pdf"]:
+            return out
         raise PortalError("EasyInvoice trả file không phải PDF")
     raise PortalError("EasyInvoice: thử %d lần chưa được (%s)" % (tries, last))
 
@@ -879,9 +929,30 @@ def easyinvoice_pdf(tra_cuu, tries=8):
 PDF_FETCHERS = {"0101243150": lambda t: misa_pdf(t["code"]), "0105987432": easyinvoice_pdf}
 
 
+def _misa_both(t, want_pdf=True, want_xml=True):
+    out = {"pdf": misa_pdf(t["code"]) if want_pdf else None, "xml": None, "xml_err": ""}
+    if want_xml:
+        try:
+            out["xml"] = misa_xml(t["code"])
+        except PortalError as e:
+            out["xml_err"] = str(e)
+    return out
+
+
+# MST nhà cung cấp → hàm tải cả PDF và XML gốc từ trang tra cứu: trả {'pdf', 'xml', 'xml_err'}.
+ORIGINAL_FETCHERS = {"0101243150": _misa_both, "0105987432": easyinvoice_files}
+
+
 # Link tải PDF gốc mà trình duyệt của người dùng mở được (MISA chặn chương trình tự động nhưng không chặn trình duyệt).
 PDF_BROWSER_URLS = {"0101243150": lambda code: MISA_WWW + "/tra-cuu/DownloadHandler.ashx?Type=pdf&Code=" +
                     urllib.parse.quote(code)}
+XML_BROWSER_URLS = {"0101243150": lambda code: MISA_WWW + "/tra-cuu/DownloadHandler.ashx?Type=xml&Code=" +
+                    urllib.parse.quote(code)}
+
+
+def browser_xml_url(tra_cuu):
+    ok, prov = can_fetch_pdf(tra_cuu)
+    return XML_BROWSER_URLS[prov](tra_cuu["code"]) if ok and prov in XML_BROWSER_URLS else ""
 
 
 def browser_pdf_url(tra_cuu):
@@ -948,7 +1019,7 @@ def _new_pdfs(folder, names, since, seen):
     files = []
     for name in names:
         path = os.path.join(folder, name)
-        if not name.lower().endswith(".pdf") or not os.path.isfile(path):
+        if not name.lower().endswith((".pdf", ".xml", ".zip")) or not os.path.isfile(path):
             continue
         mt = os.path.getmtime(path)
         if mt < since - 5 or (path, mt) in seen:
@@ -969,14 +1040,38 @@ def can_fetch_pdf(tra_cuu):
 
 
 def fetch_original_pdf(out_root, mst, kind, key):
-    """Tải PDF gốc của một hoá đơn trong kho rồi gắn vào hoá đơn. Trả về đường dẫn tương đối."""
+    """Tải hoá đơn gốc (PDF + XML) từ trang tra cứu của nhà cung cấp rồi gắn vào hoá đơn. Trả về đường dẫn PDF."""
+    return fetch_original(out_root, mst, kind, key)["pdf"]
+
+
+def needs_original(base, e):
+    """Hoá đơn còn thiếu file gốc tải được tự động: thiếu PDF, hoặc thiếu XML gốc (chưa từng thử không được)."""
+    if not can_fetch_pdf(e.get("tra_cuu"))[0]:
+        return False
+    has_pdf = e.get("pdf") and os.path.exists(os.path.join(base, e["pdf"]))
+    has_xml = e.get("xml_goc") and os.path.exists(os.path.join(base, e["xml_goc"]))
+    return not has_pdf or (not has_xml and not e.get("xml_goc_loi"))
+
+
+def fetch_original(out_root, mst, kind, key):
+    """Tải PDF và XML gốc (bản người bán phát hành, đúng như nút "Tải hoá đơn dạng PDF / XML" trên trang tra cứu).
+    Chỉ tải phần còn thiếu. Trả {'pdf': đường dẫn, 'xml': đường dẫn hoặc '', 'xml_err': lý do không có XML}."""
+    base = company_dir(out_root, mst)
     e = _load_json(index_file(out_root, mst), {}).get(kind, {}).get(key)
     if e is None:
         raise ValueError("Không tìm thấy hoá đơn")
     ok, prov = can_fetch_pdf(e.get("tra_cuu"))
     if not ok:
-        raise ValueError("Chưa hỗ trợ tự tải PDF gốc của nhà cung cấp này – bấm 'Tra cứu' để tải tay rồi '+PDF'")
-    return attach_pdf(out_root, mst, kind, key, PDF_FETCHERS[prov](e["tra_cuu"]))
+        raise ValueError("Chưa hỗ trợ tự tải hoá đơn gốc của nhà cung cấp này – bấm 'Tra cứu' để tải tay rồi '+PDF'")
+    has_pdf = bool(e.get("pdf") and os.path.exists(os.path.join(base, e["pdf"])))
+    has_xml = bool(e.get("xml_goc") and os.path.exists(os.path.join(base, e["xml_goc"])))
+    got = ORIGINAL_FETCHERS[prov](e["tra_cuu"], want_pdf=not has_pdf, want_xml=not has_xml)
+    pdf = attach_pdf(out_root, mst, kind, key, got["pdf"]) if got.get("pdf") else (e.get("pdf") or "")
+    xml = attach_original_xml(out_root, mst, kind, key, got["xml"]) if got.get("xml") else (
+        e.get("xml_goc") if has_xml else "")
+    if not xml and not has_xml:
+        _set_entry(out_root, mst, kind, key, xml_goc_loi=got.get("xml_err") or "không tải được")
+    return {"pdf": pdf, "xml": xml or "", "xml_err": "" if xml else (got.get("xml_err") or "")}
 
 
 def parse_invoice_xml(xml_path):
@@ -2095,11 +2190,11 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
     if getattr(job, "want_pdf", False):
         by_key = {invoice_key(i): r for i, r in zip(invoices, rows)}
         base_dir = company_dir(out_root, mst)
-        todo = [k for k in by_key if can_fetch_pdf(known[k].get("tra_cuu"))[0] and not (
-            known[k].get("pdf") and os.path.exists(os.path.join(base_dir, known[k]["pdf"])))]
+        cur = _load_json(index_file(out_root, mst), {}).get(kind, {})
+        todo = [k for k in by_key if needs_original(base_dir, cur.get(k) or known[k])]
         if todo:
-            job.say("%s: tải PDF gốc %d hoá đơn" % (mst, len(todo)))
-            job.phase = "đang tải PDF gốc"
+            job.say("%s: tải hoá đơn gốc (PDF + XML) %d hoá đơn" % (mst, len(todo)))
+            job.phase = "đang tải hoá đơn gốc"
             with job.lock:
                 job.total += len(todo)
         fails = {}  # nhà cung cấp → số lần lỗi liên tiếp
@@ -2108,15 +2203,18 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
                 raise Cancelled()
             prov = can_fetch_pdf(known[k].get("tra_cuu"))[1]
             if fails.get(prov, 0) >= 3:  # nhà cung cấp đang chặn / lỗi → không thử tiếp trong lượt này
-                by_key[k]["ketqua"] += " (PDF gốc: bỏ qua)"
+                by_key[k]["ketqua"] += " (HĐ gốc: bỏ qua)"
             else:
                 try:
-                    fetch_original_pdf(out_root, mst, kind, k)
-                    by_key[k]["ketqua"] += " + PDF gốc"
+                    got = fetch_original(out_root, mst, kind, k)
+                    by_key[k]["ketqua"] += " + PDF gốc" + (" + XML gốc" if got["xml"] else "")
+                    if got["xml_err"]:
+                        job.say("%s: chưa lấy được XML gốc %s: %s" % (mst, k.split("|", 2)[-1].replace("|", "/"),
+                                                                     got["xml_err"]))
                     fails[prov] = 0
                 except Exception as e:  # lỗi một hoá đơn không được làm dừng cả lượt đồng bộ
                     fails[prov] = fails.get(prov, 0) + 1
-                    by_key[k]["ketqua"] += " (PDF gốc: lỗi)"
+                    by_key[k]["ketqua"] += " (HĐ gốc: lỗi)"
                     job.say("%s: không tải được PDF gốc %s: %s" % (mst, k.split("|", 2)[-1].replace("|", "/"), e))
                     if fails[prov] == 3:
                         job.say("%s: %s lỗi 3 lần liên tiếp – bỏ qua PDF gốc của nhà cung cấp này trong lượt này "
@@ -2304,6 +2402,40 @@ def attach_pdf(out_root, mst, kind, key, data):
     return rel
 
 
+def _set_entry(out_root, mst, kind, key, **fields):
+    path = index_file(out_root, mst)
+    with _INDEX_LOCK:
+        cur = _load_json(path, {})
+        e = cur.get(kind, {}).get(key)
+        if e is not None:
+            e.update(fields)
+            _save_json(path, cur)
+
+
+def attach_original_xml(out_root, mst, kind, key, data):
+    """Lưu XML gốc tải từ trang tra cứu của người bán: <tên XML của thuế>_goc-ncc.xml (không ghi đè XML của thuế)."""
+    if not _is_xml(data):
+        raise ValueError("File không phải XML hoá đơn")
+    base = company_dir(out_root, mst)
+    path = index_file(out_root, mst)
+    with _INDEX_LOCK:
+        cur = _load_json(path, {})
+        e = cur.get(kind, {}).get(key)
+        if e is None:
+            raise ValueError("Không tìm thấy hoá đơn")
+        if e.get("xml"):
+            rel = os.path.splitext(e["xml"])[0] + "_goc-ncc.xml"
+        else:
+            rel = os.path.join("xml-goc", invoice_basename(e.get("inv") or {}) + ".xml")
+        os.makedirs(os.path.dirname(os.path.join(base, rel)), exist_ok=True)
+        with open(os.path.join(base, rel), "wb") as fh:
+            fh.write(data)
+        e["xml_goc"] = rel
+        e.pop("xml_goc_loi", None)
+        _save_json(path, cur)
+    return rel
+
+
 def _pdf_text(data):
     import pypdf
     try:
@@ -2359,14 +2491,72 @@ def match_pdf_text(text, entries_by_kind):
     return [(k, key) for sc, k, key in found if sc == best]
 
 
+def match_xml(data, entries_by_kind):
+    """Hoá đơn trong kho khớp với file XML gốc: cùng MST người bán, ký hiệu mẫu, ký hiệu và số hoá đơn."""
+    import xml.etree.ElementTree as ET
+    try:
+        root = ET.fromstring(data)
+    except ET.ParseError:
+        raise ValueError("file XML hỏng")
+    found = {}
+    for el in root.iter():
+        tag = _local(el.tag)
+        if tag in ("KHMSHDon", "KHHDon", "SHDon") and tag not in found:
+            found[tag] = (el.text or "").strip()
+        if tag == "NBan":
+            for c in el:
+                if _local(c.tag) == "MST" and "nb" not in found:
+                    found["nb"] = (c.text or "").strip()
+    if not found.get("KHHDon") or not found.get("SHDon"):
+        raise ValueError("không đọc được ký hiệu / số hoá đơn trong XML")
+    hits = []
+    for kind, entries in entries_by_kind.items():
+        for key, e in entries.items():
+            inv = e.get("inv") or {}
+            if (str(inv.get("khhdon") or "") == found["KHHDon"] and _num(inv.get("shdon")) == _num(found["SHDon"])
+                    and str(inv.get("khmshdon") or "") == found.get("KHMSHDon", str(inv.get("khmshdon") or ""))
+                    and str(inv.get("nbmst") or "") == found.get("nb", str(inv.get("nbmst") or ""))):
+                hits.append((kind, key))
+    return hits
+
+
+def _unzip_originals(files):
+    """File .zip (nhà cung cấp hay nén PDF + XML) → các file PDF / XML bên trong; ZIP khác bỏ qua im lặng."""
+    out = []
+    for name, data in files:
+        if not (data or b"")[:2] == b"PK":
+            out.append((name, data))
+            continue
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as z:
+                for n in z.namelist()[:20]:
+                    if n.lower().endswith((".pdf", ".xml")) and z.getinfo(n).file_size < 30 << 20:
+                        out.append(("%s/%s" % (name, n), z.read(n)))
+        except (zipfile.BadZipFile, OSError):
+            continue
+    return out
+
+
 def import_pdfs(out_root, mst, files):
-    """Gắn hàng loạt PDF gốc có sẵn trên máy vào đúng hoá đơn (đọc ký hiệu, số, MST trong PDF)."""
+    """Gắn hàng loạt PDF / XML gốc có sẵn trên máy vào đúng hoá đơn (đọc ký hiệu, số, MST trong file)."""
     idx = _load_json(index_file(out_root, mst), {})
     results = []
+    files = _unzip_originals(files)
     for name, data in files:
         try:
+            if _is_xml(data or b""):
+                hits = match_xml(data, {k: idx.get(k, {}) for k in ("purchase", "sold")})
+                if len(hits) != 1:
+                    raise ValueError("XML không khớp hoá đơn nào trong kho (đã đồng bộ kỳ này chưa?)" if not hits
+                                     else "XML khớp %d hoá đơn, không chắc gắn vào đâu" % len(hits))
+                kind, key = hits[0]
+                attach_original_xml(out_root, mst, kind, key, data)
+                nb, _, kh, so = key.split("|")
+                results.append({"file": name, "ok": True, "hd": "%s %s – %s (XML gốc)" % (
+                    "Mua vào" if kind == "purchase" else "Bán ra", kh, so)})
+                continue
             if not data.startswith(b"%PDF"):
-                raise ValueError("không phải file PDF")
+                raise ValueError("không phải file PDF / XML")
             text = _pdf_text(data)
             if re.search(r"chưa\s*cấp\s*số", text, re.I):
                 raise ValueError("PDF là bản nháp, hoá đơn chưa được cấp số – lấy bản PDF sau khi người bán đã phát hành")
@@ -2948,6 +3138,8 @@ def query_invoices(out_root, mst, f):
             "duyet": duyet, "dv": bool(e.get("dv")), "mat_hang": e.get("mat_hang", ""), "note": e.get("note", ""),
             "xml": xml, "html": html, "pdf": pdf or (e.get("pdf") if e.get("pdf") and
                                                      os.path.exists(os.path.join(base, e["pdf"])) else ""),
+            "xml_goc": e.get("xml_goc") if e.get("xml_goc") and os.path.exists(os.path.join(base, e["xml_goc"])) else "",
+            "need_goc": needs_original(base, e), "xml_url": browser_xml_url(e.get("tra_cuu")),
             "tra_cuu": e.get("tra_cuu") or {}, "pdf_url": browser_pdf_url(e.get("tra_cuu")),
             "can_fetch": can_fetch_pdf(e.get("tra_cuu"))[0], "cqt": _cqt_rel(base, e)})
     rows.sort(key=lambda r: r.pop("_sort"))
@@ -2991,6 +3183,8 @@ def export_invoices(out_root, mst, company_name, f, fmt):
             for r in rows:
                 if r["xml"]:
                     z.write(os.path.join(base, r["xml"]), "XML/" + os.path.basename(r["xml"]))
+                if r["xml_goc"]:
+                    z.write(os.path.join(base, r["xml_goc"]), "XML_goc_nguoi_ban/" + os.path.basename(r["xml_goc"]))
                 if r["pdf"]:
                     z.write(os.path.join(base, r["pdf"]), "PDF/" + os.path.basename(r["pdf"]))
                 else:
@@ -4010,8 +4204,8 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     <div class="bar actions">
       <button class="sec" onclick="openSub('dong-bo')">⟳ Đồng bộ</button>
       <button class="sec" id="hBulkPdf" onclick="bulkPdf()">Tải HĐ gốc hàng loạt</button>
-      <button class="sec" id="hImpPdf" onclick="$('hImpFiles').click()" title="Chọn các file PDF hoá đơn gốc có sẵn trên máy – phần mềm tự gắn vào đúng hoá đơn">Gắn PDF gốc có sẵn</button>
-      <input type="file" id="hImpFiles" accept="application/pdf" multiple class="hide">
+      <button class="sec" id="hImpPdf" onclick="$('hImpFiles').click()" title="Chọn các file PDF / XML hoá đơn gốc có sẵn trên máy – phần mềm tự gắn vào đúng hoá đơn">Gắn HĐ gốc có sẵn</button>
+      <input type="file" id="hImpFiles" accept=".pdf,.xml,application/pdf,text/xml,application/xml" multiple class="hide">
       <span style="flex:1"></span>
       <button class="sec sm" onclick="resetGrid()" title="Bỏ sắp xếp và lọc theo cột">Bỏ lọc cột</button>
       <select class="sm" id="hExp" style="width:auto" onchange="exportInv(this.value);this.value=''">
@@ -4025,7 +4219,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
         <option value="">Duyệt nội bộ…</option><option>Đã duyệt</option><option>Chờ duyệt</option><option>Không duyệt</option></select>
       <button class="sm sec" onclick="bulkUpdate({dv: true})">Đánh dấu HĐ dịch vụ</button>
       <button class="sm sec" onclick="bulkUpdate({dv: false})">Bỏ HĐ dịch vụ</button>
-      <button class="sm sec" onclick="bulkPdf()">Tải PDF gốc</button>
+      <button class="sm sec" onclick="bulkPdf()">Tải HĐ gốc</button>
       <button class="sm sec" onclick="exportInv('xlsx')">Kết xuất Excel</button>
       <button class="sm red" onclick="hSel.clear();renderInv()">Bỏ chọn</button>
     </div>
@@ -4042,7 +4236,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
       <label>Từ ngày</label><input type="date" id="sFrom"><label>Đến ngày</label><input type="date" id="sTo">
       <div class="chk"><label><input type="checkbox" id="sMtt" checked> Gồm máy tính tiền</label>
         <label><input type="checkbox" id="sXml" checked> Tải XML</label>
-        <label title="Tự tải PDF gốc của người bán khi nhà cung cấp cho phép (MISA, EasyInvoice)"><input type="checkbox" id="sPdf" checked> Tải PDF gốc</label></div>
+        <label title="Tự tải PDF và XML gốc của người bán (như nút Tải hoá đơn dạng PDF / XML trên trang tra cứu) khi nhà cung cấp cho phép (MISA, EasyInvoice)"><input type="checkbox" id="sPdf" checked> Tải HĐ gốc (PDF + XML)</label></div>
       <button class="bigbtn b-vao" onclick="runSync(['purchase'])">Đồng bộ HĐĐT ĐẦU VÀO</button>
       <button class="bigbtn b-ra" onclick="runSync(['sold'])">Đồng bộ HĐĐT ĐẦU RA</button>
       <button class="bigbtn b-vr" onclick="runSync(['purchase','sold'])">Đồng bộ HĐĐT VÀO/RA</button>
@@ -4169,7 +4363,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     <label><input type="checkbox" id="bRa" checked> Bán ra</label>
     <label><input type="checkbox" id="bMtt" checked> Gồm máy tính tiền</label>
     <label><input type="checkbox" id="bXml" checked> Tải XML + chi tiết hàng hoá</label>
-    <label title="MISA, EasyInvoice"><input type="checkbox" id="bPdf" checked> Tải PDF gốc</label>
+    <label title="MISA, EasyInvoice"><input type="checkbox" id="bPdf" checked> Tải HĐ gốc (PDF + XML)</label>
   </div>
   <div class="hint">Chỉ đồng bộ chiều đầu vào/đầu ra đang bật trong cài đặt từng doanh nghiệp.</div>
   <div class="err" id="bErr"></div>
@@ -4813,7 +5007,7 @@ function renderInv() {
 }
 function renderDetails(tr, r, kind) {
     const ct = tr.insertCell(); ct.style.whiteSpace = 'nowrap';
-    if (r.xml) ct.append(fileLink(r.xml, 'XML')); if (r.html) ct.append(fileLink(r.html, 'HTML')); if (r.pdf) ct.append(fileLink(r.pdf, 'PDF gốc'));
+    if (r.xml) ct.append(fileLink(r.xml, 'XML')); if (r.html) ct.append(fileLink(r.html, 'HTML')); if (r.pdf) ct.append(fileLink(r.pdf, 'PDF gốc')); if (r.xml_goc) ct.append(fileLink(r.xml_goc, 'XML gốc'));
     const cq = el('a', 'lk', 'PDF thuế'); cq.target = '_blank'; cq.title = 'Bản thể hiện hoá đơn theo dữ liệu cổng thuế (hoadondientu.gdt.gov.vn)';
     cq.href = '/cqt?' + new URLSearchParams({k: KEY, mst: $('hMst').value, kind, key: r.key}); ct.append(cq);
     const t = r.tra_cuu || {};
@@ -4825,14 +5019,15 @@ function renderDetails(tr, r, kind) {
         if (t.url) window.open(t.url, '_blank'); else prompt((t.ncc || '') + ' – mã tra cứu', t.code); };
       ct.append(a);
     }
-    if (!r.pdf && (r.pdf_url || r.can_fetch)) {
-      const g = el('a', 'lk', 'Tải PDF gốc'); g.href = '#'; g.title = 'Tải PDF gốc từ ' + t.ncc + ' rồi tự gắn vào hoá đơn';
+    if (r.need_goc && (r.pdf_url || r.can_fetch)) {
+      const g = el('a', 'lk', 'Tải HĐ gốc'); g.href = '#'; g.title = 'Tải PDF + XML gốc từ ' + t.ncc + ' rồi tự gắn vào hoá đơn';
       g.onclick = async ev => { ev.preventDefault();
         if (me.server || !r.pdf_url) {  // máy chủ / phần mềm tự tải (EasyInvoice tự giải captcha)
           g.textContent = 'Đang tải…'; $('hErr').textContent = '';
-          try { await post('/api/invoice/fetch-pdf', {mst: $('hMst').value, kind, key: r.key}); loadInv(); return; }
-          catch (e) { g.textContent = 'Tải PDF gốc'; if (!r.pdf_url) { $('hErr').textContent = r.shdon + ': ' + e.message; return; } } }
-        browserDownload([r.pdf_url]); };
+          try { const d = await post('/api/invoice/fetch-pdf', {mst: $('hMst').value, kind, key: r.key}); await loadInv();
+                if (d.xml_err) $('hErr').textContent = r.shdon + ': đã có PDF gốc, chưa lấy được XML gốc – ' + d.xml_err; return; }
+          catch (e) { g.textContent = 'Tải HĐ gốc'; if (!r.pdf_url) { $('hErr').textContent = r.shdon + ': ' + e.message; return; } } }
+        browserDownload(browserUrls([r])); };
       ct.append(g);
     }
     const up = el('a', 'lk', r.pdf ? '↻PDF' : '+PDF'); up.href = '#'; up.title = 'Gắn file PDF gốc đã tải từ trang tra cứu';
@@ -4857,34 +5052,38 @@ $('hImpFiles').onchange = async () => {
   try { const files = []; for (const f of fs) files.push({name: f.name, data: await readB64(f)});
     const d = await post('/api/invoice/pdf-import', {mst: $('hMst').value, files});
     const ok = d.results.filter(r => r.ok), bad = d.results.filter(r => !r.ok);
-    $('hErr').innerHTML = ''; $('hErr').append(el('div', 'ok', 'Đã gắn ' + ok.length + '/' + d.results.length + ' file PDF.'));
+    $('hErr').innerHTML = ''; $('hErr').append(el('div', 'ok', 'Đã gắn ' + ok.length + '/' + d.results.length + ' file.'));
     bad.forEach(r => $('hErr').append(el('div', 'err', r.file + ': ' + r.loi)));
     loadInv(); }
   catch (e) { $('hErr').textContent = e.message; }
-  b.disabled = false; b.textContent = 'Gắn PDF gốc có sẵn';
+  b.disabled = false; b.textContent = 'Gắn HĐ gốc có sẵn';
 };
 async function bulkPdf() {
   const sel = hRows.filter(r => hSel.has(r.key)), src = sel.length ? sel : hRows;
-  let need = src.filter(r => !r.pdf && (r.pdf_url || r.can_fetch));
-  if (!need.length) { $('hErr').textContent = 'Không có hoá đơn nào cần tải PDF gốc (hiện tự tải được: MISA, EasyInvoice). Nhà cung cấp khác: bấm "Tra cứu" rồi "Gắn PDF gốc có sẵn".'; return; }
+  let need = src.filter(r => r.need_goc && (r.pdf_url || r.can_fetch));
+  if (!need.length) { $('hErr').textContent = 'Không có hoá đơn nào cần tải hoá đơn gốc (hiện tự tải được: MISA, EasyInvoice). Nhà cung cấp khác: bấm "Tra cứu" rồi "Gắn HĐ gốc có sẵn".'; return; }
   // Phần mềm tự tải trước (EasyInvoice; bản web: cả MISA), từng nhóm 10 HĐ; MISA bản máy: trình duyệt tải.
   const auto = need.filter(r => r.can_fetch && (me.server || !r.pdf_url)), errs = [];
   if (auto.length) {
     const b = $('hBulkPdf'); b.disabled = true; let done = 0;
     for (let i = 0; i < auto.length; i += 10) {
-      b.textContent = 'Đang tải PDF gốc ' + Math.min(i + 10, auto.length) + '/' + auto.length + '…';
+      b.textContent = 'Đang tải HĐ gốc ' + Math.min(i + 10, auto.length) + '/' + auto.length + '…';
       try { const f = hFilters(false); f.keys = auto.slice(i, i + 10).map(r => r.key);
         const d = await post('/api/invoice/fetch-pdf-bulk', {mst: $('hMst').value, filters: f}); done += d.ok; errs.push(...d.errors); }
       catch (e) { errs.push(e.message); }
     }
     b.disabled = false; b.textContent = 'Tải HĐ gốc hàng loạt';
     await loadInv();
-    const keys = new Set(need.map(r => r.key)); need = hRows.filter(r => keys.has(r.key) && !r.pdf && r.pdf_url);
-    $('hErr').innerHTML = ''; $('hErr').append(el('div', 'ok', 'Đã tải và gắn ' + done + '/' + auto.length + ' PDF gốc.'));
+    const keys = new Set(need.map(r => r.key)); need = hRows.filter(r => keys.has(r.key) && r.need_goc && r.pdf_url);
+    $('hErr').innerHTML = ''; $('hErr').append(el('div', 'ok', 'Đã tải và gắn hoá đơn gốc ' + done + '/' + auto.length + ' hoá đơn.'));
     errs.slice(0, 10).forEach(x => $('hErr').append(el('div', 'err', x)));
     if (!need.length) return;
   }
-  browserDownload(need.map(r => r.pdf_url));
+  browserDownload(browserUrls(need));
+}
+// Link trình duyệt tải PDF + XML gốc (phần nào còn thiếu).
+function browserUrls(rows) {
+  return rows.flatMap(r => [r.pdf ? '' : r.pdf_url, r.xml_goc ? '' : r.xml_url]).filter(Boolean);
 }
 // Trình duyệt tải PDF gốc về thư mục Downloads (MISA chặn chương trình tự động nhưng không chặn trình duyệt);
 // phần mềm theo dõi Downloads và tự gắn file mới vào đúng hoá đơn.
@@ -4894,8 +5093,8 @@ async function browserDownload(urls) {
     urls.forEach((u, i) => setTimeout(() => {
       const f = el('iframe'); f.style.display = 'none'; f.src = u; document.body.append(f); setTimeout(() => f.remove(), 120000);
     }, i * 1200));
-    $('hErr').innerHTML = ''; $('hErr').append(el('div', 'ok', 'Trình duyệt đang tải ' + urls.length + ' PDF gốc về máy bạn (thư mục Downloads; nếu Chrome hỏi "tải nhiều tệp", chọn Cho phép). ' +
-      'Tải xong bấm "Gắn PDF gốc có sẵn" và chọn các file vừa tải – phần mềm tự gắn vào đúng hoá đơn.'));
+    $('hErr').innerHTML = ''; $('hErr').append(el('div', 'ok', 'Trình duyệt đang tải ' + urls.length + ' file hoá đơn gốc (PDF/XML) về máy bạn (thư mục Downloads; nếu Chrome hỏi "tải nhiều tệp", chọn Cho phép). ' +
+      'Tải xong bấm "Gắn HĐ gốc có sẵn" và chọn các file vừa tải – phần mềm tự gắn vào đúng hoá đơn.'));
     const box = el('div', 'mute'); box.append('Nếu không thấy tải, bấm từng link: '); $('hErr').append(box);
     urls.slice(0, 50).forEach(u => { const a = el('a', 'lk', 'link'); a.href = u; a.target = '_blank'; box.append(a); });
     return;
@@ -4912,7 +5111,7 @@ async function browserDownload(urls) {
   urls.forEach((u, i) => setTimeout(() => {
     const f = el('iframe'); f.style.display = 'none'; f.src = u; document.body.append(f); setTimeout(() => f.remove(), 120000);
   }, i * 1200));
-  $('hErr').innerHTML = ''; $('hErr').append(el('div', 'ok', 'Trình duyệt đang tải ' + urls.length + ' PDF gốc về thư mục Downloads… ' +
+  $('hErr').innerHTML = ''; $('hErr').append(el('div', 'ok', 'Trình duyệt đang tải ' + urls.length + ' file hoá đơn gốc (PDF/XML) về thư mục Downloads… ' +
     '(nếu Chrome hỏi "tải nhiều tệp", chọn Cho phép). Phần mềm sẽ tự gắn khi file về.'));
   const box = el('div', 'mute'); $('hErr').append(box);
   urls.slice(0, 50).forEach(u => { const a = el('a', 'lk', 'link'); a.href = u; a.target = '_blank'; box.append(a); });
@@ -4923,10 +5122,10 @@ async function browserDownload(urls) {
     try { const d = await post('/api/invoice/scan-downloads', {mst: $('hMst').value, since});
       const ok = d.results.filter(r => r.ok); attached += ok.length;
       if (ok.length) { loadInv(); }
-      $('hBulkPdf').textContent = attached ? ('Đã gắn ' + attached + '/' + urls.length + ' PDF') : 'Đang chờ file tải về…';
+      $('hBulkPdf').textContent = attached ? ('Đã gắn ' + attached + '/' + urls.length + ' file') : 'Đang chờ file tải về…';
       if (attached >= urls.length || tries > 20 + urls.length * 3) { clearInterval(scanTimer); $('hBulkPdf').textContent = 'Tải HĐ gốc hàng loạt'; $('hBulkPdf').disabled = false;
         if (attached < urls.length) $('hErr').append(el('div', 'err', 'Mới gắn được ' + attached + '/' + urls.length +
-          ' file. Kiểm tra thư mục tải về (' + d.folder + ') hoặc dùng "Gắn PDF gốc có sẵn".')); }
+          ' file. Kiểm tra thư mục tải về (' + d.folder + ') hoặc dùng "Gắn HĐ gốc có sẵn".')); }
     } catch (e) { clearInterval(scanTimer); $('hBulkPdf').disabled = false; $('hErr').append(el('div', 'err', e.message)); }
   }, 3000);
 }
@@ -5635,19 +5834,20 @@ def make_handler(app, port):
                     return self._send(200, {"results": import_pdfs(app.out_root, mst, files)})
                 if path == "/api/invoice/fetch-pdf":
                     try:
-                        return self._send(200, {"pdf": fetch_original_pdf(app.out_root, mst, data.get("kind"), data.get("key"))})
+                        return self._send(200, fetch_original(app.out_root, mst, data.get("kind"), data.get("key")))
                     except PortalError as e:
                         raise ValueError(str(e))
                 if path == "/api/invoice/fetch-pdf-bulk":
                     f = data.get("filters") or {}
                     kind = (f.get("kind") or "purchase").replace("_dv", "")
-                    rows = [r for r in query_invoices(app.out_root, mst, f)
-                            if not r["pdf"] and can_fetch_pdf(r.get("tra_cuu"))[0]][:300]
+                    rows = [r for r in query_invoices(app.out_root, mst, f) if r["need_goc"]][:300]
                     ok, errs = 0, []
                     for r in rows:
                         try:
-                            fetch_original_pdf(app.out_root, mst, kind, r["key"])
+                            got = fetch_original(app.out_root, mst, kind, r["key"])
                             ok += 1
+                            if got["xml_err"]:
+                                errs.append("%s/%s: XML gốc – %s" % (r["khhdon"], r["shdon"], got["xml_err"]))
                         except (PortalError, ValueError) as e:
                             errs.append("%s/%s: %s" % (r["khhdon"], r["shdon"], e))
                         time.sleep(0.3)
