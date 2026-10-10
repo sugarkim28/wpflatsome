@@ -1013,7 +1013,7 @@ class Tests(unittest.TestCase):
                     return self._out(b"<html>EasyInvoice</html>", cookie="ASP.NET_SessionId=abc; path=/")
                 if self.path == "/Search/Index":
                     return self._out(b'<form action="/Search/Search" id="Search" method="post">'
-                                     b'<input id="typeSearch" name="typeSearch" type="hidden" value="fKeySearch">'
+                                     b'<input id="typeSearch" name="typeSearch" type="hidden" value="">'
                                      b'<input id="iFkey" name="FKey" value=""><input id="Capcha" name="Capcha" value="">'
                                      b'</form>', cookie="ASP.NET_SessionId=abc; path=/")
                 if self.path == "/Captcha/Show":
@@ -1034,6 +1034,8 @@ class Tests(unittest.TestCase):
                 if self.path == "/Search/Search":
                     if form.get("Capcha") != seen["cap"]:
                         return self._out('<input id="msg" name="msg" value="Mã xác thực không đúng">'.encode())
+                    if form.get("typeSearch") != "fKeySearch":  # không chọn kiểu tra → trang trả lại form trống
+                        return self._out(b'<html><body><h3>Tra cuu hoa don</h3><input id="msg" name="msg" value=""></body></html>')
                     if form.get("FKey") != "HIUOVGNMC":
                         return self._out('<input id="msg" name="msg" value="Không tìm thấy hóa đơn">'.encode())
                     inv = H.escape(json.dumps({"str": "<?xml version=\"1.0\"?><html><body>HOA DON</body></html>"}))

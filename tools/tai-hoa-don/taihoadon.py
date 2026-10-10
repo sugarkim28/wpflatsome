@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.9.4"
+__version__ = "3.9.5"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -888,12 +888,19 @@ def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
         if not cap:
             last = "không đọc được captcha"
             continue
-        fields.update(FKey=code, Capcha=cap)
+        # Nút "Tra cứu" của trang (script trong trang): typeSearch == 'fKeySearch' là tra theo mã tra cứu.
+        # Ô này mặc định có thể để trống → điền rõ để máy chủ tra theo mã.
+        fields.update(FKey=code, Capcha=cap, typeSearch=fields.get("typeSearch") or "fKeySearch")
         res = call("/Search/Search", fields).decode("utf-8", "replace")
         token = re.search(r"downloadPdfAndFileAttachFromAvailableHtml\('([^']+)'\)", res)
         if not token:
             msg = re.search(r'id="msg"[^>]*value="([^"]*)"', res) or re.search(r'value="([^"]*)"[^>]*id="msg"', res)
-            last = H.unescape(msg.group(1)) if msg else "trang tra cứu không trả kết quả"
+            if msg and msg.group(1):
+                last = H.unescape(msg.group(1))
+            else:  # ghi lại chữ trên trang để biết lý do
+                txt = re.sub(r"\s+", " ", H.unescape(re.sub(r"<script.*?</script>|<style.*?</style>|<[^>]+>", " ", res,
+                                                             flags=re.S | re.I))).strip()
+                last = "trang tra cứu không trả kết quả (%s)" % (txt[:160] or "trang trống")
             if re.search(r"x[aá]c th[ựu]c|captcha|capcha", _plain(last) + last.lower()):
                 continue  # đọc sai captcha → thử captcha khác
             raise PortalError("EasyInvoice: %s" % last)
@@ -4552,7 +4559,7 @@ async function sendCap(id) { id = id || 'capIn'; const v = $(id).value.trim(); i
 let lastCap = null;
 function renderJob(j) {
   if (curTab === 'WS' && wsSub === 'dong-bo') { hide('jobCard'); renderSync(j); return; }
-  if (curTab === 'WS' && !j.running) { hide('jobCard'); return; }
+  if (!j.running) { hide('jobCard'); return; }  // chỉ hiện khi đang tải; kết quả xem ở tab Đồng bộ của từng DN
   show('jobCard');
   $('jobTitle').textContent = j.running ? ('Đang xử lý' + (j.current ? ' ' + j.current : '') + '…') : 'Kết quả lần chạy gần nhất';
   $('btnStop').classList.toggle('hide', !j.running);
