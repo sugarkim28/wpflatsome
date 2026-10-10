@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.8.2"
+__version__ = "3.8.3"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -872,6 +872,9 @@ def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
     for _ in range(tries):
         page = call("/").decode("utf-8", "replace")
         form = re.search(r'<form[^>]*id="Search"[^>]*>(.*?)</form>', page, re.S | re.I)
+        if not form:  # trang tra cứu chính thức: <MST người bán>hd.easyinvoice.com.vn/Search/Index
+            page = call("/Search/Index").decode("utf-8", "replace")
+            form = re.search(r'<form[^>]*id="Search"[^>]*>(.*?)</form>', page, re.S | re.I)
         fields = {}
         for tag in re.findall(r"<input[^>]*>", form.group(1) if form else page):
             name = re.search(r'name="([^"]*)"', tag)

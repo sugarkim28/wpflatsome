@@ -960,7 +960,9 @@ class Tests(unittest.TestCase):
                 self.wfile.write(body)
 
             def do_GET(self):
-                if self.path == "/":
+                if self.path == "/":  # trang chủ không có ô tra cứu → phải sang /Search/Index
+                    return self._out(b"<html>EasyInvoice</html>", cookie="ASP.NET_SessionId=abc; path=/")
+                if self.path == "/Search/Index":
                     return self._out(b'<form action="/Search/Search" id="Search" method="post">'
                                      b'<input id="typeSearch" name="typeSearch" type="hidden" value="fKeySearch">'
                                      b'<input id="iFkey" name="FKey" value=""><input id="Capcha" name="Capcha" value="">'
