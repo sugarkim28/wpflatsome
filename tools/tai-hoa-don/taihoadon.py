@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.4.0"
+__version__ = "3.5.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -1978,7 +1978,7 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
     with job.lock:
         job.found[kind] = len(invoices)
     job.phase = "đang đồng bộ hoá đơn"
-    new, changes, todo, status = 0, [], [], {}
+    new, changes, todo, status, detail_todo = 0, [], [], {}, []
     xml_dir = os.path.join(folder, "xml")
     for inv in invoices:
         key = invoice_key(inv)
@@ -1999,6 +1999,10 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
             existing = os.path.join(xml_dir, invoice_basename(inv) + ".xml")
             if (old or {}).get("no_xml") and status[key] != "Đổi trạng thái":
                 inv["_noxml"] = True  # đã biết cổng không có XML gốc của HĐ này
+                if old.get("detail") and os.path.exists(os.path.join(base, old["detail"])):
+                    inv["_detail"] = old["detail"]
+                else:
+                    detail_todo.append(inv)  # bản cũ chưa lấy dữ liệu chi tiết → lấy để có hàng hoá và PDF của thuế
             elif os.path.exists(existing) and status[key] != "Đổi trạng thái":
                 inv["_xml"] = os.path.relpath(existing, folder)
                 inv["_xmlinfo"] = parse_invoice_xml(existing)
@@ -2007,6 +2011,17 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
     errors = {}
     with job.lock:
         job.total += len(todo)
+
+    def fetch_detail(inv):
+        """HĐ không có XML gốc: lấy dữ liệu 'Xem hoá đơn' của cổng (hàng hoá, thuế suất) → PDF của thuế."""
+        try:
+            detail = client.get_detail(inv)
+            rel = os.path.join(os.path.relpath(xml_dir, base), invoice_basename(inv) + ".json")
+            os.makedirs(xml_dir, exist_ok=True)
+            _save_json(os.path.join(base, rel), detail)
+            inv["_detail"] = rel
+        except PortalError as e:
+            job.say("%s: không lấy được chi tiết HĐ %s/%s: %s" % (mst, inv.get("khhdon"), inv.get("shdon"), e))
 
     def fetch(inv):
         if job.cancel:
@@ -2018,17 +2033,19 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
         except PortalError as e:
             if NO_XML_MSG in _plain(str(e)):
                 inv["_noxml"] = True  # HĐ không mã: cổng chỉ có dữ liệu tổng hợp, không có file XML gốc
+                fetch_detail(inv)
             else:
                 inv["_xml"] = "Lỗi: %s" % e
                 errors[invoice_key(inv)] = str(e)
         with job.lock:
             job.done += 1
 
-    if todo:
+    if todo or detail_todo:
         # Tải XML song song (vừa phải để cổng không chặn).
         from concurrent.futures import ThreadPoolExecutor
         with ThreadPoolExecutor(max_workers=XML_WORKERS) as pool:
             list(pool.map(fetch, todo))
+            list(pool.map(lambda i: None if job.cancel else fetch_detail(i), detail_todo))
     if job.cancel:
         raise Cancelled()
     if any("hết hạn" in m for m in errors.values()):
@@ -2052,6 +2069,12 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
                      inv={k: inv.get(k) for k in INV_FIELDS if inv.get(k) is not None})
         if inv.get("_noxml"):
             entry["no_xml"] = True
+        if inv.get("_detail"):
+            entry["detail"] = inv["_detail"]
+            if not entry.get("mat_hang"):
+                d = _load_json(os.path.join(base, inv["_detail"]), {})
+                entry["mat_hang"] = "; ".join(str(it.get("ten") or "") for it in (d.get("hdhhdvu") or [])
+                                              if it.get("ten"))[:500]
         if inv.get("_xmlinfo") is not None:
             entry["xml"] = os.path.relpath(os.path.join(folder, inv["_xml"]), base)
             names = [it["name"] for it in inv["_xmlinfo"]["items"] if it["name"]]
@@ -2337,6 +2360,320 @@ def import_pdfs(out_root, mst, files):
     return results
 
 
+# ---------------------------------------------------------------------------
+# PDF bản thể hiện hoá đơn theo dữ liệu của cổng thuế ("PDF của thuế"): dựng từ XML, hoặc từ dữ liệu chi tiết
+# trên cổng với hoá đơn không có XML gốc (HĐ không mã, máy tính tiền). Cổng không có API trả PDF.
+# ---------------------------------------------------------------------------
+
+INVOICE_TITLES = {"1": "HÓA ĐƠN GIÁ TRỊ GIA TĂNG", "2": "HÓA ĐƠN BÁN HÀNG", "3": "HÓA ĐƠN BÁN TÀI SẢN CÔNG",
+                  "4": "HÓA ĐƠN BÁN HÀNG DỰ TRỮ QUỐC GIA", "5": "HÓA ĐƠN KHÁC",
+                  "6": "PHIẾU XUẤT KHO KIÊM VẬN CHUYỂN NỘI BỘ"}
+
+
+def _dget(d, *keys):
+    for k in keys:
+        v = (d or {}).get(k)
+        if v not in (None, "", []):
+            return v
+    return ""
+
+
+def _vn_money(v):
+    if v in (None, ""):
+        return ""
+    try:
+        f = float(str(v).replace(",", ""))
+    except ValueError:
+        return str(v)
+    s = "{:,.2f}".format(f).rstrip("0").rstrip(".")
+    return s.replace(",", "\x00").replace(".", ",").replace("\x00", ".")
+
+
+def _vn_rate(v):
+    v = str(v if v is not None else "").strip()
+    try:
+        f = float(v)
+        return "%g%%" % (f * 100 if f < 1 else f)
+    except ValueError:
+        return v
+
+
+def invoice_view_from_xml(xml_bytes):
+    x = read_invoice_xml(xml_bytes)
+    tc, nb, nm, tong = x["ttchung"], x["nb"], x["nm"], x["tong"]
+    return {
+        "mau": tc.get("KHMSHDon", ""), "kh": tc.get("KHHDon", ""), "so": tc.get("SHDon", ""), "title": tc.get("THDon", ""),
+        "ngay": tc.get("NLap", ""), "mccqt": x["mccqt"], "httt": tc.get("HTTToan", ""), "dvtte": tc.get("DVTTe", "VND"),
+        "nb": {"ten": nb.get("Ten"), "mst": nb.get("MST"), "dchi": nb.get("DChi"), "sdt": nb.get("SDThoai"),
+               "stk": nb.get("STKNHang"), "nh": nb.get("TNHang")},
+        "nm": {"ten": nm.get("Ten"), "hoten": nm.get("HVTNMHang"), "mst": nm.get("MST") or nm.get("CCCDan"),
+               "dchi": nm.get("DChi"), "stk": nm.get("STKNHang")},
+        "items": [{"stt": it["STT"], "ten": it["THHDVu"], "dvt": it["DVTinh"], "sl": it["SLuong"], "dgia": it["DGia"],
+                   "ck": it["STCKhau"], "tsuat": it["TSuat"], "thtien": it["ThTien"], "tchat": it["TChat"]}
+                  for it in x["items"]],
+        "rates": [{"tsuat": r.get("TSuat"), "thtien": r.get("ThTien"), "tthue": r.get("TThue")} for r in x["rates"]],
+        "tong": {"cthue": tong.get("TgTCThue"), "thue": tong.get("TgTThue"), "ck": tong.get("TTCKTMai"),
+                 "phi": tong.get("TgTPhi"), "tt": tong.get("TgTTTBSo"), "chu": tong.get("TgTTTBChu")},
+        "signed": bool(x["so_chu_ky"]), "nky": "", "nguon": "XML hoá đơn",
+    }
+
+
+def invoice_view_from_detail(d):
+    """Dữ liệu 'Xem hoá đơn' của cổng (JSON) – dùng cho HĐ không có XML gốc."""
+    items = []
+    for i, it in enumerate(d.get("hdhhdvu") or [], 1):
+        items.append({"stt": _dget(it, "stt") or i, "ten": _dget(it, "ten", "thhdvu"), "dvt": _dget(it, "dvtinh"),
+                      "sl": _dget(it, "sluong"), "dgia": _dget(it, "dgia"), "ck": _dget(it, "stckhau"),
+                      "tsuat": _dget(it, "tsuat", "ltsuat"), "thtien": _dget(it, "thtien"), "tchat": _dget(it, "tchat")})
+    rates = [{"tsuat": _dget(r, "tsuat"), "thtien": _dget(r, "thtien"), "tthue": _dget(r, "tthue")}
+             for r in (d.get("thttltsuat") or [])]
+    return {
+        "mau": str(_dget(d, "khmshdon")), "kh": _dget(d, "khhdon"), "so": str(_dget(d, "shdon")), "title": _dget(d, "thdon"),
+        "ngay": _dget(d, "tdlap", "nlap"), "mccqt": _dget(d, "mhdon"), "httt": _dget(d, "thtttoan", "htttoan"),
+        "dvtte": _dget(d, "dvtte") or "VND",
+        "nb": {"ten": _dget(d, "nbten"), "mst": _dget(d, "nbmst"), "dchi": _dget(d, "nbdchi"), "sdt": _dget(d, "nbsdthoai"),
+               "stk": _dget(d, "nbstkhoan"), "nh": _dget(d, "nbtnhang")},
+        "nm": {"ten": _dget(d, "nmten"), "hoten": _dget(d, "nmtnmua"), "mst": _dget(d, "nmmst", "nmcccd"),
+               "dchi": _dget(d, "nmdchi"), "stk": _dget(d, "nmstkhoan")},
+        "items": items, "rates": rates,
+        "tong": {"cthue": _dget(d, "tgtcthue"), "thue": _dget(d, "tgtthue"), "ck": _dget(d, "ttcktmai"),
+                 "phi": _dget(d, "tgtphi"), "tt": _dget(d, "tgtttbso"), "chu": _dget(d, "tgtttbchu")},
+        "signed": bool(_dget(d, "nky")), "nky": _dget(d, "nky"), "nguon": "dữ liệu chi tiết trên cổng thuế",
+    }
+
+
+def _fill_view(v, extra):
+    """Thông tin còn trống (ký hiệu, số, ngày, mã CQT, tổng tiền…) lấy bù từ dữ liệu danh sách hoá đơn của cổng."""
+    for k, val in extra.items():
+        if isinstance(val, dict):
+            for kk, vv in val.items():
+                if v.setdefault(k, {}).get(kk) in (None, "") and vv not in (None, ""):
+                    v[k][kk] = vv
+        elif k not in ("items", "rates", "nguon", "signed") and v.get(k) in (None, "") and val not in (None, ""):
+            v[k] = val
+    return v
+
+
+def invoice_view_from_summary(inv):
+    v = invoice_view_from_detail(inv)
+    v["nguon"] = "dữ liệu tổng hợp (chưa có chi tiết hàng hoá – đồng bộ lại để lấy)"
+    return v
+
+
+_FONT = {}
+
+
+def _vn_fonts():
+    """Font có dấu tiếng Việt cho reportlab: thư mục fonts/ kèm phần mềm, font hệ thống (Linux), Arial (Windows)."""
+    if _FONT:
+        return _FONT["n"], _FONT["b"]
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.lib.fonts import addMapping
+    except ImportError:
+        raise ValueError("Tạo PDF cần thư viện reportlab: pip install reportlab (chay.bat / bản web tự cài)")
+    here = os.path.dirname(os.path.abspath(__file__))
+    win = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts")
+    for reg, bold in ((os.path.join(here, "fonts", "DejaVuSans.ttf"), os.path.join(here, "fonts", "DejaVuSans-Bold.ttf")),
+                      ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
+                      ("/usr/share/fonts/dejavu/DejaVuSans.ttf", "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"),
+                      (os.path.join(win, "arial.ttf"), os.path.join(win, "arialbd.ttf")),
+                      ("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                       "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf")):
+        if os.path.exists(reg) and os.path.exists(bold):
+            pdfmetrics.registerFont(TTFont("VN", reg))
+            pdfmetrics.registerFont(TTFont("VN-B", bold))
+            addMapping("VN", 0, 0, "VN")
+            addMapping("VN", 1, 0, "VN-B")
+            addMapping("VN", 0, 1, "VN")
+            addMapping("VN", 1, 1, "VN-B")
+            _FONT.update(n="VN", b="VN-B")
+            return "VN", "VN-B"
+    raise ValueError("Không tìm thấy font tiếng Việt – chép thư mục fonts/ (DejaVuSans.ttf) cạnh taihoadon.py")
+
+
+def build_tax_pdf(v, tthai="", kq=""):
+    """Bản thể hiện hoá đơn (A4) theo dữ liệu của cổng thuế → bytes PDF."""
+    fn, fb = _vn_fonts()
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+    import html as H
+    esc = lambda s: H.escape(str(s if s is not None else ""))
+    st = ParagraphStyle("n", fontName=fn, fontSize=8.5, leading=11.5)
+    small = ParagraphStyle("s", parent=st, fontSize=7.5, leading=9.5, textColor=colors.HexColor("#555555"))
+    cell = ParagraphStyle("c", parent=st, fontSize=8, leading=10)
+    cell_r = ParagraphStyle("cr", parent=cell, alignment=TA_RIGHT)
+    cell_c = ParagraphStyle("cc", parent=cell, alignment=TA_CENTER)
+    title = ParagraphStyle("t", parent=st, fontName=fb, fontSize=15, leading=19, alignment=TA_CENTER,
+                           textColor=colors.HexColor("#b4161b"))
+    center = ParagraphStyle("ce", parent=st, alignment=TA_CENTER)
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=12 * mm, rightMargin=12 * mm, topMargin=10 * mm,
+                            bottomMargin=12 * mm, title="%s %s" % (v.get("kh"), v.get("so")), author=str(v["nb"].get("ten") or ""))
+    W = A4[0] - 24 * mm
+    d = _to_dt(v.get("ngay"))
+    ngay = ("Ngày %02d tháng %02d năm %d" % (d.day, d.month, d.year)) if d else esc(v.get("ngay"))
+    line = lambda k, val, bold=False: Paragraph("%s: %s" % (k, ("<b>%s</b>" if bold else "%s") % esc(val)), st) if val else None
+    nb, nm, tong = v["nb"], v["nm"], v["tong"]
+    story = []
+    head = Table([[Paragraph("<b>%s</b>" % esc(nb.get("ten")), ParagraphStyle("h", parent=st, fontSize=10, leading=13)),
+                   Paragraph("Mẫu số: <b>%s</b><br/>Ký hiệu: <b>%s</b><br/>Số: <b><font color='#b4161b'>%s</font></b>" % (
+                       esc(v.get("mau")), esc(v.get("kh")), esc(v.get("so"))), st)]],
+                 colWidths=[W - 55 * mm, 55 * mm])
+    head.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("BOX", (1, 0), (1, 0), 0.6, colors.HexColor("#999999")),
+                              ("LEFTPADDING", (0, 0), (0, 0), 0)]))
+    story += [head, Spacer(1, 4 * mm),
+              Paragraph(esc((v.get("title") or INVOICE_TITLES.get(str(v.get("mau")), "HÓA ĐƠN")).upper()), title),
+              Paragraph("(Bản thể hiện của hóa đơn điện tử)", center), Paragraph(ngay, center),
+              Paragraph("Mã của cơ quan thuế: <b>%s</b>" % esc(v.get("mccqt") or "(hóa đơn không có mã)"), center),
+              Spacer(1, 3 * mm)]
+
+    def block(rows):
+        t = Table([[r] for r in rows if r is not None], colWidths=[W])
+        t.setStyle(TableStyle([("LINEBELOW", (0, -1), (-1, -1), 0.5, colors.HexColor("#bbbbbb")),
+                               ("LEFTPADDING", (0, 0), (-1, -1), 0), ("TOPPADDING", (0, 0), (-1, -1), 1),
+                               ("BOTTOMPADDING", (0, 0), (-1, -1), 1)]))
+        return t
+    story.append(block([line("Đơn vị bán hàng", nb.get("ten"), True), line("Mã số thuế", nb.get("mst"), True),
+                        line("Địa chỉ", nb.get("dchi")), line("Điện thoại", nb.get("sdt")),
+                        line("Số tài khoản", " – ".join(x for x in (nb.get("stk"), nb.get("nh")) if x))]))
+    story.append(Spacer(1, 2 * mm))
+    story.append(block([line("Họ tên người mua hàng", nm.get("hoten")), line("Tên đơn vị", nm.get("ten"), True),
+                        line("Mã số thuế", nm.get("mst"), True), line("Địa chỉ", nm.get("dchi")),
+                        line("Số tài khoản", nm.get("stk")),
+                        Paragraph("Hình thức thanh toán: %s &nbsp;&nbsp;&nbsp; Đơn vị tiền tệ: %s" % (
+                            esc(v.get("httt")), esc(v.get("dvtte") or "VND")), st)]))
+    story.append(Spacer(1, 3 * mm))
+    hdr = ["STT", "Tên hàng hóa, dịch vụ", "Đơn vị tính", "Số lượng", "Đơn giá", "Thuế suất", "Thành tiền"]
+    data = [[Paragraph("<b>%s</b>" % h, cell_c) for h in hdr]]
+    for it in v["items"]:
+        note = str(it.get("tchat") or "")
+        ten = esc(it.get("ten")) + (" <font color='#777777'>(%s)</font>" % {"2": "khuyến mại", "3": "chiết khấu",
+                                                                             "4": "ghi chú"}.get(note, "") if note in ("2", "3", "4") else "")
+        data.append([Paragraph(esc(it.get("stt")), cell_c), Paragraph(ten, cell), Paragraph(esc(it.get("dvt")), cell_c),
+                     Paragraph(_vn_money(it.get("sl")), cell_r), Paragraph(_vn_money(it.get("dgia")), cell_r),
+                     Paragraph(esc(_vn_rate(it.get("tsuat"))), cell_c), Paragraph(_vn_money(it.get("thtien")), cell_r)])
+    if not v["items"]:
+        data.append(["", Paragraph("<i>(Không có dữ liệu chi tiết hàng hóa, dịch vụ)</i>", cell), "", "", "", "", ""])
+    items = Table(data, colWidths=[12 * mm, W - 114 * mm, 18 * mm, 18 * mm, 22 * mm, 16 * mm, 28 * mm], repeatRows=1)
+    items.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#999999")),
+                               ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#eef1f6")), ("VALIGN", (0, 0), (-1, -1), "MIDDLE")]))
+    story += [items, Spacer(1, 2 * mm)]
+    rate_rows = [[Paragraph("<b>Thuế suất</b>", cell_c), Paragraph("<b>Thành tiền chưa thuế</b>", cell_c),
+                  Paragraph("<b>Tiền thuế</b>", cell_c)]]
+    rate_rows += [[Paragraph(esc(_vn_rate(r.get("tsuat"))), cell_c), Paragraph(_vn_money(r.get("thtien")), cell_r),
+                   Paragraph(_vn_money(r.get("tthue")), cell_r)] for r in v["rates"]]
+    tot = [("Tổng tiền chưa thuế", tong.get("cthue")), ("Tổng tiền thuế", tong.get("thue")),
+           ("Tổng tiền chiết khấu thương mại", tong.get("ck") or 0), ("Tổng tiền phí", tong.get("phi") or 0),
+           ("Tổng tiền thanh toán", tong.get("tt"))]
+    tot_rows = [[Paragraph(("<b>%s</b>" if k.endswith("thanh toán") else "%s") % k, cell),
+                 Paragraph(("<b>%s</b>" if k.endswith("thanh toán") else "%s") % _vn_money(val), cell_r)] for k, val in tot]
+    rt = Table(rate_rows, colWidths=[18 * mm, 32 * mm, 28 * mm])
+    rt.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#999999")),
+                            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#eef1f6"))]))
+    tt = Table(tot_rows, colWidths=[52 * mm, 34 * mm])
+    tt.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#999999"))]))
+    both = Table([[rt, tt]], colWidths=[W - 88 * mm, 88 * mm])
+    both.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
+    story += [both, Spacer(1, 2 * mm)]
+    if tong.get("chu"):
+        story.append(Paragraph("Số tiền viết bằng chữ: <b>%s</b>" % esc(tong.get("chu")), st))
+    story.append(Spacer(1, 5 * mm))
+    sign = "<b>NGƯỜI BÁN HÀNG</b>"
+    if v.get("signed") or v.get("mccqt"):
+        sign += "<br/><font color='#1e8449'>Đã ký số</font><br/>Ký bởi: %s" % esc(nb.get("ten"))
+        k = _to_dt(v.get("nky"))
+        if k:
+            sign += "<br/>Ký ngày: %s" % k.strftime("%d/%m/%Y")
+    sig = Table([[Paragraph("<b>NGƯỜI MUA HÀNG</b>", center), Paragraph(sign, center)]], colWidths=[W / 2, W / 2])
+    sig.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
+                             ("BOX", (1, 0), (1, 0), 0.6, colors.HexColor("#1e8449") if (v.get("signed") or v.get("mccqt"))
+                              else colors.white)]))
+    story += [sig, Spacer(1, 6 * mm)]
+    meta = "Trạng thái: %s%s" % (esc(tthai or ""), (" · Kết quả kiểm tra: %s" % esc(kq)) if kq else "")
+    story.append(Paragraph("%s<br/>Bản thể hiện dựng từ %s trên cổng hoadondientu.gdt.gov.vn (Tổng cục Thuế); "
+                           "tra cứu hóa đơn tại https://hoadondientu.gdt.gov.vn" % (meta, esc(v.get("nguon"))), small))
+    cancelled = bool(re.search(r"hủy|huỷ", tthai or "", re.I))
+
+    def on_page(canvas, _doc):
+        if cancelled:
+            canvas.saveState()
+            canvas.setFont(fb, 46)
+            canvas.setFillColor(colors.Color(0.8, 0.1, 0.1, alpha=0.18))
+            canvas.translate(A4[0] / 2, A4[1] / 2)
+            canvas.rotate(35)
+            canvas.drawCentredString(0, 0, "HÓA ĐƠN ĐÃ BỊ HỦY")
+            canvas.restoreState()
+    doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
+    return buf.getvalue()
+
+
+def tax_pdf(out_root, mst, kind, key, client=None):
+    """Tạo (hoặc dùng lại) PDF bản thể hiện theo dữ liệu cổng thuế của một hoá đơn trong kho → đường dẫn tương đối."""
+    base = company_dir(out_root, mst)
+    idx = _load_json(index_file(out_root, mst), {})
+    e = idx.get(kind, {}).get(key)
+    if e is None:
+        raise ValueError("Không tìm thấy hoá đơn")
+    inv = dict(e.get("inv") or {})
+    inv.setdefault("tdlap", e.get("tdlap"))
+    src = ""
+    if e.get("xml") and os.path.exists(os.path.join(base, e["xml"])):
+        src = e["xml"]
+    elif e.get("detail") and os.path.exists(os.path.join(base, e["detail"])):
+        src = e["detail"]
+    elif client is not None and client.token_valid():
+        try:
+            detail = client.get_detail(inv)
+            src = save_detail_json(base, e, inv, detail)
+            update_invoice_fields(out_root, mst, kind, key, detail=src)
+        except PortalError:
+            src = ""
+    rel = (os.path.splitext(src)[0] if src else os.path.join("_cqt", invoice_basename(inv))) + "_CQT.pdf"
+    path = os.path.join(base, rel)
+    if os.path.exists(path) and (not src or os.path.getmtime(path) >= os.path.getmtime(os.path.join(base, src))):
+        return rel
+    if src.endswith(".xml"):
+        with open(os.path.join(base, src), "rb") as f:
+            v = invoice_view_from_xml(f.read())
+    elif src:
+        v = invoice_view_from_detail(_load_json(os.path.join(base, src), {}))
+    else:
+        v = invoice_view_from_summary(inv)
+    _fill_view(v, invoice_view_from_summary(inv))
+    tthai = TTHAI_NIBOT.get(_num(e.get("tthai")), "")
+    kq = TTXLY_NIBOT.get(_num(inv.get("ttxly")), "") if inv else ""
+    data = build_tax_pdf(v, tthai, kq)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "wb") as f:
+        f.write(data)
+    return rel
+
+
+def save_detail_json(base, e, inv, detail):
+    """Lưu dữ liệu chi tiết của cổng cạnh thư mục XML của kỳ (hoặc _chi-tiet/) → đường dẫn tương đối với thư mục DN."""
+    folder = os.path.dirname(e["xml"]) if e.get("xml") else "_chi-tiet"
+    rel = os.path.join(folder, invoice_basename(inv) + ".json")
+    os.makedirs(os.path.join(base, folder), exist_ok=True)
+    _save_json(os.path.join(base, rel), detail)
+    return rel
+
+
+def update_invoice_fields(out_root, mst, kind, key, **fields):
+    path = index_file(out_root, mst)
+    with _INDEX_LOCK:
+        cur = _load_json(path, {})
+        e = cur.get(kind, {}).get(key)
+        if e is not None:
+            e.update(fields)
+            _save_json(path, cur)
+
+
 def render_invoice_html(out_root, mst, kind, key):
     """Bản thể hiện hoá đơn dựng từ XML (in hoặc lưu PDF từ trình duyệt)."""
     import html as H
@@ -2412,6 +2749,12 @@ def _sibling(base, rel, ext):
     return cand if os.path.exists(os.path.join(base, cand)) else ""
 
 
+def _cqt_rel(base, e):
+    src = e.get("xml") or e.get("detail") or ""
+    rel = (os.path.splitext(src)[0] + "_CQT.pdf") if src else ""
+    return rel if rel and os.path.exists(os.path.join(base, rel)) else ""
+
+
 def query_invoices(out_root, mst, f):
     """Lọc hoá đơn trong kho theo bộ lọc của màn hình Hoá đơn. Trả về list dòng (dict)."""
     kind = f.get("kind") or "purchase"
@@ -2468,7 +2811,7 @@ def query_invoices(out_root, mst, f):
             "xml": xml, "html": html, "pdf": pdf or (e.get("pdf") if e.get("pdf") and
                                                      os.path.exists(os.path.join(base, e["pdf"])) else ""),
             "tra_cuu": e.get("tra_cuu") or {}, "pdf_url": browser_pdf_url(e.get("tra_cuu")),
-            "can_fetch": can_fetch_pdf(e.get("tra_cuu"))[0]})
+            "can_fetch": can_fetch_pdf(e.get("tra_cuu"))[0], "cqt": _cqt_rel(base, e)})
     rows.sort(key=lambda r: r.pop("_sort"))
     return rows
 
@@ -2502,6 +2845,13 @@ def export_invoices(out_root, mst, company_name, f, fmt):
         end = parse_date(f["to"]) if f.get("to") else max(dates)
         path = os.path.join(out_dir, "%s_%s_%s.xlsx" % (label, mst, stamp))
         return write_nibot_workbook(path, kind, invoices, mst, company_name, start, end)
+    if fmt == "cqt":
+        files = [tax_pdf(out_root, mst, kind, r["key"]) for r in rows]
+        path = os.path.join(out_dir, "%s_PDF_THUE_%s_%s.zip" % (label, mst, stamp))
+        with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+            for rel in files:
+                z.write(os.path.join(base, rel), os.path.basename(rel))
+        return path
     if fmt not in ("xml", "html", "pdf"):
         raise ValueError("Định dạng kết xuất không hợp lệ")
     files = [r[fmt] for r in rows if r[fmt]]
@@ -3498,7 +3848,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
       <button class="sec sm" onclick="resetGrid()" title="Bỏ sắp xếp và lọc theo cột">Bỏ lọc cột</button>
       <select class="sm" id="hExp" style="width:auto" onchange="exportInv(this.value);this.value=''">
         <option value="">Kết xuất…</option><option value="xlsx">Excel (mẫu Nibot)</option><option value="xml">XML.ZIP</option>
-        <option value="html">HTML.ZIP</option><option value="pdf">PDF.ZIP</option></select>
+        <option value="html">HTML.ZIP</option><option value="pdf">PDF gốc.ZIP</option><option value="cqt">PDF thuế.ZIP</option></select>
     </div>
     <div class="bulk hide" id="hBulk">
       <b id="hSelInfo"></b>
@@ -4286,9 +4636,9 @@ function renderInv() {
 }
 function renderDetails(tr, r, kind) {
     const ct = tr.insertCell(); ct.style.whiteSpace = 'nowrap';
-    if (r.xml) ct.append(fileLink(r.xml, 'XML')); if (r.html) ct.append(fileLink(r.html, 'HTML')); if (r.pdf) ct.append(fileLink(r.pdf, 'PDF'));
-    const v = el('a', 'lk', 'In'); v.target = '_blank'; v.title = 'Bản thể hiện dựng từ XML – in hoặc lưu PDF';
-    v.href = '/view?' + new URLSearchParams({k: KEY, mst: $('hMst').value, kind, key: r.key}); ct.append(v);
+    if (r.xml) ct.append(fileLink(r.xml, 'XML')); if (r.html) ct.append(fileLink(r.html, 'HTML')); if (r.pdf) ct.append(fileLink(r.pdf, 'PDF gốc'));
+    const cq = el('a', 'lk', 'PDF thuế'); cq.target = '_blank'; cq.title = 'Bản thể hiện hoá đơn theo dữ liệu cổng thuế (hoadondientu.gdt.gov.vn)';
+    cq.href = '/cqt?' + new URLSearchParams({k: KEY, mst: $('hMst').value, kind, key: r.key}); ct.append(cq);
     const t = r.tra_cuu || {};
     if (t.url || t.code) {
       const a = el('a', 'lk', 'Tra cứu'); a.href = '#';
@@ -4813,6 +5163,18 @@ def make_handler(app, port):
                 except (ValueError, OSError) as e:
                     return self._send(404, {"error": str(e)})
                 return self._send(200, page.encode("utf-8"), "text/html; charset=utf-8")
+            if path == "/cqt":  # PDF bản thể hiện theo dữ liệu cổng thuế (tạo khi cần, lưu lại)
+                q = dict(urllib.parse.parse_qsl(urllib.parse.urlparse(self.path).query))
+                if not self._file_ok(q):
+                    return self._send(403, {"error": "Không có quyền"})
+                try:
+                    rel = tax_pdf(app.out_root, q["mst"], q.get("kind"), q.get("key"), app.clients.get(q["mst"]))
+                    with open(os.path.join(company_dir(app.out_root, q["mst"]), rel), "rb") as f:
+                        body = f.read()
+                except (ValueError, OSError) as e:
+                    return self._send(404, {"error": str(e)})
+                self._extra = [("Content-Disposition", 'inline; filename="%s"' % os.path.basename(rel))]
+                return self._send(200, body, "application/pdf")
             self._send(404, {"error": "Không tìm thấy"})
 
         def _file_ok(self, q):

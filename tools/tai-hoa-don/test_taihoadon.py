@@ -149,6 +149,15 @@ class FakePortal(BaseHTTPRequestHandler):
             return self._json(200, {"datas": datas, "total": len(datas)})
         if u.path in ("/query/invoices/sold", "/sco-query/invoices/purchase", "/sco-query/invoices/sold"):
             return self._json(200, {"datas": [], "total": 0})
+        if u.path == "/query/invoices/detail":  # dữ liệu "Xem hoá đơn" của cổng
+            return self._json(200, {"nbten": "Cong ty Ban K", "nbmst": q.get("nbmst"), "nbdchi": "So 2 Le Loi",
+                                    "nmten": "CONG TY A", "nmmst": "0309999999", "khmshdon": 1, "khhdon": q.get("khhdon"),
+                                    "shdon": int(q.get("shdon") or 0), "tdlap": "2026-10-01T17:00:00Z", "thtttoan": "TM",
+                                    "tgtcthue": 200000, "tgtthue": 16000, "tgtttbso": 216000,
+                                    "tgtttbchu": "Hai trăm mười sáu nghìn đồng",
+                                    "hdhhdvu": [{"stt": 1, "ten": "Nước suối Lavie", "dvtinh": "Thùng", "sluong": 2,
+                                                 "dgia": 100000, "thtien": 200000, "tsuat": "8%"}],
+                                    "thttltsuat": [{"tsuat": "8%", "thtien": 200000, "tthue": 16000}]})
         if u.path == "/query/invoices/export-xml" and q.get("khhdon", "").startswith("K"):
             return self._json(500, {"message": "Không tồn tại hồ sơ gốc của hóa đơn."})
         if u.path == "/query/invoices/export-xml":
@@ -472,6 +481,23 @@ class Tests(unittest.TestCase):
         self.assertEqual(xml_calls(), 1)
         self.run_job(["0309999999"], kinds=("purchase",), start=date(2026, 10, 1), end=date(2026, 10, 31))
         self.assertEqual(xml_calls(), 1, "lần sau không hỏi lại XML của HĐ không mã")
+        detail_calls = sum(1 for p, q in FakePortal.calls if p.endswith("/detail"))
+        self.assertEqual(detail_calls, 1, "HĐ không có XML: lấy dữ liệu chi tiết một lần")
+        # PDF của thuế: HĐ không mã dựng từ dữ liệu chi tiết, HĐ có XML dựng từ XML
+        import pypdf
+        rows = {r["shdon"]: r for r in t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"})}
+        self.assertEqual(rows["100"]["mat_hang"], "Nước suối Lavie")
+        self.assertEqual(rows["100"]["cqt"], "")
+        for so, want in (("100", ("K26THA", "Nước suối Lavie", "216.000", "Hai trăm mười sáu nghìn đồng", "Cong ty Ban K")),
+                         ("99", ("C26TAA", "Giay A4", "108.900.000", "Cong ty Ban"))):
+            rel = t.tax_pdf(self.tmp, "0309999999", "purchase", rows[so]["key"])
+            data = open(os.path.join(self.tmp, "0309999999", rel), "rb").read()
+            text = " ".join(p.extract_text() for p in pypdf.PdfReader(io.BytesIO(data)).pages)
+            for w in want:
+                self.assertIn(w, text, (so, w))
+        self.assertTrue(t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"})[0]["cqt"].endswith("_CQT.pdf"))
+        zp = t.export_invoices(self.tmp, "0309999999", "A", {"kind": "purchase"}, "cqt")
+        self.assertEqual(len(zipfile.ZipFile(zp).namelist()), 2)
 
     def test_portal_timeout_splits_range(self):
         """Cổng timeout khi tra cả tháng → tự chia theo tuần, vẫn lấy đủ hoá đơn."""

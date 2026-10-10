@@ -20,14 +20,14 @@ if [ ! -x venv/bin/python ] || [ ! -f venv/.da-cai ]; then
   if [ ! -x venv/bin/pip ]; then
     curl -fsSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py && venv/bin/python get-pip.py -q && rm -f get-pip.py || { echo "LỖI: không cài được pip"; exit 1; }
   fi
-  venv/bin/pip install -q openpyxl==3.1.5 pypdf==5.1.0 cryptography==43.0.3 xlrd==2.0.1 || { echo "LỖI: không cài được thư viện"; exit 1; }
+  venv/bin/pip install -q openpyxl==3.1.5 pypdf==5.1.0 cryptography==43.0.3 xlrd==2.0.1 reportlab==4.2.5 || { echo "LỖI: không cài được thư viện"; exit 1; }
   echo "Đã cài xong thư viện."
   touch venv/.da-cai
 fi
 # Bản mới cần thêm thư viện (vd xlrd đọc sao kê .xls) → tự cài bổ sung
-if ! venv/bin/python -c "import openpyxl, pypdf, cryptography, xlrd" 2>/dev/null; then
+if ! venv/bin/python -c "import openpyxl, pypdf, cryptography, xlrd, reportlab" 2>/dev/null; then
   echo "Cài bổ sung thư viện…"
-  venv/bin/pip install -q openpyxl==3.1.5 pypdf==5.1.0 cryptography==43.0.3 xlrd==2.0.1 || echo "LỖI: không cài được thư viện bổ sung"
+  venv/bin/pip install -q openpyxl==3.1.5 pypdf==5.1.0 cryptography==43.0.3 xlrd==2.0.1 reportlab==4.2.5 || echo "LỖI: không cài được thư viện bổ sung"
 fi
 export PYTHONUNBUFFERED=1
 exec venv/bin/python taihoadon.py --server
