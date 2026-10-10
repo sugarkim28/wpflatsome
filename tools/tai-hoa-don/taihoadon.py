@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.2.1"
+__version__ = "4.2.2"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -147,6 +147,27 @@ def safe_name(text):
 # Client cổng hoá đơn điện tử
 # ---------------------------------------------------------------------------
 
+def _open_with_deadline(opener, req, seconds):
+    """Mở URL với giới hạn TỔNG thời gian (timeout của socket chỉ tính từng lần chờ; cổng trả nhỏ giọt có thể kéo dài
+    mãi). Quá hạn → TimeoutError, không treo cả lượt đồng bộ."""
+    box = {}
+
+    def work():
+        try:
+            with opener.open(req, timeout=seconds) as resp:
+                box["data"] = resp.read()
+        except BaseException as e:  # chuyển lỗi về luồng chính
+            box["err"] = e
+    th = threading.Thread(target=work, daemon=True)
+    th.start()
+    th.join(seconds + 5)
+    if th.is_alive():
+        raise TimeoutError("trang thuế không trả lời sau %d giây (timed out)" % seconds)
+    if "err" in box:
+        raise box["err"]
+    return box["data"]
+
+
 def _is_busy(e):
     """Lỗi do cổng quá tải / không trả lời kịp (khác lỗi nghiệp vụ như sai mật khẩu)."""
     t = str(e).lower()
@@ -217,6 +238,7 @@ class MttHealth:
 
 MTT_HEALTH = MttHealth()
 MTT_TIMEOUT = 25  # giây – phần MTT treo thì bỏ nhanh, không chờ lâu
+LIST_TIMEOUT = 45  # giây – mỗi lần tra danh sách hoá đơn (có mã / không mã)
 
 
 class HoaDonClient:
@@ -266,8 +288,7 @@ class HoaDonClient:
             req = urllib.request.Request(url, data=data, headers=headers, method=method)
             t0 = time.time()
             try:
-                with opener.open(req, timeout=timeout or self.timeout) as resp:
-                    content = resp.read()
+                content = _open_with_deadline(opener, req, timeout or self.timeout)
                 if health:
                     PORTAL_HEALTH.record(True, time.time() - t0)
                 break
@@ -397,6 +418,7 @@ class HoaDonClient:
             raise ValueError("kind phải là 'purchase' hoặc 'sold'")
         results, seen = [], set()
         self.mtt_skipped = False
+        self.gaps = []
         if include_mtt and MTT_HEALTH.is_down():
             include_mtt = False
             self.mtt_skipped = True
@@ -404,16 +426,24 @@ class HoaDonClient:
                 progress("Bỏ qua HĐ máy tính tiền: phần này của trang thuế đang treo (vừa thử không được) – sẽ tự thử lại sau")
         for prefix, ttxly, label in self._sources(kind, include_mtt):
             mtt = prefix == "/sco-query"
-            for a, b in month_ranges(start, end):
+            months = month_ranges(start, end)
+            for a, b in months:
                 if progress:
-                    progress("Tra %s %s → %s (%s)" % (
+                    progress("Tra %s %s → %s (%s)%s" % (
                         "mua vào" if kind == "purchase" else "bán ra",
-                        a.strftime("%d/%m/%Y"), b.strftime("%d/%m/%Y"), label))
+                        a.strftime("%d/%m/%Y"), b.strftime("%d/%m/%Y"), label,
+                        " – trang thuế không trả lời trong %d giây sẽ bỏ qua phần này" % MTT_TIMEOUT if mtt else ""))
                 try:
                     found = self._fetch_range(prefix, kind, a, b, ttxly, progress, mtt=mtt)
                 except PortalError as e:
-                    if not mtt or not _is_busy(e):
+                    if not _is_busy(e):
                         raise
+                    if not mtt:  # phần có mã / không mã lỗi: ghi các khoảng còn lại là thiếu, tra tiếp phần khác
+                        self.gaps.append("%s %s – %s" % (label, a.strftime("%d/%m/%Y"), end.strftime("%d/%m/%Y")))
+                        if progress:
+                            progress("CẢNH BÁO: trang thuế không trả lời khi tra %s từ %s – bỏ qua phần này tới %s (%s)" % (
+                                label, a.strftime("%d/%m/%Y"), end.strftime("%d/%m/%Y"), e))
+                        break
                     # Phần MTT treo: không làm hỏng cả lượt – giữ các HĐ có mã / không mã đã tra được.
                     MTT_HEALTH.mark_down()
                     self.mtt_skipped = True
@@ -423,6 +453,7 @@ class HoaDonClient:
                     break
                 if mtt:
                     MTT_HEALTH.mark_up()
+                self.gaps = ["%s %s" % (label, g) if g[:1].isdigit() else g for g in self.gaps]
                 for inv in found:
                     key = (inv.get("nbmst"), inv.get("khmshdon"), inv.get("khhdon"), inv.get("shdon"))
                     if key in seen:
@@ -436,7 +467,7 @@ class HoaDonClient:
         results.sort(key=lambda i: (str(i.get("tdlap") or ""), str(i.get("khhdon") or ""), _num(i.get("shdon"))))
         return results
 
-    def _fetch_range(self, prefix, kind, a, b, ttxly, progress=None, mtt=False):
+    def _fetch_range(self, prefix, kind, a, b, ttxly, progress=None, mtt=False, _split=False):
         """Tra một khoảng ngày (có lật trang). Cổng quá tải (timeout) thì chia nhỏ theo tuần rồi tra lại.
         mtt=True (máy tính tiền): chờ ngắn, thử lại 1 lần, không chia nhỏ – phần này treo thì bỏ qua cho nhanh."""
         try:
@@ -445,8 +476,8 @@ class HoaDonClient:
                 params = {"sort": "tdlap:desc", "size": PAGE_SIZE, "search": search_query(a, b, ttxly)}
                 if state:
                     params["state"] = state
-                data = self._request("GET", "%s/invoices/%s" % (prefix, kind), params=params, retries=1 if mtt else 2,
-                                     timeout=MTT_TIMEOUT if mtt else None, health=not mtt)
+                data = self._request("GET", "%s/invoices/%s" % (prefix, kind), params=params, retries=1,
+                                     timeout=MTT_TIMEOUT if mtt else LIST_TIMEOUT, health=not mtt)
                 page = data.get("datas") or []
                 out.extend(page)
                 state = data.get("state")
@@ -455,19 +486,30 @@ class HoaDonClient:
                 time.sleep(self.delay)
         except PortalError as e:
             busy = _is_busy(e)
-            if mtt or not busy or (b - a).days < 1:
-                if busy:
-                    raise PortalError("Cổng thuế đang quá tải, không trả được dữ liệu ngày %s – %s. Vui lòng đồng bộ "
-                                      "lại sau ít phút. (%s)" % (a.strftime("%d/%m/%Y"), b.strftime("%d/%m/%Y"), e))
+            if mtt or not busy or (b - a).days < 7 or _split:
+                if busy and not mtt:
+                    raise PortalError("Cổng thuế đang quá tải, không trả được dữ liệu ngày %s – %s (%s)" % (
+                        a.strftime("%d/%m/%Y"), b.strftime("%d/%m/%Y"), e))
                 raise
-            step = 7 if (b - a).days > 7 else 1
+            # Chia theo tuần, tra lại MỘT lần; tuần nào vẫn lỗi thì ghi là thiếu, không chia nhỏ thêm (tránh treo lâu).
             if progress:
-                progress("Cổng thuế quá tải, chia nhỏ %s – %s theo %s để tra lại" % (
-                    a.strftime("%d/%m/%Y"), b.strftime("%d/%m/%Y"), "tuần" if step == 7 else "ngày"))
-            out, cur = [], a
+                progress("Cổng thuế quá tải, chia nhỏ %s – %s theo tuần để tra lại" % (
+                    a.strftime("%d/%m/%Y"), b.strftime("%d/%m/%Y")))
+            out, cur, failed = [], a, 0
             while cur <= b:
-                stop = min(cur + timedelta(days=step - 1), b)
-                out.extend(self._fetch_range(prefix, kind, cur, stop, ttxly, progress))
+                stop = min(cur + timedelta(days=6), b)
+                try:
+                    out.extend(self._fetch_range(prefix, kind, cur, stop, ttxly, progress, _split=True))
+                except PortalError as e2:
+                    if not _is_busy(e2):
+                        raise
+                    failed += 1
+                    self.gaps.append("%s – %s" % (cur.strftime("%d/%m/%Y"), stop.strftime("%d/%m/%Y")))
+                    if failed >= 1:  # cổng vẫn không trả lời → bỏ phần còn lại của khoảng này, không chờ thêm
+                        if stop < b:
+                            self.gaps.append("%s – %s" % ((stop + timedelta(days=1)).strftime("%d/%m/%Y"),
+                                                          b.strftime("%d/%m/%Y")))
+                        break
                 cur = stop + timedelta(days=1)
                 time.sleep(self.delay)
             return out
@@ -2364,7 +2406,8 @@ class Job:
             return {"running": self.running, "log": list(self.log), "done": self.done, "total": self.total,
                     "current": self.current, "results": list(self.results), "files": list(self.files),
                     "need_captcha": self.need_captcha, "auth": self.auth, "found": dict(self.found),
-                    "rows": self.rows[-1500:], "phase": self.phase,
+                    "rows": self.rows[-1500:], "phase": self.phase, "gaps": list(getattr(self, "gaps", [])),
+                    "mtt_skipped": bool(getattr(self, "mtt_skipped", False)),
                     "elapsed": round((self.finished or time.time()) - self.started, 1)}
 
 
@@ -2423,6 +2466,14 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
 
     job.phase = "đang tra danh sách hoá đơn"
     invoices = client.list_invoices(kind, start, end, include_mtt, progress=lambda m: job.say("%s: %s" % (mst, m)))
+    gaps = list(dict.fromkeys(getattr(client, "gaps", []) or []))
+    if gaps:
+        job.say("%s: THIẾU DỮ LIỆU – trang thuế lỗi, chưa tra được: %s. Các hoá đơn khác vẫn được đồng bộ; "
+                "đồng bộ lại sau để lấy đủ." % (mst, "; ".join(gaps)))
+        job.gaps = getattr(job, "gaps", []) + ["%s %s: %s" % (mst, "mua vào" if kind == "purchase" else "bán ra", g)
+                                                for g in gaps]
+    if getattr(client, "mtt_skipped", False):
+        job.mtt_skipped = True
     quota = getattr(job, "quota", None)
     if quota:  # gói theo số hoá đơn: chỉ hoá đơn mới (chưa có trong kho) tính vào hạn mức
         fresh = sorted((i for i in invoices if invoice_key(i) not in known),
@@ -4925,7 +4976,7 @@ async function refresh() {
   $('bellN').textContent = s.unread; $('bellN').classList.toggle('hide', !s.unread);
   if (s.auto) renderAuto(s.auto);
   render(); if (curTab === 'WS') { fillMst(); renderWsHead(); }
-  $('capStat').textContent = s.captcha.count ? ('Captcha đã học ' + s.captcha.chars.length + ' ký tự') : '';
+  $('capStat').textContent = (s.captcha.count ? ('Captcha đã học ' + s.captcha.chars.length + ' ký tự · ') : '') + 'phiên bản ' + s.version;
   if (s.job.running || s.job.log.length) renderJob(s.job);
   return s;
 }
@@ -5375,6 +5426,9 @@ function renderSync(j) {
     line('&nbsp;&nbsp;- Thời gian xử lý: ' + j.elapsed + ' giây');
     const errs = j.log.filter(x => x.includes('LỖI'));
     if (errs.length) line('<span class="err">' + esc(errs[errs.length - 1]) + '</span>');
+    (j.gaps || []).forEach(g => line('<span class="err">⚠ Trang thuế lỗi – chưa tra được: ' + esc(g) + '. Đồng bộ lại sau để lấy đủ.</span>'));
+    if (j.mtt_skipped) line('<span class="err">⚠ Phần hoá đơn MÁY TÍNH TIỀN của trang thuế đang treo – đã bỏ qua phần này, các hoá đơn khác vẫn đồng bộ. Đối chiếu lại sau.</span>');
+    if (j.running && j.log.length) line('<span class="mute">' + esc(j.log[j.log.length - 1]) + '</span>');
   }
   $('sProg').style.width = (j.total ? Math.round(100 * j.done / j.total) : (j.running ? 5 : (j.log.length ? 100 : 0))) + '%';
   syncRows = j.rows || []; renderSyncRows();
@@ -6144,6 +6198,8 @@ class App:
                     who, name, len(changed), ex, " …" if len(changed) > 5 else ""), "warn", vp)
             if new and job.unattended:
                 self.notify(mst, "%s: %s có %d HĐ mới" % (who, name, len(new)), vp=vp)
+        for g in getattr(job, "gaps", []):
+            self.notify(g.split(" ")[0], "%s: trang thuế lỗi, THIẾU dữ liệu %s – đồng bộ lại sau" % (who, g), "warn", vp)
         if job.unattended:
             for line in job.log:
                 m = re.match(r"\S+\s+(\d{10}(?:-\d{3})?): LỖI (.*)", line)
@@ -6380,7 +6436,8 @@ def make_handler(app, port):
                                         if app.server else None,
                                         "unread": app.notices_for(u, 0)["unread"] if app.server else 0,
                                         "auto": self._auto_state() if app.server and u["role"] == "admin" else None,
-                                        "captcha": {"count": app.solver.count(), "chars": app.solver.chars()}})
+                                        "captcha": {"count": app.solver.count(), "chars": app.solver.chars()},
+                                        "version": __version__})
             if path == "/file":
                 return self._file()
             if path == "/view":

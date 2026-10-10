@@ -77,6 +77,7 @@ XML = ('<?xml version="1.0" encoding="UTF-8"?><HDon><DLHDon><NDHDon>'
 class FakePortal(BaseHTTPRequestHandler):
     calls = []
     mtt_hang = 0  # giây: giả lập phần máy tính tiền của cổng bị treo
+    sold_hang = 0  # giây: giả lập phần tra bán ra (có mã) bị treo
     captchas = {}
     logins = []
     headers = []
@@ -151,6 +152,8 @@ class FakePortal(BaseHTTPRequestHandler):
         if u.path in ("/query/invoices/sold", "/sco-query/invoices/purchase", "/sco-query/invoices/sold"):
             if u.path.startswith("/sco-query") and FakePortal.mtt_hang:
                 time.sleep(FakePortal.mtt_hang)
+            if u.path == "/query/invoices/sold" and FakePortal.sold_hang:
+                time.sleep(FakePortal.sold_hang)
             return self._json(200, {"datas": [], "total": 0})
         if u.path == "/query/invoices/detail":  # dữ liệu "Xem hoá đơn" của cổng
             return self._json(200, {"nbten": "Cong ty Ban K", "nbmst": q.get("nbmst"), "nbdchi": "So 2 Le Loi",
@@ -1109,6 +1112,26 @@ class Tests(unittest.TestCase):
             FakePortal.mtt_hang = 0
             t.MTT_HEALTH.mark_up()
         self.assertTrue(t._is_busy(t.PortalError("Không kết nối được cổng hoá đơn điện tử: The read operation timed out")))
+
+    def test_portal_hang_skips_part_with_warning(self):
+        """Một phần của cổng treo (bán ra): bỏ qua phần đó trong thời gian giới hạn, báo THIẾU, phần khác vẫn đồng bộ."""
+        import unittest.mock as mock
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        FakePortal.sold_hang = 4
+        t0 = time.time()
+        try:
+            with mock.patch.object(t, "LIST_TIMEOUT", 1), mock.patch.object(t, "MTT_TIMEOUT", 1):
+                job, _ = self.run_job(["0309999999"], kinds=("purchase", "sold"), start=date(2026, 9, 1),
+                                      end=date(2026, 10, 31))
+        finally:
+            FakePortal.sold_hang = 0
+            t.MTT_HEALTH.mark_up()
+        log = "\n".join(job.log)
+        self.assertLess(time.time() - t0, 60)                       # có giới hạn thời gian, không treo
+        self.assertIn("THIẾU DỮ LIỆU", log)
+        self.assertNotIn(": LỖI", log)
+        self.assertTrue(job.snapshot()["gaps"])
+        self.assertTrue(t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"}))   # mua vào vẫn đủ
 
     def test_auto_sync_and_notices(self):
         self.assertEqual(t.auto_range("auto", date(2026, 10, 9)), (date(2026, 9, 1), date(2026, 10, 9)))
