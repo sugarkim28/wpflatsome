@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.5.0"
+__version__ = "3.6.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -434,6 +434,14 @@ def save_xml(zip_bytes, folder, basename):
         raise PortalError("File XML tải về không hợp lệ.")
     xml_path = None
     with zf:
+        # Giữ nguyên cả gói của cổng (HTML + details.js, css, hình…) để bản HTML hiển thị / in PDF đúng như trên thuế
+        goc = os.path.join(folder, basename + "_goc")
+        for name in zf.namelist():
+            leaf = os.path.basename(name.replace("\\", "/"))
+            if leaf and not name.endswith("/") and leaf not in (".", ".."):
+                os.makedirs(goc, exist_ok=True)
+                with open(os.path.join(goc, leaf), "wb") as f:
+                    f.write(zf.read(name))
         for name in zf.namelist():
             ext = os.path.splitext(name)[1].lower()
             if ext not in (".xml", ".html", ".htm", ".pdf"):
@@ -2003,7 +2011,9 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
                     inv["_detail"] = old["detail"]
                 else:
                     detail_todo.append(inv)  # bản cũ chưa lấy dữ liệu chi tiết → lấy để có hàng hoá và PDF của thuế
-            elif os.path.exists(existing) and status[key] != "Đổi trạng thái":
+            elif os.path.exists(existing) and status[key] != "Đổi trạng thái" and not (
+                    os.path.exists(existing[:-4] + ".html") and not os.path.isdir(existing[:-4] + "_goc")
+                    and html_missing_assets(existing[:-4] + ".html")):
                 inv["_xml"] = os.path.relpath(existing, folder)
                 inv["_xmlinfo"] = parse_invoice_xml(existing)
             else:
@@ -2613,6 +2623,97 @@ def build_tax_pdf(v, tthai="", kq=""):
     return buf.getvalue()
 
 
+def find_browser():
+    """Chrome / Edge / Chromium để in bản HTML của cổng thuế ra PDF (chạy ngầm). Không có → None."""
+    import glob
+    import shutil
+    here = os.path.dirname(os.path.abspath(__file__))
+    cands = [os.environ.get("TAIHOADON_CHROME", "")]
+    for env in ("PROGRAMFILES(X86)", "PROGRAMFILES", "LOCALAPPDATA"):
+        root = os.environ.get(env)
+        if root:
+            cands += [os.path.join(root, "Microsoft", "Edge", "Application", "msedge.exe"),
+                      os.path.join(root, "Google", "Chrome", "Application", "chrome.exe")]
+    cands += [shutil.which(n) or "" for n in ("chromium", "chromium-browser", "google-chrome", "google-chrome-stable",
+                                              "microsoft-edge", "msedge", "chrome")]
+    for root in (os.environ.get("PLAYWRIGHT_BROWSERS_PATH", ""), os.path.join(here, "browsers"), "/opt/pw-browsers",
+                 os.path.expanduser("~/.cache/ms-playwright")):
+        if root:
+            cands += sorted(glob.glob(os.path.join(root, "chromium-*", "chrome-linux*", "chrome")), reverse=True)
+            cands += sorted(glob.glob(os.path.join(root, "chromium-*", "chrome-win*", "chrome.exe")), reverse=True)
+    return next((c for c in cands if c and os.path.isfile(c)), None)
+
+
+_BROWSER_FAIL = {"t": 0.0}
+
+
+def html_to_pdf(html_path, timeout=90):
+    """In file HTML ra PDF bằng trình duyệt chạy ngầm (chạy cả JavaScript của trang). Lỗi / không có trình duyệt → None."""
+    import subprocess
+    import tempfile
+    exe = find_browser()
+    if not exe or time.time() - _BROWSER_FAIL["t"] < 600:  # trình duyệt vừa lỗi (thiếu thư viện…) → 10 phút sau mới thử lại
+        return None
+    with tempfile.TemporaryDirectory() as td:
+        out = os.path.join(td, "out.pdf")
+        cmd = [exe, "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
+               "--user-data-dir=" + os.path.join(td, "profile"), "--no-pdf-header-footer", "--print-to-pdf-no-header",
+               "--run-all-compositor-stages-before-draw", "--virtual-time-budget=8000", "--print-to-pdf=" + out,
+               "file:///" + os.path.abspath(html_path).replace("\\", "/").lstrip("/")]
+        if os.name != "nt":
+            cmd.insert(1, "--no-sandbox")  # máy chủ / container thường không có sandbox của Chrome
+        try:
+            subprocess.run(cmd, timeout=timeout, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           env=dict(os.environ, HOME=os.environ.get("HOME") or td),
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except (OSError, subprocess.SubprocessError):
+            return None
+        if os.path.exists(out) and os.path.getsize(out) > 800:
+            with open(out, "rb") as f:
+                return f.read()
+    _BROWSER_FAIL["t"] = time.time()
+    return None
+
+
+def portal_html(base, e):
+    """Bản HTML của cổng thuế đã tải (trong gói _goc nếu có, không thì file .html cạnh XML)."""
+    xml = e.get("xml") or ""
+    if not xml:
+        return ""
+    stem = os.path.splitext(xml)[0]
+    goc = os.path.join(base, stem + "_goc")
+    if os.path.isdir(goc):
+        htmls = sorted(f for f in os.listdir(goc) if f.lower().endswith((".html", ".htm")))
+        if htmls:
+            return os.path.join(goc, htmls[0])
+    for ext in (".html", ".htm"):
+        if os.path.exists(os.path.join(base, stem + ext)):
+            return os.path.join(base, stem + ext)
+    return ""
+
+
+def html_missing_assets(html_path):
+    """Các file script / css mà bản HTML cần nhưng chưa có cạnh nó (bản cũ chỉ lưu .html)."""
+    try:
+        with open(html_path, encoding="utf-8", errors="ignore") as f:
+            text = f.read(400000)
+    except OSError:
+        return []
+    refs = re.findall(r"""<(?:script|link)[^>]+(?:src|href)\s*=\s*["']([^"':?#]+)["']""", text, re.I)
+    folder = os.path.dirname(html_path)
+    return [r for r in refs if not os.path.exists(os.path.join(folder, os.path.basename(r)))]
+
+
+def _pdf_has_invoice(data, inv):
+    try:
+        import pypdf
+        text = " ".join((p.extract_text() or "") for p in pypdf.PdfReader(io.BytesIO(data)).pages[:2])
+    except Exception:
+        return False
+    so = str(_num(inv.get("shdon")) or "")
+    return bool(so) and re.search(r"(?<!\d)0*%s(?!\d)" % re.escape(so), text) is not None
+
+
 def tax_pdf(out_root, mst, kind, key, client=None):
     """Tạo (hoặc dùng lại) PDF bản thể hiện theo dữ liệu cổng thuế của một hoá đơn trong kho → đường dẫn tương đối."""
     base = company_dir(out_root, mst)
@@ -2636,8 +2737,19 @@ def tax_pdf(out_root, mst, kind, key, client=None):
             src = ""
     rel = (os.path.splitext(src)[0] if src else os.path.join("_cqt", invoice_basename(inv))) + "_CQT.pdf"
     path = os.path.join(base, rel)
-    if os.path.exists(path) and (not src or os.path.getmtime(path) >= os.path.getmtime(os.path.join(base, src))):
+    html = portal_html(base, e)
+    want_html = bool(html) and find_browser() is not None
+    if os.path.exists(path) and (not src or os.path.getmtime(path) >= os.path.getmtime(os.path.join(base, src))) \
+            and (e.get("cqt_src") == "html" or not want_html):
         return rel
+    if want_html:  # bản HTML chuẩn của cổng thuế → PDF (giữ nguyên giao diện của thuế)
+        data = html_to_pdf(html)
+        if data and _pdf_has_invoice(data, inv):
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "wb") as f:
+                f.write(data)
+            update_invoice_fields(out_root, mst, kind, key, cqt_src="html")
+            return rel
     if src.endswith(".xml"):
         with open(os.path.join(base, src), "rb") as f:
             v = invoice_view_from_xml(f.read())
@@ -2652,6 +2764,7 @@ def tax_pdf(out_root, mst, kind, key, client=None):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as f:
         f.write(data)
+    update_invoice_fields(out_root, mst, kind, key, cqt_src="dung")
     return rel
 
 

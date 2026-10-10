@@ -42,6 +42,10 @@ mkdir -p "$APP" "$DATA"
 "$APP/venv/bin/pip" install -q openpyxl==3.1.5 pypdf==5.1.0 cryptography==43.0.3 xlrd==2.0.1 reportlab==4.2.5
 install -m 644 "$SRC" "$APP/taihoadon.py"
 mkdir -p "$APP/fonts" && install -m 644 "$(dirname "$SRC")"/fonts/* "$APP/fonts/"
+echo ">> Cài Chromium (in PDF thuế từ bản HTML của cổng)…"
+"$APP/venv/bin/pip" install -q playwright==1.48.0 \
+  && PLAYWRIGHT_BROWSERS_PATH="$APP/browsers" "$APP/venv/bin/python" -m playwright install --with-deps chromium \
+  || echo "   (không cài được Chromium – PDF thuế dùng bản dựng sẵn)"
 chown -R taihoadon:taihoadon "$DATA"
 chmod 700 "$DATA"
 

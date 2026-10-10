@@ -164,7 +164,11 @@ class FakePortal(BaseHTTPRequestHandler):
             buf = io.BytesIO()
             with zipfile.ZipFile(buf, "w") as z:
                 z.writestr("invoice.xml", XML % (q["shdon"], q["shdon"]))
-                z.writestr("details.js", "x")
+                # bản HTML của cổng: nội dung do details.js dựng (cần chạy JavaScript)
+                z.writestr("invoice.html", '<!doctype html><html><head><meta charset="utf-8"><script src="details.js">'
+                                           '</script></head><body><h1>HÓA ĐƠN CỦA CỔNG THUẾ</h1><p id="so"></p></body></html>')
+                z.writestr("details.js", "document.addEventListener('DOMContentLoaded',function(){"
+                                         "document.getElementById('so').textContent='Số hóa đơn: %s';});" % q["shdon"])
             data = buf.getvalue()
             self.send_response(200)
             self.send_header("Content-Length", str(len(data)))
@@ -488,6 +492,10 @@ class Tests(unittest.TestCase):
         rows = {r["shdon"]: r for r in t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"})}
         self.assertEqual(rows["100"]["mat_hang"], "Nước suối Lavie")
         self.assertEqual(rows["100"]["cqt"], "")
+        import unittest.mock as mock
+        no_browser = mock.patch.object(t, "find_browser", return_value=None)  # kiểm bản dựng dự phòng
+        no_browser.start()
+        self.addCleanup(no_browser.stop)
         for so, want in (("100", ("K26THA", "Nước suối Lavie", "216.000", "Hai trăm mười sáu nghìn đồng", "Cong ty Ban K")),
                          ("99", ("C26TAA", "Giay A4", "108.900.000", "Cong ty Ban"))):
             rel = t.tax_pdf(self.tmp, "0309999999", "purchase", rows[so]["key"])
@@ -1142,6 +1150,30 @@ class Tests(unittest.TestCase):
         self.assertEqual(info["rows"][0]["desc"], "IBFT Strawberry Tao chuyen khoan nhanh qua Zalo W2LQ5EU7/722239")
         with self.assertRaisesRegex(ValueError, "scan"):
             t.parse_bank_statement("scan.pdf", self._pdf([[(10, 10, "x")]]))
+
+    @unittest.skipUnless(t.find_browser(), "máy không có Chrome/Edge/Chromium")
+    def test_tax_pdf_from_portal_html(self):
+        """PDF thuế = bản HTML của cổng in qua trình duyệt chạy ngầm (chạy cả details.js đi kèm)."""
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        self.run_job(["0309999999"], kinds=("purchase",), start=date(2026, 10, 1), end=date(2026, 10, 31))
+        row = t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"})[0]
+        base = os.path.join(self.tmp, "0309999999")
+        goc = os.path.join(base, os.path.splitext(row["xml"])[0] + "_goc")
+        self.assertEqual(sorted(os.listdir(goc)), ["details.js", "invoice.html", "invoice.xml"])
+        rel = t.tax_pdf(self.tmp, "0309999999", "purchase", row["key"])
+        import pypdf
+        text = pypdf.PdfReader(os.path.join(base, rel)).pages[0].extract_text()
+        self.assertIn("HÓA ĐƠN CỦA CỔNG THUẾ", text)
+        self.assertIn("Số hóa đơn: 99", text)
+        e = t._load_json(t.index_file(self.tmp, "0309999999"), {})["purchase"][row["key"]]
+        self.assertEqual(e["cqt_src"], "html")
+        # Bản cũ chỉ lưu .html (thiếu details.js) → lần đồng bộ sau tải lại gói đầy đủ
+        import shutil
+        shutil.rmtree(goc)
+        n = sum(1 for p_, _ in FakePortal.calls if p_.endswith("export-xml"))
+        self.run_job(["0309999999"], kinds=("purchase",), start=date(2026, 10, 1), end=date(2026, 10, 31))
+        self.assertEqual(sum(1 for p_, _ in FakePortal.calls if p_.endswith("export-xml")), n + 1)
+        self.assertTrue(os.path.isdir(goc))
 
 
 if __name__ == "__main__":

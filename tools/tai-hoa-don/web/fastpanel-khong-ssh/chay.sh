@@ -29,5 +29,23 @@ if ! venv/bin/python -c "import openpyxl, pypdf, cryptography, xlrd, reportlab" 
   echo "Cài bổ sung thư viện…"
   venv/bin/pip install -q openpyxl==3.1.5 pypdf==5.1.0 cryptography==43.0.3 xlrd==2.0.1 reportlab==4.2.5 || echo "LỖI: không cài được thư viện bổ sung"
 fi
+# Trình duyệt chạy ngầm để in bản HTML của cổng thuế ra "PDF thuế" (tải một lần ~150 MB vào browsers/)
+export PLAYWRIGHT_BROWSERS_PATH="$PWD/browsers"
+if [ ! -f browsers/.da-thu ]; then
+  mkdir -p browsers
+  echo "Cài Chromium để in PDF thuế (một lần)…"
+  if venv/bin/pip install -q playwright==1.48.0 && venv/bin/python -m playwright install chromium; then
+    CH=$(ls -d browsers/chromium-*/chrome-linux*/chrome 2>/dev/null | head -1)
+    if [ -n "$CH" ] && "$CH" --headless=new --no-sandbox --disable-gpu --dump-dom about:blank >/dev/null 2>&1; then
+      echo "Chromium chạy được – PDF thuế dùng bản HTML của cổng."
+    else
+      echo "Chromium đã tải nhưng không chạy được (máy chủ thiếu thư viện hệ thống) – PDF thuế dùng bản dựng sẵn."
+      [ -n "$CH" ] && ldd "$CH" 2>/dev/null | grep "not found" | head -20
+    fi
+  else
+    echo "Không cài được Chromium – PDF thuế dùng bản dựng sẵn."
+  fi
+  touch browsers/.da-thu
+fi
 export PYTHONUNBUFFERED=1
 exec venv/bin/python taihoadon.py --server
