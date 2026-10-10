@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.9.3"
+__version__ = "3.9.4"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -4088,7 +4088,7 @@ nav{display:flex;gap:4px;margin-left:12px}nav a{color:#fff;opacity:.7;text-decor
 nav a.on{opacity:1;background:rgba(255,255,255,.15)}
 .flt{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:8px}
 .flt select,.flt input,select.sm{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit;width:100%}
-#hTbl td,#hTbl th{font-size:13px;padding:6px}#hTbl select{min-width:112px}#hTbl td.mh{max-width:260px;white-space:normal}
+#hTbl td.mh{max-width:260px;white-space:normal}
 #hTbl tfoot td{font-weight:700;color:var(--acc)}.pager{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
 .pager button{padding:3px 9px}
 .tools{display:grid;grid-template-columns:200px 1fr;gap:20px}@media(max-width:800px){.tools{grid-template-columns:1fr}}
@@ -4120,8 +4120,8 @@ body.ws main{max-width:none}
 .bulk{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:#eef0ff;border:1px solid #c9ceff;color:#222;border-radius:8px;padding:8px 10px;margin:6px 0}
 .bulk select{width:auto}
 .grid{overflow:auto;max-height:calc(100vh - 96px);min-height:260px;border:1px solid var(--line);border-radius:8px}
-.grid table{border-collapse:separate;border-spacing:0}
-.grid th,.grid td{font-size:13px;padding:6px 7px;border-bottom:1px solid var(--line);background:var(--card)}
+.grid table{border-collapse:separate;border-spacing:0;width:100%}
+.grid th,.grid td{font-size:13px;padding:6px 6px;border-bottom:1px solid var(--line);background:var(--card)}
 .grid thead{position:sticky;top:0;z-index:3}
 .grid thead th{background:var(--bg);color:var(--acc);white-space:nowrap;user-select:none}
 .grid thead tr.f th{padding:4px;font-weight:400}
@@ -4131,7 +4131,9 @@ body.ws main{max-width:none}
 .grid tbody tr{cursor:default}.grid tbody tr:hover td{background:rgba(91,95,224,.06)}
 .grid tbody tr.sel td{background:rgba(91,95,224,.14)}.grid tbody tr.sel td:first-child{box-shadow:inset 3px 0 var(--acc)}
 .grid tbody tr.bad td{color:var(--err)}.grid td.nw{white-space:nowrap}
-.grid td.mh,.grid td.ten{white-space:normal;min-width:200px;max-width:320px}
+.grid td.mh,.grid td.ten{white-space:normal;min-width:150px;max-width:300px}
+.grid td.ct{white-space:normal;min-width:130px;max-width:170px;line-height:1.5}.grid td.ct a.lk{margin:0 6px 0 0;display:inline-block}
+.grid thead th{white-space:normal;vertical-align:bottom}
 .clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35}
 @media(max-width:760px){
   header{padding:8px 10px;gap:8px}header nav{order:3;width:100%;margin-left:0;overflow-x:auto}header small{display:none}
@@ -4143,7 +4145,11 @@ body.ws main{max-width:none}
   .grid{max-height:calc(100vh - 70px)}.grid td.mh,.grid td.ten{min-width:160px}
   .pager .tip{display:none}.subtabs a{padding:8px 10px}
 }
-.grid select{min-width:108px;padding:3px 4px;font-size:12px}
+.grid select{min-width:0;max-width:110px;padding:3px 2px;font-size:12px}
+.grid thead tr.f select{width:100%;max-width:84px;min-width:62px}
+@media(max-width:1700px){.grid th,.grid td{font-size:12px;padding:5px 4px}.grid td.mh,.grid td.ten{min-width:108px}
+  .grid td.ct{min-width:100px;max-width:126px}.grid td.ct a.lk{margin-right:4px}
+  .grid thead tr.f select{min-width:54px}.grid thead tr.f input{min-width:42px}.grid tbody select{max-width:92px}}
 a.dn-link{color:inherit;text-decoration:none}a.dn-link:hover{color:var(--acc);text-decoration:underline}
 .me{display:flex;gap:8px;align-items:center;font-size:13px}.me a{color:#fff;opacity:.85;text-decoration:none;cursor:pointer}.me a:hover{opacity:1;text-decoration:underline}
 .bell{position:relative;background:transparent;border:0;color:#fff;font-size:18px;padding:2px 6px}.bell i{position:absolute;top:-4px;right:-4px;background:#e5534b;color:#fff;
@@ -4959,9 +4965,11 @@ const HCOLS = [
   {k: 'cthue', t: 'Tiền C.Thuế', f: 'num', n: 1, sum: 1}, {k: 'thue', t: 'Tiền thuế', f: 'num', n: 1, sum: 1},
   {k: 'ck', t: 'CK.TM', f: 'num', n: 1, sum: 1}, {k: 'phi', t: 'Phí', f: 'num', n: 1, sum: 1},
   {k: 'tt', t: 'Tổng T.Toán', f: 'num', n: 1, sum: 1}, {k: 'tthai', t: 'T.thái HĐ', f: 'pick', cls: 'nw'},
-  {k: 'kq', t: 'Kết quả k.tra', f: 'pick'}, {k: 'duyet', t: 'Duyệt nội bộ', f: 'pick'}, {k: 'dv', t: 'HĐ DV', f: 'bool'},
+  {k: 'kq', t: 'Kết quả k.tra', f: 'pick', cls: 'nw'}, {k: 'duyet', t: 'Duyệt nội bộ', f: 'pick'}, {k: 'dv', t: 'HĐ DV', f: 'bool'},
   {k: 'mat_hang', t: 'Mặt hàng', f: 'text', cls: 'mh'}, {k: 'note', t: 'Ghi chú', f: 'text'}, {k: '_ct', t: 'Chi tiết'}];
-let hSort = {k: 'ngay', dir: 1}, hColF = {}, hLastClick = null;
+let hSort = {k: 'ngay', dir: 1}, hColF = {}, hLastClick = null, hHide = new Set();
+// Cột CK.TM / Phí toàn số 0 (thường gặp) thì ẩn để bảng vừa màn hình; có số khác 0 là hiện lại.
+const visCols = () => HCOLS.filter(c => !hHide.has(c.k));
 try { const g = JSON.parse(localStorage.getItem('grid') || '{}'); if (g.sort) hSort = g.sort; if (g.size) hSize = g.size; } catch (e) {}
 const saveGrid = () => { try { localStorage.setItem('grid', JSON.stringify({sort: hSort, size: hSize})); } catch (e) {} };
 const dkey = s => s ? s.split('/').reverse().join('') : '';
@@ -4988,12 +4996,13 @@ function viewRows() {
 function buildHead() {
   const sold = $('hKind').value.startsWith('sold');
   HCOLS[1].t = sold ? 'Người mua' : 'Người bán';
+  hHide = new Set(['ck', 'phi'].filter(k => hRows.every(r => !r[k])));
   const th = $('hHead'); th.innerHTML = '';
   const r1 = th.insertRow(), r2 = th.insertRow(); r2.className = 'f';
   const all = el('input'); all.type = 'checkbox'; all.id = 'hAll'; all.title = 'Chọn tất cả các dòng đang lọc';
   all.onchange = () => { const v = viewRows(); if (all.checked) v.forEach(r => hSel.add(r.key)); else v.forEach(r => hSel.delete(r.key)); renderInv(); };
   const c0 = el('th'); c0.append(all); r1.append(c0); r2.append(el('th'));
-  HCOLS.forEach(c => {
+  visCols().forEach(c => {
     const h = el('th', (c.n ? 'n ' : '') + (c.k !== '_ct' ? 's' : ''), c.t);
     if (hSort.k === c.k) h.textContent += hSort.dir > 0 ? ' ▲' : ' ▼';
     if (c.k !== '_ct') { h.title = 'Bấm để sắp xếp'; h.onclick = () => { hSort = {k: c.k, dir: hSort.k === c.k ? -hSort.dir : 1}; saveGrid(); buildHead(); renderInv(); }; }
@@ -5038,7 +5047,7 @@ function renderInv() {
       } else on ? hSel.add(r.key) : hSel.delete(r.key);
       hLastClick = r.key; renderInv();
     };
-    HCOLS.forEach(c => {
+    visCols().forEach(c => {
       if (c.k === 'duyet') { const sel = el('select'); ['Chờ duyệt', 'Đã duyệt', 'Không duyệt'].forEach(o => sel.append(new Option(o, o)));
         sel.value = r.duyet; sel.onchange = () => updInv(r, {duyet: sel.value}); tr.insertCell().append(sel); return; }
       if (c.k === 'dv') { const cb = el('input'); cb.type = 'checkbox'; cb.checked = r.dv; cb.title = 'Hoá đơn dịch vụ';
@@ -5054,8 +5063,8 @@ function renderInv() {
   });
   const f = $('hFoot'); f.innerHTML = '';
   const c0 = f.insertCell(); c0.colSpan = 6; c0.textContent = view.length + ' HĐ' + (view.length !== hRows.length ? ' (lọc từ ' + hRows.length + ')' : '');
-  HCOLS.filter(c => c.sum).forEach(c => { const x = f.insertCell(); x.className = 'n'; x.textContent = fmt(view.reduce((a, r) => a + (r[c.k] || 0), 0)); });
-  f.insertCell().colSpan = HCOLS.length - 9;
+  visCols().filter(c => c.sum).forEach(c => { const x = f.insertCell(); x.className = 'n'; x.textContent = fmt(view.reduce((a, r) => a + (r[c.k] || 0), 0)); });
+  f.insertCell().colSpan = visCols().filter(c => !c.sum).length - 4;
   const pg = $('hPager'); pg.innerHTML = '';
   [20, 50, 100, 0].forEach(n => { const b = el('button', 'sm sec' + (n === hSize ? ' cur' : ''), n ? String(n) : 'Tất cả'); if (n === hSize) b.style.color = '#fff';
     b.onclick = () => { hSize = n; hPage = 0; saveGrid(); renderInv(); }; pg.append(b); });
@@ -5066,7 +5075,7 @@ function renderInv() {
   selInfo(view);
 }
 function renderDetails(tr, r, kind) {
-    const ct = tr.insertCell(); ct.style.whiteSpace = 'nowrap';
+    const ct = tr.insertCell(); ct.className = 'ct';
     if (r.xml) ct.append(fileLink(r.xml, 'XML')); if (r.html) ct.append(fileLink(r.html, 'HTML')); if (r.pdf) ct.append(fileLink(r.pdf, 'PDF gốc')); if (r.xml_goc) ct.append(fileLink(r.xml_goc, 'XML gốc'));
     const cq = el('a', 'lk', 'PDF thuế'); cq.target = '_blank'; cq.title = 'Bản thể hiện hoá đơn theo dữ liệu cổng thuế (hoadondientu.gdt.gov.vn)';
     cq.href = '/cqt?' + new URLSearchParams({k: KEY, mst: $('hMst').value, kind, key: r.key}); ct.append(cq);
