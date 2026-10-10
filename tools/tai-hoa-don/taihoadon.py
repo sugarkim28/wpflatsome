@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.2.0"
+__version__ = "3.3.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -2386,6 +2386,25 @@ table{border-collapse:collapse;width:100%%}td,th{border:1px solid #999;padding:5
         ("– %s: %s" % (esc(tcu.get("field")), esc(tcu.get("code")))) if tcu.get("code") else "")
 
 
+def update_invoices(out_root, mst, kind, keys, **fields):
+    """Sửa duyệt / HĐ dịch vụ cho nhiều hoá đơn một lần."""
+    path = index_file(out_root, mst)
+    n = 0
+    with _INDEX_LOCK:
+        cur = _load_json(path, {})
+        entries = cur.get(kind, {})
+        for key in keys:
+            e = entries.get(key)
+            if e is None:
+                continue
+            for f in ("duyet", "dv"):
+                if fields.get(f) is not None:
+                    e[f] = bool(fields[f]) if f == "dv" else fields[f]
+            n += 1
+        _save_json(path, cur)
+    return n
+
+
 def _sibling(base, rel, ext):
     if not rel:
         return ""
@@ -3102,6 +3121,37 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
 .badge.run{background:#f0a500}.badge.ok{background:#1e8449}.badge.bad{background:#c0392b}.steps{line-height:1.9;margin:10px 0}
 .staff .adm,.local .srv{display:none!important}
 .pw{-webkit-text-security:disc;text-security:disc}
+/* Trang doanh nghiệp */
+.wshead{padding-bottom:0;position:sticky;top:0;z-index:5}.wshead .crumb{margin-bottom:6px}
+.wsrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#wsPick{flex:1;min-width:260px;font-weight:600;font-size:15px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}
+.wsmeta{font-size:12px;color:var(--mute);display:flex;gap:12px;flex-wrap:wrap}.wsmeta b{color:var(--fg)}
+.subtabs{display:flex;gap:2px;margin-top:10px;overflow-x:auto}
+.subtabs a{padding:9px 16px;font-weight:700;font-size:13px;letter-spacing:.3px;text-transform:uppercase;color:var(--mute);
+  text-decoration:none;border-bottom:3px solid transparent;white-space:nowrap}
+.subtabs a.on{color:var(--acc);border-bottom-color:var(--acc)}.subtabs a:hover{color:var(--fg)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.filters select,.filters input{padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
+.filters .grow{flex:1;min-width:200px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:transparent;color:var(--fg);padding:7px 12px}
+.seg button+button{border-left:1px solid var(--line)}.seg button.on{background:var(--acc);color:#fff}
+.bulk{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:#eef0ff;border:1px solid #c9ceff;color:#222;border-radius:8px;padding:8px 10px;margin:6px 0}
+.bulk select{width:auto}
+.grid{overflow:auto;max-height:calc(100vh - 300px);min-height:240px;border:1px solid var(--line);border-radius:8px}
+.grid table{border-collapse:separate;border-spacing:0}
+.grid th,.grid td{font-size:13px;padding:6px 7px;border-bottom:1px solid var(--line);background:var(--card)}
+.grid thead th{position:sticky;top:0;z-index:2;background:var(--bg);color:var(--acc);white-space:nowrap;user-select:none}
+.grid thead tr.f th{top:var(--hh,32px);padding:4px;font-weight:400}
+.grid thead th.s{cursor:pointer}.grid thead th.s:hover{color:var(--fg)}
+.grid thead tr.f input,.grid thead tr.f select{width:100%;min-width:52px;padding:4px 6px;font-size:12px;border:1px solid var(--line);border-radius:5px;background:var(--card);color:var(--fg)}
+.grid tfoot td{position:sticky;bottom:0;z-index:2;background:var(--bg);font-weight:700;color:var(--acc);border-top:2px solid var(--line)}
+.grid tbody tr{cursor:default}.grid tbody tr:hover td{background:rgba(91,95,224,.06)}
+.grid tbody tr.sel td{background:rgba(91,95,224,.14)}.grid tbody tr.sel td:first-child{box-shadow:inset 3px 0 var(--acc)}
+.grid tbody tr.bad td{color:var(--err)}.grid td.mh{max-width:280px;white-space:normal;min-width:180px}
+.grid td.ten{max-width:260px;min-width:160px;white-space:normal}.grid td.nw{white-space:nowrap}
+.grid select{min-width:108px;padding:3px 4px;font-size:12px}
+a.dn-link{color:inherit;text-decoration:none}a.dn-link:hover{color:var(--acc);text-decoration:underline}
 .me{display:flex;gap:8px;align-items:center;font-size:13px}.me a{color:#fff;opacity:.85;text-decoration:none;cursor:pointer}.me a:hover{opacity:1;text-decoration:underline}
 .bell{position:relative;background:transparent;border:0;color:#fff;font-size:18px;padding:2px 6px}.bell i{position:absolute;top:-4px;right:-4px;background:#e5534b;color:#fff;
 font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;text-align:center}
@@ -3111,7 +3161,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
 .crumb{font-size:13px;color:var(--mute);margin-bottom:10px}.crumb b{color:var(--fg)}#sTbl td,#sTbl th{font-size:13px;padding:5px}.pager .cur{background:var(--err);border-color:var(--err)}a.lk{color:var(--acc);margin-right:6px}
 </style></head><body>
 <header><b>Tải hoá đơn</b><nav><a href="#" id="navDN" class="on" onclick="tab('DN');return false">Doanh nghiệp</a>
-<a href="#" id="navHD" onclick="tab('HD');return false">Hoá đơn</a>
+<a href="#" id="navHD" onclick="openCompany(wsMst || (companies.find(c => !c.an) || {}).mst);return false">Hoá đơn</a>
 <a href="#" id="navTI" onclick="tab('TI');return false">Tiện ích</a>
 <a href="#" id="navND" class="adm srv" onclick="tab('ND');return false">Quản trị</a></nav><span style="flex:1"></span><small id="capStat"></small>
 <span class="me srv"><button class="bell" id="bell" title="Thông báo" onclick="toggleNotes()">&#128276;<i id="bellN" class="hide"></i></button>
@@ -3181,8 +3231,69 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     </div>
   </div>
 </section>
-<section class="card hide" id="tabSYNC">
-  <div class="crumb"><a href="#" onclick="tab('DN');return false">Doanh nghiệp</a> › <b id="sName"></b> › Đồng bộ</div>
+<section class="hide" id="tabWS">
+  <div class="card wshead">
+    <div class="crumb"><a href="#/" onclick="tab('DN');return false">Doanh nghiệp</a> › <b id="wsCrumb"></b></div>
+    <div class="wsrow">
+      <button class="sec sm" id="wsPrev" title="Doanh nghiệp trước (Alt+←)" onclick="stepCompany(-1)">‹</button>
+      <input type="search" id="wsPick" list="wsList" autocomplete="off" placeholder="Gõ tên hoặc MST để chuyển doanh nghiệp…">
+      <datalist id="wsList"></datalist>
+      <button class="sec sm" id="wsNext" title="Doanh nghiệp sau (Alt+→)" onclick="stepCompany(1)">›</button>
+      <button class="sec sm" title="Sửa thông tin doanh nghiệp" onclick="openEdit(companies.find(c => c.mst === wsMst))">✎ Sửa</button>
+      <span class="wsmeta" id="wsMeta"></span>
+    </div>
+    <input type="hidden" id="hMst">
+    <nav class="subtabs" id="wsTabs">
+      <a href="#" data-s="hoa-don">Hoá đơn</a><a href="#" data-s="dong-bo">Đồng bộ</a>
+      <a href="#" data-s="sao-ke">Sao kê ng.hàng</a><a href="#" data-s="tra-cuu-mst">Tra cứu MST</a>
+    </nav>
+  </div>
+
+  <div class="card" id="wsHD">
+    <div class="filters">
+      <div class="seg" id="hKindSeg"><button data-k="purchase" class="on">Mua vào</button><button data-k="sold">Bán ra</button>
+        <button data-k="purchase_dv" title="Hoá đơn mua vào đã đánh dấu dịch vụ">Mua vào – HĐDV</button><button data-k="sold_dv">Bán ra – HĐDV</button></div>
+      <input type="hidden" id="hKind" value="purchase">
+      <select id="hPer"></select><input type="date" id="hFrom" title="Từ ngày"><input type="date" id="hTo" title="Đến ngày">
+      <input id="hQ" type="search" autocomplete="off" placeholder="Tìm MST, tên, mặt hàng, ghi chú…" class="grow">
+      <button onclick="hPage=0;loadInv()">Tìm kiếm</button>
+      <button class="sec" id="hMoreBtn" onclick="$('hMore').classList.toggle('hide')">Bộ lọc khác ▾</button>
+    </div>
+    <div class="filters hide" id="hMore">
+      <select id="hFile"><option value="">Tất cả file</option><option value="no_xml">Không có XML</option><option value="xml">Có XML</option>
+        <option value="pdf">Có PDF</option><option value="no_pdf">Không có PDF</option><option value="xml_pdf">Có XML và PDF</option></select>
+      <select id="hDuyet"><option value="">Duyệt nội bộ: tất cả</option><option>Chờ duyệt</option><option>Đã duyệt</option><option>Không duyệt</option></select>
+      <select id="hTthai"><option value="">Trạng thái HĐ: tất cả</option></select>
+      <select id="hKq"><option value="">Kết quả kiểm tra: tất cả</option></select>
+      <input id="hKh" autocomplete="off" placeholder="Ký hiệu HĐ"><input id="hSo" autocomplete="off" placeholder="Số HĐ">
+    </div>
+    <div class="bar actions">
+      <button class="sec" onclick="openSub('dong-bo')">⟳ Đồng bộ</button>
+      <button class="sec" id="hBulkPdf" onclick="bulkPdf()">Tải HĐ gốc hàng loạt</button>
+      <button class="sec" id="hImpPdf" onclick="$('hImpFiles').click()" title="Chọn các file PDF hoá đơn gốc có sẵn trên máy – phần mềm tự gắn vào đúng hoá đơn">Gắn PDF gốc có sẵn</button>
+      <input type="file" id="hImpFiles" accept="application/pdf" multiple class="hide">
+      <span style="flex:1"></span>
+      <button class="sec sm" onclick="resetGrid()" title="Bỏ sắp xếp và lọc theo cột">Bỏ lọc cột</button>
+      <select class="sm" id="hExp" style="width:auto" onchange="exportInv(this.value);this.value=''">
+        <option value="">Kết xuất…</option><option value="xlsx">Excel (mẫu Nibot)</option><option value="xml">XML.ZIP</option>
+        <option value="html">HTML.ZIP</option><option value="pdf">PDF.ZIP</option></select>
+    </div>
+    <div class="bulk hide" id="hBulk">
+      <b id="hSelInfo"></b>
+      <select class="sm" id="hBulkDuyet" onchange="bulkUpdate({duyet: this.value});this.value=''">
+        <option value="">Duyệt nội bộ…</option><option>Đã duyệt</option><option>Chờ duyệt</option><option>Không duyệt</option></select>
+      <button class="sm sec" onclick="bulkUpdate({dv: true})">Đánh dấu HĐ dịch vụ</button>
+      <button class="sm sec" onclick="bulkUpdate({dv: false})">Bỏ HĐ dịch vụ</button>
+      <button class="sm sec" onclick="bulkPdf()">Tải PDF gốc</button>
+      <button class="sm sec" onclick="exportInv('xlsx')">Kết xuất Excel</button>
+      <button class="sm red" onclick="hSel.clear();renderInv()">Bỏ chọn</button>
+    </div>
+    <div class="err" id="hErr"></div>
+    <div class="grid"><table id="hTbl"><thead id="hHead"></thead><tbody id="hRows"></tbody><tfoot><tr id="hFoot"></tr></tfoot></table></div>
+    <div class="pager" id="hPager"></div>
+  </div>
+
+  <div class="card hide" id="wsSYNC">
   <div class="sync">
     <div>
       <label>Chọn khoảng thời gian</label><div style="display:flex;gap:8px"><select id="sPer"></select>
@@ -3215,39 +3326,9 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
         <th>Ký hiệu</th><th class="n">Số HĐ</th><th>Loại đồng bộ</th><th>Kết quả đồng bộ</th></tr></thead><tbody id="sRows"></tbody></table></div>
     </div>
   </div>
-</section>
-<section class="card hide" id="tabHD">
-  <div class="flt">
-    <select id="hMst" style="grid-column:span 2"></select>
-    <select id="hKind"><option value="purchase">Mua vào</option><option value="sold">Bán ra</option>
-      <option value="purchase_dv">Mua vào - HĐDV</option><option value="sold_dv">Bán ra - HĐDV</option></select>
-    <select id="hFile"><option value="">--Lọc file--</option><option value="no_xml">Không có XML</option><option value="xml">Có XML</option>
-      <option value="pdf">Có PDF</option><option value="no_pdf">Không có PDF</option><option value="xml_pdf">Có XML và PDF</option></select>
-    <select id="hDuyet"><option value="">--Duyệt n.bộ--</option><option>Chờ duyệt</option><option>Đã duyệt</option><option>Không duyệt</option></select>
-    <select id="hTthai"><option value="">--Trạng thái HĐ--</option></select>
-    <select id="hKq"><option value="">--K.quả k.tra--</option></select>
-  </div>
-  <div class="flt">
-    <input id="hKh" autocomplete="off" placeholder="Ký hiệu HĐ"><input id="hSo" autocomplete="off" placeholder="Số HĐ"><input id="hQ" type="search" autocomplete="off" placeholder="MST, tên DN, mặt hàng, ghi chú">
-    <select id="hPer"></select><input type="date" id="hFrom"><input type="date" id="hTo">
-  </div>
-  <div class="bar">
-    <button class="sec" onclick="openSync($('hMst').value)">Đồng bộ</button><button onclick="hPage=0;loadInv()">Tìm kiếm</button>
-    <span class="mute" id="hSelInfo"></span>
-    <button class="sec" id="hBulkPdf" onclick="bulkPdf()">Tải HĐ gốc hàng loạt</button>
-    <button class="sec" id="hImpPdf" onclick="$('hImpFiles').click()" title="Chọn các file PDF hoá đơn gốc có sẵn trên máy – phần mềm tự gắn vào đúng hoá đơn">Gắn PDF gốc có sẵn</button>
-    <input type="file" id="hImpFiles" accept="application/pdf" multiple class="hide">
-    <span style="flex:1"></span>
-    <select class="sm" id="hExp" style="width:auto" onchange="exportInv(this.value);this.value=''">
-      <option value="">Kết xuất…</option><option value="xlsx">EXCEL.XLSX</option><option value="xml">XML.ZIP</option>
-      <option value="html">HTML.ZIP</option><option value="pdf">PDF.ZIP</option></select>
-  </div>
-  <div class="err" id="hErr"></div>
-  <div class="tbl"><table id="hTbl"><thead><tr><th title="chọn tất cả"><input type="checkbox" id="hAll"></th><th id="hMstH">MST</th><th id="hTenH">Người bán</th><th>Ngày</th><th>Ký hiệu HĐ</th>
-    <th class="n">Số HĐ</th><th class="n">Tiền C.Thuế</th><th class="n">Tiền Thuế</th><th class="n">Tiền CK.TM</th><th class="n">Tiền phí</th>
-    <th class="n">Tiền T.Toán</th><th>T.thái HĐ</th><th>Kết quả k.tra</th><th>Duyệt Nội Bộ</th><th>HĐ DV</th><th>Mặt hàng</th>
-    <th>Ghi chú</th><th>Chi tiết</th></tr></thead><tbody id="hRows"></tbody><tfoot><tr id="hFoot"></tr></tfoot></table></div>
-  <div class="pager" id="hPager"></div>
+</div>
+
+  <div class="card hide" id="wsTOOL"></div>
 </section>
 <section class="card" id="tabDN">
   <div class="top">
@@ -3384,7 +3465,9 @@ function render() {
   vis.forEach((c, i) => {
     const tr = tb.insertRow();
     const cb = el('input'); cb.type = 'checkbox'; cb.className = 'pick'; cb.value = c.mst; tr.insertCell().append(cb);
-    const td = tr.insertCell(); const dn = el('div', 'dn', String(i + 1).padStart(3, '0') + '. ' + (c.ten || '(chưa đặt tên)') + ' ');
+    const td = tr.insertCell(); const dn = el('a', 'dn dn-link', String(i + 1).padStart(3, '0') + '. ' + (c.ten || '(chưa đặt tên)') + ' ');
+    dn.href = '#/dn/' + c.mst + '/hoa-don'; dn.title = 'Mở trang làm việc của doanh nghiệp';
+    dn.onclick = ev => { ev.preventDefault(); openCompany(c.mst); };
     dn.append(el('span', 'm', '(' + c.mst + ')')); td.append(dn);
     if (!c.co_mk) td.append(el('div', 'loi', 'Chưa nhập mật khẩu'));
     if (c.loi) td.append(el('div', 'loi', c.loi));
@@ -3397,9 +3480,9 @@ function render() {
     const s = c.so_hd || {}, v = s.purchase || 0, r = s.sold || 0;
     [v, r, v + r].forEach(n => { const x = tr.insertCell(); x.className = 'n'; x.textContent = fmt(n); });
     const act = tr.insertCell(); act.style.whiteSpace = 'nowrap';
-    const b1 = el('button', 'sm', 'Đồng bộ'); b1.onclick = () => openSync(c.mst);
+    const b1 = el('button', 'sm', 'Đồng bộ'); b1.onclick = () => openCompany(c.mst, 'dong-bo');
     const b2 = el('button', 'sm sec', 'Sửa'); b2.onclick = () => openEdit(c); b2.style.marginLeft = '4px';
-    const b3 = el('button', 'sm sec', 'Xem HĐ'); b3.onclick = () => { $('hMst').value = c.mst; tab('HD'); }; b3.style.marginLeft = '4px';
+    const b3 = el('button', 'sm sec', 'Xem HĐ'); b3.onclick = () => openCompany(c.mst); b3.style.marginLeft = '4px';
     act.append(b1, b2, b3);
   });
 }
@@ -3409,7 +3492,7 @@ async function refresh() {
   $('meName').textContent = me.ten ? (me.ten + ' (' + me.username + ')') : me.username;
   $('bellN').textContent = s.unread; $('bellN').classList.toggle('hide', !s.unread);
   if (s.auto) renderAuto(s.auto);
-  render();
+  render(); if (curTab === 'WS') { fillMst(); renderWsHead(); }
   $('capStat').textContent = s.captcha.count ? ('Captcha đã học ' + s.captcha.chars.length + ' ký tự') : '';
   if (s.job.running || s.job.log.length) renderJob(s.job);
   return s;
@@ -3465,7 +3548,8 @@ async function sendCap(id) { id = id || 'capIn'; const v = $(id).value.trim(); i
   await post('/api/captcha', {answer: v}); poll(); }
 let lastCap = null;
 function renderJob(j) {
-  if (curTab === 'SYNC') { hide('jobCard'); renderSync(j); return; }
+  if (curTab === 'WS' && wsSub === 'dong-bo') { hide('jobCard'); renderSync(j); return; }
+  if (curTab === 'WS' && !j.running) { hide('jobCard'); return; }
   show('jobCard');
   $('jobTitle').textContent = j.running ? ('Đang xử lý' + (j.current ? ' ' + j.current : '') + '…') : 'Kết quả lần chạy gần nhất';
   $('btnStop').classList.toggle('hide', !j.running);
@@ -3483,7 +3567,7 @@ let wasRunning = false;
 async function poll() {
   clearTimeout(timer);
   let s; try { s = await refresh(); } catch (e) { timer = setTimeout(poll, 2000); return; }
-  if (wasRunning && !s.job.running && curTab === 'HD') loadInv();
+  if (wasRunning && !s.job.running && curTab === 'WS') { loadInv(); }
   wasRunning = s.job.running;
   if (s.job.running || (s.auto && s.auto.running && curTab === 'ND')) timer = setTimeout(poll, 1500);
   else if (me.server) timer = setTimeout(poll, 60000);  // cập nhật chuông thông báo
@@ -3498,7 +3582,7 @@ async function toggleNotes() {
   d.items.forEach((n, i) => { const it = el('div', 'it' + (i < unread ? ' new' : ''));
     it.append(el('div', 'mute', n.t)); it.append(el('div', n.level === 'warn' ? 'warn' : n.level === 'err' ? 'err2' : '', n.text));
     if (n.mst && companies.some(c => c.mst === n.mst)) { const a = el('a', 'lk', 'Xem hoá đơn'); a.href = '#';
-      a.onclick = ev => { ev.preventDefault(); hide('notes'); $('hMst').value = n.mst; tab('HD'); }; it.append(a); }
+      a.onclick = ev => { ev.preventDefault(); hide('notes'); openCompany(n.mst); }; it.append(a); }
     box.append(it); });
   show('notes'); if (unread) { await post('/api/notices', {read: true}); $('bellN').classList.add('hide'); }
 }
@@ -3694,13 +3778,7 @@ function sPeriod() {
   $('sYear').classList.toggle('hide', ['today', 'week', 'month'].includes(v));
 }
 $('sPer').onchange = sPeriod; $('sYear').onchange = sPeriod;
-function openSync(mst) {
-  if (!mst) return;
-  syncMst = mst; const c = companies.find(x => x.mst === mst) || {};
-  $('sName').textContent = (c.ten || '') + ' (' + mst + ')';
-  if (!$('sFrom').value) { $('sYear').value = new Date().getFullYear(); $('sPer').value = 'week'; sPeriod(); }
-  tab('SYNC'); poll();
-}
+function openSync(mst) { openCompany(mst, 'dong-bo'); }
 async function runSync(kinds) {
   syncRange = [$('sFrom').value, $('sTo').value];
   try { await start({msts: [syncMst], kinds, from: syncRange[0], to: syncRange[1], mtt: $('sMtt').checked, xml: $('sXml').checked,
@@ -3708,9 +3786,8 @@ async function runSync(kinds) {
   catch (e) { alert(e.message); }
 }
 function openInvoicesFromSync() {
-  $('hMst').value = syncMst; tab('HD'); $('hMst').value = syncMst;
   if (syncRange) { $('hPer').value = ''; $('hFrom').value = syncRange[0]; $('hTo').value = syncRange[1]; }
-  hPage = 0; loadInv();
+  hPage = 0; openSub('hoa-don');
 }
 const vnd = s => s ? s.split('-').reverse().join('/') : '';
 function renderSync(j) {
@@ -3775,26 +3852,86 @@ $('hPer').onchange = () => {
   else if (v === 'lastyear') { a = new Date(y - 1, 0, 1); b = new Date(y - 1, 11, 31); }
   if (a) { $('hFrom').value = isoD(a); $('hTo').value = isoD(b); hPage = 0; loadInv(); }
 };
-function tab(t) {
-  curTab = t; $('navDN').classList.toggle('on', t === 'DN'); $('navHD').classList.toggle('on', t === 'HD');
-  $('tabDN').classList.toggle('hide', t !== 'DN'); $('tabHD').classList.toggle('hide', t !== 'HD');
-  $('tabSYNC').classList.toggle('hide', t !== 'SYNC'); $('tabTI').classList.toggle('hide', t !== 'TI');
-  $('navTI').classList.toggle('on', t === 'TI');
+function tab(t, keepHash) {
+  curTab = t; $('navDN').classList.toggle('on', t === 'DN'); $('navHD').classList.toggle('on', t === 'WS');
+  $('tabDN').classList.toggle('hide', t !== 'DN'); $('tabWS').classList.toggle('hide', t !== 'WS');
+  $('tabTI').classList.toggle('hide', t !== 'TI'); $('navTI').classList.toggle('on', t === 'TI');
   $('tabND').classList.toggle('hide', t !== 'ND'); $('navND').classList.toggle('on', t === 'ND');
-  if (t === 'HD') { fillMst(); loadInv(); }
+  if (t !== 'WS') toolsHome();
   if (t === 'ND') loadUsers();
+  if (!keepHash) setHash(t === 'WS' ? '#/dn/' + wsMst + '/' + wsSub : t === 'DN' ? '#/' : '#/' + t.toLowerCase());
 }
+
+// ---- Trang doanh nghiệp ----
+let wsMst = '', wsSub = 'hoa-don';
+const coLabel = (c, i) => String(i + 1).padStart(3, '0') + '. ' + (c.ten || '(chưa đặt tên)') + ' (' + c.mst + ')';
+const visibleCos = () => companies.filter(c => !c.an || c.mst === wsMst);
+function setHash(h) { if (location.hash !== h) history.pushState(null, '', h); }
 function fillMst() {
-  const cur = $('hMst').value; $('hMst').innerHTML = '';
-  companies.filter(c => !c.an).forEach((c, i) => $('hMst').append(new Option(String(i + 1).padStart(3, '0') + '. ' + (c.ten || '') + ' (' + c.mst + ')', c.mst)));
-  if (cur) $('hMst').value = cur;
+  const dl = $('wsList'); dl.innerHTML = '';
+  visibleCos().forEach((c, i) => dl.append(new Option(coLabel(c, i), coLabel(c, i))));
 }
-function selInfo() {
-  const n = hRows.filter(r => hSel.has(r.key)).length;
-  $('hSelInfo').textContent = n ? ('Đã chọn ' + n + ' HĐ – tải gốc / kết xuất chỉ các HĐ này') : '';
-  $('hAll').checked = n > 0 && n === hRows.length;
+function renderWsHead() {
+  const list = visibleCos(), i = list.findIndex(c => c.mst === wsMst), c = list[i] || {mst: wsMst};
+  $('wsPick').value = i >= 0 ? coLabel(c, i) : wsMst; $('wsCrumb').textContent = c.ten || wsMst;
+  $('wsPrev').disabled = i <= 0; $('wsNext').disabled = i < 0 || i >= list.length - 1;
+  const h = c.lich_su || {}, so = c.so_hd || {}, m = $('wsMeta'); m.innerHTML = '';
+  const item = (label, val, cls) => { const sp = el('span', cls || '', label + ': '); sp.append(el('b', '', val)); m.append(sp); };
+  item('MST', c.mst || '');
+  item('HĐ mua vào', fmt(so.purchase || 0)); item('HĐ bán ra', fmt(so.sold || 0));
+  if (h.purchase) item('Đồng bộ vào', h.purchase.luc, 'v'); if (h.sold) item('Đồng bộ ra', h.sold.luc, 'r');
+  if (c.loi) m.append(el('span', 'err', c.loi));
+  document.querySelectorAll('#wsTabs a').forEach(a => a.classList.toggle('on', a.dataset.s === wsSub));
 }
-$('hAll').onchange = () => { hSel = new Set($('hAll').checked ? hRows.map(r => r.key) : []); renderInv(); };
+function openCompany(mst, sub) {
+  if (!mst) { tab('DN'); return; }
+  const changed = mst !== wsMst;
+  wsMst = mst; syncMst = mst; $('hMst').value = mst;
+  if (changed) { hSel.clear(); hColF = {}; hRows = []; }
+  tab('WS', true); fillMst(); openSub(sub || (changed ? 'hoa-don' : wsSub), changed);
+}
+function openSub(sub, force) {
+  wsSub = sub; renderWsHead();
+  ['wsHD', 'wsSYNC', 'wsTOOL'].forEach(id => hide(id)); toolsHome();
+  if (sub === 'dong-bo') {
+    show('wsSYNC'); if (!$('sFrom').value) { $('sYear').value = new Date().getFullYear(); $('sPer').value = 'week'; sPeriod(); }
+    poll();
+  } else if (sub === 'sao-ke' || sub === 'tra-cuu-mst') {
+    const pane = $(sub === 'sao-ke' ? 't-bank' : 't-mst'); $('wsTOOL').append(pane); pane.classList.remove('hide'); show('wsTOOL');
+    if (sub === 'tra-cuu-mst' && !$('mstText').value.trim()) $('mstText').value = wsMst;
+  } else { wsSub = 'hoa-don'; show('wsHD'); if (force || !hRows.length) loadInv(); else renderInv(); }
+  setHash('#/dn/' + wsMst + '/' + wsSub);
+}
+const toolHome = $('t-bank').parentNode;
+function toolsHome() {
+  ['t-bank', 't-mst'].forEach(id => { const p = $(id); if (p.parentNode !== toolHome) { toolHome.append(p);
+    p.classList.toggle('hide', !document.querySelector('.tmenu a.on[data-t="' + id.slice(2) + '"]')); } });
+}
+function stepCompany(d) {
+  const list = visibleCos(), i = list.findIndex(c => c.mst === wsMst);
+  if (list[i + d]) openCompany(list[i + d].mst, wsSub);
+}
+document.querySelectorAll('#wsTabs a').forEach(a => a.onclick = ev => { ev.preventDefault(); openSub(a.dataset.s); });
+$('wsPick').addEventListener('change', () => {
+  const v = $('wsPick').value.trim(), m = v.match(/\((\d{10}(?:-\d{3})?)\)\s*$/) || v.match(/^(\d{10}(?:-\d{3})?)$/);
+  let c = m && companies.find(x => x.mst === m[1]);
+  if (!c && v) { const q = v.toLowerCase(), hits = companies.filter(x => (x.ten || '').toLowerCase().includes(q) || x.mst.includes(q)); if (hits.length === 1) c = hits[0]; }
+  if (c) openCompany(c.mst, wsSub); else if (v) $('wsPick').select();
+});
+$('wsPick').addEventListener('focus', () => $('wsPick').select());
+document.addEventListener('keydown', e => { if (curTab === 'WS' && e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+  e.preventDefault(); stepCompany(e.key === 'ArrowLeft' ? -1 : 1); } });
+function route() {
+  const h = location.hash, m = h.match(/^#\/dn\/([\d-]+)(?:\/([\w-]+))?/);
+  if (m) { if (m[1] !== wsMst || curTab !== 'WS') openCompany(m[1], m[2]); else if (m[2] && m[2] !== wsSub) openSub(m[2]); return; }
+  const t = (h.match(/^#\/(\w+)/) || [])[1];
+  tab(t === 'ti' ? 'TI' : t === 'nd' ? 'ND' : 'DN', true);
+}
+window.addEventListener('popstate', route);
+document.querySelectorAll('#hKindSeg button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#hKindSeg button').forEach(x => x.classList.toggle('on', x === b));
+  $('hKind').value = b.dataset.k; hSel.clear(); hColF = {}; hPage = 0; loadInv();
+});
 function hFilters(useSel) {
   const keys = useSel ? hRows.filter(r => hSel.has(r.key)).map(r => r.key) : [];
   return {keys, kind: $('hKind').value, file: $('hFile').value, duyet: $('hDuyet').value, tthai: $('hTthai').value, kq: $('hKq').value,
@@ -3802,37 +3939,132 @@ function hFilters(useSel) {
 }
 async function loadInv() {
   $('hErr').textContent = '';
-  if (!$('hMst').value) { hRows = []; renderInv(); return; }
+  if (!$('hMst').value) { hRows = []; buildHead(); renderInv(); return; }
   try { hRows = (await post('/api/invoices', {mst: $('hMst').value, filters: hFilters()})).rows; }
   catch (e) { $('hErr').textContent = e.message; hRows = []; }
-  renderInv();
+  const live = new Set(hRows.map(r => r.key)); hSel.forEach(k => { if (!live.has(k)) hSel.delete(k); });
+  buildHead(); renderInv();
 }
 function fileLink(rel, text) {
   const a = el('a', 'lk', text); a.href = '/file?k=' + encodeURIComponent(KEY) + '&mst=' + encodeURIComponent($('hMst').value) + '&p=' + encodeURIComponent(rel);
   a.target = '_blank'; return a;
 }
-function renderInv() {
+
+// ---- Bảng hoá đơn: sắp xếp, lọc theo cột, chọn dòng ----
+const HCOLS = [
+  {k: 'mst', t: 'MST', f: 'text'}, {k: 'ten', t: 'Người bán', f: 'text', cls: 'ten'}, {k: 'ngay', t: 'Ngày', f: 'text', sort: 'date', cls: 'nw'},
+  {k: 'khhdon', t: 'Ký hiệu', f: 'text', cls: 'nw'}, {k: 'shdon', t: 'Số HĐ', f: 'text', n: 1, sort: 'num'},
+  {k: 'cthue', t: 'Tiền C.Thuế', f: 'num', n: 1, sum: 1}, {k: 'thue', t: 'Tiền thuế', f: 'num', n: 1, sum: 1},
+  {k: 'ck', t: 'CK.TM', f: 'num', n: 1, sum: 1}, {k: 'phi', t: 'Phí', f: 'num', n: 1, sum: 1},
+  {k: 'tt', t: 'Tổng T.Toán', f: 'num', n: 1, sum: 1}, {k: 'tthai', t: 'T.thái HĐ', f: 'pick', cls: 'nw'},
+  {k: 'kq', t: 'Kết quả k.tra', f: 'pick'}, {k: 'duyet', t: 'Duyệt nội bộ', f: 'pick'}, {k: 'dv', t: 'HĐ DV', f: 'bool'},
+  {k: 'mat_hang', t: 'Mặt hàng', f: 'text', cls: 'mh'}, {k: 'note', t: 'Ghi chú', f: 'text'}, {k: '_ct', t: 'Chi tiết'}];
+let hSort = {k: 'ngay', dir: 1}, hColF = {}, hLastClick = null;
+try { const g = JSON.parse(localStorage.getItem('grid') || '{}'); if (g.sort) hSort = g.sort; if (g.size) hSize = g.size; } catch (e) {}
+const saveGrid = () => { try { localStorage.setItem('grid', JSON.stringify({sort: hSort, size: hSize})); } catch (e) {} };
+const dkey = s => s ? s.split('/').reverse().join('') : '';
+function resetGrid() { hColF = {}; hSort = {k: 'ngay', dir: 1}; saveGrid(); buildHead(); renderInv(); }
+function viewRows() {
+  let rows = hRows.filter(r => HCOLS.every(c => {
+    const f = hColF[c.k]; if (f == null || f === '') return true;
+    if (c.f === 'pick') return r[c.k] === f;
+    if (c.f === 'bool') return String(!!r[c.k]) === f;
+    if (c.f === 'num') { const m = f.replace(/\s/g, '').match(/^(>=|<=|>|<|=)?([\d.,]+)$/);
+      if (m) { const v = +m[2].replace(/[.,]/g, ''), x = r[c.k] || 0;
+        return {'>': x > v, '<': x < v, '>=': x >= v, '<=': x <= v}[m[1]] ?? x === v; }
+      return fmt(r[c.k]).includes(f); }
+    return String(r[c.k] ?? '').toLowerCase().includes(f.toLowerCase());
+  }));
+  const c = HCOLS.find(x => x.k === hSort.k);
+  if (c) {
+    const key = c.sort === 'date' ? (r => dkey(r.ngay) + String(r.shdon).padStart(12, '0'))
+      : c.sort === 'num' ? (r => +r[c.k] || 0) : c.n ? (r => r[c.k] || 0) : (r => String(r[c.k] ?? '').toLowerCase());
+    rows = rows.slice().sort((a, b) => { const x = key(a), y = key(b); return (x > y ? 1 : x < y ? -1 : 0) * hSort.dir; });
+  }
+  return rows;
+}
+function buildHead() {
   const sold = $('hKind').value.startsWith('sold');
-  $('hTenH').textContent = sold ? 'Người mua' : 'Người bán';
-  const tb = $('hRows'); tb.innerHTML = '';
-  const pages = Math.max(1, Math.ceil(hRows.length / hSize)); hPage = Math.min(hPage, pages - 1);
-  selInfo();
-  hRows.slice(hPage * hSize, hPage * hSize + hSize).forEach(r => {
-    const tr = tb.insertRow();
-    const pick = el('input'); pick.type = 'checkbox'; pick.checked = hSel.has(r.key);
-    pick.onchange = () => { pick.checked ? hSel.add(r.key) : hSel.delete(r.key); selInfo(); }; tr.insertCell().append(pick);
-    [r.mst, r.ten, r.ngay, r.khhdon].forEach(v => tr.insertCell().textContent = v);
-    [r.shdon, fmt(r.cthue), fmt(r.thue), fmt(r.ck), fmt(r.phi), fmt(r.tt)].forEach(v => { const c = tr.insertCell(); c.className = 'n'; c.textContent = v; });
-    tr.insertCell().textContent = r.tthai; tr.insertCell().textContent = r.kq;
-    const sel = el('select', 'sm'); ['Chờ duyệt', 'Đã duyệt', 'Không duyệt'].forEach(o => sel.append(new Option(o, o))); sel.value = r.duyet;
-    sel.onchange = () => updInv(r, {duyet: sel.value}); tr.insertCell().append(sel);
-    const cb = el('input'); cb.type = 'checkbox'; cb.checked = r.dv; cb.onchange = () => updInv(r, {dv: cb.checked}); tr.insertCell().append(cb);
-    const mh = tr.insertCell(); mh.className = 'mh'; mh.textContent = r.mat_hang;
-    const note = el('input', 'note'); note.value = r.note; note.placeholder = 'ghi chú…'; note.onchange = () => updInv(r, {note: note.value});
-    tr.insertCell().append(note);
+  HCOLS[1].t = sold ? 'Người mua' : 'Người bán';
+  const th = $('hHead'); th.innerHTML = '';
+  const r1 = th.insertRow(), r2 = th.insertRow(); r2.className = 'f';
+  const all = el('input'); all.type = 'checkbox'; all.id = 'hAll'; all.title = 'Chọn tất cả các dòng đang lọc';
+  all.onchange = () => { const v = viewRows(); if (all.checked) v.forEach(r => hSel.add(r.key)); else v.forEach(r => hSel.delete(r.key)); renderInv(); };
+  const c0 = el('th'); c0.append(all); r1.append(c0); r2.append(el('th'));
+  HCOLS.forEach(c => {
+    const h = el('th', (c.n ? 'n ' : '') + (c.k !== '_ct' ? 's' : ''), c.t);
+    if (hSort.k === c.k) h.textContent += hSort.dir > 0 ? ' ▲' : ' ▼';
+    if (c.k !== '_ct') { h.title = 'Bấm để sắp xếp'; h.onclick = () => { hSort = {k: c.k, dir: hSort.k === c.k ? -hSort.dir : 1}; saveGrid(); buildHead(); renderInv(); }; }
+    r1.append(h);
+    const f = el('th'); r2.append(f);
+    if (c.f === 'pick' || c.f === 'bool') {
+      const sel = el('select'); sel.append(new Option('(Tất cả)', ''));
+      if (c.f === 'bool') { sel.append(new Option('Có', 'true')); sel.append(new Option('Không', 'false')); }
+      else [...new Set(hRows.map(r => r[c.k]).filter(Boolean))].sort().forEach(v => sel.append(new Option(v, v)));
+      sel.value = hColF[c.k] || ''; sel.onchange = () => { hColF[c.k] = sel.value; hPage = 0; renderInv(); }; f.append(sel);
+    } else if (c.f) {
+      const inp = el('input'); inp.type = 'search'; inp.value = hColF[c.k] || ''; inp.placeholder = '🔍';
+      if (c.f === 'num') inp.title = 'Lọc số tiền: gõ 1000000, >1000000, <500000, >=…';
+      inp.oninput = () => { hColF[c.k] = inp.value; hPage = 0; renderInv(); }; f.append(inp);
+    }
+  });
+  requestAnimationFrame(() => $('hTbl').style.setProperty('--hh', r1.getBoundingClientRect().height + 'px'));
+}
+function selInfo(view) {
+  const sel = hRows.filter(r => hSel.has(r.key));
+  $('hBulk').classList.toggle('hide', !sel.length);
+  $('hSelInfo').textContent = sel.length ? ('Đã chọn ' + sel.length + ' HĐ · tổng thanh toán ' + fmt(sel.reduce((a, r) => a + r.tt, 0))) : '';
+  const all = $('hAll'); if (all) { const v = view || viewRows(); all.checked = v.length > 0 && v.every(r => hSel.has(r.key));
+    all.indeterminate = !all.checked && v.some(r => hSel.has(r.key)); }
+}
+const BAD = /bị hủy|bị huỷ|bị thay thế|bị điều chỉnh|từ chối|k đủ/i;
+function renderInv() {
+  if (!$('hHead').rows.length) buildHead();
+  const view = viewRows(), tb = $('hRows'); tb.innerHTML = '';
+  const size = hSize || view.length || 1, pages = Math.max(1, Math.ceil(view.length / size)); hPage = Math.min(hPage, pages - 1);
+  const kind = $('hKind').value.replace('_dv', '');
+  view.slice(hPage * size, hPage * size + size).forEach(r => {
+    const tr = tb.insertRow(); tr.dataset.key = r.key;
+    if (hSel.has(r.key)) tr.classList.add('sel');
+    if (BAD.test(r.tthai + ' ' + r.kq)) tr.classList.add('bad');
+    const pick = el('input'); pick.type = 'checkbox'; pick.checked = hSel.has(r.key); tr.insertCell().append(pick);
+    tr.onclick = ev => {
+      if (ev.target.closest('a,select,button,input:not([type=checkbox]),label')) return;
+      const keys = view.map(x => x.key), on = !hSel.has(r.key);
+      if (ev.shiftKey && hLastClick && keys.includes(hLastClick)) {
+        const [a, b] = [keys.indexOf(hLastClick), keys.indexOf(r.key)].sort((x, y) => x - y);
+        keys.slice(a, b + 1).forEach(k => hSel.add(k));
+      } else on ? hSel.add(r.key) : hSel.delete(r.key);
+      hLastClick = r.key; renderInv();
+    };
+    HCOLS.forEach(c => {
+      if (c.k === 'duyet') { const sel = el('select'); ['Chờ duyệt', 'Đã duyệt', 'Không duyệt'].forEach(o => sel.append(new Option(o, o)));
+        sel.value = r.duyet; sel.onchange = () => updInv(r, {duyet: sel.value}); tr.insertCell().append(sel); return; }
+      if (c.k === 'dv') { const cb = el('input'); cb.type = 'checkbox'; cb.checked = r.dv; cb.title = 'Hoá đơn dịch vụ';
+        cb.onclick = ev => ev.stopPropagation(); cb.onchange = () => updInv(r, {dv: cb.checked}); tr.insertCell().append(cb); return; }
+      if (c.k === 'note') { const note = el('input', 'note'); note.value = r.note; note.placeholder = 'ghi chú…';
+        note.onchange = () => updInv(r, {note: note.value}); tr.insertCell().append(note); return; }
+      if (c.k === '_ct') { renderDetails(tr, r, kind); return; }
+      const td = tr.insertCell(); td.className = (c.n ? 'n ' : '') + (c.cls || '');
+      td.textContent = c.sum ? fmt(r[c.k]) : (r[c.k] ?? '');
+    });
+  });
+  const f = $('hFoot'); f.innerHTML = '';
+  const c0 = f.insertCell(); c0.colSpan = 6; c0.textContent = view.length + ' HĐ' + (view.length !== hRows.length ? ' (lọc từ ' + hRows.length + ')' : '');
+  HCOLS.filter(c => c.sum).forEach(c => { const x = f.insertCell(); x.className = 'n'; x.textContent = fmt(view.reduce((a, r) => a + (r[c.k] || 0), 0)); });
+  f.insertCell().colSpan = HCOLS.length - 9;
+  const pg = $('hPager'); pg.innerHTML = '';
+  [20, 50, 100, 0].forEach(n => { const b = el('button', 'sm sec' + (n === hSize ? ' cur' : ''), n ? String(n) : 'Tất cả'); if (n === hSize) b.style.color = '#fff';
+    b.onclick = () => { hSize = n; hPage = 0; saveGrid(); renderInv(); }; pg.append(b); });
+  pg.append(el('span', 'mute', ' Trang ' + (hPage + 1) + '/' + pages + ' '));
+  const prev = el('button', 'sm sec', '‹'); prev.disabled = hPage === 0; prev.onclick = () => { hPage--; renderInv(); };
+  const next = el('button', 'sm sec', '›'); next.disabled = hPage >= pages - 1; next.onclick = () => { hPage++; renderInv(); };
+  pg.append(prev, next, el('span', 'mute', '  Mẹo: bấm vào dòng để chọn, Shift+bấm để chọn liên tiếp, bấm tiêu đề cột để sắp xếp.'));
+  selInfo(view);
+}
+function renderDetails(tr, r, kind) {
     const ct = tr.insertCell(); ct.style.whiteSpace = 'nowrap';
     if (r.xml) ct.append(fileLink(r.xml, 'XML')); if (r.html) ct.append(fileLink(r.html, 'HTML')); if (r.pdf) ct.append(fileLink(r.pdf, 'PDF'));
-    const kind = $('hKind').value.replace('_dv', '');
     const v = el('a', 'lk', 'In'); v.target = '_blank'; v.title = 'Bản thể hiện dựng từ XML – in hoặc lưu PDF';
     v.href = '/view?' + new URLSearchParams({k: KEY, mst: $('hMst').value, kind, key: r.key}); ct.append(v);
     const t = r.tra_cuu || {};
@@ -3862,19 +4094,13 @@ function renderInv() {
         catch (e) { $('hErr').textContent = e.message; } };
       fi.click(); };
     ct.append(up);
-  });
-  const sum = k => hRows.reduce((a, r) => a + r[k], 0);
-  const f = $('hFoot'); f.innerHTML = '';
-  const c0 = f.insertCell(); c0.colSpan = 6; c0.textContent = hRows.length + ' HĐ';
-  ['cthue', 'thue', 'ck', 'phi', 'tt'].forEach(k => { const c = f.insertCell(); c.className = 'n'; c.textContent = fmt(sum(k)); });
-  f.insertCell().colSpan = 7;
-  const pg = $('hPager'); pg.innerHTML = '';
-  [10, 20, 50, 100].forEach(n => { const b = el('button', 'sm sec' + (n === hSize ? ' cur' : ''), String(n)); if (n === hSize) b.style.color = '#fff';
-    b.onclick = () => { hSize = n; hPage = 0; renderInv(); }; pg.append(b); });
-  pg.append(el('span', 'mute', ' Tổng cộng: ' + hRows.length + ' hoá đơn - Trang ' + (hPage + 1) + '/' + pages + ' '));
-  const prev = el('button', 'sm sec', '‹'); prev.disabled = hPage === 0; prev.onclick = () => { hPage--; renderInv(); };
-  const next = el('button', 'sm sec', '›'); next.disabled = hPage >= pages - 1; next.onclick = () => { hPage++; renderInv(); };
-  pg.append(prev, next);
+}
+async function bulkUpdate(fields) {
+  const keys = hRows.filter(r => hSel.has(r.key)).map(r => r.key);
+  if (!keys.length || Object.values(fields).every(v => v === '')) return;
+  try { await post('/api/invoice/update-bulk', Object.assign({mst: wsMst, kind: $('hKind').value.replace('_dv', ''), keys}, fields));
+        hRows.forEach(r => { if (hSel.has(r.key)) Object.assign(r, fields); }); buildHead(); renderInv(); }
+  catch (e) { $('hErr').textContent = e.message; }
 }
 $('hImpFiles').onchange = async () => {
   const fs = [...$('hImpFiles').files]; $('hImpFiles').value = ''; if (!fs.length) return;
@@ -3964,7 +4190,7 @@ async function exportInv(fmtx) {
   try { const d = await post('/api/export', {mst: $('hMst').value, filters: hFilters(true), fmt: fmtx}); window.open(d.url, '_blank'); }
   catch (e) { $('hErr').textContent = e.message; }
 }
-['hKind', 'hFile', 'hDuyet', 'hTthai', 'hKq', 'hMst'].forEach(id => $(id).onchange = () => { hPage = 0; if (id === 'hMst' || id === 'hKind') hSel.clear(); loadInv(); });
+['hFile', 'hDuyet', 'hTthai', 'hKq'].forEach(id => $(id).onchange = () => { hPage = 0; loadInv(); });
 ['hKh', 'hSo', 'hQ'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { hPage = 0; loadInv(); } }));
 $('q').oninput = render;
 $('toggleAn').onclick = e => { e.preventDefault(); showHidden = !showHidden; render(); };
@@ -3976,7 +4202,7 @@ $('eMst').addEventListener('change', () => { if (!editing && !$('eTen').value.tr
   const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   $('bFrom').value = iso(first); $('bTo').value = iso(last);
   $('hPer').value = 'month'; $('hFrom').value = iso(new Date(now.getFullYear(), now.getMonth(), 1)); $('hTo').value = iso(now);
-  poll();
+  poll().then(() => { if (location.hash.length > 2) route(); });
 })();
 </script></body></html>
 """
@@ -4618,7 +4844,7 @@ def make_handler(app, port):
             if path == "/api/captcha":
                 app.job_for(self.user).answer(data.get("answer"))
                 return self._send(200, {"ok": True})
-            if path in ("/api/invoices", "/api/export", "/api/invoice/update", "/api/invoice/pdf",
+            if path in ("/api/invoices", "/api/export", "/api/invoice/update", "/api/invoice/update-bulk", "/api/invoice/pdf",
                         "/api/invoice/fetch-pdf", "/api/invoice/fetch-pdf-bulk", "/api/invoice/pdf-import",
                         "/api/invoice/scan-downloads"):
                 mst = data.get("mst", "")
@@ -4672,6 +4898,13 @@ def make_handler(app, port):
                     except ValueError:
                         raise ValueError("Dữ liệu file không hợp lệ")
                     return self._send(200, {"pdf": attach_pdf(app.out_root, mst, data.get("kind"), data.get("key"), raw)})
+                if path == "/api/invoice/update-bulk":
+                    if data.get("duyet") is not None and data["duyet"] not in DUYET_OPTIONS:
+                        raise ValueError("Trạng thái duyệt không hợp lệ")
+                    keys = [str(k) for k in (data.get("keys") or [])][:5000]
+                    n = update_invoices(app.out_root, mst, data.get("kind"), keys, duyet=data.get("duyet"),
+                                        dv=data.get("dv"))
+                    return self._send(200, {"ok": True, "updated": n})
                 if path == "/api/invoice/update":
                     if data.get("duyet") is not None and data["duyet"] not in DUYET_OPTIONS:
                         raise ValueError("Trạng thái duyệt không hợp lệ")

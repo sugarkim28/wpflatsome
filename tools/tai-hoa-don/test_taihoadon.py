@@ -1053,6 +1053,16 @@ class Tests(unittest.TestCase):
         self.assertEqual(t._bank_amount("(1.234.567)"), -1234567.0)
         self.assertEqual(t._bank_amount("1,234.5"), 1234.5)
 
+    def test_update_invoices_bulk(self):
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        self.run_job(["0309999999"], kinds=("purchase",))
+        keys = list(t._load_json(t.index_file(self.tmp, "0309999999"), {})["purchase"])
+        self.assertEqual(t.update_invoices(self.tmp, "0309999999", "purchase", keys + ["khong|co"], duyet="Đã duyệt", dv=True),
+                         len(keys))
+        rows = t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"})
+        self.assertTrue(rows and all(r["duyet"] == "Đã duyệt" and r["dv"] for r in rows))
+        self.assertEqual(len(t.query_invoices(self.tmp, "0309999999", {"kind": "purchase_dv"})), len(rows))
+
 
 if __name__ == "__main__":
     unittest.main()
