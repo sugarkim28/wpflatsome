@@ -40,6 +40,10 @@ Tải hàng loạt hoá đơn **mua vào / bán ra** từ cổng [hoadondientu.g
 
 ## Cài đặt & chạy
 
+**Cách nhanh nhất (Windows): file `TaiHoaDon.exe`** – tải ở mục *Releases* của repo (bản mới nhất `taihoadon-v…`), bấm đúp là chạy, không cần cài Python. Hoá đơn lưu ở thư mục `HoaDon` cạnh file exe. Lần đầu Windows có thể báo "Windows protected your PC" → *More info* → *Run anyway*. Kiểm tra nhanh: `TaiHoaDon.exe --self-test`. File exe được GitHub Actions đóng gói trên máy Windows mỗi khi mã nguồn thay đổi (`.github/workflows/build-taihoadon-exe.yml`).
+
+Hoặc chạy từ mã nguồn:
+
 1. Cài [Python 3.8+](https://www.python.org/downloads/) (Windows: tích *Add python.exe to PATH*).
 2. Để `taihoadon.py` và `chay.bat` chung một thư mục, bấm đúp **`chay.bat`** (lần đầu tự cài `openpyxl` để xuất Excel).
    macOS/Linux: `pip install openpyxl` rồi `python3 taihoadon.py`.

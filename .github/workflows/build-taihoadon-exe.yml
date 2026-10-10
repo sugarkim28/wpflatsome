@@ -1,0 +1,76 @@
+# Đóng gói phần mềm Tải hoá đơn thành TaiHoaDon.exe (Windows) và đăng lên Releases.
+name: Build TaiHoaDon.exe
+
+on:
+  push:
+    branches: [claude/beautiful-ride-0h8ypn, main, master]
+    paths:
+      - "tools/tai-hoa-don/**"
+      - ".github/workflows/build-taihoadon-exe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: tools/tai-hoa-don
+    env:
+      PYTHONIOENCODING: utf-8
+      NO_PROXY: 127.0.0.1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cài thư viện
+        run: python -m pip install pyinstaller==6.10.0 openpyxl==3.1.5 pypdf==5.1.0 cryptography==43.0.3 xlrd==2.0.1 reportlab==4.2.5
+
+      - name: Kiểm thử trên Windows
+        continue-on-error: true
+        run: python -W ignore -m unittest -v test_taihoadon.py
+
+      - name: Lấy số phiên bản
+        id: ver
+        run: |
+          $v = (Select-String -Path taihoadon.py -Pattern '^__version__ = "(.+)"').Matches[0].Groups[1].Value
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Đóng gói một file exe
+        run: python -m PyInstaller --noconfirm --clean --onefile --console --name TaiHoaDon --add-data "fonts;fonts" --collect-all reportlab taihoadon.py
+
+      - name: Chạy thử TaiHoaDon.exe
+        run: |
+          ./dist/TaiHoaDon.exe --self-test
+          if ($LASTEXITCODE -ne 0) { throw "TaiHoaDon.exe --self-test báo lỗi" }
+          $p = Start-Process ./dist/TaiHoaDon.exe -ArgumentList '--no-browser', '--port', '8799', '--out', "$env:RUNNER_TEMP\HoaDon" -PassThru
+          $ok = $false
+          foreach ($i in 1..30) {
+            Start-Sleep -Seconds 2
+            try { $r = Invoke-WebRequest http://127.0.0.1:8799/ -UseBasicParsing; if ($r.StatusCode -eq 200) { $ok = $true; break } } catch { }
+          }
+          Stop-Process -Id $p.Id -Force
+          if (-not $ok) { throw "Giao diện của TaiHoaDon.exe không mở được" }
+          Write-Output "Giao diện chạy OK"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TaiHoaDon-${{ steps.ver.outputs.version }}
+          path: tools/tai-hoa-don/dist/TaiHoaDon.exe
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: taihoadon-v${{ steps.ver.outputs.version }}
+          name: Tải hoá đơn ${{ steps.ver.outputs.version }} (Windows)
+          target_commitish: ${{ github.sha }}
+          files: tools/tai-hoa-don/dist/TaiHoaDon.exe
+          body: |
+            **TaiHoaDon.exe** – bấm đúp để chạy, không cần cài Python.
+            Trình duyệt tự mở http://127.0.0.1:8765. Hoá đơn lưu ở thư mục `HoaDon` cạnh file exe.
+            Lần đầu Windows có thể cảnh báo "Windows protected your PC" → bấm *More info* → *Run anyway*.

@@ -2473,6 +2473,16 @@ def invoice_view_from_summary(inv):
 _FONT = {}
 
 
+def resource_dir():
+    """Thư mục chứa fonts/ kèm phần mềm (bản .exe: thư mục tạm PyInstaller giải nén)."""
+    return getattr(sys, "_MEIPASS", None) or os.path.dirname(os.path.abspath(__file__))
+
+
+def app_dir():
+    """Thư mục đặt phần mềm (bản .exe: thư mục chứa TaiHoaDon.exe)."""
+    return os.path.dirname(os.path.abspath(sys.executable if getattr(sys, "frozen", False) else __file__))
+
+
 def _vn_fonts():
     """Font có dấu tiếng Việt cho reportlab: thư mục fonts/ kèm phần mềm, font hệ thống (Linux), Arial (Windows)."""
     if _FONT:
@@ -2483,7 +2493,7 @@ def _vn_fonts():
         from reportlab.lib.fonts import addMapping
     except ImportError:
         raise ValueError("Tạo PDF cần thư viện reportlab: pip install reportlab (chay.bat / bản web tự cài)")
-    here = os.path.dirname(os.path.abspath(__file__))
+    here = resource_dir()
     win = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts")
     for reg, bold in ((os.path.join(here, "fonts", "DejaVuSans.ttf"), os.path.join(here, "fonts", "DejaVuSans-Bold.ttf")),
                       ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
@@ -2627,7 +2637,7 @@ def find_browser():
     """Chrome / Edge / Chromium để in bản HTML của cổng thuế ra PDF (chạy ngầm). Không có → None."""
     import glob
     import shutil
-    here = os.path.dirname(os.path.abspath(__file__))
+    here = app_dir()
     cands = [os.environ.get("TAIHOADON_CHROME", "")]
     for env in ("PROGRAMFILES(X86)", "PROGRAMFILES", "LOCALAPPDATA"):
         root = os.environ.get(env)
@@ -5634,11 +5644,51 @@ def make_handler(app, port):
     return Handler
 
 
+def self_test():
+    """Kiểm tra bản cài / bản .exe: đủ thư viện, có font tiếng Việt, dựng được PDF và Excel."""
+    import importlib
+    ok = True
+    for mod in ("openpyxl", "pypdf", "xlrd", "reportlab", "cryptography"):
+        try:
+            importlib.import_module(mod)
+            print("OK  thư viện %s" % mod)
+        except ImportError as e:
+            ok = False
+            print("LỖI thư viện %s: %s" % (mod, e))
+    try:
+        v = invoice_view_from_detail({"nbten": "CÔNG TY THỬ NGHIỆM ĐẦU VÀO", "khmshdon": 1, "khhdon": "C26TAA", "shdon": 1,
+                                      "tgtttbso": 1000, "hdhhdvu": [{"stt": 1, "ten": "Hàng hoá có dấu tiếng Việt",
+                                                                      "thtien": 1000}]})
+        data = build_tax_pdf(v)
+        import pypdf
+        text = pypdf.PdfReader(io.BytesIO(data)).pages[0].extract_text()
+        assert "Hàng hoá có dấu tiếng Việt" in text, text[:200]
+        print("OK  PDF tiếng Việt (%d byte)" % len(data))
+    except Exception as e:
+        ok = False
+        print("LỖI tạo PDF: %s" % e)
+    try:
+        write_bank_ktsc([{"date": "2026-01-02", "ref": "1", "desc": "Thử", "name": "", "in": 1000.0, "out": 0.0}])
+        print("OK  Excel KTSC")
+    except Exception as e:
+        ok = False
+        print("LỖI tạo Excel: %s" % e)
+    print("Trình duyệt in PDF thuế: %s" % (find_browser() or "không có (dùng bản dựng sẵn)"))
+    print("Phiên bản %s: %s" % (__version__, "TẤT CẢ OK" if ok else "CÓ LỖI"))
+    return 0 if ok else 1
+
+
 def main(argv=None):
+    for stream in (sys.stdout, sys.stderr):  # cửa sổ dòng lệnh không hỗ trợ tiếng Việt → không được làm dừng phần mềm
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            pass
     ap = argparse.ArgumentParser(description="Phần mềm tải hoá đơn điện tử (hoadondientu.gdt.gov.vn)")
     ap.add_argument("--port", type=int, default=int(os.environ.get("TAIHOADON_PORT") or 8765),
                     help="cổng giao diện (mặc định 8765)")
-    ap.add_argument("--out", default=os.environ.get("TAIHOADON_DATA") or os.path.join(os.getcwd(), "HoaDon"),
+    ap.add_argument("--out", default=os.environ.get("TAIHOADON_DATA") or os.path.join(
+        app_dir() if getattr(sys, "frozen", False) else os.getcwd(), "HoaDon"),
                     help="thư mục lưu (mặc định ./HoaDon)")
     ap.add_argument("--no-browser", action="store_true", help="không tự mở trình duyệt")
     ap.add_argument("--insecure", action="store_true", help="bỏ kiểm tra chứng chỉ SSL (chỉ dùng khi máy báo lỗi SSL)")
@@ -5654,7 +5704,10 @@ def main(argv=None):
     web.add_argument("--max-jobs", type=int, default=int(os.environ.get("TAIHOADON_MAX_JOBS") or 4),
                      help="số lượt đồng bộ chạy cùng lúc (mặc định 4)")
     web.add_argument("--set-password", metavar="TÊN", help="tạo / đặt lại mật khẩu quản trị TÊN rồi thoát")
+    ap.add_argument("--self-test", action="store_true", help="kiểm tra thư viện, font, tạo PDF rồi thoát")
     args = ap.parse_args(argv)
+    if args.self_test:
+        return self_test()
 
     out = os.path.abspath(args.out)
     cfg = os.path.join(out, "_cau-hinh")
