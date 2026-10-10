@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.6.0"
+__version__ = "3.6.1"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -3807,7 +3807,8 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
 .staff .adm,.local .srv{display:none!important}
 .pw{-webkit-text-security:disc;text-security:disc}
 /* Trang doanh nghiệp */
-.wshead{padding-bottom:0;position:sticky;top:0;z-index:5}.wshead .crumb{margin-bottom:6px}
+.wshead{padding-bottom:0}.wshead .crumb{margin-bottom:6px}
+body.ws main{max-width:none}
 .wsrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 #wsPick{flex:1;min-width:260px;font-weight:600;font-size:15px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}
 .wsmeta{font-size:12px;color:var(--mute);display:flex;gap:12px;flex-wrap:wrap}.wsmeta b{color:var(--fg)}
@@ -3823,18 +3824,30 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
 .seg button+button{border-left:1px solid var(--line)}.seg button.on{background:var(--acc);color:#fff}
 .bulk{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:#eef0ff;border:1px solid #c9ceff;color:#222;border-radius:8px;padding:8px 10px;margin:6px 0}
 .bulk select{width:auto}
-.grid{overflow:auto;max-height:calc(100vh - 300px);min-height:240px;border:1px solid var(--line);border-radius:8px}
+.grid{overflow:auto;max-height:calc(100vh - 96px);min-height:260px;border:1px solid var(--line);border-radius:8px}
 .grid table{border-collapse:separate;border-spacing:0}
 .grid th,.grid td{font-size:13px;padding:6px 7px;border-bottom:1px solid var(--line);background:var(--card)}
-.grid thead th{position:sticky;top:0;z-index:2;background:var(--bg);color:var(--acc);white-space:nowrap;user-select:none}
-.grid thead tr.f th{top:var(--hh,32px);padding:4px;font-weight:400}
+.grid thead{position:sticky;top:0;z-index:3}
+.grid thead th{background:var(--bg);color:var(--acc);white-space:nowrap;user-select:none}
+.grid thead tr.f th{padding:4px;font-weight:400}
 .grid thead th.s{cursor:pointer}.grid thead th.s:hover{color:var(--fg)}
 .grid thead tr.f input,.grid thead tr.f select{width:100%;min-width:52px;padding:4px 6px;font-size:12px;border:1px solid var(--line);border-radius:5px;background:var(--card);color:var(--fg)}
 .grid tfoot td{position:sticky;bottom:0;z-index:2;background:var(--bg);font-weight:700;color:var(--acc);border-top:2px solid var(--line)}
 .grid tbody tr{cursor:default}.grid tbody tr:hover td{background:rgba(91,95,224,.06)}
 .grid tbody tr.sel td{background:rgba(91,95,224,.14)}.grid tbody tr.sel td:first-child{box-shadow:inset 3px 0 var(--acc)}
-.grid tbody tr.bad td{color:var(--err)}.grid td.mh{max-width:280px;white-space:normal;min-width:180px}
-.grid td.ten{max-width:260px;min-width:160px;white-space:normal}.grid td.nw{white-space:nowrap}
+.grid tbody tr.bad td{color:var(--err)}.grid td.nw{white-space:nowrap}
+.grid td.mh,.grid td.ten{white-space:normal;min-width:200px;max-width:320px}
+.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35}
+@media(max-width:760px){
+  header{padding:8px 10px;gap:8px}header nav{order:3;width:100%;margin-left:0;overflow-x:auto}header small{display:none}
+  main{padding:8px}.card{padding:10px;border-radius:8px}
+  .wsrow #wsPick{order:-1;flex:1 1 100%;min-width:0;font-size:14px}
+  .wsmeta span:nth-child(n+4){display:none}
+  .filters>*{flex:1 1 calc(50% - 8px);min-width:0}.filters .grow{flex-basis:100%}
+  .seg{flex-basis:100%;overflow-x:auto}.seg button{flex:1 0 auto}
+  .grid{max-height:calc(100vh - 70px)}.grid td.mh,.grid td.ten{min-width:160px}
+  .pager .tip{display:none}.subtabs a{padding:8px 10px}
+}
 .grid select{min-width:108px;padding:3px 4px;font-size:12px}
 a.dn-link{color:inherit;text-decoration:none}a.dn-link:hover{color:var(--acc);text-decoration:underline}
 .me{display:flex;gap:8px;align-items:center;font-size:13px}.me a{color:#fff;opacity:.85;text-decoration:none;cursor:pointer}.me a:hover{opacity:1;text-decoration:underline}
@@ -4539,6 +4552,7 @@ $('hPer').onchange = () => {
 };
 function tab(t, keepHash) {
   curTab = t; $('navDN').classList.toggle('on', t === 'DN'); $('navHD').classList.toggle('on', t === 'WS');
+  document.body.classList.toggle('ws', t === 'WS');
   $('tabDN').classList.toggle('hide', t !== 'DN'); $('tabWS').classList.toggle('hide', t !== 'WS');
   $('tabTI').classList.toggle('hide', t !== 'TI'); $('navTI').classList.toggle('on', t === 'TI');
   $('tabND').classList.toggle('hide', t !== 'ND'); $('navND').classList.toggle('on', t === 'ND');
@@ -4693,7 +4707,6 @@ function buildHead() {
       inp.oninput = () => { hColF[c.k] = inp.value; hPage = 0; renderInv(); }; f.append(inp);
     }
   });
-  requestAnimationFrame(() => $('hTbl').style.setProperty('--hh', r1.getBoundingClientRect().height + 'px'));
 }
 function selInfo(view) {
   const sel = hRows.filter(r => hSel.has(r.key));
@@ -4731,7 +4744,9 @@ function renderInv() {
         note.onchange = () => updInv(r, {note: note.value}); tr.insertCell().append(note); return; }
       if (c.k === '_ct') { renderDetails(tr, r, kind); return; }
       const td = tr.insertCell(); td.className = (c.n ? 'n ' : '') + (c.cls || '');
-      td.textContent = c.sum ? fmt(r[c.k]) : (r[c.k] ?? '');
+      const val = c.sum ? fmt(r[c.k]) : (r[c.k] ?? '');
+      if (c.cls === 'ten' || c.cls === 'mh') { const d = el('div', 'clamp', val); d.title = val; td.append(d); }  // tối đa 2 dòng
+      else td.textContent = val;
     });
   });
   const f = $('hFoot'); f.innerHTML = '';
@@ -4744,7 +4759,7 @@ function renderInv() {
   pg.append(el('span', 'mute', ' Trang ' + (hPage + 1) + '/' + pages + ' '));
   const prev = el('button', 'sm sec', '‹'); prev.disabled = hPage === 0; prev.onclick = () => { hPage--; renderInv(); };
   const next = el('button', 'sm sec', '›'); next.disabled = hPage >= pages - 1; next.onclick = () => { hPage++; renderInv(); };
-  pg.append(prev, next, el('span', 'mute', '  Mẹo: bấm vào dòng để chọn, Shift+bấm để chọn liên tiếp, bấm tiêu đề cột để sắp xếp.'));
+  pg.append(prev, next, el('span', 'mute tip', '  Mẹo: bấm vào dòng để chọn, Shift+bấm để chọn liên tiếp, bấm tiêu đề cột để sắp xếp.'));
   selInfo(view);
 }
 function renderDetails(tr, r, kind) {
