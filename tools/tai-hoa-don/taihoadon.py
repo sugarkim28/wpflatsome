@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.0.0"
+__version__ = "4.1.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -1758,6 +1758,9 @@ PERMS = {"dongbo": "Đồng bộ / tải hoá đơn", "hdgoc": "Tải và gắn 
 STAFF_DEFAULT_PERMS = [k for k in PERMS if k != "dn"]
 
 
+EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[A-Za-z]{2,}")
+
+
 def user_vp(user):
     return (user or {}).get("vp") or DEFAULT_VP
 
@@ -1773,12 +1776,17 @@ class TenantStore:
 
     def _default(self):
         return {"id": DEFAULT_VP, "ten": "Văn phòng chính", "active": True, "max_dn": 0, "max_jobs": 0,
-                "tao": "", "ghichu": ""}
+                "tao": "", "ghichu": "", "han_muc_hd": 0, "tai_goc": True, "han_muc_goc": 0}
 
     def list(self):
         with self.lock:
             ids = {t["id"] for t in self.items}
-            return ([self._default()] if DEFAULT_VP not in ids else []) + [dict(t) for t in self.items]
+            out = ([self._default()] if DEFAULT_VP not in ids else []) + [dict(t) for t in self.items]
+            for t in out:  # văn phòng tạo trước khi có gói theo số hoá đơn: không giới hạn, có tải HĐ gốc
+                t.setdefault("han_muc_hd", 0)
+                t.setdefault("tai_goc", True)
+                t.setdefault("han_muc_goc", 0)
+            return out
 
     def get(self, vid):
         return next((t for t in self.list() if t["id"] == vid), None)
@@ -1796,15 +1804,17 @@ class TenantStore:
                     raise ValueError("Không tìm thấy văn phòng %s" % vid)
                 t = self._default() if vid == DEFAULT_VP else {
                     "id": vid, "ten": "", "active": True, "max_dn": 0, "max_jobs": 2, "ghichu": "",
-                    "tao": date.today().strftime("%d/%m/%y")}
+                    "tao": date.today().strftime("%d/%m/%y"), "han_muc_hd": 0, "tai_goc": True, "han_muc_goc": 0}
                 self.items.append(t)
             if fields.get("ten") is not None:
                 t["ten"] = str(fields["ten"]).strip()[:150]
             if fields.get("ghichu") is not None:
                 t["ghichu"] = str(fields["ghichu"]).strip()[:300]
-            for k in ("max_dn", "max_jobs"):
+            for k in ("max_dn", "max_jobs", "han_muc_hd", "han_muc_goc"):
                 if fields.get(k) is not None:
                     t[k] = max(0, int(fields[k] or 0))
+            if fields.get("tai_goc") is not None:
+                t["tai_goc"] = bool(fields["tai_goc"])
             if fields.get("active") is not None:
                 if vid == DEFAULT_VP and not fields["active"]:
                     raise ValueError("Không khoá văn phòng chính (văn phòng của chủ hệ thống)")
@@ -1823,6 +1833,70 @@ class Tenant:
         self.cfg = os.path.join(root, "_cau-hinh")
         self.store = Store(os.path.join(self.cfg, "doanh-nghiep.json"))
         self.clients = {}
+
+
+_QUOTA_LOCK = threading.Lock()
+
+
+class Quota:
+    """Hạn mức theo gói của văn phòng: tổng số hoá đơn tải về (mỗi hoá đơn mới tính một lần, đồng bộ lại không tính)
+    và số hoá đơn gốc tự tải từ trang tra cứu (gói có thể không gồm tải HĐ gốc). 0 = không giới hạn.
+    Số đã dùng lưu ở <văn phòng>/_cau-hinh/su-dung.json."""
+
+    def __init__(self, tenants, tenant):
+        self.tenants, self.vid = tenants, tenant.id
+        self.path = os.path.join(tenant.cfg, "su-dung.json")
+
+    def info(self):
+        t = self.tenants.get(self.vid) or {}
+        used = _load_json(self.path, {})
+        return {"han_muc_hd": t.get("han_muc_hd", 0), "da_dung_hd": used.get("hd", 0),
+                "tai_goc": t.get("tai_goc", True), "han_muc_goc": t.get("han_muc_goc", 0),
+                "da_dung_goc": used.get("goc", 0)}
+
+    def _take(self, kind, n, limit):
+        with _QUOTA_LOCK:
+            used = _load_json(self.path, {})
+            cur = used.get(kind, 0)
+            n = n if not limit else max(0, min(n, limit - cur))
+            if n:
+                used[kind] = cur + n
+                used.setdefault("lich_su", []).append([datetime.now().strftime("%Y-%m-%d %H:%M"), kind, n])
+                used["lich_su"] = used["lich_su"][-500:]
+                _save_json(self.path, used)
+            return n
+
+    def take_hd(self, n):
+        """Xin n hoá đơn mới; trả về số được phép tải (ít hơn n khi sắp hết hạn mức)."""
+        return self._take("hd", n, self.info()["han_muc_hd"])
+
+    def goc_error(self):
+        i = self.info()
+        if not i["tai_goc"]:
+            return "Gói của văn phòng không gồm tự tải hoá đơn gốc"
+        if i["han_muc_goc"] and i["da_dung_goc"] >= i["han_muc_goc"]:
+            return "Đã dùng hết hạn mức %d hoá đơn gốc của gói" % i["han_muc_goc"]
+        return ""
+
+    def take_goc(self):
+        i = self.info()
+        if not i["tai_goc"]:
+            return False
+        return self._take("goc", 1, i["han_muc_goc"]) == 1
+
+    def refund_goc(self):
+        with _QUOTA_LOCK:
+            used = _load_json(self.path, {})
+            used["goc"] = max(0, used.get("goc", 0) - 1)
+            _save_json(self.path, used)
+
+    def reset(self, kind):
+        with _QUOTA_LOCK:
+            used = _load_json(self.path, {})
+            used.setdefault("lich_su", []).append([datetime.now().strftime("%Y-%m-%d %H:%M"), "dat-lai-" + kind,
+                                                   used.get(kind, 0)])
+            used[kind] = 0
+            _save_json(self.path, used)
 
 
 class UserStore:
@@ -1876,8 +1950,13 @@ class UserStore:
         return [u for u in self.items if u["role"] == "admin" and u.get("active", True) and user_vp(u) == vp]
 
     def upsert(self, username, ten=None, role=None, password=None, msts=None, active=None, create=False,
-               vp=None, quyen=None, owner=None):
+               vp=None, quyen=None, owner=None, email=None, invite=False):
+        """invite=True: tạo người dùng chưa có mật khẩu (sẽ nhận email để tự đặt)."""
         username = (username or "").strip().lower()
+        if email is not None:
+            email = str(email).strip()
+            if email and not EMAIL_RE.fullmatch(email):
+                raise ValueError("Email không hợp lệ")
         if not re.fullmatch(r"[a-z0-9][a-z0-9._@-]{2,39}", username):
             raise ValueError("Tên đăng nhập 3–40 ký tự: chữ thường không dấu, số, . _ - @ (bắt đầu bằng chữ/số)")
         if password is not None and password != "" and len(password) < 8:
@@ -1890,13 +1969,17 @@ class UserStore:
                 raise ValueError("Tên đăng nhập %s đã tồn tại" % username)
             is_new = u is None
             if is_new:
-                if not password:
-                    raise ValueError("Nhập mật khẩu cho người dùng mới")
+                if not password and not (invite and email):
+                    raise ValueError("Nhập mật khẩu cho người dùng mới (hoặc nhập email để gửi lời mời tự đặt mật khẩu)")
                 u = {"username": username, "ten": "", "role": "staff", "pw": "", "msts": [], "active": True,
                      "tao": date.today().strftime("%d/%m/%y"), "vp": vp or DEFAULT_VP,
                      "quyen": list(STAFF_DEFAULT_PERMS)}
                 self.items.append(u)
             old = dict(u)
+            if email is not None:
+                u["email"] = email
+            if is_new and not password:
+                u["pw"] = "!" + secrets.token_hex(16)  # chưa đặt mật khẩu: không đăng nhập được tới khi bấm link trong email
             if quyen is not None:
                 u["quyen"] = [k for k in PERMS if k in quyen]
             if owner is not None:
@@ -1942,7 +2025,8 @@ class UserStore:
 
     def public(self, vp=None):
         with self.lock:
-            return [dict({k: v for k, v in u.items() if k != "pw"}, vp=user_vp(u), quyen=self.perms(u))
+            return [dict({k: v for k, v in u.items() if k != "pw"}, vp=user_vp(u), quyen=self.perms(u),
+                         pw_set=not str(u.get("pw", "")).startswith("!"))
                     for u in self.items if vp is None or user_vp(u) == vp]
 
     def add_mst(self, username, mst):
@@ -2237,6 +2321,17 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
 
     job.phase = "đang tra danh sách hoá đơn"
     invoices = client.list_invoices(kind, start, end, include_mtt, progress=lambda m: job.say("%s: %s" % (mst, m)))
+    quota = getattr(job, "quota", None)
+    if quota:  # gói theo số hoá đơn: chỉ hoá đơn mới (chưa có trong kho) tính vào hạn mức
+        fresh = sorted((i for i in invoices if invoice_key(i) not in known),
+                       key=lambda i: (invoice_date(i) or date.max, _num(i.get("shdon"))))
+        got = quota.take_hd(len(fresh)) if fresh else 0
+        if got < len(fresh):
+            drop = {invoice_key(i) for i in fresh[got:]}
+            invoices = [i for i in invoices if invoice_key(i) not in drop]
+            job.say("%s: HẾT HẠN MỨC hoá đơn của gói – bỏ qua %d hoá đơn mới (đã tải %d). Liên hệ nhà cung cấp "
+                    "để nâng gói rồi đồng bộ lại." % (mst, len(drop), got))
+            job.quota_out = True
     loai = "Mua vào" if kind == "purchase" else "Bán ra"
     with job.lock:
         job.found[kind] = len(invoices)
@@ -2364,6 +2459,11 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
             prov = can_fetch_pdf(known[k].get("tra_cuu"))[1]
             if fails.get(prov, 0) >= 3:  # nhà cung cấp đang chặn / lỗi → không thử tiếp trong lượt này
                 by_key[k]["ketqua"] += " (HĐ gốc: bỏ qua)"
+            elif quota and not quota.take_goc():
+                by_key[k]["ketqua"] += " (HĐ gốc: hết hạn mức)"
+                if not getattr(job, "goc_out", False):
+                    job.goc_out = True
+                    job.say("%s: %s – không tự tải thêm hoá đơn gốc" % (mst, quota.goc_error() or "Hết hạn mức HĐ gốc"))
             else:
                 try:
                     got = fetch_original(out_root, mst, kind, k)
@@ -2373,6 +2473,8 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
                                                                      got["xml_err"]))
                     fails[prov] = 0
                 except Exception as e:  # lỗi một hoá đơn không được làm dừng cả lượt đồng bộ
+                    if quota:
+                        quota.refund_goc()  # tải lỗi không tính vào hạn mức
                     fails[prov] = fails.get(prov, 0) + 1
                     by_key[k]["ketqua"] += " (HĐ gốc: lỗi)"
                     job.say("%s: không tải được PDF gốc %s: %s" % (mst, k.split("|", 2)[-1].replace("|", "/"), e))
@@ -4134,12 +4236,44 @@ label{display:block;font-size:13px;color:var(--mute);margin:12px 0 4px}
 input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit}
 button{width:100%;margin-top:18px;padding:11px;border:0;border-radius:8px;background:var(--acc);color:#fff;font:inherit;font-weight:600;cursor:pointer}
 button:disabled{opacity:.6}.err{color:var(--err);font-size:13px;margin-top:10px;min-height:1em}
+.ok{color:#1e8449;font-size:13px;margin-top:10px}a{color:var(--acc);font-size:13px;cursor:pointer}.hide{display:none}
 </style></head><body>
 <form id="f"><h1>Tải hoá đơn điện tử</h1><p>Đăng nhập để làm việc với các doanh nghiệp được giao.</p>
 <label for="u">Tên đăng nhập</label><input id="u" autocomplete="username" autofocus required>
 <label for="p">Mật khẩu</label><input id="p" type="password" autocomplete="current-password" required>
-<button id="b">Đăng nhập</button><div class="err" id="e"></div></form>
+<button id="b">Đăng nhập</button><div class="err" id="e"></div>
+<div style="margin-top:12px;text-align:right"><a id="fg">Quên mật khẩu?</a></div></form>
+<form id="f2" class="hide"><h1>Quên mật khẩu</h1><p>Nhập tên đăng nhập hoặc email của tài khoản. Phần mềm gửi link đặt mật khẩu mới về email đã đăng ký.</p>
+<label for="q">Tên đăng nhập hoặc email</label><input id="q" required>
+<button id="b2">Gửi link về email</button><div class="err" id="e2"></div><div class="ok" id="o2"></div>
+<div style="margin-top:12px"><a href="/">← Quay lại đăng nhập</a></div></form>
+<form id="f3" class="hide"><h1>Đặt mật khẩu mới</h1><p id="who3">Đặt mật khẩu cho tài khoản.</p>
+<label for="n1">Mật khẩu mới (tối thiểu 8 ký tự)</label><input id="n1" type="password" autocomplete="new-password" required>
+<label for="n2">Nhập lại</label><input id="n2" type="password" autocomplete="new-password" required>
+<button id="b3">Lưu mật khẩu</button><div class="err" id="e3"></div><div class="ok" id="o3"></div>
+<div style="margin-top:12px"><a href="/">← Đăng nhập</a></div></form>
 <script>
+const $ = id => document.getElementById(id);
+const call = async (url, body) => { const r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || ('Lỗi ' + r.status)); return d; };
+$('fg').onclick = () => { $('f').classList.add('hide'); $('f2').classList.remove('hide'); $('q').value = $('u').value; $('q').focus(); };
+$('f2').onsubmit = async ev => { ev.preventDefault(); $('e2').textContent = ''; $('o2').textContent = ''; $('b2').disabled = true;
+  try { const d = await call('/api/forgot', {username: $('q').value});
+        $('o2').textContent = d.mail ? 'Nếu tài khoản có email, link đặt lại mật khẩu đã được gửi (hiệu lực 30 phút). Kiểm tra cả thư mục Spam.'
+                                     : 'Máy chủ chưa cấu hình gửi email – liên hệ quản trị văn phòng để đặt lại mật khẩu.'; }
+  catch (x) { $('e2').textContent = x.message; } $('b2').disabled = false; };
+const tok = new URLSearchParams(location.search).get('t');
+if (location.pathname === '/dat-lai-mat-khau' && tok) {
+  $('f').classList.add('hide'); $('f3').classList.remove('hide');
+  call('/api/reset', {token: tok, check: true}).then(d => { $('who3').textContent = 'Đặt mật khẩu cho tài khoản: ' + d.username; })
+    .catch(x => { $('e3').textContent = x.message; $('b3').disabled = true; });
+  $('f3').onsubmit = async ev => { ev.preventDefault(); $('e3').textContent = '';
+    if ($('n1').value !== $('n2').value) { $('e3').textContent = 'Hai lần nhập không khớp'; return; }
+    $('b3').disabled = true;
+    try { await call('/api/reset', {token: tok, password: $('n1').value});
+          $('o3').textContent = 'Đã đặt mật khẩu. Đang chuyển tới trang đăng nhập…'; setTimeout(() => location.href = '/', 1500); }
+    catch (x) { $('e3').textContent = x.message; $('b3').disabled = false; } };
+}
 document.getElementById('f').onsubmit = async ev => {
   ev.preventDefault(); const b = document.getElementById('b'), e = document.getElementById('e'); b.disabled = true; e.textContent = '';
   try {
@@ -4277,6 +4411,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
 <div class="card hide" id="notes"><div class="top"><b>Thông báo</b><button class="sm sec" onclick="toggleNotes()">Đóng</button></div><div id="notesList"></div></div>
 <main>
 <section class="card hide" id="tabND">
+  <div class="hint srv" id="goiInfo"></div>
   <div class="top"><b>Người dùng</b><button onclick="openUser()">+ Thêm người dùng</button></div>
   <div class="hint">Quản trị xem và làm việc với tất cả doanh nghiệp, quản lý người dùng. Nhân viên chỉ thấy các doanh nghiệp được giao.</div>
   <div class="tbl"><table><thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Vai trò</th><th class="n">Số DN được giao</th><th>Quyền</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr></thead>
@@ -4289,8 +4424,25 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
       Chủ hệ thống không xem được hoá đơn của văn phòng khác.</div>
     <div class="bar" style="margin:6px 0"><button onclick="openVp()">+ Thêm văn phòng</button></div>
     <div class="tbl"><table><thead><tr><th>Mã</th><th>Tên văn phòng</th><th>Quản trị</th><th class="n">Số DN</th><th class="n">Giới hạn DN</th>
+      <th class="n">HĐ đã tải / gói</th><th class="n">HĐ gốc đã tải / gói</th>
       <th class="n">Người dùng</th><th class="n">Lượt chạy cùng lúc</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr></thead><tbody id="vpRows"></tbody></table></div>
     <div class="err" id="vpErr"></div>
+    <h3 style="margin:24px 0 6px">Gửi email</h3>
+    <div class="hint">Máy chủ gửi mail (SMTP) dùng cho: quên mật khẩu, báo khi đổi mật khẩu, mời người dùng mới tự đặt mật khẩu.
+      Gmail: máy chủ smtp.gmail.com, cổng 587 STARTTLS, tên đăng nhập là địa chỉ Gmail, mật khẩu là <b>mật khẩu ứng dụng</b> (App Password, cần bật xác minh 2 bước).</div>
+    <div class="chk" style="align-items:center;flex-wrap:wrap">
+      <label>Máy chủ <input type="text" id="mlHost" placeholder="smtp.gmail.com" style="width:180px"></label>
+      <label>Cổng <input type="number" id="mlPort" style="width:80px"></label>
+      <label>Bảo mật <select id="mlMode" class="sm" style="width:auto"><option value="starttls">STARTTLS (587)</option><option value="ssl">SSL (465)</option><option value="none">Không</option></select></label>
+      <label>Tên đăng nhập <input type="text" id="mlUser" autocomplete="off" style="width:200px"></label>
+      <label>Mật khẩu <input type="text" class="pw" id="mlPw" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" style="width:160px"></label>
+      <label>Gửi từ (email) <input type="text" id="mlFrom" style="width:200px"></label>
+      <label>Tên người gửi <input type="text" id="mlName" style="width:160px" placeholder="Tải hoá đơn"></label>
+      <label>Địa chỉ trang web (cho link trong mail) <input type="text" id="mlSite" style="width:240px" placeholder="https://taihoadon.tinhoc119.com"></label>
+    </div>
+    <div class="chk" style="align-items:center"><button class="sm" onclick="saveMail()">Lưu</button>
+      <input type="text" id="mlTo" placeholder="email nhận thử" style="width:220px"><button class="sm sec" onclick="testMail()">Gửi thử</button>
+      <span class="ok" id="mlMsg"></span><span class="err" id="mlErr"></span></div>
   </div>
   <h3 style="margin:24px 0 6px">Đồng bộ tự động hằng ngày</h3>
   <div class="hint">Máy chủ tự đồng bộ mua vào + bán ra cho tất cả doanh nghiệp đang hiển thị (có mật khẩu) theo giờ đã đặt, tự giải captcha.
@@ -4506,8 +4658,10 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
   <label>Tên đăng nhập</label><input type="text" class="full" id="uName" autocomplete="off">
   <label>Họ tên</label><input type="text" class="full" id="uTen">
   <label>Vai trò</label><select id="uRole" class="sm"><option value="staff">Nhân viên – chỉ các DN được giao</option><option value="admin">Quản trị – tất cả DN, quản lý người dùng</option></select>
+  <label>Email (nhận link đặt mật khẩu, báo khi đổi mật khẩu)</label><input type="text" class="full" id="uEmail" autocomplete="off" placeholder="ten@congty.vn">
   <label>Mật khẩu đăng nhập phần mềm</label><input type="text" class="full pw" id="uPw" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
   <div class="hint" id="uPwHint"></div>
+  <div class="hide" id="uLinkBox"><button class="sm sec" type="button" onclick="sendUserLink()">Gửi link đặt lại mật khẩu qua email</button> <span class="ok" id="uLinkMsg"></span></div>
   <div class="chk"><label><input type="checkbox" id="uActive" checked> Đang hoạt động (bỏ tích để khoá tài khoản)</label></div>
   <div class="chk own" id="uOwnerBox"><label title="Quản lý các văn phòng khách hàng (không xem được hoá đơn của văn phòng khác)">
     <input type="checkbox" id="uOwner"> Chủ hệ thống – quản lý văn phòng khách hàng</label></div>
@@ -4528,11 +4682,18 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
   <label>Tên văn phòng / công ty</label><input type="text" class="full" id="vpTen">
   <div class="chk"><label>Giới hạn số DN (0 = không giới hạn) <input type="number" id="vpMaxDn" min="0" style="width:100px"></label>
     <label>Lượt đồng bộ chạy cùng lúc (0 = theo máy chủ) <input type="number" id="vpMaxJobs" min="0" style="width:80px"></label></div>
+  <label>Gói theo số hoá đơn (0 = không giới hạn)</label>
+  <div class="chk" style="align-items:center"><label>Tổng số HĐ được tải <input type="number" id="vpHd" min="0" style="width:120px"></label>
+    <span class="mute" id="vpHdUsed"></span><label class="hide" id="vpHdResetL"><input type="checkbox" id="vpHdReset"> Đặt lại số đã dùng về 0 (gia hạn gói)</label></div>
+  <div class="chk" style="align-items:center"><label><input type="checkbox" id="vpGoc" checked> Gói gồm tự tải hoá đơn gốc (PDF/XML của người bán)</label>
+    <label>Hạn mức HĐ gốc riêng <input type="number" id="vpHdGoc" min="0" style="width:110px"></label>
+    <span class="mute" id="vpGocUsed"></span><label class="hide" id="vpGocResetL"><input type="checkbox" id="vpGocReset"> Đặt lại về 0</label></div>
   <label>Ghi chú (gói, liên hệ…)</label><input type="text" class="full" id="vpNote">
   <div id="vpNew"><label>Tài khoản quản trị đầu tiên của văn phòng</label>
     <div style="display:flex;gap:6px;flex-wrap:wrap"><input type="text" id="vpAdm" placeholder="tên đăng nhập" autocomplete="off" style="flex:1">
       <input type="text" id="vpAdmTen" placeholder="họ tên" style="flex:1">
-      <input type="text" class="pw" id="vpAdmPw" placeholder="mật khẩu (≥ 8 ký tự)" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" style="flex:1"></div></div>
+      <input type="text" class="pw" id="vpAdmPw" placeholder="mật khẩu (≥ 8 ký tự)" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" style="flex:1"></div>
+    <input type="text" class="full" id="vpAdmEmail" placeholder="email quản trị (để trống mật khẩu: gửi lời mời tự đặt mật khẩu qua email)" autocomplete="off" style="margin-top:6px"></div>
   <div class="chk" id="vpActBox"><label><input type="checkbox" id="vpActive" checked> Đang hoạt động (bỏ tích để khoá: mọi người dùng của văn phòng bị đăng xuất)</label></div>
   <div class="err" id="vpEditErr"></div>
   <div class="bar"><button onclick="saveVp()">Lưu</button><span style="flex:1"></span><button class="sec" onclick="hide('mVp')">Đóng</button></div>
@@ -4545,6 +4706,9 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
   <label>Nhập lại mật khẩu mới</label><input type="text" class="full pw" id="pNew2" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
   <div class="err" id="pErr"></div>
   <div class="bar"><button onclick="savePw()">Đổi mật khẩu</button><button class="sec" onclick="hide('mPw')">Đóng</button></div>
+  <label style="margin-top:14px">Email của tôi (nhận link khi quên mật khẩu, báo khi mật khẩu bị đổi)</label>
+  <div style="display:flex;gap:6px"><input type="text" id="pEmail" autocomplete="off" style="flex:1" placeholder="ten@congty.vn">
+    <button class="sm sec" onclick="saveMyEmail()">Lưu email</button></div><span class="ok" id="pMsg"></span>
 </div></div>
 
 <div class="modal hide" id="mImport"><div class="card">
@@ -4636,6 +4800,7 @@ async function refresh() {
   document.body.classList.toggle('owner', !!me.owner);
   Object.keys(PERM_NAMES).forEach(p => document.body.classList.toggle('no-' + p, !(me.quyen || []).includes(p)));
   $('meName').textContent = me.ten ? (me.ten + ' (' + me.username + ')') : me.username;
+  if (me.goi && !me.goi.tai_goc) ['sPdf', 'bPdf'].forEach(id => { $(id).checked = false; $(id).disabled = true; $(id).parentNode.title = 'Gói của văn phòng không gồm tự tải hoá đơn gốc'; });
   $('vpName').textContent = me.server && me.vp_ten ? me.vp_ten : ''; $('vpName').classList.toggle('hide', !(me.server && me.vp_ten));
   $('bellN').textContent = s.unread; $('bellN').classList.toggle('hide', !s.unread);
   if (s.auto) renderAuto(s.auto);
@@ -4734,7 +4899,12 @@ async function toggleNotes() {
     box.append(it); });
   show('notes'); if (unread) { await post('/api/notices', {read: true}); $('bellN').classList.add('hide'); }
 }
-function openPw() { ['pOld', 'pNew', 'pNew2'].forEach(i => $(i).value = ''); $('pErr').textContent = ''; show('mPw'); $('pOld').focus(); }
+function openPw() { ['pOld', 'pNew', 'pNew2'].forEach(i => $(i).value = ''); $('pErr').textContent = ''; $('pMsg').textContent = '';
+  $('pEmail').value = me.email || ''; show('mPw'); $('pOld').focus(); }
+async function saveMyEmail() {
+  try { await post('/api/me/email', {email: $('pEmail').value.trim()}); me.email = $('pEmail').value.trim(); $('pMsg').textContent = 'Đã lưu email.'; }
+  catch (e) { $('pErr').textContent = e.message; }
+}
 async function savePw() {
   if ($('pNew').value !== $('pNew2').value) { $('pErr').textContent = 'Hai lần nhập mật khẩu mới không khớp'; return; }
   try { await post('/api/me/password', {old: $('pOld').value, new: $('pNew').value}); hide('mPw'); alert('Đã đổi mật khẩu.'); }
@@ -4745,10 +4915,14 @@ let users = [], allCos = [], editingUser = null, uPicked = new Set();
 async function loadUsers() {
   $('uErr').textContent = '';
   try { const d = await post('/api/users', {}); users = d.users; allCos = d.companies; } catch (e) { $('uErr').textContent = e.message; return; }
-  if (me.owner) loadVps();
+  if (me.owner) { loadVps(); loadMail(); }
+  renderGoi();
   const tb = $('uRows'); tb.innerHTML = '';
   users.forEach(u => { const tr = tb.insertRow();
-    tr.insertCell().textContent = u.username; tr.insertCell().textContent = u.ten || '';
+    const c0 = tr.insertCell(); c0.textContent = u.username;
+    if (u.email) { c0.append(el('br'), el('span', 'mute', u.email)); }
+    if ((u.pw_set === false)) c0.append(el('br'), el('span', 'err', 'chưa đặt mật khẩu'));
+    tr.insertCell().textContent = u.ten || '';
     tr.insertCell().textContent = u.role === 'admin' ? 'Quản trị' : 'Nhân viên';
     const n = tr.insertCell(); n.className = 'n'; n.textContent = u.role === 'admin' ? 'tất cả' : (u.msts || []).length;
     const q = tr.insertCell(); q.className = 'mute'; q.style.maxWidth = '280px';
@@ -4776,7 +4950,9 @@ function openUser(u) {
   $('uTitle').textContent = u ? 'Sửa người dùng' : 'Thêm người dùng';
   $('uName').value = u ? u.username : ''; $('uName').disabled = !!u; $('uTen').value = u ? (u.ten || '') : '';
   $('uRole').value = u ? u.role : 'staff'; $('uActive').checked = !u || u.active !== false; $('uPw').value = '';
-  $('uPwHint').textContent = u ? 'Để trống nếu không đổi. Đặt mật khẩu mới sẽ đăng xuất người này khỏi các máy khác.' : 'Tối thiểu 8 ký tự – gửi riêng cho nhân viên.';
+  $('uPwHint').textContent = u ? 'Để trống nếu không đổi. Đặt mật khẩu mới sẽ đăng xuất người này khỏi các máy khác (có email thì được báo qua mail).'
+    : 'Tối thiểu 8 ký tự – gửi riêng cho nhân viên. Hoặc để trống và nhập email: phần mềm gửi lời mời để nhân viên tự đặt mật khẩu.';
+  $('uEmail').value = u ? (u.email || '') : ''; $('uLinkBox').classList.toggle('hide', !(u && u.email)); $('uLinkMsg').textContent = '';
   uPicked = new Set(u ? (u.msts || []) : []); $('uQ').value = ''; renderUList();
   const has = new Set(u ? (u.quyen || []) : ['dongbo', 'hdgoc', 'sua', 'ketxuat', 'saoke']), box = $('uPerms'); box.innerHTML = '';
   Object.entries(PERM_NAMES).forEach(([k, t]) => { const l = el('label'), cb = el('input'); cb.type = 'checkbox'; cb.value = k; cb.checked = has.has(k);
@@ -4790,21 +4966,52 @@ $('uRole').onchange = uRoleChanged; $('uQ').oninput = renderUList;
 async function saveUser() {
   const body = {username: $('uName').value.trim(), ten: $('uTen').value, role: $('uRole').value,
           password: $('uPw').value, active: $('uActive').checked, msts: [...uPicked], create: !editingUser,
-          quyen: [...$('uPerms').querySelectorAll('input:checked')].map(x => x.value)};
+          quyen: [...$('uPerms').querySelectorAll('input:checked')].map(x => x.value), email: $('uEmail').value.trim()};
   if (me.owner) body.owner = $('uRole').value === 'admin' && $('uOwner').checked;
   try { await post('/api/user/save', body);
         hide('mUser'); loadUsers(); }
   catch (e) { $('uEditErr').textContent = e.message; }
 }
+async function sendUserLink() {
+  try { await post('/api/user/save', {username: editingUser.username, send_link: true}); $('uLinkMsg').textContent = 'Đã gửi link tới ' + editingUser.email; }
+  catch (e) { $('uEditErr').textContent = e.message; }
+}
 // ---- Chủ hệ thống: văn phòng khách hàng ----
 let vps = [], editingVp = null;
+async function loadMail() {
+  try { const m = await post('/api/mail/get', {});
+    $('mlHost').value = m.host || ''; $('mlPort').value = m.port || 587; $('mlMode').value = m.mode || 'starttls'; $('mlUser').value = m.user || '';
+    $('mlPw').value = ''; $('mlPw').placeholder = m.co_mk ? '(đã lưu – để trống nếu không đổi)' : ''; $('mlFrom').value = m.from_addr || '';
+    $('mlName').value = m.from_name || ''; $('mlSite').value = m.site || location.origin; $('mlTo').value = me.email || ''; } catch (e) {}
+}
+async function saveMail() {
+  $('mlMsg').textContent = ''; $('mlErr').textContent = '';
+  try { await post('/api/mail/save', {host: $('mlHost').value, port: +$('mlPort').value || 587, mode: $('mlMode').value, user: $('mlUser').value,
+          pw: $('mlPw').value, from_addr: $('mlFrom').value, from_name: $('mlName').value, site: $('mlSite').value});
+        $('mlMsg').textContent = 'Đã lưu.'; loadMail(); } catch (e) { $('mlErr').textContent = e.message; }
+}
+async function testMail() {
+  $('mlMsg').textContent = 'Đang gửi…'; $('mlErr').textContent = '';
+  try { await post('/api/mail/test', {to: $('mlTo').value.trim()}); $('mlMsg').textContent = 'Đã gửi – kiểm tra hộp thư (cả Spam).'; }
+  catch (e) { $('mlMsg').textContent = ''; $('mlErr').textContent = e.message; }
+}
+function renderGoi() {
+  const g = me.goi; if (!g) { $('goiInfo').textContent = ''; return; }
+  const part = (used, lim) => fmt(used) + (lim ? ' / ' + fmt(lim) : ' (không giới hạn)');
+  $('goiInfo').textContent = 'Gói của văn phòng: hoá đơn đã tải ' + part(g.da_dung_hd, g.han_muc_hd) + ' · hoá đơn gốc tự tải '
+    + (g.tai_goc ? part(g.da_dung_goc, g.han_muc_goc) : 'không gồm trong gói');
+}
 async function loadVps() {
   $('vpErr').textContent = '';
   try { vps = (await post('/api/vp/list', {})).items; } catch (e) { $('vpErr').textContent = e.message; return; }
   const tb = $('vpRows'); tb.innerHTML = '';
   vps.forEach(v => { const tr = tb.insertRow();
-    [v.id, v.ten, v.quan_tri || '', v.so_dn, v.max_dn || 'không giới hạn', v.so_nd, v.max_jobs || 'theo máy chủ'].forEach((x, i) => {
-      const c = tr.insertCell(); c.textContent = x; if (i >= 3) c.className = 'n'; });
+    [v.id, v.ten, v.quan_tri || '', v.so_dn, v.max_dn || 'không giới hạn',
+     fmt(v.da_dung_hd || 0) + ' / ' + (v.han_muc_hd ? fmt(v.han_muc_hd) : '∞'),
+     v.tai_goc === false ? 'không gồm' : fmt(v.da_dung_goc || 0) + ' / ' + (v.han_muc_goc ? fmt(v.han_muc_goc) : '∞'),
+     v.so_nd, v.max_jobs || 'theo máy chủ'].forEach((x, i) => {
+      const c = tr.insertCell(); c.textContent = x; if (i >= 3) c.className = 'n';
+      if ((i === 5 && v.han_muc_hd && v.da_dung_hd >= v.han_muc_hd) || (i === 6 && v.han_muc_goc && v.da_dung_goc >= v.han_muc_goc)) c.classList.add('err'); });
     const st = tr.insertCell(); st.textContent = v.active ? 'Hoạt động' : 'Đã khoá'; st.className = v.active ? 'ok' : 'err';
     tr.insertCell().textContent = v.tao || '';
     const b = el('button', 'sm sec', 'Sửa'); b.onclick = () => openVp(v); tr.insertCell().append(b); });
@@ -4815,16 +5022,24 @@ function openVp(v) {
   $('vpId').value = v ? v.id : ''; $('vpId').disabled = !!v; $('vpTen').value = v ? v.ten : '';
   $('vpMaxDn').value = v ? (v.max_dn || 0) : 0; $('vpMaxJobs').value = v ? (v.max_jobs || 0) : 2; $('vpNote').value = v ? (v.ghichu || '') : '';
   $('vpActive').checked = !v || v.active !== false; $('vpActBox').classList.toggle('hide', !!(v && v.id === 'goc'));
-  $('vpNew').classList.toggle('hide', !!v); ['vpAdm', 'vpAdmTen', 'vpAdmPw'].forEach(id => $(id).value = '');
+  $('vpNew').classList.toggle('hide', !!v); ['vpAdm', 'vpAdmTen', 'vpAdmPw', 'vpAdmEmail'].forEach(id => $(id).value = '');
+  $('vpHd').value = v ? (v.han_muc_hd || 0) : 0; $('vpHdGoc').value = v ? (v.han_muc_goc || 0) : 0; $('vpGoc').checked = !v || v.tai_goc !== false;
+  $('vpHdUsed').textContent = v ? 'đã dùng ' + fmt(v.da_dung_hd || 0) : ''; $('vpGocUsed').textContent = v ? 'đã dùng ' + fmt(v.da_dung_goc || 0) : '';
+  ['vpHdReset', 'vpGocReset'].forEach(id => $(id).checked = false);
+  $('vpHdResetL').classList.toggle('hide', !v); $('vpGocResetL').classList.toggle('hide', !v);
   show('mVp');
 }
 async function saveVp() {
   const body = {id: $('vpId').value.trim(), ten: $('vpTen').value, max_dn: +$('vpMaxDn').value || 0, max_jobs: +$('vpMaxJobs').value || 0,
-                ghichu: $('vpNote').value, active: $('vpActive').checked, create: !editingVp};
-  if (!editingVp) Object.assign(body, {admin: $('vpAdm').value.trim(), admin_ten: $('vpAdmTen').value, admin_pw: $('vpAdmPw').value});
+                ghichu: $('vpNote').value, active: $('vpActive').checked, create: !editingVp,
+                han_muc_hd: +$('vpHd').value || 0, han_muc_goc: +$('vpHdGoc').value || 0, tai_goc: $('vpGoc').checked,
+                dat_lai_hd: $('vpHdReset').checked, dat_lai_goc: $('vpGocReset').checked};
+  if (!editingVp) Object.assign(body, {admin: $('vpAdm').value.trim(), admin_ten: $('vpAdmTen').value, admin_pw: $('vpAdmPw').value,
+                                       admin_email: $('vpAdmEmail').value.trim()});
   if (editingVp && editingVp.active && !body.active && !confirm('Khoá văn phòng ' + editingVp.ten + '? Mọi người dùng của văn phòng sẽ bị đăng xuất.')) return;
   try { await post('/api/vp/save', body); hide('mVp'); loadVps();
-        if (!editingVp) alert('Đã tạo văn phòng. Gửi cho khách: địa chỉ trang web, tên đăng nhập ' + body.admin + ' và mật khẩu vừa đặt.'); }
+        if (!editingVp) alert(body.admin_pw ? 'Đã tạo văn phòng. Gửi cho khách: địa chỉ trang web, tên đăng nhập ' + body.admin + ' và mật khẩu vừa đặt.'
+                                            : 'Đã tạo văn phòng và gửi email mời ' + body.admin_email + ' tự đặt mật khẩu.'); }
   catch (e) { $('vpEditErr').textContent = e.message; }
 }
 async function delUser() {
@@ -5508,6 +5723,108 @@ class App:
     def vp_info(self, vid):
         return self.tenants.get(vid or DEFAULT_VP) or {}
 
+    def quota(self, vid):
+        return Quota(self.tenants, self.t(vid))
+
+    # ---- email (SMTP do chủ hệ thống cấu hình) ----
+    def mail_settings(self, raw=False):
+        d = _load_json(os.path.join(self.cfg, "email.json"), {})
+        d.setdefault("port", 587)
+        d.setdefault("mode", "starttls")
+        if not raw:
+            d = {k: v for k, v in d.items() if k != "pw"}
+            d["co_mk"] = bool(_load_json(os.path.join(self.cfg, "email.json"), {}).get("pw"))
+        return d
+
+    def save_mail(self, **f):
+        with self.lock:
+            d = self.mail_settings(raw=True)
+            for k in ("host", "user", "from_addr", "from_name", "site", "mode"):
+                if f.get(k) is not None:
+                    d[k] = str(f[k]).strip()[:200]
+            if f.get("port") is not None:
+                d["port"] = int(f["port"] or 587)
+            if f.get("pw"):
+                d["pw"] = protect(str(f["pw"]))
+            if d.get("mode") not in ("ssl", "starttls", "none"):
+                d["mode"] = "starttls"
+            if d.get("site") and not re.match(r"https?://", d["site"]):
+                d["site"] = "https://" + d["site"]
+            path = os.path.join(self.cfg, "email.json")
+            _save_json(path, d)
+            try:
+                os.chmod(path, 0o600)
+            except OSError:
+                pass
+            return self.mail_settings()
+
+    def mail_ready(self):
+        d = self.mail_settings(raw=True)
+        return bool(d.get("host") and (d.get("from_addr") or d.get("user")))
+
+    def send_mail(self, to, subject, body, wait=False):
+        """Gửi email (chạy nền để không làm chậm trang). wait=True: gửi ngay, lỗi thì ném ValueError (nút Gửi thử)."""
+        def go():
+            import smtplib
+            from email.message import EmailMessage
+            from email.utils import formataddr
+            d = self.mail_settings(raw=True)
+            msg = EmailMessage()
+            sender = d.get("from_addr") or d.get("user")
+            msg["From"] = formataddr((d.get("from_name") or "Tải hoá đơn", sender))
+            msg["To"] = to
+            msg["Subject"] = subject
+            msg.set_content(body)
+            cls = smtplib.SMTP_SSL if d.get("mode") == "ssl" else smtplib.SMTP
+            with cls(d["host"], int(d.get("port") or 587), timeout=30) as smtp:
+                if d.get("mode") == "starttls":
+                    smtp.starttls()
+                if d.get("user"):
+                    smtp.login(d["user"], unprotect(d.get("pw", "")))
+                smtp.send_message(msg)
+        if not self.mail_ready():
+            if wait:
+                raise ValueError("Chưa cấu hình máy chủ gửi email (SMTP)")
+            return False
+        if wait:
+            try:
+                go()
+            except Exception as e:
+                raise ValueError("Gửi email lỗi: %s" % e)
+            return True
+
+        def bg():
+            try:
+                go()
+            except Exception as e:
+                self.audit("email", "gửi tới %s lỗi: %s" % (to, e))
+        threading.Thread(target=bg, daemon=True).start()
+        return True
+
+    def new_reset(self, username, hours=0.5):
+        import hashlib
+        tok = secrets.token_urlsafe(32)
+        path = os.path.join(self.cfg, "dat-lai-mat-khau.json")
+        with self.lock:
+            d = {k: v for k, v in _load_json(path, {}).items() if v["exp"] > time.time()}
+            d[hashlib.sha256(tok.encode()).hexdigest()] = {"u": username, "exp": time.time() + hours * 3600}
+            _save_json(path, d)
+        return tok
+
+    def use_reset(self, tok, consume=True):
+        import hashlib
+        path = os.path.join(self.cfg, "dat-lai-mat-khau.json")
+        h = hashlib.sha256(str(tok or "").encode()).hexdigest()
+        with self.lock:
+            d = _load_json(path, {})
+            v = d.get(h)
+            if not v or v["exp"] < time.time():
+                return None
+            if consume:
+                d.pop(h)
+                _save_json(path, d)
+            return v["u"]
+
     def job_for(self, user):
         with self.lock:
             return self.jobs.setdefault(user["username"], Job())
@@ -5585,6 +5902,8 @@ class App:
         job.unattended = unattended
         job.owner = user["username"]
         job.vp = user_vp(user)
+        if self.server:
+            job.quota = self.quota(job.vp)
         with self.lock:
             self.jobs[user["username"]] = job
         t = threading.Thread(target=self._run_job, daemon=True,
@@ -5787,7 +6106,7 @@ def make_handler(app, port):
                 self.user, self.csrf = LOCAL_USER, app.key
                 self.T = app.t(DEFAULT_VP)
             path = self.path.split("?")[0]
-            if path.startswith("/api/") and path != "/api/login":
+            if path.startswith("/api/") and path not in ("/api/login", "/api/forgot", "/api/reset"):
                 if not self.user:
                     self._send(401, {"error": "Phiên đăng nhập đã hết – tải lại trang để đăng nhập lại", "login": True})
                     return False
@@ -5795,6 +6114,39 @@ def make_handler(app, port):
                     self._send(403, {"error": "Phiên giao diện không hợp lệ, hãy tải lại trang"})
                     return False
             return True
+
+        def _site(self):
+            """Địa chỉ trang web dùng trong link gửi email."""
+            site = app.mail_settings().get("site")
+            if site:
+                return site.rstrip("/")
+            host = self._public_host()
+            if host.split(":")[0] in ("127.0.0.1", "localhost") and app.allowed_hosts:
+                host = sorted(app.allowed_hosts)[0]
+            return ("https" if (self._https() or app.trust_proxy) else "http") + "://" + host
+
+        def _mail_user(self, u, kind):
+            """kind: 'doi' (báo đã đổi mật khẩu), 'moi' (mời tự đặt mật khẩu), 'quen' (quên mật khẩu)."""
+            if not u or not u.get("email"):
+                return False
+            vp = app.vp_info(user_vp(u)).get("ten", "")
+            if kind == "doi":
+                return app.send_mail(u["email"], "Mật khẩu tài khoản %s đã được đổi" % u["username"],
+                                     "Chào %s,\n\nMật khẩu đăng nhập phần mềm Tải hoá đơn (%s) của tài khoản %s vừa được đổi "
+                                     "lúc %s.\n\nNếu không phải bạn đổi, hãy báo ngay cho quản trị văn phòng hoặc dùng "
+                                     "\"Quên mật khẩu\" tại %s để đặt lại.\n" % (u.get("ten") or u["username"], vp, u["username"],
+                                                                         datetime.now().strftime("%H:%M %d/%m/%Y"), self._site()))
+            hours = 24 if kind == "moi" else 0.5
+            link = "%s/dat-lai-mat-khau?t=%s" % (self._site(), app.new_reset(u["username"], hours))
+            if kind == "moi":
+                return app.send_mail(u["email"], "Tài khoản phần mềm Tải hoá đơn – %s" % vp,
+                                     "Chào %s,\n\nBạn được tạo tài khoản phần mềm Tải hoá đơn (%s).\nTên đăng nhập: %s\n\n"
+                                     "Bấm link sau để tự đặt mật khẩu (hiệu lực 24 giờ):\n%s\n" % (
+                                         u.get("ten") or u["username"], vp, u["username"], link))
+            return app.send_mail(u["email"], "Đặt lại mật khẩu phần mềm Tải hoá đơn",
+                                 "Chào %s,\n\nCó yêu cầu đặt lại mật khẩu cho tài khoản %s.\nBấm link sau để đặt mật khẩu "
+                                 "mới (hiệu lực 30 phút):\n%s\n\nNếu không phải bạn yêu cầu, hãy bỏ qua email này.\n" % (
+                                     u.get("ten") or u["username"], u["username"], link))
 
         def _audit(self, action):
             app.audit(self.user["username"], action, self.T.id)
@@ -5837,6 +6189,8 @@ def make_handler(app, port):
             if not self._guard():
                 return
             path = self.path.split("?")[0]
+            if path == "/dat-lai-mat-khau":  # link trong email: trang đặt mật khẩu mới
+                return self._send(200, LOGIN_PAGE.encode("utf-8"), "text/html; charset=utf-8")
             if path == "/":
                 if not self.user:
                     return self._send(200, LOGIN_PAGE.encode("utf-8"), "text/html; charset=utf-8")
@@ -5847,7 +6201,9 @@ def make_handler(app, port):
                                         "me": {"username": u["username"], "ten": u.get("ten", ""), "role": u["role"],
                                                "server": app.server, "quyen": UserStore.perms(u),
                                                "owner": bool(app.server and u.get("owner") and user_vp(u) == DEFAULT_VP),
-                                               "vp": self.T.id, "vp_ten": app.vp_info(self.T.id).get("ten", "")},
+                                               "vp": self.T.id, "vp_ten": app.vp_info(self.T.id).get("ten", ""),
+                                               "goi": app.quota(self.T.id).info() if app.server else None,
+                                               "email": u.get("email", "")},
                                         "unread": app.notices_for(u, 0)["unread"] if app.server else 0,
                                         "auto": self._auto_state() if app.server and u["role"] == "admin" else None,
                                         "captcha": {"count": app.solver.count(), "chars": app.solver.chars()}})
@@ -5952,6 +6308,36 @@ def make_handler(app, port):
                 self._set_cookie(app.new_session(u["username"]), SESSION_TTL)
                 app.audit(u["username"], "đăng nhập từ " + ip, user_vp(u))
                 return self._send(200, {"ok": True})
+            if path in ("/api/forgot", "/api/reset"):
+                if not app.server:
+                    raise ValueError("Bản chạy trên máy không có đăng nhập")
+                ip = self._ip()
+                if app.too_many_fails("ip:" + ip):
+                    return self._send(429, {"error": "Thử quá nhiều lần – thử lại sau 15 phút"})
+                if path == "/api/forgot":
+                    app.add_fail("ip:" + ip)  # giới hạn số lần gửi email
+                    q = str(data.get("username") or "").strip().lower()[:100]
+                    u = app.users.get(q) or next((x for x in app.users.items if (x.get("email") or "").lower() == q), None)
+                    if u and u.get("active", True) and app.vp_active(u) and u.get("email"):
+                        self._mail_user(u, "quen")
+                        app.audit(u["username"], "yêu cầu đặt lại mật khẩu từ " + ip, user_vp(u))
+                    # luôn trả lời giống nhau để không lộ tài khoản / email nào có thật
+                    return self._send(200, {"ok": True, "mail": app.mail_ready()})
+                name = app.use_reset(data.get("token"), consume=False)
+                if not name:
+                    app.add_fail("ip:" + ip)
+                    raise ValueError("Link đã hết hạn hoặc đã dùng – bấm \"Quên mật khẩu\" để nhận link mới")
+                if data.get("check"):
+                    return self._send(200, {"ok": True, "username": name})
+                if not str(data.get("password") or ""):
+                    raise ValueError("Nhập mật khẩu mới")
+                app.users.upsert(name, password=str(data["password"]))
+                app.use_reset(data.get("token"))
+                app.drop_sessions(name)
+                u = app.users.get(name)
+                app.audit(name, "đặt lại mật khẩu qua email từ " + ip, user_vp(u))
+                self._mail_user(u, "doi")
+                return self._send(200, {"ok": True, "username": name})
             if path == "/api/logout":
                 sid = self._cookie(COOKIE)
                 with app.lock:
@@ -5966,8 +6352,14 @@ def make_handler(app, port):
                 app.users.upsert(self.user["username"], password=str(data.get("new") or "") or None)
                 app.drop_sessions(self.user["username"], keep=self._cookie(COOKIE))
                 self._audit("đổi mật khẩu")
+                self._mail_user(app.users.get(self.user["username"]), "doi")
                 return self._send(200, {"ok": True})
-            if path.startswith("/api/vp/"):
+            if path == "/api/me/email":
+                if not app.server:
+                    raise ValueError("Bản chạy trên máy không có email")
+                app.users.upsert(self.user["username"], email=str(data.get("email") or ""))
+                return self._send(200, {"ok": True})
+            if path.startswith("/api/vp/") or path.startswith("/api/mail/"):
                 return self._vp_post(path, data)
             self._admin()
             if path == "/api/users":
@@ -5988,9 +6380,17 @@ def make_handler(app, port):
                     owner = bool(data["owner"])
                     if not owner and str(data.get("username") or "").lower() == self.user["username"]:
                         raise ValueError("Không tự bỏ quyền chủ hệ thống của chính mình")
+                invite = bool(data.get("create")) and not data.get("password") and bool(data.get("email"))
+                if invite and not app.mail_ready():
+                    raise ValueError("Máy chủ chưa cấu hình gửi email – nhập mật khẩu cho người dùng mới")
                 u = app.users.upsert(data.get("username"), ten=data.get("ten"), role=data.get("role"),
                                      password=data.get("password") or None, msts=msts, active=data.get("active"),
-                                     create=bool(data.get("create")), vp=self.T.id, quyen=data.get("quyen"), owner=owner)
+                                     create=bool(data.get("create")), vp=self.T.id, quyen=data.get("quyen"), owner=owner,
+                                     email=data.get("email"), invite=invite)
+                if invite or data.get("send_link"):
+                    self._mail_user(u, "moi" if invite else "quen")
+                elif data.get("password") and not data.get("create"):
+                    self._mail_user(u, "doi")
                 if data.get("password") or not u.get("active", True):
                     app.drop_sessions(u["username"], keep=self._cookie(COOKIE))
                 self._audit("lưu người dùng " + u["username"])
@@ -6010,12 +6410,25 @@ def make_handler(app, port):
         def _vp_post(self, path, data):
             """Chủ hệ thống: quản lý các văn phòng (khách hàng dùng phần mềm). Không xem được hoá đơn của văn phòng khác."""
             self._owner()
+            if path == "/api/mail/get":
+                return self._send(200, app.mail_settings())
+            if path == "/api/mail/save":
+                return self._send(200, app.save_mail(**{k: data.get(k) for k in (
+                    "host", "port", "user", "pw", "from_addr", "from_name", "site", "mode")}))
+            if path == "/api/mail/test":
+                to = str(data.get("to") or self.user.get("email") or "")
+                if not EMAIL_RE.fullmatch(to):
+                    raise ValueError("Nhập email nhận thử")
+                app.send_mail(to, "Thử gửi email – phần mềm Tải hoá đơn",
+                              "Email thử từ %s. Cấu hình gửi email đã hoạt động.\n" % self._site(), wait=True)
+                return self._send(200, {"ok": True})
             if path == "/api/vp/list":
                 rows = []
                 for t in app.tenants.list():
                     T = app.t(t["id"])
                     us = app.users.public(t["id"])
-                    rows.append(dict(t, so_dn=len(T.store.public()), so_nd=len(us),
+                    rows.append(dict(t, so_dn=len(T.store.public()), so_nd=len(us), **{
+                                         k: v for k, v in app.quota(t["id"]).info().items() if k.startswith("da_dung")},
                                      quan_tri=", ".join(u["username"] for u in us if u["role"] == "admin"),
                                      dang_chay=app.running_jobs(t["id"])))
                 return self._send(200, {"items": rows})
@@ -6024,19 +6437,32 @@ def make_handler(app, port):
                 vid = str(data.get("id") or "").strip().lower()
                 admin = str(data.get("admin") or "").strip().lower()
                 if create:
-                    if not admin or not data.get("admin_pw"):
-                        raise ValueError("Nhập tên đăng nhập và mật khẩu quản trị đầu tiên của văn phòng")
+                    invite = not data.get("admin_pw") and bool(data.get("admin_email")) and app.mail_ready()
+                    if not admin or not (data.get("admin_pw") or invite):
+                        raise ValueError("Nhập tên đăng nhập và mật khẩu (hoặc email, khi đã cấu hình gửi email) cho quản trị "
+                                         "đầu tiên của văn phòng")
                     if app.users.get(admin):
                         raise ValueError("Tên đăng nhập %s đã tồn tại – chọn tên khác" % admin)
-                    if len(str(data.get("admin_pw"))) < 8:
+                    if not invite and len(str(data.get("admin_pw"))) < 8:
                         raise ValueError("Mật khẩu phần mềm tối thiểu 8 ký tự")
+                    if data.get("admin_email") and not EMAIL_RE.fullmatch(str(data["admin_email"]).strip()):
+                        raise ValueError("Email quản trị không hợp lệ")
                     if not re.fullmatch(r"[a-z0-9][a-z0-9._@-]{2,39}", admin):
                         raise ValueError("Tên đăng nhập 3–40 ký tự: chữ thường không dấu, số, . _ - @")
                 t = app.tenants.upsert(vid, create=create, ten=data.get("ten"), ghichu=data.get("ghichu"),
-                                       max_dn=data.get("max_dn"), max_jobs=data.get("max_jobs"), active=data.get("active"))
+                                       max_dn=data.get("max_dn"), max_jobs=data.get("max_jobs"), active=data.get("active"),
+                                       han_muc_hd=data.get("han_muc_hd"), tai_goc=data.get("tai_goc"),
+                                       han_muc_goc=data.get("han_muc_goc"))
+                for k in ("hd", "goc"):  # gia hạn gói: đặt lại số đã dùng
+                    if data.get("dat_lai_" + k):
+                        app.quota(t["id"]).reset(k)
+                        self._audit("đặt lại số %s đã dùng của văn phòng %s" % ("HĐ" if k == "hd" else "HĐ gốc", t["id"]))
                 if create:
-                    app.users.upsert(admin, ten=data.get("admin_ten") or "Quản trị", role="admin",
-                                     password=str(data.get("admin_pw")), create=True, vp=t["id"])
+                    u = app.users.upsert(admin, ten=data.get("admin_ten") or "Quản trị", role="admin",
+                                         password=str(data.get("admin_pw") or "") or None, create=True, vp=t["id"],
+                                         email=str(data.get("admin_email") or ""), invite=invite)
+                    if invite:
+                        self._mail_user(u, "moi")
                 if t.get("active") is False:
                     for u in app.users.public(t["id"]):
                         app.drop_sessions(u["username"])
@@ -6107,7 +6533,8 @@ def make_handler(app, port):
 
         def _post(self, path, data):
             if path in ("/api/login", "/api/logout", "/api/me/password", "/api/users", "/api/user/save",
-                        "/api/user/delete", "/api/vp/list", "/api/vp/save"):
+                        "/api/user/delete", "/api/vp/list", "/api/vp/save", "/api/forgot", "/api/reset", "/api/me/email",
+                        "/api/mail/get", "/api/mail/save", "/api/mail/test"):
                 return self._auth_post(path, data)
             if path == "/api/company/save":
                 existing = self.T.store.get(str(data.get("mst", "")).strip())
@@ -6244,10 +6671,17 @@ def make_handler(app, port):
                         except ValueError:
                             files.append((f.get("name"), b""))
                     return self._send(200, {"results": import_pdfs(self.T.root, mst, files)})
+                quota = app.quota(self.T.id) if app.server else None
+                if path in ("/api/invoice/fetch-pdf", "/api/invoice/fetch-pdf-bulk") and quota and quota.goc_error():
+                    raise ValueError(quota.goc_error())
                 if path == "/api/invoice/fetch-pdf":
+                    if quota and not quota.take_goc():
+                        raise ValueError(quota.goc_error() or "Hết hạn mức hoá đơn gốc")
                     try:
                         return self._send(200, fetch_original(self.T.root, mst, data.get("kind"), data.get("key")))
-                    except PortalError as e:
+                    except (PortalError, ValueError) as e:
+                        if quota:
+                            quota.refund_goc()
                         raise ValueError(str(e))
                 if path == "/api/invoice/fetch-pdf-bulk":
                     f = data.get("filters") or {}
@@ -6255,12 +6689,17 @@ def make_handler(app, port):
                     rows = [r for r in query_invoices(self.T.root, mst, f) if r["need_goc"]][:300]
                     ok, errs = 0, []
                     for r in rows:
+                        if quota and not quota.take_goc():
+                            errs.append(quota.goc_error() or "Hết hạn mức hoá đơn gốc")
+                            break
                         try:
                             got = fetch_original(self.T.root, mst, kind, r["key"])
                             ok += 1
                             if got["xml_err"]:
                                 errs.append("%s/%s: XML gốc – %s" % (r["khhdon"], r["shdon"], got["xml_err"]))
                         except (PortalError, ValueError) as e:
+                            if quota:
+                                quota.refund_goc()
                             errs.append("%s/%s: %s" % (r["khhdon"], r["shdon"], e))
                         time.sleep(0.3)
                     return self._send(200, {"ok": ok, "total": len(rows), "errors": errs[:20]})

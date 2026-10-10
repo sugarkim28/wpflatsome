@@ -983,6 +983,80 @@ class Tests(unittest.TestCase):
             srv.shutdown()
             srv.server_close()
 
+    def test_quota_and_email(self):
+        """Gói theo số hoá đơn (HĐ mới mới tính, đồng bộ lại không tính), gói không gồm HĐ gốc; quên mật khẩu qua email."""
+        t.set_secret_key(os.path.join(self.tmp, "_cau-hinh", "khoa.key"))
+        app = t.App(self.tmp, lambda: t.HoaDonClient(self.base, delay=0), server=True)
+        app.tenants.upsert("ketoan-b", create=True, ten="KT B", han_muc_hd=10, tai_goc=False)
+        T = app.t("ketoan-b")
+        T.store.import_text("0309999999\tA\tpw1\n")
+
+        def sync(end):
+            job = t.Job()
+            job.running = True
+            job.quota = app.quota("ketoan-b")
+            job.want_pdf = True
+            helper = AutoAnswer(job)
+            helper.start()
+            t.run_batch(job, T.store, app.solver, ["0309999999"], ["purchase"], date(2026, 9, 1), end, True, True,
+                        T.root, False, app.client_factory, T.clients)
+            helper.join(1)
+            return job
+        job = sync(date(2026, 10, 31))
+        self.assertIn("HẾT HẠN MỨC", "\n".join(job.log))
+        idx = t._load_json(t.index_file(T.root, "0309999999"), {})
+        self.assertEqual(len(idx["purchase"]), 10)
+        self.assertEqual(app.quota("ketoan-b").info()["da_dung_hd"], 10)
+        self.assertIn("không gồm tự tải hoá đơn gốc", "\n".join(job.log))
+        self.assertEqual(app.quota("ketoan-b").info()["da_dung_goc"], 0)
+        job = sync(date(2026, 10, 31))                                   # đồng bộ lại: không tính thêm
+        self.assertEqual(app.quota("ketoan-b").info()["da_dung_hd"], 10)
+        app.tenants.upsert("ketoan-b", han_muc_hd=0)                      # nâng gói không giới hạn → tải nốt
+        sync(date(2026, 10, 31))
+        n = len(t._load_json(t.index_file(T.root, "0309999999"), {})["purchase"])
+        self.assertGreater(n, 10)
+        self.assertEqual(app.quota("ketoan-b").info()["da_dung_hd"], n)
+        app.quota("ketoan-b").reset("hd")
+        self.assertEqual(app.quota("ketoan-b").info()["da_dung_hd"], 0)
+        # Quên mật khẩu qua email
+        sent = []
+        app.mail_ready = lambda: True
+        app.send_mail = lambda to, subj, body, wait=False: sent.append((to, subj, body)) or True
+        app.users.upsert("boss", role="admin", password="matkhau-boss", email="boss@vd.vn")
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), t.make_handler(app, 0))
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        base = "http://127.0.0.1:%d" % srv.server_port
+
+        def post(path, body):
+            req = urllib.request.Request(base + path, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+            try:
+                return 200, json.loads(urllib.request.urlopen(req).read())
+            except urllib.error.HTTPError as e:
+                return e.code, json.loads(e.read() or b"{}")
+        try:
+            self.assertEqual(post("/api/forgot", {"username": "khong-co"})[0], 200)    # không lộ tài khoản có thật
+            self.assertEqual(sent, [])
+            self.assertEqual(post("/api/forgot", {"username": "boss@vd.vn"})[0], 200)  # tìm theo email
+            to, subj, body = sent[-1]
+            self.assertEqual(to, "boss@vd.vn")
+            tok = re.search(r"/dat-lai-mat-khau\?t=(\S+)", body).group(1)
+            self.assertIn("Đặt mật khẩu", urllib.request.urlopen(base + "/dat-lai-mat-khau?t=" + tok).read().decode())
+            self.assertEqual(post("/api/reset", {"token": tok, "check": True})[1]["username"], "boss")
+            self.assertEqual(post("/api/reset", {"token": tok, "password": "ngan"})[0], 400)
+            self.assertEqual(post("/api/reset", {"token": tok, "password": "matkhau-moi-1"})[0], 200)
+            self.assertIn("đã được đổi", sent[-1][1])                                      # báo đổi mật khẩu
+            self.assertEqual(post("/api/reset", {"token": tok, "password": "matkhau-moi-2"})[0], 400)  # link chỉ dùng 1 lần
+            self.assertTrue(app.users.authenticate("boss", "matkhau-moi-1"))
+            # Mời người dùng mới tự đặt mật khẩu: chưa đặt thì không đăng nhập được
+            u = app.users.upsert("nv-moi", role="staff", email="nv@vd.vn", invite=True)
+            self.assertFalse(app.users.authenticate("nv-moi", ""))
+            self.assertTrue(u["pw"].startswith("!"))
+            with self.assertRaises(ValueError):
+                app.users.upsert("nv-sai", role="staff", email="khong-phai-email", invite=True)
+        finally:
+            srv.shutdown()
+            srv.server_close()
+
     def test_auto_sync_and_notices(self):
         self.assertEqual(t.auto_range("auto", date(2026, 10, 9)), (date(2026, 9, 1), date(2026, 10, 9)))
         self.assertEqual(t.auto_range("auto", date(2026, 10, 25)), (date(2026, 10, 1), date(2026, 10, 25)))
