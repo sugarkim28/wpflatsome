@@ -554,7 +554,8 @@ class Tests(unittest.TestCase):
 
     def test_misa_original_pdf(self):
         """MISA giả mô phỏng trang tra cứu thật: ext có dấu '_' (J1V4E6D_), link DownloadHandler trong trang."""
-        state = {"link_in_page": False, "calls": [], "direct": False}
+        state = {"link_in_page": False, "calls": [], "direct": False,
+                 "xml": b'<?xml version="1.0"?><HDon><DLHDon>misa</DLHDon></HDon>'}
 
         class FakeMisa(BaseHTTPRequestHandler):
             def log_message(self, *a):
@@ -577,7 +578,7 @@ class Tests(unittest.TestCase):
                         and q.get("ext") in ("J1V4E6D_", "PAGE1234"):
                     body, ctype = b"%PDF-1.4 misa goc", "application/pdf"
                     if q.get("Type") == "xml":
-                        body, ctype = b'<?xml version="1.0"?><HDon><DLHDon>misa</DLHDon></HDon>', "text/xml"
+                        body, ctype = state["xml"], "text/xml"
                 self.send_response(200)
                 self.send_header("Content-Type", ctype)
                 self.send_header("Content-Length", str(len(body)))
@@ -609,13 +610,22 @@ class Tests(unittest.TestCase):
                 with m.patch("time.sleep"):
                     t.run_batch(job, self.app.store, self.app.solver, ["0309999999"], ["purchase"], date(2026, 10, 1),
                                 date(2026, 10, 31), True, True, self.tmp, False, self.app.client_factory)
-            self.assertEqual(job.snapshot()["rows"][0]["ketqua"], "OK + PDF gốc + XML gốc")
+                # XML tải về không đúng hoá đơn → không gắn, ghi lý do
+                self.assertEqual(job.snapshot()["rows"][0]["ketqua"], "OK + PDF gốc")
+                self.assertRegex("\n".join(job.log), "chưa lấy được XML gốc .*(không khớp|không đọc được)")
+                r = t.query_invoices(self.tmp, "0309999999", {"kind": "purchase", "file": "pdf"})
+                self.assertEqual(len(r), 1)
+                self.assertEqual(r[0]["xml_goc"], "")
+                nb, mau, kh, so = r[0]["key"].split("|")
+                state["xml"] = ('<?xml version="1.0"?><HDon><DLHDon><TTChung><KHMSHDon>%s</KHMSHDon><KHHDon>%s</KHHDon>'
+                                '<SHDon>%s</SHDon></TTChung><NDHDon><NBan><MST>%s</MST></NBan></NDHDon></DLHDon></HDon>'
+                                % (mau, kh, so, nb)).encode()
+                got = t.fetch_original(self.tmp, "0309999999", "purchase", r[0]["key"])
+            self.assertTrue(got["xml"].endswith("_goc-ncc.xml"), got)
             r = t.query_invoices(self.tmp, "0309999999", {"kind": "purchase", "file": "pdf"})
-            self.assertEqual(len(r), 1)
-            self.assertTrue(r[0]["xml_goc"].endswith("_goc-ncc.xml"))
             self.assertFalse(r[0]["need_goc"])
             with open(os.path.join(t.company_dir(self.tmp, "0309999999"), r[0]["xml_goc"]), "rb") as fh:
-                self.assertIn(b"<DLHDon>misa</DLHDon>", fh.read())
+                self.assertEqual(fh.read(), state["xml"])
         finally:
             srv.shutdown()
             srv.server_close()
@@ -927,6 +937,7 @@ class Tests(unittest.TestCase):
         self.assertIsNone(t.solve_easy_captcha(b"khong phai anh"))
 
     def test_easyinvoice_pdf(self):
+        import unittest.mock as mock
         """Trang tra cứu EasyInvoice giả: captcha 4 số, /Search/Search, tải PDF qua fileGuid."""
         import html as H
         d = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data")
@@ -991,8 +1002,12 @@ class Tests(unittest.TestCase):
             url = "http://127.0.0.1:%d" % srv.server_port
             self.assertEqual(t.easyinvoice_pdf({"url": url, "code": "HIUOVGNMC"}), b"%PDF-1.4 easy goc")
             self.assertEqual(seen["posts"][0][1]["typeSearch"], "fKeySearch")
-            got = t.easyinvoice_files({"url": url, "code": "HIUOVGNMC"})
-            self.assertEqual((got["pdf"], got["xml"]), (b"%PDF-1.4 easy goc", b'<?xml version="1.0"?><HDon>easy</HDon>'))
+            got = t.easyinvoice_files({"url": url, "code": "HIUOVGNMC"})  # chưa biết đường dẫn XML thật → không đoán
+            self.assertEqual((got["pdf"], got["xml"]), (b"%PDF-1.4 easy goc", None))
+            self.assertIn("tải tay", got["xml_err"])
+            with mock.patch.object(t, "EASY_XML_PATHS", ("/Search/DownloadXML?token=",)):
+                got = t.easyinvoice_files({"url": url, "code": "HIUOVGNMC"})
+            self.assertEqual(got["xml"], b'<?xml version="1.0"?><HDon>easy</HDon>')
             with self.assertRaisesRegex(t.PortalError, "Không tìm thấy"):
                 t.easyinvoice_pdf({"url": url, "code": "SAI"})
             self.assertTrue(t.can_fetch_pdf({"ncc_mst": "0105987432", "code": "X"})[0])

@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.8.0"
+__version__ = "3.8.1"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -832,13 +832,14 @@ def easyinvoice_pdf(tra_cuu, tries=8):
     return easyinvoice_files(tra_cuu, tries, want_xml=False)["pdf"]
 
 
-EASY_XML_PATHS = ("/Invoice/DownloadXML?token=", "/Search/DownloadXML?token=", "/Invoice/DownloadXml?token=",
-                  "/Invoice/ExportXml?token=")
+# Đường dẫn tải XML của nút "Tải tệp XML" (hàm downloadXML trong file JS của trang tra cứu). Chưa xác minh được
+# trên trang thật nên để trống: không tự đoán đường dẫn. Khi có file JS thật thì điền vào đây.
+EASY_XML_PATHS = ()
 
 
 def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
     """Trả {'pdf': bytes|None, 'xml': bytes|None, 'xml_err': str}. Nút "Tải tệp XML" của trang tra cứu gọi
-    downloadXML('<token>') – thử các đường dẫn tải XML thường gặp với token đó.
+    downloadXML('<token>'); chỉ tải XML khi đã biết đường dẫn thật (EASY_XML_PATHS).
     EasyInvoice: mở trang tra cứu của người bán, tự giải captcha, tra bằng mã tra cứu rồi bấm
     "Tải PDF & đính kèm" như trình duyệt: gửi HTML hoá đơn lên /Invoice/DownloadPdfAndFileAttachFromAvailableHtml,
     nhận fileGuid và tải /Invoice/Download (PDF, hoặc ZIP gồm PDF + file đính kèm)."""
@@ -905,7 +906,9 @@ def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
                     out["xml"] = got
                     break
             if not out["xml"]:
-                out["xml_err"] = "trang tra cứu không có nút Tải tệp XML" if not xt else "không tải được XML"
+                out["xml_err"] = ("trang tra cứu không có nút Tải tệp XML" if not xt else
+                                  "chưa tự tải được XML gốc EasyInvoice – tải tay bằng nút Tải tệp XML rồi Gắn HĐ gốc có sẵn"
+                                  if not EASY_XML_PATHS else "EasyInvoice không trả file XML")
         if not want_pdf:
             return out
         js = call("/Invoice/DownloadPdfAndFileAttachFromAvailableHtml",
@@ -1067,8 +1070,16 @@ def fetch_original(out_root, mst, kind, key):
     has_xml = bool(e.get("xml_goc") and os.path.exists(os.path.join(base, e["xml_goc"])))
     got = ORIGINAL_FETCHERS[prov](e["tra_cuu"], want_pdf=not has_pdf, want_xml=not has_xml)
     pdf = attach_pdf(out_root, mst, kind, key, got["pdf"]) if got.get("pdf") else (e.get("pdf") or "")
-    xml = attach_original_xml(out_root, mst, kind, key, got["xml"]) if got.get("xml") else (
-        e.get("xml_goc") if has_xml else "")
+    xml = ""
+    if got.get("xml"):
+        try:  # chỉ gắn XML đúng hoá đơn này (MST người bán, ký hiệu, số) – sai thì bỏ, không gắn nhầm
+            if match_xml(got["xml"], {kind: {key: e}}) != [(kind, key)]:
+                raise ValueError("XML tải về không khớp ký hiệu / số / MST của hoá đơn này – không gắn")
+            xml = attach_original_xml(out_root, mst, kind, key, got["xml"])
+        except ValueError as err:
+            got["xml_err"] = str(err)
+    elif has_xml:
+        xml = e.get("xml_goc")
     if not xml and not has_xml:
         _set_entry(out_root, mst, kind, key, xml_goc_loi=got.get("xml_err") or "không tải được")
     return {"pdf": pdf, "xml": xml or "", "xml_err": "" if xml else (got.get("xml_err") or "")}
