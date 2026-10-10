@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.1.0"
+__version__ = "4.2.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -147,6 +147,42 @@ def safe_name(text):
 # Client cổng hoá đơn điện tử
 # ---------------------------------------------------------------------------
 
+class PortalHealth:
+    """Theo dõi tình trạng cổng hoadondientu.gdt.gov.vn từ các lần gọi gần đây của mọi người dùng trên máy chủ:
+    tỷ lệ lỗi quá tải / không kết nối và thời gian trả lời → cảnh báo "trang thuế chậm / quá tải"."""
+    WINDOW = 600  # xét 10 phút gần nhất
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.events = []  # (thời điểm, ok, số giây)
+
+    def record(self, ok, seconds):
+        now = time.time()
+        with self.lock:
+            self.events = [e for e in self.events if now - e[0] < self.WINDOW][-500:]
+            self.events.append((now, ok, seconds))
+
+    def status(self):
+        now = time.time()
+        with self.lock:
+            ev = [e for e in self.events if now - e[0] < self.WINDOW]
+        if len(ev) < 5:
+            return {"level": "", "text": ""}
+        bad = sum(1 for e in ev if not e[1])
+        slow = sorted(e[2] for e in ev if e[1])
+        med = slow[len(slow) // 2] if slow else 0
+        if bad / len(ev) >= 0.4:
+            return {"level": "err", "text": "Trang hoadondientu.gdt.gov.vn đang quá tải hoặc lỗi (%d/%d lần gọi gần đây "
+                    "không thành công) – đồng bộ có thể thiếu hoá đơn, nên thử lại sau (thường ổn hơn sau 17h)." % (bad, len(ev))}
+        if med >= 15 or bad / len(ev) >= 0.15:
+            return {"level": "warn", "text": "Trang hoadondientu.gdt.gov.vn đang chậm (trung bình %d giây mỗi lần gọi) – "
+                    "đồng bộ sẽ lâu hơn bình thường." % med}
+        return {"level": "", "text": ""}
+
+
+PORTAL_HEALTH = PortalHealth()
+
+
 class HoaDonClient:
     def __init__(self, base_url=BASE_URL, timeout=60, verify_ssl=True, delay=0.15):
         self.base_url = base_url.rstrip("/")
@@ -192,12 +228,15 @@ class HoaDonClient:
         for attempt in range(retries + 1):
             headers = self._headers(profile, action, body is not None)
             req = urllib.request.Request(url, data=data, headers=headers, method=method)
+            t0 = time.time()
             try:
                 with opener.open(req, timeout=self.timeout) as resp:
                     content = resp.read()
+                PORTAL_HEALTH.record(True, time.time() - t0)
                 break
             except urllib.error.HTTPError as e:
                 content = e.read()
+                PORTAL_HEALTH.record(e.code not in (429, 500, 502, 503, 504), time.time() - t0)
                 # Chỉ thử lại khi cổng quá tải; cổng đã trả thông báo cụ thể (vd "Không tồn tại hồ sơ gốc") thì không.
                 if e.code in (429, 500, 502, 503, 504) and attempt < retries and \
                         NO_XML_MSG not in _plain(self._error_message(content) or ""):
@@ -211,6 +250,7 @@ class HoaDonClient:
                     msg += " (tường lửa của cổng chặn; chờ vài phút rồi thử lại, nếu vẫn bị hãy báo để cập nhật phần mềm)"
                 raise PortalError(msg)
             except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+                PORTAL_HEALTH.record(False, time.time() - t0)
                 if attempt < retries:
                     time.sleep(2 ** attempt * 2)
                     continue
@@ -4341,6 +4381,13 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
 .staff .adm,.local .srv{display:none!important}
 .no-dongbo .q-dongbo,.no-hdgoc .q-hdgoc,.no-sua .q-sua,.no-ketxuat .q-ketxuat,.no-saoke .q-saoke,.no-dn .q-dn,
 body:not(.owner) .own{display:none!important}
+.sysbar{max-width:1400px;margin:10px auto 0;padding:0 16px;display:flex;flex-direction:column;gap:6px}
+.sysbar>div{border-radius:8px;padding:8px 12px;font-size:13px;white-space:pre-line}
+.sb-ann{background:#2b2b2b;color:#ffd54a;font-weight:600;border:1px solid #444}
+.sb-hint{background:#fff8e1;color:#6d5300;border-left:4px solid #f4b400}
+.sb-portal.warn{background:#fff3e0;color:#8a4b00;border-left:4px solid #fb8c00}.sb-portal.err{background:#fdecea;color:#a12622;border-left:4px solid #e53935}
+.sb-goi{background:var(--card);border:1px solid var(--line);color:var(--fg)}.sb-goi.warn{border-color:#fb8c00;background:#fff3e0;color:#8a4b00}
+.sb-goi.err{border-color:#e53935;background:#fdecea;color:#a12622}.sb-goi small{color:var(--mute)}
 .vpname{font-size:12px;background:rgba(255,255,255,.18);border-radius:10px;padding:2px 8px;margin-left:6px}
 .perms{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin:4px 0 8px}.perms label{font-weight:400}
 .pw{-webkit-text-security:disc;text-security:disc}
@@ -4408,6 +4455,10 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
 <a href="#" id="navND" class="adm srv" onclick="tab('ND');return false">Quản trị</a></nav><span style="flex:1"></span><small id="capStat"></small>
 <span class="me srv"><button class="bell" id="bell" title="Thông báo" onclick="toggleNotes()">&#128276;<i id="bellN" class="hide"></i></button>
 <span id="meName"></span><span class="vpname hide" id="vpName"></span> · <a onclick="openPw()">Đổi mật khẩu</a> · <a onclick="logout()">Đăng xuất</a></span></header>
+<div class="sysbar srv hide" id="sysBar">
+  <div class="sb-ann hide" id="sbAnn"></div><div class="sb-hint hide" id="sbHint"></div>
+  <div class="sb-portal hide" id="sbPortal"></div><div class="sb-goi hide" id="sbGoi"></div>
+</div>
 <div class="card hide" id="notes"><div class="top"><b>Thông báo</b><button class="sm sec" onclick="toggleNotes()">Đóng</button></div><div id="notesList"></div></div>
 <main>
 <section class="card hide" id="tabND">
@@ -4427,6 +4478,12 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
       <th class="n">HĐ đã tải / gói</th><th class="n">HĐ gốc đã tải / gói</th>
       <th class="n">Người dùng</th><th class="n">Lượt chạy cùng lúc</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr></thead><tbody id="vpRows"></tbody></table></div>
     <div class="err" id="vpErr"></div>
+    <h3 style="margin:24px 0 6px">Thông báo hệ thống</h3>
+    <div class="hint">Hiện trên đầu trang của mọi văn phòng. Cảnh báo "trang thuế chậm / quá tải" phần mềm tự hiện khi phát hiện nhiều lần gọi trang thuế bị lỗi hoặc chậm trong 10 phút gần nhất.</div>
+    <label>Thông báo (vd: Trang thuế đang bảo trì phần máy tính tiền…)</label><textarea id="syAnn" rows="2" class="full"></textarea>
+    <label>Gợi ý đồng bộ (vd: Trang thuế thường chậm giờ hành chính, khoảng 17h–22h ổn định hơn)</label><textarea id="syHint" rows="2" class="full"></textarea>
+    <div class="chk" style="align-items:center"><label><input type="checkbox" id="syMtt"> Tạm bỏ qua đồng bộ HĐ máy tính tiền (khi trang thuế treo phần này)</label>
+      <button class="sm" onclick="saveSys()">Lưu thông báo</button><span class="ok" id="syMsg"></span></div>
     <h3 style="margin:24px 0 6px">Gửi email</h3>
     <div class="hint">Máy chủ gửi mail (SMTP) dùng cho: quên mật khẩu, báo khi đổi mật khẩu, mời người dùng mới tự đặt mật khẩu.
       Gmail: máy chủ smtp.gmail.com, cổng 587 STARTTLS, tên đăng nhập là địa chỉ Gmail, mật khẩu là <b>mật khẩu ứng dụng</b> (App Password, cần bật xác minh 2 bước).</div>
@@ -4800,6 +4857,7 @@ async function refresh() {
   document.body.classList.toggle('owner', !!me.owner);
   Object.keys(PERM_NAMES).forEach(p => document.body.classList.toggle('no-' + p, !(me.quyen || []).includes(p)));
   $('meName').textContent = me.ten ? (me.ten + ' (' + me.username + ')') : me.username;
+  renderSys(s.sys);
   if (me.goi && !me.goi.tai_goc) ['sPdf', 'bPdf'].forEach(id => { $(id).checked = false; $(id).disabled = true; $(id).parentNode.title = 'Gói của văn phòng không gồm tự tải hoá đơn gốc'; });
   $('vpName').textContent = me.server && me.vp_ten ? me.vp_ten : ''; $('vpName').classList.toggle('hide', !(me.server && me.vp_ten));
   $('bellN').textContent = s.unread; $('bellN').classList.toggle('hide', !s.unread);
@@ -4915,7 +4973,7 @@ let users = [], allCos = [], editingUser = null, uPicked = new Set();
 async function loadUsers() {
   $('uErr').textContent = '';
   try { const d = await post('/api/users', {}); users = d.users; allCos = d.companies; } catch (e) { $('uErr').textContent = e.message; return; }
-  if (me.owner) { loadVps(); loadMail(); }
+  if (me.owner) { loadVps(); loadMail(); loadSys(); }
   renderGoi();
   const tb = $('uRows'); tb.innerHTML = '';
   users.forEach(u => { const tr = tb.insertRow();
@@ -4978,6 +5036,14 @@ async function sendUserLink() {
 }
 // ---- Chủ hệ thống: văn phòng khách hàng ----
 let vps = [], editingVp = null;
+async function loadSys() {
+  try { const s = await api('/api/state'); const y = s.sys || {};
+    $('syAnn').value = y.thong_bao || ''; $('syHint').value = y.goi_y || ''; $('syMtt').checked = !!y.bo_qua_mtt; } catch (e) {}
+}
+async function saveSys() {
+  try { await post('/api/sys/save', {thong_bao: $('syAnn').value, goi_y: $('syHint').value, bo_qua_mtt: $('syMtt').checked});
+        $('syMsg').textContent = 'Đã lưu.'; refresh(); } catch (e) { $('syMsg').textContent = e.message; }
+}
 async function loadMail() {
   try { const m = await post('/api/mail/get', {});
     $('mlHost').value = m.host || ''; $('mlPort').value = m.port || 587; $('mlMode').value = m.mode || 'starttls'; $('mlUser').value = m.user || '';
@@ -4994,6 +5060,29 @@ async function testMail() {
   $('mlMsg').textContent = 'Đang gửi…'; $('mlErr').textContent = '';
   try { await post('/api/mail/test', {to: $('mlTo').value.trim()}); $('mlMsg').textContent = 'Đã gửi – kiểm tra hộp thư (cả Spam).'; }
   catch (e) { $('mlMsg').textContent = ''; $('mlErr').textContent = e.message; }
+}
+// Thanh thông báo: thông báo của chủ hệ thống, tình trạng trang thuế, số hoá đơn đã dùng / còn lại của gói.
+function renderSys(sys) {
+  if (!me.server || !sys) { hide('sysBar'); return; }
+  const set = (id, txt, cls) => { const e = $(id); e.textContent = txt || ''; e.className = id === 'sbAnn' ? 'sb-ann' : id === 'sbHint' ? 'sb-hint'
+    : id === 'sbPortal' ? 'sb-portal ' + (cls || '') : 'sb-goi ' + (cls || ''); e.classList.toggle('hide', !txt); };
+  set('sbAnn', sys.thong_bao ? '⚠ ' + sys.thong_bao + (sys.bo_qua_mtt ? '\n⚠ Tạm thời bỏ qua đồng bộ hoá đơn từ máy tính tiền – đối chiếu kỹ số lượng hoá đơn trước khi làm sổ sách.' : '')
+    : (sys.bo_qua_mtt ? '⚠ Trang thuế đang lỗi phần hoá đơn máy tính tiền – tạm thời bỏ qua đồng bộ phần này. Đối chiếu kỹ số lượng hoá đơn trước khi làm sổ sách.' : ''));
+  set('sbHint', sys.goi_y ? '💡 ' + sys.goi_y : '');
+  set('sbPortal', sys.portal && sys.portal.text ? (sys.portal.level === 'err' ? '⛔ ' : '⏳ ') + sys.portal.text : '', sys.portal && sys.portal.level);
+  const g = me.goi; let gt = '', gc = '';
+  if (g) {
+    if (g.han_muc_hd) { const left = Math.max(0, g.han_muc_hd - g.da_dung_hd);
+      gt = 'Gói hoá đơn: đã dùng ' + fmt(g.da_dung_hd) + ' / ' + fmt(g.han_muc_hd) + ' · còn lại ' + fmt(left) + ' hoá đơn';
+      gc = left === 0 ? 'err' : left < g.han_muc_hd * 0.1 ? 'warn' : ''; }
+    else gt = 'Hoá đơn đã tải: ' + fmt(g.da_dung_hd) + ' (gói không giới hạn)';
+    if (g.tai_goc && g.han_muc_goc) { const lg = Math.max(0, g.han_muc_goc - g.da_dung_goc);
+      gt += ' · HĐ gốc: còn lại ' + fmt(lg) + ' / ' + fmt(g.han_muc_goc); if (!lg && gc !== 'err') gc = 'warn'; }
+    if (gc === 'err') gt += ' – HẾT HẠN MỨC, liên hệ nhà cung cấp để nâng gói.';
+  }
+  set('sbGoi', gt, gc);
+  if (gt) $('sbGoi').append(el('br'), el('small', '', 'Hoá đơn đã tải rồi thì đồng bộ bao nhiêu lần cũng chỉ tính 1 hoá đơn – cứ đồng bộ lại thoải mái để cập nhật trạng thái.'));
+  $('sysBar').classList.toggle('hide', !(sys.thong_bao || sys.bo_qua_mtt || sys.goi_y || (sys.portal && sys.portal.text) || gt));
 }
 function renderGoi() {
   const g = me.goi; if (!g) { $('goiInfo').textContent = ''; return; }
@@ -5726,6 +5815,23 @@ class App:
     def quota(self, vid):
         return Quota(self.tenants, self.t(vid))
 
+    # ---- thông báo hệ thống (chủ hệ thống đặt, mọi văn phòng thấy) ----
+    def system(self):
+        d = {"thong_bao": "", "bo_qua_mtt": False, "goi_y": ""}
+        d.update(_load_json(os.path.join(self.cfg, "he-thong.json"), {}))
+        return d
+
+    def save_system(self, **f):
+        with self.lock:
+            d = self.system()
+            for k in ("thong_bao", "goi_y"):
+                if f.get(k) is not None:
+                    d[k] = str(f[k]).strip()[:2000]
+            if f.get("bo_qua_mtt") is not None:
+                d["bo_qua_mtt"] = bool(f["bo_qua_mtt"])
+            _save_json(os.path.join(self.cfg, "he-thong.json"), d)
+            return d
+
     # ---- email (SMTP do chủ hệ thống cấu hình) ----
     def mail_settings(self, raw=False):
         d = _load_json(os.path.join(self.cfg, "email.json"), {})
@@ -5913,6 +6019,10 @@ class App:
 
     def _run_job(self, job, msts, kinds, start, end, mtt, xml, test):
         T = self.t(job.vp)
+        if mtt and self.server and self.system()["bo_qua_mtt"]:
+            mtt = False
+            job.say("Tạm bỏ qua hoá đơn từ máy tính tiền (trang thuế đang lỗi phần này – theo thông báo hệ thống). "
+                    "Khi trang thuế ổn định, đồng bộ lại để lấy đủ.")
         run_batch(job, T.store, self.solver, msts, kinds, start, end, mtt, xml, T.root, test,
                   self.client_factory, T.clients)
         if not test:
@@ -6204,6 +6314,7 @@ def make_handler(app, port):
                                                "vp": self.T.id, "vp_ten": app.vp_info(self.T.id).get("ten", ""),
                                                "goi": app.quota(self.T.id).info() if app.server else None,
                                                "email": u.get("email", "")},
+                                        "sys": dict(app.system(), portal=PORTAL_HEALTH.status()) if app.server else None,
                                         "unread": app.notices_for(u, 0)["unread"] if app.server else 0,
                                         "auto": self._auto_state() if app.server and u["role"] == "admin" else None,
                                         "captcha": {"count": app.solver.count(), "chars": app.solver.chars()}})
@@ -6359,7 +6470,7 @@ def make_handler(app, port):
                     raise ValueError("Bản chạy trên máy không có email")
                 app.users.upsert(self.user["username"], email=str(data.get("email") or ""))
                 return self._send(200, {"ok": True})
-            if path.startswith("/api/vp/") or path.startswith("/api/mail/"):
+            if path.startswith("/api/vp/") or path.startswith("/api/mail/") or path == "/api/sys/save":
                 return self._vp_post(path, data)
             self._admin()
             if path == "/api/users":
@@ -6410,6 +6521,10 @@ def make_handler(app, port):
         def _vp_post(self, path, data):
             """Chủ hệ thống: quản lý các văn phòng (khách hàng dùng phần mềm). Không xem được hoá đơn của văn phòng khác."""
             self._owner()
+            if path == "/api/sys/save":
+                d = app.save_system(thong_bao=data.get("thong_bao"), goi_y=data.get("goi_y"), bo_qua_mtt=data.get("bo_qua_mtt"))
+                self._audit("cập nhật thông báo hệ thống")
+                return self._send(200, d)
             if path == "/api/mail/get":
                 return self._send(200, app.mail_settings())
             if path == "/api/mail/save":
@@ -6534,7 +6649,7 @@ def make_handler(app, port):
         def _post(self, path, data):
             if path in ("/api/login", "/api/logout", "/api/me/password", "/api/users", "/api/user/save",
                         "/api/user/delete", "/api/vp/list", "/api/vp/save", "/api/forgot", "/api/reset", "/api/me/email",
-                        "/api/mail/get", "/api/mail/save", "/api/mail/test"):
+                        "/api/mail/get", "/api/mail/save", "/api/mail/test", "/api/sys/save"):
                 return self._auth_post(path, data)
             if path == "/api/company/save":
                 existing = self.T.store.get(str(data.get("mst", "")).strip())

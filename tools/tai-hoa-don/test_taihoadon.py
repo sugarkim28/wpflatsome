@@ -1057,6 +1057,34 @@ class Tests(unittest.TestCase):
             srv.shutdown()
             srv.server_close()
 
+    def test_portal_health_and_system_notice(self):
+        """Cảnh báo trang thuế chậm / quá tải; chủ hệ thống tạm bỏ qua HĐ máy tính tiền."""
+        h = t.PortalHealth()
+        self.assertEqual(h.status()["level"], "")
+        for _ in range(6):
+            h.record(True, 1)
+        self.assertEqual(h.status()["level"], "")
+        for _ in range(6):
+            h.record(False, 60)
+        self.assertEqual(h.status()["level"], "err")
+        h2 = t.PortalHealth()
+        for _ in range(6):
+            h2.record(True, 25)
+        self.assertEqual(h2.status()["level"], "warn")
+        t.set_secret_key(os.path.join(self.tmp, "_cau-hinh", "khoa.key"))
+        app = t.App(self.tmp, lambda: t.HoaDonClient(self.base, delay=0), server=True)
+        app.store.import_text("0309999999\tA\tpw1\n")
+        app.save_system(thong_bao="Trang thuế bảo trì", bo_qua_mtt=True)
+        self.assertTrue(app.system()["bo_qua_mtt"])
+        user = {"username": "boss", "role": "admin", "msts": [], "active": True}
+        job, th = app.start_job(user, ["0309999999"], ["purchase"], date(2026, 10, 1), date(2026, 10, 31), mtt=True)
+        helper = AutoAnswer(job)
+        helper.start()
+        th.join(30)
+        log = "\n".join(job.log)
+        self.assertIn("Tạm bỏ qua hoá đơn từ máy tính tiền", log)
+        self.assertNotIn("(Máy tính tiền)", log)
+
     def test_auto_sync_and_notices(self):
         self.assertEqual(t.auto_range("auto", date(2026, 10, 9)), (date(2026, 9, 1), date(2026, 10, 9)))
         self.assertEqual(t.auto_range("auto", date(2026, 10, 25)), (date(2026, 10, 1), date(2026, 10, 25)))
