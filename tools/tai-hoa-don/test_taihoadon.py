@@ -1300,7 +1300,9 @@ class Tests(unittest.TestCase):
                '<SHDon>%s</SHDon></TTChung><NDHDon><NBan><Ten>X</Ten><MST>%s</MST></NBan></NDHDon></DLHDon></HDon>'
                % (mau, kh, so, nb)).encode()
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w") as z:
+        with zipfile.ZipFile(buf, "w") as z:  # ZIP tải từ trang tra cứu: nhiều file trang web trước, XML ở cuối
+            for i in range(30):
+                z.writestr("trang_files/%d.js" % i, "x")
             z.writestr("hoa-don.xml", xml)
         res = t.import_pdfs(self.tmp, "0309999999", [("x.zip", buf.getvalue()),
                                                     ("sai.xml", xml.replace(b"<SHDon>", b"<SHDon>9"))])

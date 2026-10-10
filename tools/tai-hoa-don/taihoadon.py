@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.9.2"
+__version__ = "3.9.3"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -2586,9 +2586,11 @@ def _unzip_originals(files):
             continue
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as z:
-                for n in z.namelist()[:20]:
-                    if n.lower().endswith((".pdf", ".xml")) and z.getinfo(n).file_size < 30 << 20:
-                        out.append(("%s/%s" % (name, n), z.read(n)))
+                # lọc PDF / XML trước rồi mới giới hạn số file (ZIP có thể kèm cả trang web đã lưu: js, css, ảnh…)
+                picks = [n for n in z.namelist() if n.lower().endswith((".pdf", ".xml"))
+                         and z.getinfo(n).file_size < 30 << 20][:50]
+                for n in picks:
+                    out.append(("%s/%s" % (name, n), z.read(n)))
         except (zipfile.BadZipFile, OSError):
             continue
     return out
