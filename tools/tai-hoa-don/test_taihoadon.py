@@ -1063,6 +1063,60 @@ class Tests(unittest.TestCase):
         self.assertTrue(rows and all(r["duyet"] == "Đã duyệt" and r["dv"] for r in rows))
         self.assertEqual(len(t.query_invoices(self.tmp, "0309999999", {"kind": "purchase_dv"})), len(rows))
 
+    @staticmethod
+    def _pdf(pages):
+        """PDF tối giản: mỗi trang là danh sách (x, y, chữ ASCII)."""
+        objs = ["<< /Type /Catalog /Pages 2 0 R >>", None, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]
+        kids = []
+        for frags in pages:
+            body = " ".join("BT 1 0 0 1 %s %s Tm /F1 7 Tf (%s) Tj 0 g ET" % (x, y, t.replace("(", "\\(").replace(")", "\\)"))
+                            for x, y, t in frags)  # mỗi ô một khối chữ như sổ phụ thật
+            objs.append("<< /Length %d >>\nstream\n%s\nendstream" % (len(body), body))
+            objs.append("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Contents %d 0 R "
+                        "/Resources << /Font << /F1 3 0 R >> >> >>" % len(objs))
+            kids.append(len(objs))
+        objs[1] = "<< /Type /Pages /Kids [%s] /Count %d >>" % (" ".join("%d 0 R" % k for k in kids), len(kids))
+        out, offs = "%PDF-1.4\n", []
+        for i, o in enumerate(objs, 1):
+            offs.append(len(out))
+            out += "%d 0 obj\n%s\nendobj\n" % (i, o)
+        x = len(out)
+        out += "xref\n0 %d\n0000000000 65535 f \n" % (len(objs) + 1) + "".join("%010d 00000 n \n" % o for o in offs)
+        out += "trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, x)
+        return out.encode("latin-1")
+
+    def test_bank_statement_pdf(self):
+        """Sổ phụ PDF (bố cục như MB): cột theo toạ độ, số bút toán 2 dòng, tổng in 2 dòng, nội dung cắt 35 ký tự."""
+        hdr = [(23, 547, "Ngay giao dich"), (95, 547, "Ngay hach toan"), (170, 552, "So but toan"), (186, 531, "No"),
+               (221, 547, "Phat sinh no"), (283, 547, "Phat sinh co"), (428, 547, "Noi dung"),
+               (560, 547, "Don vi thu huong/Don vi chuyen"), (706, 547, "Tai khoan")]
+        top = [(250, 592, "SO PHU CHI TIET NGAN HANG TMCP QUAN DOI"), (20, 568, "Tai khoan/Account No: 2018000001"),
+               (20, 580 - 24, "Ten khach hang/Customer name: CONG TY A"), (40, 580 - 36, "So du dau ky/ Opening Balance: 2,000,000 VND")]
+
+        def row(y, d, ref1, ref2, debit, credit, desc, name):
+            return [(26, y + 5, d + " 10:"), (41, y - 4, "01:30"), (106, y, d), (172, y + 5, ref1), (172, y - 4, ref2),
+                    (269, y, debit), (300, y, credit)] + [(344, y + 5 - 9 * i, line) for i, line in enumerate(desc)] + \
+                [(559, y, name), (697, y, "0601607")]
+        p1 = top + hdr + row(500, "03/09/2026", "FT26246090", "960093", "0", "1,090,000",
+                             ["IBFT Strawberry Tao chuyen khoan nh  anh qua Zalo", "W2LQ5EU7/722239"], "KHA BINH LUONG") + \
+            row(470, "04/09/2026", "FT26247479", "933602", "2,340,000", "0", ["MBCT thanh toan"], "CT TNHH TM FNB") + \
+            [(20, 30, "Chung tu nay duoc xuat tu dong tu he thong")]
+        p2 = hdr + row(500, "05/09/2026", "FT26248550", "198084", "0", "500", ["Lai"], "") + \
+            [(60, 440, "Tong phat sinh trong ky/Total"), (228, 446, "2,340,00"), (262, 434, "0"),
+             (292, 446, "1,090,50"), (326, 434, "0"), (20, 420, "So du cuoi ky/ Closing Balance: 750,500 VND")]
+        info = t.parse_bank_statement("sp.pdf", self._pdf([p1, p2]))
+        self.assertEqual((info["bank"], info["account"], info["company"]), ("MB", "2018000001", "CONG TY A"))
+        self.assertEqual((info["opening"], info["closing"], info["total_out"], info["total_in"]),
+                         (2000000.0, 750500.0, 2340000.0, 1090500.0))
+        self.assertEqual(info["warnings"], [])
+        self.assertEqual([(r["date"], r["ref"], r["in"], r["out"], r["name"]) for r in info["rows"]],
+                         [("2026-09-03", "FT26246090960093", 1090000.0, 0.0, "KHA BINH LUONG"),
+                          ("2026-09-04", "FT26247479933602", 0.0, 2340000.0, "CT TNHH TM FNB"),
+                          ("2026-09-05", "FT26248550198084", 500.0, 0.0, "")])
+        self.assertEqual(info["rows"][0]["desc"], "IBFT Strawberry Tao chuyen khoan nhanh qua Zalo W2LQ5EU7/722239")
+        with self.assertRaisesRegex(ValueError, "scan"):
+            t.parse_bank_statement("scan.pdf", self._pdf([[(10, 10, "x")]]))
+
 
 if __name__ == "__main__":
     unittest.main()

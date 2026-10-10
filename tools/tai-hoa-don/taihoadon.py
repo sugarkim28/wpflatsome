@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.3.0"
+__version__ = "3.4.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -2867,6 +2867,8 @@ def _bank_col(text):
 
 def parse_bank_statement(name, data):
     """Đọc sao kê ngân hàng → thông tin tài khoản + danh sách giao dịch (theo thứ tự trong file)."""
+    if data[:5] == b"%PDF-":
+        return _finish_statement(parse_bank_pdf(name, data))
     best = None
     for sheet, rows in read_table_file(name, data):
         for i, row in enumerate(rows[:80]):
@@ -2948,6 +2950,12 @@ def parse_bank_statement(name, data):
             ref = ref[:-2]
         info["rows"].append({"date": d.strftime("%Y-%m-%d"), "time": d.strftime("%H:%M:%S"), "ref": ref,
                              "desc": val("desc"), "name": val("name"), "in": tin, "out": tout})
+    return _finish_statement(info)
+
+
+def _finish_statement(info):
+    """Kỳ sao kê, tổng thu/chi và đối chiếu với tổng / số dư in trên sao kê."""
+    name = info["file"]
     if not info["rows"]:
         raise ValueError("%s: không có giao dịch nào" % name)
     ds = sorted(x["date"] for x in info["rows"])
@@ -2963,6 +2971,220 @@ def parse_bank_statement(name, data):
     if info["opening"] is not None and info["closing"] is not None and \
             abs(info["opening"] + s_in - s_out - info["closing"]) > 0.5:
         info["warnings"].append("Số dư đầu kỳ + thu − chi không bằng số dư cuối kỳ – kiểm tra lại file")
+    return info
+
+
+_AMOUNT_RE = re.compile(r"^-?(?:0|\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d{1,3})$")
+_PDF_SKIP_RE = re.compile(r"chungtunay|automaticallyexported|tongphatsinh|tongcong|soducuoi|closingbalance|bangchu|"
+                          r"inwords|^trang\d|^page\d")
+
+
+class _PdfSkip:
+    """Dòng chân trang / tổng cộng / số dư cuối kỳ – không phải giao dịch (so khớp không dấu)."""
+    @staticmethod
+    def search(text):
+        return _PDF_SKIP_RE.search(_bank_plain(text))
+
+
+_PDF_SKIP = _PdfSkip()
+
+
+def _unchunk35(s):
+    """Nội dung giao dịch MB (core T24) bị cắt thành đoạn 35 ký tự nối bằng 2 dấu cách ("chuyen kh  oan") → nối lại."""
+    i = 0
+    while len(s) > i + 37 and s[i + 35:i + 37] == "  ":
+        s = s[:i + 35] + s[i + 37:]
+        i += 35
+    return s
+
+
+def _pdf_fragments(page):
+    """Các đoạn chữ trên trang PDF kèm toạ độ đọc (x tăng sang phải, y tăng lên trên)."""
+    out = []
+
+    def visit(text, cm, tm, fd, fs):
+        t = (text or "").replace("\n", " ").strip()
+        if not t:
+            return
+        if abs(cm[1]) > 0.5 and abs(cm[2]) > 0.5:  # trang xoay ngang: toạ độ trong hệ của chữ
+            x, y = tm[4], tm[5]
+        else:
+            x, y = tm[4] * cm[0] + cm[4], tm[5] * cm[3] + cm[5]
+        out.append({"x": round(x, 1), "y": round(y, 1), "t": t})
+    page.extract_text(visitor_text=visit)
+    return out
+
+
+def _bank_col_pdf(text):
+    p = _bank_plain(text)
+    if any(k in p for k in ("donvithuhuong", "donvichuyen", "beneficiary", "nguoithuhuong", "nguoichuyen")):
+        return "name"
+    if "hachtoan" in p or "accountingdate" in p:
+        return "date_acc"
+    return _bank_col(text)
+
+
+def parse_bank_pdf(name, data):
+    """Sổ phụ ngân hàng dạng PDF có chữ (xuất từ internet banking, không phải bản scan)."""
+    pypdf = _pypdf()
+    try:
+        reader = pypdf.PdfReader(io.BytesIO(data))
+        pages = [_pdf_fragments(p) for p in reader.pages]
+        full = "\n".join((p.extract_text() or "") for p in reader.pages)
+    except Exception as e:
+        raise ValueError("Không đọc được PDF %s: %s" % (name, e))
+    if len(re.sub(r"\s", "", full)) < 50:
+        raise ValueError("%s: PDF không có chữ (bản scan/ảnh chụp) – cần file sổ phụ tải từ internet banking hoặc file Excel" % name)
+    info = {"file": name, "bank": "", "account": "", "company": "", "from": "", "to": "", "opening": None, "closing": None,
+            "total_in": None, "total_out": None, "rows": [], "warnings": []}
+    head = full.split("\n")
+    flat = _plain(" ".join(head[:6]))  # tên ngân hàng ở đầu sổ phụ (nội dung giao dịch có tên ngân hàng đối tác)
+    for key, code in BANK_NAMES:
+        if _plain(key).replace(" ", "") in flat.replace(" ", ""):
+            info["bank"] = code
+            break
+
+    def grab(pattern):
+        m = re.search(pattern, full, re.I)
+        return m.group(1).strip() if m else ""
+    info["account"] = re.sub(r"\D", "", grab(r"(?:Số tài khoản|Tài khoản|Account No\.?)\s*/?[^:\n]{0,25}:\s*([\d .\-]{6,25})"))[:20]
+    info["company"] = grab(r"(?:Tên khách hàng|Tên tài khoản|Customer name|Account name)\s*/?[^:\n]{0,25}:\s*([^\n]+)")
+    for key, pat in (("opening", r"(?:Số dư đầu kỳ|Opening Balance)[^:\n]*:\s*(-?[\d.,]+)"),
+                     ("closing", r"(?:Số dư cuối kỳ|Closing Balance)[^:\n]*:\s*(-?[\d.,]+)")):
+        v = grab(pat)
+        if v:
+            info[key] = _bank_amount(v)
+    header = None
+
+    def header_band(frags):
+        """Dòng tiêu đề bảng: các nhãn cột ngắn nằm cùng dải với nhãn ngày."""
+        for d in frags:
+            if _bank_col_pdf(d["t"]) not in ("date", "date_acc") or len(d["t"]) > 30:
+                continue
+            cols = {}
+            for f in sorted(frags, key=lambda f: (f["x"], -f["y"])):
+                if abs(f["y"] - d["y"]) > 22 or len(f["t"]) > 40 or re.search(r":\s*\S", f["t"]):
+                    continue  # nhãn cột không kèm giá trị ("Tên khách hàng: …" là thông tin tài khoản)
+                k = _bank_col_pdf(f["t"])
+                if k and (k not in cols or len(f["t"]) > len(cols[k]["t"])):  # nhãn đầy đủ nhất ("Phát sinh nợ", không phải "No")
+                    cols[k] = f
+            if ("date" in cols or "date_acc" in cols) and "in" in cols and "out" in cols:
+                return cols
+        return None
+    for frags in pages:
+        header = header_band(frags)
+        if header:
+            break
+    if not header:
+        raise ValueError("%s: không tìm thấy bảng giao dịch trong sổ phụ PDF" % name)
+    amount_hdr = sorted((header[k]["x"], k) for k in ("out", "in"))
+    amt_lo, amt_hi = amount_hdr[0][0] - 45, amount_hdr[-1][0] + 90
+    date_x = header.get("date_acc", header.get("date"))["x"]
+    ref_x = header["ref"]["x"] if "ref" in header else None
+    text_hdrs = sorted((header[k]["x"], k) for k in ("desc", "name") if k in header)
+
+    def is_amount(f):
+        return amt_lo <= f["x"] <= amt_hi and _AMOUNT_RE.match(f["t"].replace(" ", ""))
+    # Cột chữ (nội dung, tên đối ứng…): nhóm theo vị trí bắt đầu của chữ trên toàn bộ sổ phụ
+    starts = {}
+    body = []
+    for pi, frags in enumerate(pages):
+        band = header_band(frags)
+        if not band:
+            continue
+        top = min(f["y"] for f in band.values()) - 6
+        stop = max([f["y"] for f in frags if _PDF_SKIP.search(f["t"]) and f["y"] < top] or [-1e9])
+        page_body = [f for f in frags if stop + 1 < f["y"] < top and not _PDF_SKIP.search(f["t"])]
+        body.append(page_body)
+        for f in page_body:
+            if f["x"] > amt_hi - 60 and not is_amount(f):
+                starts[round(f["x"] / 4)] = starts.get(round(f["x"] / 4), 0) + 1
+    col_x = sorted({k * 4 for k, n in starts.items() if n >= 2})
+    clusters = []
+    for x in col_x:
+        if clusters and x - clusters[-1][-1] <= 8:
+            clusters[-1].append(x)
+        else:
+            clusters.append([x])
+    text_cols = [min(c) for c in clusters]
+    # gán cột chữ cho tiêu đề gần nhất (theo thứ tự trái → phải)
+    col_kind = {}
+    for hx, k in text_hdrs:
+        free = [c for c in text_cols if c not in col_kind and c <= hx + 20]
+        if free:
+            col_kind[max(free, key=lambda c: (c <= hx + 20, -abs(c - hx)))] = k
+    if text_hdrs and "desc" not in col_kind.values() and text_cols:
+        col_kind[text_cols[0]] = "desc"
+
+    def text_col(x):
+        own = [c for c in text_cols if c <= x + 3]
+        return col_kind.get(max(own)) if own else None
+    for page_body in body:
+        anchors = []
+        for f in sorted((f for f in page_body if is_amount(f)), key=lambda f: -f["y"]):
+            if anchors and abs(anchors[-1]["y"] - f["y"]) <= 2:
+                anchors[-1]["amts"].append(f)
+            else:
+                anchors.append({"y": f["y"], "amts": [f], "frags": []})
+        if not anchors:
+            continue
+        for f in page_body:
+            if is_amount(f):
+                continue
+            a = min(anchors, key=lambda a: abs(a["y"] - f["y"]))
+            if abs(a["y"] - f["y"]) <= 45:
+                a["frags"].append(f)
+        for a in anchors:
+            amts = sorted(a["amts"], key=lambda f: f["x"])
+            vals = {}
+            if len(amts) == len(amount_hdr):
+                for (hx, k), f in zip(amount_hdr, amts):
+                    vals[k] = _bank_amount(f["t"])
+            else:
+                for f in amts:
+                    k = min(amount_hdr, key=lambda h: abs(h[0] - f["x"]))[1]
+                    vals[k] = _bank_amount(f["t"])
+            dates = [f for f in a["frags"] if re.search(r"\d{1,2}/\d{1,2}/\d{4}", f["t"])]
+            if not dates:
+                continue
+            dfrag = min(dates, key=lambda f: abs(f["x"] - date_x))
+            d = _bank_date(re.search(r"\d{1,2}/\d{1,2}/\d{4}", dfrag["t"]).group(0))
+            tin, tout = abs(vals.get("in", 0.0)), abs(vals.get("out", 0.0))
+            if not d or (not tin and not tout):
+                continue
+            lines = {"desc": [], "name": []}
+            ref = []
+            for f in sorted(a["frags"], key=lambda f: (-f["y"], f["x"])):
+                if f in dates or re.fullmatch(r"\d{1,2}:\d{2}(:\d{2})?", f["t"]):
+                    continue
+                if ref_x is not None and f["x"] < amt_lo and abs(f["x"] - ref_x) <= 30:
+                    ref.append(f["t"])
+                    continue
+                k = text_col(f["x"]) if f["x"] >= amt_lo else None
+                if k in lines:
+                    lines[k].append(f["t"])
+            clean = lambda parts: re.sub(r"\s+", " ", " ".join(parts)).strip()
+            info["rows"].append({"date": d.strftime("%Y-%m-%d"), "time": "", "ref": "".join(ref).replace(" ", ""),
+                                 "desc": clean([_unchunk35(" ".join(lines["desc"]))]), "name": clean(lines["name"]),
+                                 "in": tin, "out": tout})
+    # Tổng phát sinh (số có thể bị ngắt 2 dòng: "693,350,3" + "85")
+    for frags in pages:
+        lab = next((f for f in frags if re.search(r"^(tongphatsinh|tongcong|total)", _bank_plain(f["t"]))), None)
+        if not lab:
+            continue
+        near = sorted((f for f in frags if abs(f["y"] - lab["y"]) <= 12 and f["x"] > lab["x"]
+                       and re.fullmatch(r"[\d.,]+", f["t"])), key=lambda f: (-f["y"], f["x"]))
+        groups = []  # số in 2 dòng: phần sau nằm dòng dưới, lệch phải
+        for f in near:
+            prev = [g for g in groups if g["x"] <= f["x"] + 2 and g["y"] > f["y"] + 2]
+            if prev:
+                max(prev, key=lambda g: g["x"])["t"] += f["t"]
+            else:
+                groups.append(dict(f))
+        nums = [(g["x"], _bank_amount(g["t"])) for g in sorted(groups, key=lambda g: g["x"])]
+        if len(nums) >= 2:
+            for (hx, k), (x, v) in zip(amount_hdr, nums[:2]):
+                info["total_" + ("in" if k == "in" else "out")] = v
     return info
 
 
@@ -3212,10 +3434,10 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
         <label>Khoảng trang (để trống = mỗi trang một file)</label><input type="text" id="splitRanges" placeholder="vd: 1-3, 4, 5-8">
         <div class="bar"><button onclick="toolSplit()">Tách file</button></div><div class="err" id="splitErr"></div></div>
       <div class="tpane hide" id="t-bank"><h3>Sao kê ngân hàng → file nhập phần mềm kế toán (KTSC)</h3>
-        <div class="hint">Chọn một hoặc nhiều file sao kê tải từ internet banking (.xls, .xlsx, .csv). Phần mềm tự tìm bảng giao dịch,
+        <div class="hint">Chọn một hoặc nhiều file sao kê / sổ phụ tải từ internet banking (.xls, .xlsx, .csv, hoặc sổ phụ .pdf có chữ – không nhận bản scan). Phần mềm tự tìm bảng giao dịch,
           đối chiếu với tổng ghi có / ghi nợ và số dư trên sao kê, bỏ giao dịch trùng giữa các tháng, rồi xuất Excel sheet KTSC
           theo mẫu Nibot để nhập Smart Pro. Tiền vào: Nợ TK ngân hàng; tiền ra: Có TK ngân hàng.</div>
-        <input type="file" id="bankFiles" multiple accept=".xls,.xlsx,.csv,.htm,.html,.txt" style="margin-top:8px">
+        <input type="file" id="bankFiles" multiple accept=".xls,.xlsx,.csv,.htm,.html,.txt,.pdf" style="margin-top:8px">
         <div class="flt" style="margin-top:10px">
           <label>TK ngân hàng<input type="text" id="bkTk" value="1121"></label>
           <label>Mã đối tượng TK ngân hàng<input type="text" id="bkMa" placeholder="vd 112_VIETTIN"></label>
