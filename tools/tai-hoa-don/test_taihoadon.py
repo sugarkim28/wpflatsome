@@ -736,6 +736,9 @@ class Tests(unittest.TestCase):
             open(os.path.join(d, "a.xml"), "w").write("<x/>")
             q = lambda p, k=self.app.key: base + "/file?" + urllib.parse.urlencode({"k": k, "mst": "0309999999", "p": p})
             self.assertEqual(urllib.request.urlopen(q("a.xml")).read(), b"<x/>")
+            zr = urllib.request.urlopen(q("a.xml") + "&zip=1")  # XML nén .zip để trình duyệt không chặn
+            self.assertIn('filename="a.zip"', zr.headers["Content-Disposition"])
+            self.assertEqual(zipfile.ZipFile(io.BytesIO(zr.read())).read("a.xml"), b"<x/>")
             for bad in (q("a.xml", "sai"), q("../_cau-hinh/doanh-nghiep.json")):
                 with self.assertRaises(urllib.error.HTTPError):
                     urllib.request.urlopen(bad)

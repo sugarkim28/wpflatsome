@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.8.1"
+__version__ = "3.8.2"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -4900,6 +4900,7 @@ async function loadInv() {
 }
 function fileLink(rel, text) {
   const a = el('a', 'lk', text); a.href = '/file?k=' + encodeURIComponent(KEY) + '&mst=' + encodeURIComponent($('hMst').value) + '&p=' + encodeURIComponent(rel);
+  if (/\.xml$/i.test(rel)) { a.href += '&zip=1'; a.title = 'Tải file XML (đã nén .zip để trình duyệt không chặn)'; }
   a.target = '_blank'; return a;
 }
 
@@ -5584,13 +5585,20 @@ def make_handler(app, port):
                      ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}.get(ext, "application/octet-stream")
             with open(full, "rb") as fh:
                 body = fh.read()
+            name = os.path.basename(full)
+            if q.get("zip") == "1":  # nén trước khi tải: trình duyệt hay chặn / cảnh báo file .xml tải trực tiếp
+                buf = io.BytesIO()
+                with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+                    z.writestr(name, body)
+                body, ext, ctype = buf.getvalue(), ".zip", "application/zip"
+                name = os.path.splitext(name)[0] + ".zip"
             self.send_response(200)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "private, no-store")
             self._sec_headers()
             if ext in (".zip", ".xlsx"):
-                self.send_header("Content-Disposition", 'attachment; filename="%s"' % os.path.basename(full))
+                self.send_header("Content-Disposition", 'attachment; filename="%s"' % name)
             if ext in (".html", ".htm"):
                 self.send_header("Content-Security-Policy", "script-src 'none'")  # HTML hoá đơn chỉ để xem
             self.end_headers()
