@@ -894,6 +894,95 @@ class Tests(unittest.TestCase):
         finally:
             t._FERNET = None
 
+    def test_multi_tenant(self):
+        """Nhiều văn phòng: dữ liệu tách hẳn, chủ hệ thống tạo / khoá văn phòng, phân quyền theo mục, giới hạn gói."""
+        t.set_secret_key(os.path.join(self.tmp, "_cau-hinh", "khoa.key"))
+        app = t.App(self.tmp, lambda: t.HoaDonClient(self.base, delay=0), server=True)
+        app.store.import_text("0309999999\tA\tpw1\n")
+        app.users.upsert("boss", ten="Sếp", role="admin", password="matkhau-boss")
+        app.users.upsert("nv0", role="staff", password="matkhau-nv0", msts=["0309999999"])
+        self.assertEqual(t.migrate_owner(app), 1)                      # quản trị cũ thành chủ hệ thống
+        self.assertEqual(t.migrate_owner(app), 0)
+        self.assertEqual(t.UserStore.perms(app.users.get("nv0")), t.STAFF_DEFAULT_PERMS)
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), t.make_handler(app, 0))
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        base = "http://127.0.0.1:%d" % srv.server_port
+        import http.cookiejar
+
+        class S:
+            def __init__(s):
+                s.op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+                s.key = ""
+
+            def login(s, u, pw):
+                s.call("/api/login", {"username": u, "password": pw})
+                page = s.op.open(base + "/").read().decode()
+                s.key = re.search(r'const KEY = "([^"]+)"', page).group(1)
+
+            def call(s, path, body=None):
+                req = urllib.request.Request(base + path, data=json.dumps(body).encode() if body is not None else None,
+                                             headers={"X-App-Key": s.key, "Content-Type": "application/json"})
+                return json.loads(s.op.open(req).read())
+
+            def code(s, *a):
+                try:
+                    s.call(*a)
+                    return 200
+                except urllib.error.HTTPError as e:
+                    return e.code
+        try:
+            boss, nv0 = S(), S()
+            boss.login("boss", "matkhau-boss")
+            nv0.login("nv0", "matkhau-nv0")
+            self.assertTrue(boss.call("/api/state")["me"]["owner"])
+            self.assertEqual(nv0.code("/api/vp/list", {}), 403)                 # nhân viên không quản lý văn phòng
+            self.assertEqual(nv0.code("/api/company/save", {"mst": "0309999999", "ten": "x"}), 403)  # mặc định không sửa DN
+            self.assertEqual(nv0.code("/api/company/save", {"mst": "0309999999", "ghichu": "goi"}), 200)  # ghi chú thì được
+            self.assertEqual(boss.code("/api/vp/save", {"id": "ketoan-a", "ten": "Kế toán A", "create": True,
+                                                        "admin": "boss", "admin_pw": "matkhau-a1"}), 400)  # trùng tên
+            boss.call("/api/vp/save", {"id": "ketoan-a", "ten": "Kế toán A", "create": True, "max_dn": 2,
+                                       "admin": "qt-a", "admin_pw": "matkhau-a1"})
+            items = {v["id"]: v for v in boss.call("/api/vp/list", {})["items"]}
+            self.assertEqual((items["goc"]["so_dn"], items["ketoan-a"]["so_dn"], items["ketoan-a"]["quan_tri"]), (1, 0, "qt-a"))
+            a1 = S()
+            a1.login("qt-a", "matkhau-a1")
+            st = a1.call("/api/state")
+            self.assertEqual((st["companies"], st["me"]["vp"], st["me"]["owner"]), ([], "ketoan-a", False))
+            self.assertEqual(a1.code("/api/vp/list", {}), 403)                  # quản trị văn phòng không phải chủ hệ thống
+            self.assertEqual(a1.code("/api/invoices", {"mst": "0309999999"}), 400)   # DN của văn phòng khác: không thấy
+            # Cùng MST ở văn phòng khác: dữ liệu riêng, mật khẩu riêng
+            a1.call("/api/company/save", {"mst": "0309999999", "ten": "A ben vp A", "password": "pw-khac"})
+            a1.call("/api/company/save", {"mst": "0101234567", "ten": "B", "password": "pw2"})
+            self.assertEqual(a1.code("/api/company/save", {"mst": "0102222222", "ten": "C", "password": "pw3"}), 400)  # gói 2 DN
+            self.assertEqual(boss.call("/api/state")["companies"][0]["ten"], "A")
+            self.assertTrue(os.path.isfile(os.path.join(self.tmp, "_vp", "ketoan-a", "_cau-hinh", "doanh-nghiep.json")))
+            self.assertEqual(t.unprotect(app.t("ketoan-a").store.get("0309999999")["pw"]), "pw-khac")
+            self.assertEqual(t.unprotect(app.store.get("0309999999")["pw"]), "pw1")
+            # Người dùng của văn phòng: chỉ thấy người cùng văn phòng; phân quyền từng mục
+            self.assertEqual([u["username"] for u in a1.call("/api/users", {})["users"]], ["qt-a"])
+            self.assertEqual(a1.code("/api/user/save", {"username": "nv0", "role": "staff"}), 400)   # người văn phòng khác
+            a1.call("/api/user/save", {"username": "a-nv", "role": "staff", "password": "matkhau-anv", "create": True,
+                                       "msts": ["0101234567", "0309999999"], "quyen": ["ketxuat", "dn"]})
+            nv = S()
+            nv.login("a-nv", "matkhau-anv")
+            self.assertEqual(nv.call("/api/state")["me"]["quyen"], ["ketxuat", "dn"])
+            self.assertEqual(nv.code("/api/run", {"msts": ["0101234567"], "test": True}), 403)       # không có quyền đồng bộ
+            self.assertEqual(nv.code("/api/invoice/update", {"mst": "0101234567", "kind": "purchase", "key": "x",
+                                                             "note": "a"}), 403)
+            self.assertEqual(nv.code("/api/tool/bank-parse", {"files": []}), 403)
+            self.assertEqual(nv.code("/api/invoices", {"mst": "0101234567"}), 200)                  # xem thì được
+            self.assertEqual(nv.code("/api/company/save", {"mst": "0101234567", "ten": "B moi"}), 200)  # có quyền DN
+            self.assertEqual(boss.code("/api/user/save", {"username": "a-nv", "owner": True}), 400)  # khác văn phòng
+            # Khoá văn phòng: người dùng văn phòng đó bị đăng xuất, không đăng nhập lại được
+            boss.call("/api/vp/save", {"id": "ketoan-a", "active": False})
+            self.assertEqual(a1.code("/api/state"), 401)
+            self.assertEqual(S().code("/api/login", {"username": "qt-a", "password": "matkhau-a1"}), 403)
+            self.assertEqual(boss.code("/api/vp/save", {"id": "goc", "active": False}), 400)       # không khoá văn phòng chính
+            self.assertEqual(len(boss.call("/api/state")["companies"]), 1)
+        finally:
+            srv.shutdown()
+            srv.server_close()
+
     def test_auto_sync_and_notices(self):
         self.assertEqual(t.auto_range("auto", date(2026, 10, 9)), (date(2026, 9, 1), date(2026, 10, 9)))
         self.assertEqual(t.auto_range("auto", date(2026, 10, 25)), (date(2026, 10, 1), date(2026, 10, 25)))
@@ -929,14 +1018,18 @@ class Tests(unittest.TestCase):
 
     def test_mst_busy(self):
         a, b = t.Job(), t.Job()
-        self.assertTrue(t.claim_mst("0309999999", a))
-        self.assertFalse(t.claim_mst("0309999999", b))
+        key = (os.path.abspath(self.tmp), "0309999999")   # khoá theo thư mục dữ liệu (văn phòng) + MST
+        self.assertTrue(t.claim_mst(key, a))
+        self.assertFalse(t.claim_mst(key, b))
+        self.assertTrue(t.claim_mst((os.path.abspath(self.tmp) + "/_vp/khac", "0309999999"), b))  # văn phòng khác
+        t.release_mst((os.path.abspath(self.tmp) + "/_vp/khac", "0309999999"), b)
         self.app.store.import_text("0309999999\tA\tpw1\n")
         b.running = True
         t.run_batch(b, self.app.store, self.app.solver, ["0309999999"], [], None, None, True, True, self.tmp, True,
                     self.app.client_factory)
         self.assertIn("đang được người khác đồng bộ", "\n".join(b.log))
-        t.release_mst("0309999999", a)
+        self.assertIn("0309999999", t.busy_msts(self.tmp))
+        t.release_mst(key, a)
         self.assertNotIn("0309999999", t.busy_msts())
 
     def test_web_behind_nginx(self):

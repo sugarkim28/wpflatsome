@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.9.5"
+__version__ = "4.0.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -1750,6 +1750,79 @@ class Store:
 # ---------------------------------------------------------------------------
 
 ROLES = {"admin": "Quản trị", "staff": "Nhân viên"}
+DEFAULT_VP = "goc"  # văn phòng đầu tiên: dùng nguyên thư mục dữ liệu cũ (không phải chuyển file)
+# Quyền theo từng mục cho nhân viên (quản trị văn phòng có tất cả). Nhân viên tạo trước khi có phân quyền: có hết.
+PERMS = {"dongbo": "Đồng bộ / tải hoá đơn", "hdgoc": "Tải và gắn hoá đơn gốc",
+         "sua": "Ghi chú, duyệt nội bộ, đánh dấu HĐ dịch vụ", "ketxuat": "Kết xuất Excel / ZIP",
+         "saoke": "Sao kê ngân hàng", "dn": "Thêm / sửa doanh nghiệp, mật khẩu cổng thuế"}
+STAFF_DEFAULT_PERMS = [k for k in PERMS if k != "dn"]
+
+
+def user_vp(user):
+    return (user or {}).get("vp") or DEFAULT_VP
+
+
+class TenantStore:
+    """Danh sách văn phòng (công ty dịch vụ kế toán) dùng chung máy chủ. Mỗi văn phòng có doanh nghiệp, người dùng,
+    cài đặt, thông báo và thư mục dữ liệu riêng."""
+
+    def __init__(self, path):
+        self.path = path
+        self.lock = threading.RLock()
+        self.items = _load_json(path, [])
+
+    def _default(self):
+        return {"id": DEFAULT_VP, "ten": "Văn phòng chính", "active": True, "max_dn": 0, "max_jobs": 0,
+                "tao": "", "ghichu": ""}
+
+    def list(self):
+        with self.lock:
+            ids = {t["id"] for t in self.items}
+            return ([self._default()] if DEFAULT_VP not in ids else []) + [dict(t) for t in self.items]
+
+    def get(self, vid):
+        return next((t for t in self.list() if t["id"] == vid), None)
+
+    def upsert(self, vid, create=False, **fields):
+        vid = (vid or "").strip().lower()
+        if not re.fullmatch(r"[a-z0-9][a-z0-9-]{1,29}", vid):
+            raise ValueError("Mã văn phòng 2–30 ký tự: chữ thường không dấu, số, dấu - (vd: ketoan-abc)")
+        with self.lock:
+            t = next((x for x in self.items if x["id"] == vid), None)
+            if t and create or (create and vid == DEFAULT_VP):
+                raise ValueError("Mã văn phòng %s đã có" % vid)
+            if not t:
+                if not create and vid != DEFAULT_VP:
+                    raise ValueError("Không tìm thấy văn phòng %s" % vid)
+                t = self._default() if vid == DEFAULT_VP else {
+                    "id": vid, "ten": "", "active": True, "max_dn": 0, "max_jobs": 2, "ghichu": "",
+                    "tao": date.today().strftime("%d/%m/%y")}
+                self.items.append(t)
+            if fields.get("ten") is not None:
+                t["ten"] = str(fields["ten"]).strip()[:150]
+            if fields.get("ghichu") is not None:
+                t["ghichu"] = str(fields["ghichu"]).strip()[:300]
+            for k in ("max_dn", "max_jobs"):
+                if fields.get(k) is not None:
+                    t[k] = max(0, int(fields[k] or 0))
+            if fields.get("active") is not None:
+                if vid == DEFAULT_VP and not fields["active"]:
+                    raise ValueError("Không khoá văn phòng chính (văn phòng của chủ hệ thống)")
+                t["active"] = bool(fields["active"])
+            if not t["ten"]:
+                raise ValueError("Nhập tên văn phòng")
+            _save_json(self.path, self.items)
+            return dict(t)
+
+
+class Tenant:
+    """Dữ liệu đang dùng của một văn phòng: danh sách doanh nghiệp, phiên đăng nhập cổng thuế đang giữ."""
+
+    def __init__(self, vid, root):
+        self.id, self.root = vid, root
+        self.cfg = os.path.join(root, "_cau-hinh")
+        self.store = Store(os.path.join(self.cfg, "doanh-nghiep.json"))
+        self.clients = {}
 
 
 class UserStore:
@@ -1799,10 +1872,11 @@ class UserStore:
         ok = self.check(password or "", u["pw"] if u else "")
         return u if ok and u.get("active", True) else None
 
-    def _active_admins(self):
-        return [u for u in self.items if u["role"] == "admin" and u.get("active", True)]
+    def _active_admins(self, vp=DEFAULT_VP):
+        return [u for u in self.items if u["role"] == "admin" and u.get("active", True) and user_vp(u) == vp]
 
-    def upsert(self, username, ten=None, role=None, password=None, msts=None, active=None, create=False):
+    def upsert(self, username, ten=None, role=None, password=None, msts=None, active=None, create=False,
+               vp=None, quyen=None, owner=None):
         username = (username or "").strip().lower()
         if not re.fullmatch(r"[a-z0-9][a-z0-9._@-]{2,39}", username):
             raise ValueError("Tên đăng nhập 3–40 ký tự: chữ thường không dấu, số, . _ - @ (bắt đầu bằng chữ/số)")
@@ -1819,9 +1893,14 @@ class UserStore:
                 if not password:
                     raise ValueError("Nhập mật khẩu cho người dùng mới")
                 u = {"username": username, "ten": "", "role": "staff", "pw": "", "msts": [], "active": True,
-                     "tao": date.today().strftime("%d/%m/%y")}
+                     "tao": date.today().strftime("%d/%m/%y"), "vp": vp or DEFAULT_VP,
+                     "quyen": list(STAFF_DEFAULT_PERMS)}
                 self.items.append(u)
             old = dict(u)
+            if quyen is not None:
+                u["quyen"] = [k for k in PERMS if k in quyen]
+            if owner is not None:
+                u["owner"] = bool(owner)
             if ten is not None:
                 u["ten"] = str(ten).strip()[:100]
             if role is not None:
@@ -1833,7 +1912,7 @@ class UserStore:
             if password:
                 u["pw"] = self.hash(password)
                 u["doi_mk"] = int(time.time())
-            if not self._active_admins():
+            if not self._active_admins(user_vp(u)):
                 if is_new:
                     self.items.remove(u)
                 else:
@@ -1849,25 +1928,42 @@ class UserStore:
             if not u:
                 return
             rest = [x for x in self.items if x is not u]
-            if not any(x["role"] == "admin" and x.get("active", True) for x in rest):
+            if not any(x["role"] == "admin" and x.get("active", True) and user_vp(x) == user_vp(u) for x in rest):
                 raise ValueError("Không xoá được quản trị cuối cùng")
             self.items = rest
             self.save()
 
-    def remove_mst(self, mst):
+    def remove_mst(self, mst, vp=DEFAULT_VP):
         with self.lock:
             for u in self.items:
-                if mst in u.get("msts", []):
+                if mst in u.get("msts", []) and user_vp(u) == vp:
                     u["msts"].remove(mst)
             self.save()
 
-    def public(self):
+    def public(self, vp=None):
         with self.lock:
-            return [{k: v for k, v in u.items() if k != "pw"} for u in self.items]
+            return [dict({k: v for k, v in u.items() if k != "pw"}, vp=user_vp(u), quyen=self.perms(u))
+                    for u in self.items if vp is None or user_vp(u) == vp]
+
+    def add_mst(self, username, mst):
+        with self.lock:
+            u = self.get(username)
+            if u and u["role"] != "admin" and mst not in u.get("msts", []):
+                u.setdefault("msts", []).append(mst)
+                self.save()
 
     @staticmethod
     def can(user, mst):
         return bool(user) and (user["role"] == "admin" or mst in (user.get("msts") or []))
+
+    @staticmethod
+    def perms(user):
+        """Các quyền thực có: quản trị có hết; nhân viên cũ (chưa phân quyền) có hết như trước."""
+        if not user:
+            return []
+        if user.get("role") == "admin" or user.get("quyen") is None:
+            return list(PERMS)
+        return [k for k in PERMS if k in user["quyen"]]
 
 
 # ---------------------------------------------------------------------------
@@ -2321,9 +2417,11 @@ def release_mst(mst, job):
             del _BUSY[mst]
 
 
-def busy_msts():
+def busy_msts(root=None):
+    """MST đang đồng bộ (khoá theo thư mục dữ liệu + MST: văn phòng khác cùng MST không chặn nhau)."""
     with _BUSY_LOCK:
-        return set(_BUSY)
+        return {k[1] if isinstance(k, tuple) else k for k in _BUSY
+                if root is None or (isinstance(k, tuple) and k[0] == os.path.abspath(root))}
 
 
 def run_batch(job, store, solver, msts, kinds, start, end, include_mtt, want_xml, out_root,
@@ -2339,7 +2437,7 @@ def run_batch(job, store, solver, msts, kinds, start, end, include_mtt, want_xml
             company = store.get(mst)
             if not company:
                 continue
-            if not claim_mst(mst, job):
+            if not claim_mst((os.path.abspath(out_root), mst), job):
                 job.say("%s: LỖI doanh nghiệp đang được người khác đồng bộ – bỏ qua, thử lại sau" % mst)
                 continue
             with job.lock:
@@ -2383,7 +2481,7 @@ def run_batch(job, store, solver, msts, kinds, start, end, include_mtt, want_xml
                 job.say("%s: LỖI %s" % (mst, msg))
                 store.update(mst, lambda c: c.update(loi=msg))
             finally:
-                release_mst(mst, job)
+                release_mst((os.path.abspath(out_root), mst), job)
         job.say("Hoàn tất.")
         job.phase = "đồng bộ xong" if not job.cancel else "đã dừng"
     finally:
@@ -4107,6 +4205,10 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
 .advice h4{color:#5503ca;margin:0 0 6px}.badge{display:inline-block;padding:2px 8px;border-radius:5px;color:#fff;font-size:12px;background:#6c757d}
 .badge.run{background:#f0a500}.badge.ok{background:#1e8449}.badge.bad{background:#c0392b}.steps{line-height:1.9;margin:10px 0}
 .staff .adm,.local .srv{display:none!important}
+.no-dongbo .q-dongbo,.no-hdgoc .q-hdgoc,.no-sua .q-sua,.no-ketxuat .q-ketxuat,.no-saoke .q-saoke,.no-dn .q-dn,
+body:not(.owner) .own{display:none!important}
+.vpname{font-size:12px;background:rgba(255,255,255,.18);border-radius:10px;padding:2px 8px;margin-left:6px}
+.perms{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin:4px 0 8px}.perms label{font-weight:400}
 .pw{-webkit-text-security:disc;text-security:disc}
 /* Trang doanh nghiệp */
 .wshead{padding-bottom:0}.wshead .crumb{margin-bottom:6px}
@@ -4171,15 +4273,25 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
 <a href="#" id="navTI" onclick="tab('TI');return false">Tiện ích</a>
 <a href="#" id="navND" class="adm srv" onclick="tab('ND');return false">Quản trị</a></nav><span style="flex:1"></span><small id="capStat"></small>
 <span class="me srv"><button class="bell" id="bell" title="Thông báo" onclick="toggleNotes()">&#128276;<i id="bellN" class="hide"></i></button>
-<span id="meName"></span> · <a onclick="openPw()">Đổi mật khẩu</a> · <a onclick="logout()">Đăng xuất</a></span></header>
+<span id="meName"></span><span class="vpname hide" id="vpName"></span> · <a onclick="openPw()">Đổi mật khẩu</a> · <a onclick="logout()">Đăng xuất</a></span></header>
 <div class="card hide" id="notes"><div class="top"><b>Thông báo</b><button class="sm sec" onclick="toggleNotes()">Đóng</button></div><div id="notesList"></div></div>
 <main>
 <section class="card hide" id="tabND">
   <div class="top"><b>Người dùng</b><button onclick="openUser()">+ Thêm người dùng</button></div>
   <div class="hint">Quản trị xem và làm việc với tất cả doanh nghiệp, quản lý người dùng. Nhân viên chỉ thấy các doanh nghiệp được giao.</div>
-  <div class="tbl"><table><thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Vai trò</th><th class="n">Số DN được giao</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr></thead>
+  <div class="tbl"><table><thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Vai trò</th><th class="n">Số DN được giao</th><th>Quyền</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr></thead>
     <tbody id="uRows"></tbody></table></div>
   <div class="err" id="uErr"></div>
+  <div class="own">
+    <h3 style="margin:24px 0 6px">Văn phòng khách hàng <span class="mute" style="font-weight:400;font-size:13px">(chỉ chủ hệ thống thấy)</span></h3>
+    <div class="hint">Mỗi văn phòng (công ty dịch vụ kế toán) có doanh nghiệp, người dùng, cài đặt và dữ liệu riêng, không thấy nhau.
+      Chủ hệ thống tạo văn phòng kèm tài khoản quản trị đầu tiên; quản trị văn phòng tự thêm doanh nghiệp, nhân viên và phân quyền.
+      Chủ hệ thống không xem được hoá đơn của văn phòng khác.</div>
+    <div class="bar" style="margin:6px 0"><button onclick="openVp()">+ Thêm văn phòng</button></div>
+    <div class="tbl"><table><thead><tr><th>Mã</th><th>Tên văn phòng</th><th>Quản trị</th><th class="n">Số DN</th><th class="n">Giới hạn DN</th>
+      <th class="n">Người dùng</th><th class="n">Lượt chạy cùng lúc</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr></thead><tbody id="vpRows"></tbody></table></div>
+    <div class="err" id="vpErr"></div>
+  </div>
   <h3 style="margin:24px 0 6px">Đồng bộ tự động hằng ngày</h3>
   <div class="hint">Máy chủ tự đồng bộ mua vào + bán ra cho tất cả doanh nghiệp đang hiển thị (có mật khẩu) theo giờ đã đặt, tự giải captcha.
     HĐ mới, HĐ đổi trạng thái (huỷ, thay thế, điều chỉnh) và lỗi được báo ở chuông thông báo cho người phụ trách doanh nghiệp.</div>
@@ -4196,7 +4308,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     <div class="tmenu">
       <a href="#" data-t="xml" class="on">Đọc hoá đơn XML</a><a href="#" data-t="mst">Kiểm tra MST DN</a>
       <a href="#" data-t="merge">Nối file PDF</a><a href="#" data-t="split">Tách file PDF</a>
-      <a href="#" data-t="bank">Sao kê ngân hàng</a>
+      <a href="#" data-t="bank" class="q-saoke">Sao kê ngân hàng</a>
     </div>
     <div>
       <div class="tpane" id="t-xml"><h3>Đọc và xem hoá đơn XML</h3>
@@ -4245,13 +4357,13 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
       <input type="search" id="wsPick" list="wsList" autocomplete="off" placeholder="Gõ tên hoặc MST để chuyển doanh nghiệp…">
       <datalist id="wsList"></datalist>
       <button class="sec sm" id="wsNext" title="Doanh nghiệp sau (Alt+→)" onclick="stepCompany(1)">›</button>
-      <button class="sec sm" title="Sửa thông tin doanh nghiệp" onclick="openEdit(companies.find(c => c.mst === wsMst))">✎ Sửa</button>
+      <button class="sec sm q-dn" title="Sửa thông tin doanh nghiệp" onclick="openEdit(companies.find(c => c.mst === wsMst))">✎ Sửa</button>
       <span class="wsmeta" id="wsMeta"></span>
     </div>
     <input type="hidden" id="hMst">
     <nav class="subtabs" id="wsTabs">
-      <a href="#" data-s="hoa-don">Hoá đơn</a><a href="#" data-s="dong-bo">Đồng bộ</a>
-      <a href="#" data-s="sao-ke">Sao kê ng.hàng</a><a href="#" data-s="tra-cuu-mst">Tra cứu MST</a>
+      <a href="#" data-s="hoa-don">Hoá đơn</a><a href="#" data-s="dong-bo" class="q-dongbo">Đồng bộ</a>
+      <a href="#" data-s="sao-ke" class="q-saoke">Sao kê ng.hàng</a><a href="#" data-s="tra-cuu-mst">Tra cứu MST</a>
     </nav>
   </div>
 
@@ -4275,24 +4387,24 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     </div>
     <div class="bar actions">
       <button class="sec" onclick="openSub('dong-bo')">⟳ Đồng bộ</button>
-      <button class="sec" id="hBulkPdf" onclick="bulkPdf()">Tải HĐ gốc hàng loạt</button>
-      <button class="sec" id="hImpPdf" onclick="$('hImpFiles').click()" title="Chọn các file PDF / XML hoá đơn gốc có sẵn trên máy – phần mềm tự gắn vào đúng hoá đơn">Gắn HĐ gốc có sẵn</button>
+      <button class="sec q-hdgoc" id="hBulkPdf" onclick="bulkPdf()">Tải HĐ gốc hàng loạt</button>
+      <button class="sec q-hdgoc" id="hImpPdf" onclick="$('hImpFiles').click()" title="Chọn các file PDF / XML hoá đơn gốc có sẵn trên máy – phần mềm tự gắn vào đúng hoá đơn">Gắn HĐ gốc có sẵn</button>
       <input type="file" id="hImpFiles" accept=".pdf,.xml,application/pdf,text/xml,application/xml" multiple class="hide">
       <span style="flex:1"></span>
       <button class="sec sm" onclick="resetGrid()" title="Bỏ sắp xếp và lọc theo cột">Bỏ lọc cột</button>
-      <select class="sm" id="hExp" style="width:auto" onchange="exportInv(this.value);this.value=''">
+      <select class="sm q-ketxuat" id="hExp" style="width:auto" onchange="exportInv(this.value);this.value=''">
         <option value="">Kết xuất…</option><option value="xlsx">Excel (mẫu Nibot)</option><option value="xml">XML.ZIP</option>
         <option value="all">Tất cả (XML + PDF + Excel).ZIP</option><option value="html">HTML.ZIP</option>
         <option value="pdf">PDF gốc.ZIP</option><option value="cqt">PDF thuế.ZIP</option></select>
     </div>
     <div class="bulk hide" id="hBulk">
       <b id="hSelInfo"></b>
-      <select class="sm" id="hBulkDuyet" onchange="bulkUpdate({duyet: this.value});this.value=''">
+      <select class="sm q-sua" id="hBulkDuyet" onchange="bulkUpdate({duyet: this.value});this.value=''">
         <option value="">Duyệt nội bộ…</option><option>Đã duyệt</option><option>Chờ duyệt</option><option>Không duyệt</option></select>
-      <button class="sm sec" onclick="bulkUpdate({dv: true})">Đánh dấu HĐ dịch vụ</button>
-      <button class="sm sec" onclick="bulkUpdate({dv: false})">Bỏ HĐ dịch vụ</button>
-      <button class="sm sec" onclick="bulkPdf()">Tải HĐ gốc</button>
-      <button class="sm sec" onclick="exportInv('xlsx')">Kết xuất Excel</button>
+      <button class="sm sec q-sua" onclick="bulkUpdate({dv: true})">Đánh dấu HĐ dịch vụ</button>
+      <button class="sm sec q-sua" onclick="bulkUpdate({dv: false})">Bỏ HĐ dịch vụ</button>
+      <button class="sm sec q-hdgoc" onclick="bulkPdf()">Tải HĐ gốc</button>
+      <button class="sm sec q-ketxuat" onclick="exportInv('xlsx')">Kết xuất Excel</button>
       <button class="sm red" onclick="hSel.clear();renderInv()">Bỏ chọn</button>
     </div>
     <div class="err" id="hErr"></div>
@@ -4345,9 +4457,9 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     <input class="search" id="q" type="search" name="tim-doanh-nghiep" autocomplete="off" placeholder="nhập MST hoặc tên doanh nghiệp cần làm việc nhanh">
   </div>
   <div class="bar">
-    <button class="adm" onclick="openEdit()">+ Thêm doanh nghiệp</button>
+    <button class="q-dn" onclick="openEdit()">+ Thêm doanh nghiệp</button>
     <button class="sec adm" onclick="show('mImport')">Nhập danh sách từ Excel</button>
-    <button class="red" onclick="openBatch()">Xử lý hàng loạt</button>
+    <button class="red q-dongbo" onclick="openBatch()">Xử lý hàng loạt</button>
   </div>
   <div class="tbl"><table>
     <thead><tr><th><input type="checkbox" id="all"></th><th>Doanh nghiệp</th><th>Ghi chú công việc</th>
@@ -4397,6 +4509,10 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
   <label>Mật khẩu đăng nhập phần mềm</label><input type="text" class="full pw" id="uPw" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
   <div class="hint" id="uPwHint"></div>
   <div class="chk"><label><input type="checkbox" id="uActive" checked> Đang hoạt động (bỏ tích để khoá tài khoản)</label></div>
+  <div class="chk own" id="uOwnerBox"><label title="Quản lý các văn phòng khách hàng (không xem được hoá đơn của văn phòng khác)">
+    <input type="checkbox" id="uOwner"> Chủ hệ thống – quản lý văn phòng khách hàng</label></div>
+  <div id="uPermBox"><label>Quyền theo từng mục <span class="mute">(xem hoá đơn của DN được giao luôn có)</span></label>
+    <div class="perms" id="uPerms"></div></div>
   <div id="uMstBox"><label>Doanh nghiệp được giao (<span id="uCnt">0</span>)</label>
     <div style="display:flex;gap:6px;margin-bottom:6px"><input type="search" id="uQ" autocomplete="off" placeholder="lọc MST / tên" style="flex:1">
       <button class="sm sec" type="button" onclick="uPickAll(true)">Chọn hết đang lọc</button><button class="sm sec" type="button" onclick="uPickAll(false)">Bỏ chọn</button></div>
@@ -4404,6 +4520,22 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
   <div class="err" id="uEditErr"></div>
   <div class="bar"><button onclick="saveUser()">Lưu</button><span style="flex:1"></span>
     <button class="red" id="uDel" onclick="delUser()">Xoá</button><button class="sec" onclick="hide('mUser')">Đóng</button></div>
+</div></div>
+
+<div class="modal hide" id="mVp"><div class="card">
+  <b id="vpTitle">Văn phòng</b>
+  <label>Mã văn phòng (không đổi được, vd: ketoan-abc)</label><input type="text" class="full" id="vpId" autocomplete="off">
+  <label>Tên văn phòng / công ty</label><input type="text" class="full" id="vpTen">
+  <div class="chk"><label>Giới hạn số DN (0 = không giới hạn) <input type="number" id="vpMaxDn" min="0" style="width:100px"></label>
+    <label>Lượt đồng bộ chạy cùng lúc (0 = theo máy chủ) <input type="number" id="vpMaxJobs" min="0" style="width:80px"></label></div>
+  <label>Ghi chú (gói, liên hệ…)</label><input type="text" class="full" id="vpNote">
+  <div id="vpNew"><label>Tài khoản quản trị đầu tiên của văn phòng</label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><input type="text" id="vpAdm" placeholder="tên đăng nhập" autocomplete="off" style="flex:1">
+      <input type="text" id="vpAdmTen" placeholder="họ tên" style="flex:1">
+      <input type="text" class="pw" id="vpAdmPw" placeholder="mật khẩu (≥ 8 ký tự)" autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" style="flex:1"></div></div>
+  <div class="chk" id="vpActBox"><label><input type="checkbox" id="vpActive" checked> Đang hoạt động (bỏ tích để khoá: mọi người dùng của văn phòng bị đăng xuất)</label></div>
+  <div class="err" id="vpEditErr"></div>
+  <div class="bar"><button onclick="saveVp()">Lưu</button><span style="flex:1"></span><button class="sec" onclick="hide('mVp')">Đóng</button></div>
 </div></div>
 
 <div class="modal hide" id="mPw"><div class="card">
@@ -4462,6 +4594,9 @@ async function api(path, body) {
   return d;
 }
 const post = (p, b) => api(p, b);
+const PERM_NAMES = {dongbo: 'Đồng bộ / tải hoá đơn', hdgoc: 'Tải và gắn hoá đơn gốc', sua: 'Ghi chú, duyệt nội bộ, HĐ dịch vụ',
+                    ketxuat: 'Kết xuất Excel / ZIP', saoke: 'Sao kê ngân hàng', dn: 'Thêm / sửa doanh nghiệp, mật khẩu cổng thuế'};
+const can = p => !me || !me.quyen || me.quyen.includes(p);
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 
 function render() {
@@ -4489,8 +4624,8 @@ function render() {
     const s = c.so_hd || {}, v = s.purchase || 0, r = s.sold || 0;
     [v, r, v + r].forEach(n => { const x = tr.insertCell(); x.className = 'n'; x.textContent = fmt(n); });
     const act = tr.insertCell(); act.style.whiteSpace = 'nowrap';
-    const b1 = el('button', 'sm', 'Đồng bộ'); b1.onclick = () => openCompany(c.mst, 'dong-bo');
-    const b2 = el('button', 'sm sec', 'Sửa'); b2.onclick = () => openEdit(c); b2.style.marginLeft = '4px';
+    const b1 = el('button', 'sm q-dongbo', 'Đồng bộ'); b1.onclick = () => openCompany(c.mst, 'dong-bo');
+    const b2 = el('button', 'sm sec q-dn', 'Sửa'); b2.onclick = () => openEdit(c); b2.style.marginLeft = '4px';
     const b3 = el('button', 'sm sec', 'Xem HĐ'); b3.onclick = () => openCompany(c.mst); b3.style.marginLeft = '4px';
     act.append(b1, b2, b3);
   });
@@ -4498,7 +4633,10 @@ function render() {
 async function refresh() {
   const s = await api('/api/state'); companies = s.companies; me = s.me;
   document.body.classList.toggle('staff', me.role !== 'admin'); document.body.classList.toggle('local', !me.server);
+  document.body.classList.toggle('owner', !!me.owner);
+  Object.keys(PERM_NAMES).forEach(p => document.body.classList.toggle('no-' + p, !(me.quyen || []).includes(p)));
   $('meName').textContent = me.ten ? (me.ten + ' (' + me.username + ')') : me.username;
+  $('vpName').textContent = me.server && me.vp_ten ? me.vp_ten : ''; $('vpName').classList.toggle('hide', !(me.server && me.vp_ten));
   $('bellN').textContent = s.unread; $('bellN').classList.toggle('hide', !s.unread);
   if (s.auto) renderAuto(s.auto);
   render(); if (curTab === 'WS') { fillMst(); renderWsHead(); }
@@ -4607,11 +4745,15 @@ let users = [], allCos = [], editingUser = null, uPicked = new Set();
 async function loadUsers() {
   $('uErr').textContent = '';
   try { const d = await post('/api/users', {}); users = d.users; allCos = d.companies; } catch (e) { $('uErr').textContent = e.message; return; }
+  if (me.owner) loadVps();
   const tb = $('uRows'); tb.innerHTML = '';
   users.forEach(u => { const tr = tb.insertRow();
     tr.insertCell().textContent = u.username; tr.insertCell().textContent = u.ten || '';
     tr.insertCell().textContent = u.role === 'admin' ? 'Quản trị' : 'Nhân viên';
     const n = tr.insertCell(); n.className = 'n'; n.textContent = u.role === 'admin' ? 'tất cả' : (u.msts || []).length;
+    const q = tr.insertCell(); q.className = 'mute'; q.style.maxWidth = '280px';
+    q.textContent = u.role === 'admin' ? 'tất cả' + (u.owner ? ' · chủ hệ thống' : '')
+      : ((u.quyen || []).map(p => PERM_NAMES[p]).join('; ') || 'chỉ xem hoá đơn');
     const st = tr.insertCell(); st.textContent = u.active === false ? 'Đã khoá' : 'Hoạt động'; st.className = u.active === false ? 'err' : 'ok';
     tr.insertCell().textContent = u.tao || '';
     const b = el('button', 'sm sec', 'Sửa'); b.onclick = () => openUser(u); tr.insertCell().append(b); });
@@ -4636,15 +4778,54 @@ function openUser(u) {
   $('uRole').value = u ? u.role : 'staff'; $('uActive').checked = !u || u.active !== false; $('uPw').value = '';
   $('uPwHint').textContent = u ? 'Để trống nếu không đổi. Đặt mật khẩu mới sẽ đăng xuất người này khỏi các máy khác.' : 'Tối thiểu 8 ký tự – gửi riêng cho nhân viên.';
   uPicked = new Set(u ? (u.msts || []) : []); $('uQ').value = ''; renderUList();
+  const has = new Set(u ? (u.quyen || []) : ['dongbo', 'hdgoc', 'sua', 'ketxuat', 'saoke']), box = $('uPerms'); box.innerHTML = '';
+  Object.entries(PERM_NAMES).forEach(([k, t]) => { const l = el('label'), cb = el('input'); cb.type = 'checkbox'; cb.value = k; cb.checked = has.has(k);
+    l.append(cb, document.createTextNode(' ' + t)); box.append(l); });
+  $('uOwner').checked = !!(u && u.owner);
   $('uDel').classList.toggle('hide', !u || u.username === me.username); uRoleChanged(); show('mUser');
 }
-function uRoleChanged() { $('uMstBox').classList.toggle('hide', $('uRole').value === 'admin'); }
+function uRoleChanged() { const adm = $('uRole').value === 'admin';
+  $('uMstBox').classList.toggle('hide', adm); $('uPermBox').classList.toggle('hide', adm); $('uOwnerBox').classList.toggle('hide', !adm); }
 $('uRole').onchange = uRoleChanged; $('uQ').oninput = renderUList;
 async function saveUser() {
-  try { await post('/api/user/save', {username: $('uName').value.trim(), ten: $('uTen').value, role: $('uRole').value,
-          password: $('uPw').value, active: $('uActive').checked, msts: [...uPicked], create: !editingUser});
+  const body = {username: $('uName').value.trim(), ten: $('uTen').value, role: $('uRole').value,
+          password: $('uPw').value, active: $('uActive').checked, msts: [...uPicked], create: !editingUser,
+          quyen: [...$('uPerms').querySelectorAll('input:checked')].map(x => x.value)};
+  if (me.owner) body.owner = $('uRole').value === 'admin' && $('uOwner').checked;
+  try { await post('/api/user/save', body);
         hide('mUser'); loadUsers(); }
   catch (e) { $('uEditErr').textContent = e.message; }
+}
+// ---- Chủ hệ thống: văn phòng khách hàng ----
+let vps = [], editingVp = null;
+async function loadVps() {
+  $('vpErr').textContent = '';
+  try { vps = (await post('/api/vp/list', {})).items; } catch (e) { $('vpErr').textContent = e.message; return; }
+  const tb = $('vpRows'); tb.innerHTML = '';
+  vps.forEach(v => { const tr = tb.insertRow();
+    [v.id, v.ten, v.quan_tri || '', v.so_dn, v.max_dn || 'không giới hạn', v.so_nd, v.max_jobs || 'theo máy chủ'].forEach((x, i) => {
+      const c = tr.insertCell(); c.textContent = x; if (i >= 3) c.className = 'n'; });
+    const st = tr.insertCell(); st.textContent = v.active ? 'Hoạt động' : 'Đã khoá'; st.className = v.active ? 'ok' : 'err';
+    tr.insertCell().textContent = v.tao || '';
+    const b = el('button', 'sm sec', 'Sửa'); b.onclick = () => openVp(v); tr.insertCell().append(b); });
+}
+function openVp(v) {
+  editingVp = v || null; $('vpEditErr').textContent = '';
+  $('vpTitle').textContent = v ? 'Sửa văn phòng ' + v.id : 'Thêm văn phòng khách hàng';
+  $('vpId').value = v ? v.id : ''; $('vpId').disabled = !!v; $('vpTen').value = v ? v.ten : '';
+  $('vpMaxDn').value = v ? (v.max_dn || 0) : 0; $('vpMaxJobs').value = v ? (v.max_jobs || 0) : 2; $('vpNote').value = v ? (v.ghichu || '') : '';
+  $('vpActive').checked = !v || v.active !== false; $('vpActBox').classList.toggle('hide', !!(v && v.id === 'goc'));
+  $('vpNew').classList.toggle('hide', !!v); ['vpAdm', 'vpAdmTen', 'vpAdmPw'].forEach(id => $(id).value = '');
+  show('mVp');
+}
+async function saveVp() {
+  const body = {id: $('vpId').value.trim(), ten: $('vpTen').value, max_dn: +$('vpMaxDn').value || 0, max_jobs: +$('vpMaxJobs').value || 0,
+                ghichu: $('vpNote').value, active: $('vpActive').checked, create: !editingVp};
+  if (!editingVp) Object.assign(body, {admin: $('vpAdm').value.trim(), admin_ten: $('vpAdmTen').value, admin_pw: $('vpAdmPw').value});
+  if (editingVp && editingVp.active && !body.active && !confirm('Khoá văn phòng ' + editingVp.ten + '? Mọi người dùng của văn phòng sẽ bị đăng xuất.')) return;
+  try { await post('/api/vp/save', body); hide('mVp'); loadVps();
+        if (!editingVp) alert('Đã tạo văn phòng. Gửi cho khách: địa chỉ trang web, tên đăng nhập ' + body.admin + ' và mật khẩu vừa đặt.'); }
+  catch (e) { $('vpEditErr').textContent = e.message; }
 }
 async function delUser() {
   if (!editingUser || !confirm('Xoá người dùng ' + editingUser.username + '?')) return;
@@ -5056,10 +5237,10 @@ function renderInv() {
     };
     visCols().forEach(c => {
       if (c.k === 'duyet') { const sel = el('select'); ['Chờ duyệt', 'Đã duyệt', 'Không duyệt'].forEach(o => sel.append(new Option(o, o)));
-        sel.value = r.duyet; sel.onchange = () => updInv(r, {duyet: sel.value}); tr.insertCell().append(sel); return; }
+        sel.value = r.duyet; sel.disabled = !can('sua'); sel.onchange = () => updInv(r, {duyet: sel.value}); tr.insertCell().append(sel); return; }
       if (c.k === 'dv') { const cb = el('input'); cb.type = 'checkbox'; cb.checked = r.dv; cb.title = 'Hoá đơn dịch vụ';
-        cb.onclick = ev => ev.stopPropagation(); cb.onchange = () => updInv(r, {dv: cb.checked}); tr.insertCell().append(cb); return; }
-      if (c.k === 'note') { const note = el('input', 'note'); note.value = r.note; note.placeholder = 'ghi chú…';
+        cb.disabled = !can('sua'); cb.onclick = ev => ev.stopPropagation(); cb.onchange = () => updInv(r, {dv: cb.checked}); tr.insertCell().append(cb); return; }
+      if (c.k === 'note') { const note = el('input', 'note'); note.value = r.note; note.placeholder = 'ghi chú…'; note.disabled = !can('sua');
         note.onchange = () => updInv(r, {note: note.value}); tr.insertCell().append(note); return; }
       if (c.k === '_ct') { renderDetails(tr, r, kind); return; }
       const td = tr.insertCell(); td.className = (c.n ? 'n ' : '') + (c.cls || '');
@@ -5097,7 +5278,7 @@ function renderDetails(tr, r, kind) {
       ct.append(a);
     }
     if (r.need_goc && (r.pdf_url || r.can_fetch)) {
-      const g = el('a', 'lk', 'Tải HĐ gốc'); g.href = '#'; g.title = 'Tải PDF + XML gốc từ ' + t.ncc + ' rồi tự gắn vào hoá đơn';
+      const g = el('a', 'lk q-hdgoc', 'Tải HĐ gốc'); g.href = '#'; g.title = 'Tải PDF + XML gốc từ ' + t.ncc + ' rồi tự gắn vào hoá đơn';
       g.onclick = async ev => { ev.preventDefault();
         if (me.server || !r.pdf_url || !browserFirst(r)) {  // máy chủ / phần mềm tự tải (EasyInvoice, TS24)
           g.textContent = 'Đang tải…'; $('hErr').textContent = '';
@@ -5107,7 +5288,7 @@ function renderDetails(tr, r, kind) {
         browserDownload(browserUrls([r])); };
       ct.append(g);
     }
-    const up = el('a', 'lk', r.pdf ? '↻PDF' : '+PDF'); up.href = '#'; up.title = 'Gắn file PDF gốc đã tải từ trang tra cứu';
+    const up = el('a', 'lk q-hdgoc', r.pdf ? '↻PDF' : '+PDF'); up.href = '#'; up.title = 'Gắn file PDF gốc đã tải từ trang tra cứu';
     up.onclick = ev => { ev.preventDefault(); const fi = el('input'); fi.type = 'file'; fi.accept = 'application/pdf';
       fi.onchange = async () => { const f = fi.files[0]; if (!f) return;
         const b64 = await new Promise(res => { const rd = new FileReader(); rd.onload = () => res(String(rd.result).split(',')[1]); rd.readAsDataURL(f); });
@@ -5269,16 +5450,17 @@ def auto_sync_loop(app, interval=30):
     """Mỗi ngày đến giờ đã đặt thì đồng bộ tự động (bản web)."""
     while True:
         time.sleep(interval)
-        try:
-            a = app.settings()["auto"]
-            now = datetime.now()
-            if not a.get("on") or now.strftime("%H:%M") < a.get("gio", "06:00"):
-                continue
-            if (a.get("lan_cuoi") or "")[:10] == now.strftime("%Y-%m-%d"):
-                continue
-            app.run_auto(wait=True)
-        except Exception as e:  # không để vòng lặp chết
-            print("Đồng bộ tự động lỗi: %s" % e)
+        for vp in [t["id"] for t in app.tenants.list() if t.get("active")]:
+            try:
+                a = app.settings(vp)["auto"]
+                now = datetime.now()
+                if not a.get("on") or now.strftime("%H:%M") < a.get("gio", "06:00"):
+                    continue
+                if (a.get("lan_cuoi") or "")[:10] == now.strftime("%Y-%m-%d"):
+                    continue
+                app.run_auto(wait=False, vp=vp)  # các văn phòng chạy song song, mỗi văn phòng một lượt
+            except Exception as e:  # không để vòng lặp chết
+                print("Đồng bộ tự động (%s) lỗi: %s" % (vp, e))
 
 
 LOCAL_USER = {"username": "admin", "ten": "Máy này", "role": "admin", "msts": [], "active": True}
@@ -5293,21 +5475,38 @@ class App:
         self.server = server  # True: bản web nhiều người dùng (máy chủ); False: chạy trên máy, không cần đăng nhập
         cfg = os.path.join(out_root, "_cau-hinh")
         self.cfg = cfg
-        self.store = Store(os.path.join(cfg, "doanh-nghiep.json"))
-        self.users = UserStore(os.path.join(cfg, "nguoi-dung.json"))
+        self.lock = threading.RLock()  # RLock: t() được gọi cả khi đang giữ khoá (cài đặt, thông báo)
+        self.tenants = TenantStore(os.path.join(cfg, "van-phong.json"))
+        self._tctx = {}
+        self.store = self.t(DEFAULT_VP).store       # văn phòng chính (bản chạy trên máy chỉ có văn phòng này)
+        self.users = UserStore(os.path.join(cfg, "nguoi-dung.json"))  # tên đăng nhập duy nhất trên cả máy chủ
         self.solver = CaptchaSolver(os.path.join(cfg, "captcha-mau.json"))
         self.client_factory = client_factory or HoaDonClient
-        self.clients = {}  # MST → client đã đăng nhập (giữ phiên)
+        self.clients = self.t(DEFAULT_VP).clients  # MST → client đã đăng nhập (giữ phiên)
         self.downloads = default_downloads_dir()  # nơi trình duyệt lưu PDF gốc tải về
         self.seen_downloads = set()
         self.key = secrets.token_urlsafe(24)
-        self.lock = threading.Lock()
         self.jobs = {}          # tên đăng nhập → Job (mỗi người một lượt đồng bộ riêng)
         self.sessions = {}      # mã phiên (cookie) → {user, csrf, exp}
         self.fails = {}         # IP / tên đăng nhập → các lần đăng nhập sai gần đây
         self.allowed_hosts = set()  # bản web: tên miền được phép (rỗng = không kiểm tra)
         self.trust_proxy = False    # chạy sau Caddy/Nginx: tin X-Forwarded-For / X-Forwarded-Proto
         self.max_jobs = 4           # số lượt đồng bộ chạy cùng lúc trên máy chủ
+
+    # ---- văn phòng ----
+    def t(self, vid=DEFAULT_VP):
+        vid = vid or DEFAULT_VP
+        with self.lock:
+            if vid not in self._tctx:
+                root = self.out_root if vid == DEFAULT_VP else os.path.join(self.out_root, "_vp", vid)
+                self._tctx[vid] = Tenant(vid, root)
+            return self._tctx[vid]
+
+    def tenant_of(self, user):
+        return self.t(user_vp(user))
+
+    def vp_info(self, vid):
+        return self.tenants.get(vid or DEFAULT_VP) or {}
 
     def job_for(self, user):
         with self.lock:
@@ -5317,14 +5516,15 @@ class App:
     def job(self):  # bản chạy trên máy: một người dùng
         return self.job_for(LOCAL_USER)
 
-    def running_jobs(self):
+    def running_jobs(self, vp=None):
         with self.lock:
-            return sum(1 for j in self.jobs.values() if j.running)
+            return sum(1 for j in self.jobs.values() if j.running and (vp is None or getattr(j, "vp", DEFAULT_VP) == vp))
 
-    def audit(self, who, action):
+    def audit(self, who, action, vp=DEFAULT_VP):
         try:
-            os.makedirs(self.cfg, exist_ok=True)
-            with open(os.path.join(self.cfg, "nhat-ky.log"), "a", encoding="utf-8") as f:
+            cfg = self.t(vp).cfg
+            os.makedirs(cfg, exist_ok=True)
+            with open(os.path.join(cfg, "nhat-ky.log"), "a", encoding="utf-8") as f:
                 f.write("%s\t%s\t%s\n" % (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), who, action))
         except OSError:
             pass
@@ -5361,10 +5561,13 @@ class App:
                 return None, None
             s["exp"] = time.time() + SESSION_TTL
         u = self.users.get(s["user"])
-        if not u or not u.get("active", True):
+        if not u or not u.get("active", True) or not self.vp_active(u):
             self.drop_sessions(s["user"])
             return None, None
         return u, s["csrf"]
+
+    def vp_active(self, user):
+        return bool(self.vp_info(user_vp(user)).get("active", False))
 
     def drop_sessions(self, username, keep=None):
         with self.lock:
@@ -5372,7 +5575,7 @@ class App:
                 del self.sessions[k]
 
     def visible(self, user):
-        return [c for c in self.store.public() if self.users.can(user, c["mst"])]
+        return [c for c in self.tenant_of(user).store.public() if self.users.can(user, c["mst"])]
 
     # ---- chạy đồng bộ ----
     def start_job(self, user, msts, kinds, start, end, mtt=True, xml=True, test=False, pdf=False, unattended=False):
@@ -5381,6 +5584,7 @@ class App:
         job.want_pdf = pdf
         job.unattended = unattended
         job.owner = user["username"]
+        job.vp = user_vp(user)
         with self.lock:
             self.jobs[user["username"]] = job
         t = threading.Thread(target=self._run_job, daemon=True,
@@ -5389,8 +5593,9 @@ class App:
         return job, t
 
     def _run_job(self, job, msts, kinds, start, end, mtt, xml, test):
-        run_batch(job, self.store, self.solver, msts, kinds, start, end, mtt, xml, self.out_root, test,
-                  self.client_factory, self.clients)
+        T = self.t(job.vp)
+        run_batch(job, T.store, self.solver, msts, kinds, start, end, mtt, xml, T.root, test,
+                  self.client_factory, T.clients)
         if not test:
             try:
                 self.post_notices(job)
@@ -5398,31 +5603,34 @@ class App:
                 job.say("Không ghi được thông báo: %s" % e)
 
     # ---- thông báo (chuông) ----
-    def _notes_path(self):
-        return os.path.join(self.cfg, "thong-bao.json")
+    def _notes_path(self, vp=DEFAULT_VP):
+        return os.path.join(self.t(vp).cfg, "thong-bao.json")
 
-    def notify(self, mst, text, level="info"):
+    def notify(self, mst, text, level="info", vp=DEFAULT_VP):
+        path = self._notes_path(vp)
         with self.lock:
-            data = _load_json(self._notes_path(), {})
+            data = _load_json(path, {})
             seq = data.get("seq", 0) + 1
             items = data.get("items", [])
             items.append({"id": seq, "t": datetime.now().strftime("%d/%m/%Y %H:%M"), "mst": mst, "text": text,
                           "level": level})
             data.update(seq=seq, items=items[-2000:])
-            _save_json(self._notes_path(), data)
+            _save_json(path, data)
 
     def notices_for(self, user, limit=100):
+        path = self._notes_path(user_vp(user))
         with self.lock:
-            data = _load_json(self._notes_path(), {})
+            data = _load_json(path, {})
         read = data.get("read", {}).get(user["username"], 0)
         items = [n for n in data.get("items", []) if not n["mst"] or self.users.can(user, n["mst"])]
         return {"items": items[::-1][:limit], "unread": sum(1 for n in items if n["id"] > read)}
 
     def mark_read(self, user):
+        path = self._notes_path(user_vp(user))
         with self.lock:
-            data = _load_json(self._notes_path(), {})
+            data = _load_json(path, {})
             data.setdefault("read", {})[user["username"]] = data.get("seq", 0)
-            _save_json(self._notes_path(), data)
+            _save_json(path, data)
 
     def post_notices(self, job):
         """Sau mỗi lượt đồng bộ: báo HĐ đổi trạng thái (huỷ, thay thế, điều chỉnh); lượt tự động báo thêm HĐ mới và lỗi."""
@@ -5431,8 +5639,10 @@ class App:
             if r.get("mst"):
                 per.setdefault(r["mst"], []).append(r)
         who = "Đồng bộ tự động" if job.unattended else "Đồng bộ (%s)" % job.owner
+        vp = getattr(job, "vp", DEFAULT_VP)
+        store = self.t(vp).store
         for mst, rows in per.items():
-            c = self.store.get(mst) or {}
+            c = store.get(mst) or {}
             name = "%s (%s)" % (c.get("ten") or "", mst)
             changed = [r for r in rows if r["dongbo"] == "Đổi trạng thái"]
             new = [r for r in rows if r["dongbo"] == "Mới"]
@@ -5440,44 +5650,50 @@ class App:
                 ex = ", ".join("%s %s%s/%s – %s" % (r["loai"], r["mau"], r["kh"], r["so"], r.get("tthai") or "?")
                                for r in changed[:5])
                 self.notify(mst, "%s: %s có %d HĐ đổi trạng thái: %s%s" % (
-                    who, name, len(changed), ex, " …" if len(changed) > 5 else ""), "warn")
+                    who, name, len(changed), ex, " …" if len(changed) > 5 else ""), "warn", vp)
             if new and job.unattended:
-                self.notify(mst, "%s: %s có %d HĐ mới" % (who, name, len(new)))
+                self.notify(mst, "%s: %s có %d HĐ mới" % (who, name, len(new)), vp=vp)
         if job.unattended:
             for line in job.log:
                 m = re.match(r"\S+\s+(\d{10}(?:-\d{3})?): LỖI (.*)", line)
                 if m:
-                    c = self.store.get(m.group(1)) or {}
-                    self.notify(m.group(1), "%s: %s (%s) lỗi – %s" % (who, c.get("ten") or "", m.group(1), m.group(2)), "err")
+                    c = store.get(m.group(1)) or {}
+                    self.notify(m.group(1), "%s: %s (%s) lỗi – %s" % (who, c.get("ten") or "", m.group(1), m.group(2)),
+                                "err", vp)
 
     # ---- cài đặt đồng bộ tự động ----
-    def _settings_path(self):
-        return os.path.join(self.cfg, "cai-dat.json")
+    def _settings_path(self, vp=DEFAULT_VP):
+        return os.path.join(self.t(vp).cfg, "cai-dat.json")
 
-    def settings(self):
-        d = _load_json(self._settings_path(), {})
+    def settings(self, vp=DEFAULT_VP):
+        d = _load_json(self._settings_path(vp), {})
         auto = {"on": False, "gio": "06:00", "ky": "auto", "lan_cuoi": ""}
         auto.update(d.get("auto") or {})
         return {"auto": auto}
 
-    def save_auto(self, **fields):
+    def save_auto(self, vp=DEFAULT_VP, **fields):
         with self.lock:
-            d = _load_json(self._settings_path(), {})
-            auto = self.settings()["auto"]
+            d = _load_json(self._settings_path(vp), {})
+            auto = self.settings(vp)["auto"]
             auto.update({k: v for k, v in fields.items() if v is not None})
             d["auto"] = auto
-            _save_json(self._settings_path(), d)
+            _save_json(self._settings_path(vp), d)
             return auto
 
-    def run_auto(self, wait=True):
+    @staticmethod
+    def auto_user(vp=DEFAULT_VP):
+        return dict(AUTO_USER, vp=vp, username=AUTO_USER["username"] + ("" if vp == DEFAULT_VP else "@" + vp))
+
+    def run_auto(self, wait=True, vp=DEFAULT_VP):
         """Đồng bộ tự động tất cả DN đang hiển thị, có mật khẩu (mua vào + bán ra theo cài đặt từng DN)."""
-        job = self.jobs.get(AUTO_USER["username"])
+        au = self.auto_user(vp)
+        job = self.jobs.get(au["username"])
         if job and job.running:
             return job
-        msts = [c["mst"] for c in self.store.public() if not c.get("an") and c.get("co_mk")]
-        start, end = auto_range(self.settings()["auto"]["ky"])
-        self.save_auto(lan_cuoi=datetime.now().strftime("%Y-%m-%d %H:%M"))
-        job, t = self.start_job(AUTO_USER, msts, ["purchase", "sold"], start, end, unattended=True)
+        msts = [c["mst"] for c in self.t(vp).store.public() if not c.get("an") and c.get("co_mk")]
+        start, end = auto_range(self.settings(vp)["auto"]["ky"])
+        self.save_auto(vp, lan_cuoi=datetime.now().strftime("%Y-%m-%d %H:%M"))
+        job, t = self.start_job(au, msts, ["purchase", "sold"], start, end, unattended=True)
         job.say("Đồng bộ tự động %d doanh nghiệp, từ %s đến %s" % (
             len(msts), start.strftime("%d/%m/%Y"), end.strftime("%d/%m/%Y")))
         if wait:
@@ -5563,11 +5779,13 @@ def make_handler(app, port):
                     self._send(403, {"error": "Host không hợp lệ"})
                     return False
                 self.user, self.csrf = app.session_user(self._cookie(COOKIE))
+                self.T = app.tenant_of(self.user) if self.user else app.t(DEFAULT_VP)
             else:
                 if host not in allowed_hosts:
                     self._send(403, {"error": "Host không hợp lệ"})
                     return False
                 self.user, self.csrf = LOCAL_USER, app.key
+                self.T = app.t(DEFAULT_VP)
             path = self.path.split("?")[0]
             if path.startswith("/api/") and path != "/api/login":
                 if not self.user:
@@ -5578,9 +5796,20 @@ def make_handler(app, port):
                     return False
             return True
 
+        def _audit(self, action):
+            app.audit(self.user["username"], action, self.T.id)
+
+        def _perm(self, p):
+            if p not in UserStore.perms(self.user):
+                raise PermissionError("Tài khoản chưa được cấp quyền: " + PERMS[p])
+
+        def _owner(self):
+            if not (app.server and self.user.get("owner") and user_vp(self.user) == DEFAULT_VP):
+                raise PermissionError("Chỉ chủ hệ thống mới được làm việc này")
+
         def _auto_state(self):
-            a = app.settings()["auto"]
-            job = app.jobs.get(AUTO_USER["username"])
+            a = app.settings(self.T.id)["auto"]
+            job = app.jobs.get(app.auto_user(self.T.id)["username"])
             a["ky_text"] = AUTO_KY.get(a["ky"], "")
             a["running"] = bool(job and job.running)
             if job:
@@ -5589,7 +5818,7 @@ def make_handler(app, port):
             return a
 
         def _can(self, mst):
-            return bool(mst) and app.users.can(self.user, mst) and app.store.get(mst) is not None
+            return bool(mst) and app.users.can(self.user, mst) and self.T.store.get(mst) is not None
 
         def _admin(self):
             if self.user["role"] != "admin":
@@ -5616,7 +5845,9 @@ def make_handler(app, port):
                 u = self.user
                 return self._send(200, {"companies": app.visible(u), "job": app.job_for(u).snapshot(),
                                         "me": {"username": u["username"], "ten": u.get("ten", ""), "role": u["role"],
-                                               "server": app.server},
+                                               "server": app.server, "quyen": UserStore.perms(u),
+                                               "owner": bool(app.server and u.get("owner") and user_vp(u) == DEFAULT_VP),
+                                               "vp": self.T.id, "vp_ten": app.vp_info(self.T.id).get("ten", "")},
                                         "unread": app.notices_for(u, 0)["unread"] if app.server else 0,
                                         "auto": self._auto_state() if app.server and u["role"] == "admin" else None,
                                         "captcha": {"count": app.solver.count(), "chars": app.solver.chars()}})
@@ -5627,7 +5858,7 @@ def make_handler(app, port):
                 if not self._file_ok(q):
                     return self._send(403, {"error": "Không có quyền"})
                 try:
-                    page = render_invoice_html(app.out_root, q["mst"], q.get("kind"), q.get("key"))
+                    page = render_invoice_html(self.T.root, q["mst"], q.get("kind"), q.get("key"))
                 except (ValueError, OSError) as e:
                     return self._send(404, {"error": str(e)})
                 return self._send(200, page.encode("utf-8"), "text/html; charset=utf-8")
@@ -5636,8 +5867,8 @@ def make_handler(app, port):
                 if not self._file_ok(q):
                     return self._send(403, {"error": "Không có quyền"})
                 try:
-                    rel = tax_pdf(app.out_root, q["mst"], q.get("kind"), q.get("key"), app.clients.get(q["mst"]))
-                    with open(os.path.join(company_dir(app.out_root, q["mst"]), rel), "rb") as f:
+                    rel = tax_pdf(self.T.root, q["mst"], q.get("kind"), q.get("key"), self.T.clients.get(q["mst"]))
+                    with open(os.path.join(company_dir(self.T.root, q["mst"]), rel), "rb") as f:
                         body = f.read()
                 except (ValueError, OSError) as e:
                     return self._send(404, {"error": str(e)})
@@ -5655,7 +5886,7 @@ def make_handler(app, port):
             q = dict(urllib.parse.parse_qsl(urllib.parse.urlparse(self.path).query))
             if not self._file_ok(q):
                 return self._send(403, {"error": "Không có quyền"})
-            base = os.path.realpath(company_dir(app.out_root, q["mst"]))
+            base = os.path.realpath(company_dir(self.T.root, q["mst"]))
             full = os.path.realpath(os.path.join(base, q.get("p", "")))
             if not full.startswith(base + os.sep) or not os.path.isfile(full):
                 return self._send(404, {"error": "Không tìm thấy file"})
@@ -5710,6 +5941,8 @@ def make_handler(app, port):
                 if app.too_many_fails("ip:" + ip, "u:" + name):
                     return self._send(429, {"error": "Đăng nhập sai quá nhiều lần – thử lại sau 15 phút"})
                 u = app.users.authenticate(name, str(data.get("password") or ""))
+                if u and not app.vp_active(u):
+                    return self._send(403, {"error": "Văn phòng của tài khoản này đang bị khoá – liên hệ nhà cung cấp phần mềm"})
                 if not u:
                     app.add_fail("ip:" + ip, "u:" + name)
                     app.audit(name or "?", "đăng nhập sai từ " + ip)
@@ -5717,7 +5950,7 @@ def make_handler(app, port):
                 with app.lock:
                     app.fails.pop("u:" + name, None)
                 self._set_cookie(app.new_session(u["username"]), SESSION_TTL)
-                app.audit(u["username"], "đăng nhập từ " + ip)
+                app.audit(u["username"], "đăng nhập từ " + ip, user_vp(u))
                 return self._send(200, {"ok": True})
             if path == "/api/logout":
                 sid = self._cookie(COOKIE)
@@ -5732,31 +5965,89 @@ def make_handler(app, port):
                     raise ValueError("Mật khẩu hiện tại không đúng")
                 app.users.upsert(self.user["username"], password=str(data.get("new") or "") or None)
                 app.drop_sessions(self.user["username"], keep=self._cookie(COOKIE))
-                app.audit(self.user["username"], "đổi mật khẩu")
+                self._audit("đổi mật khẩu")
                 return self._send(200, {"ok": True})
+            if path.startswith("/api/vp/"):
+                return self._vp_post(path, data)
             self._admin()
             if path == "/api/users":
-                return self._send(200, {"users": app.users.public(),
-                                        "companies": [{"mst": c["mst"], "ten": c["ten"]} for c in app.store.public()]})
+                return self._send(200, {"users": app.users.public(self.T.id), "perms": PERMS,
+                                        "companies": [{"mst": c["mst"], "ten": c["ten"]} for c in self.T.store.public()]})
             if path == "/api/user/save":
                 msts = data.get("msts")
                 if msts is not None:
-                    msts = [m for m in msts if app.store.get(m)]
+                    msts = [m for m in msts if self.T.store.get(m)]
+                other = app.users.get(data.get("username"))
+                if other and user_vp(other) != self.T.id:
+                    raise ValueError("Tên đăng nhập %s đã có người dùng (văn phòng khác) – chọn tên khác"
+                                     % str(data.get("username")).lower())
+                if data.get("create") and other:
+                    raise ValueError("Tên đăng nhập %s đã tồn tại" % str(data.get("username")).lower())
+                owner = None
+                if data.get("owner") is not None and self.user.get("owner") and self.T.id == DEFAULT_VP:
+                    owner = bool(data["owner"])
+                    if not owner and str(data.get("username") or "").lower() == self.user["username"]:
+                        raise ValueError("Không tự bỏ quyền chủ hệ thống của chính mình")
                 u = app.users.upsert(data.get("username"), ten=data.get("ten"), role=data.get("role"),
                                      password=data.get("password") or None, msts=msts, active=data.get("active"),
-                                     create=bool(data.get("create")))
+                                     create=bool(data.get("create")), vp=self.T.id, quyen=data.get("quyen"), owner=owner)
                 if data.get("password") or not u.get("active", True):
                     app.drop_sessions(u["username"], keep=self._cookie(COOKIE))
-                app.audit(self.user["username"], "lưu người dùng " + u["username"])
+                self._audit("lưu người dùng " + u["username"])
                 return self._send(200, {"ok": True})
             if path == "/api/user/delete":
                 if str(data.get("username") or "").lower() == self.user["username"]:
                     raise ValueError("Không tự xoá tài khoản đang đăng nhập")
+                other = app.users.get(data.get("username"))
+                if not other or user_vp(other) != self.T.id:
+                    raise ValueError("Không tìm thấy người dùng")
                 app.users.delete(data.get("username"))
                 app.drop_sessions(str(data.get("username") or "").lower())
-                app.audit(self.user["username"], "xoá người dùng %s" % data.get("username"))
+                self._audit("xoá người dùng %s" % data.get("username"))
                 return self._send(200, {"ok": True})
             self._send(404, {"error": "Không tìm thấy"})
+
+        def _vp_post(self, path, data):
+            """Chủ hệ thống: quản lý các văn phòng (khách hàng dùng phần mềm). Không xem được hoá đơn của văn phòng khác."""
+            self._owner()
+            if path == "/api/vp/list":
+                rows = []
+                for t in app.tenants.list():
+                    T = app.t(t["id"])
+                    us = app.users.public(t["id"])
+                    rows.append(dict(t, so_dn=len(T.store.public()), so_nd=len(us),
+                                     quan_tri=", ".join(u["username"] for u in us if u["role"] == "admin"),
+                                     dang_chay=app.running_jobs(t["id"])))
+                return self._send(200, {"items": rows})
+            if path == "/api/vp/save":
+                create = bool(data.get("create"))
+                vid = str(data.get("id") or "").strip().lower()
+                admin = str(data.get("admin") or "").strip().lower()
+                if create:
+                    if not admin or not data.get("admin_pw"):
+                        raise ValueError("Nhập tên đăng nhập và mật khẩu quản trị đầu tiên của văn phòng")
+                    if app.users.get(admin):
+                        raise ValueError("Tên đăng nhập %s đã tồn tại – chọn tên khác" % admin)
+                    if len(str(data.get("admin_pw"))) < 8:
+                        raise ValueError("Mật khẩu phần mềm tối thiểu 8 ký tự")
+                    if not re.fullmatch(r"[a-z0-9][a-z0-9._@-]{2,39}", admin):
+                        raise ValueError("Tên đăng nhập 3–40 ký tự: chữ thường không dấu, số, . _ - @")
+                t = app.tenants.upsert(vid, create=create, ten=data.get("ten"), ghichu=data.get("ghichu"),
+                                       max_dn=data.get("max_dn"), max_jobs=data.get("max_jobs"), active=data.get("active"))
+                if create:
+                    app.users.upsert(admin, ten=data.get("admin_ten") or "Quản trị", role="admin",
+                                     password=str(data.get("admin_pw")), create=True, vp=t["id"])
+                if t.get("active") is False:
+                    for u in app.users.public(t["id"]):
+                        app.drop_sessions(u["username"])
+                self._audit("%s văn phòng %s (%s)" % ("tạo" if create else "sửa", t["id"], t["ten"]))
+                return self._send(200, {"ok": True, "vp": t})
+            self._send(404, {"error": "Không tìm thấy"})
+
+        def _check_max_dn(self, adding=1):
+            lim = app.vp_info(self.T.id).get("max_dn") or 0
+            if lim and len(self.T.store.public()) + adding > lim:
+                raise ValueError("Văn phòng đã đủ %d doanh nghiệp theo gói – liên hệ nhà cung cấp để nâng gói" % lim)
 
         def _tool(self, name, data):
             import base64
@@ -5778,6 +6069,8 @@ def make_handler(app, port):
                     except (PortalError, ValueError) as e:
                         rows.append({"mst": m, "ten": "", "dia_chi": "", "cqt": "", "tthai_text": "", "loi": str(e)})
                 return self._send(200, {"rows": rows})
+            if name in ("bank-parse", "bank-export"):
+                self._perm("saoke")
             if name == "bank-parse":
                 infos, errors = [], []
                 for f in (data.get("files") or [])[:24]:
@@ -5814,20 +6107,26 @@ def make_handler(app, port):
 
         def _post(self, path, data):
             if path in ("/api/login", "/api/logout", "/api/me/password", "/api/users", "/api/user/save",
-                        "/api/user/delete"):
+                        "/api/user/delete", "/api/vp/list", "/api/vp/save"):
                 return self._auth_post(path, data)
             if path == "/api/company/save":
-                existing = app.store.get(str(data.get("mst", "")).strip())
+                existing = self.T.store.get(str(data.get("mst", "")).strip())
                 if existing and not self._can(existing["mst"]):
                     raise PermissionError("Không có quyền với doanh nghiệp này")
+                only_note = existing and {k for k in data if data.get(k) is not None} <= {"mst", "ghichu"}
+                if not only_note:  # ghi chú công việc: ai được giao DN cũng sửa được
+                    self._perm("dn")
                 if not existing:
-                    self._admin()
-                if not existing and not data.get("password"):
-                    raise ValueError("Nhập mật khẩu trang hoadondientu.gdt.gov.vn")
+                    if not data.get("password"):
+                        raise ValueError("Nhập mật khẩu trang hoadondientu.gdt.gov.vn")
+                    self._check_max_dn()
                 fields = {k: data.get(k) for k in ("ghichu", "an")}
                 for k in ("vao", "ra"):
                     fields[k] = data.get(k)
-                c = app.store.upsert(data.get("mst"), data.get("ten"), data.get("password") or None, **fields)
+                c = self.T.store.upsert(data.get("mst"), data.get("ten"), data.get("password") or None, **fields)
+                if not existing:
+                    app.users.add_mst(self.user["username"], c["mst"])  # nhân viên tự thêm DN thì được giao luôn
+                    self._audit("thêm DN %s" % c["mst"])
                 return self._send(200, {"mst": c["mst"]})
             if path.startswith("/api/tool/"):
                 return self._tool(path[len("/api/tool/"):], data)
@@ -5838,34 +6137,42 @@ def make_handler(app, port):
                     raise ValueError(str(e))
             if path == "/api/company/delete":
                 self._admin()
-                app.store.delete(data.get("mst"))
-                app.users.remove_mst(data.get("mst"))
-                app.audit(self.user["username"], "xoá DN %s" % data.get("mst"))
+                self.T.store.delete(data.get("mst"))
+                app.users.remove_mst(data.get("mst"), self.T.id)
+                self._audit("xoá DN %s" % data.get("mst"))
                 return self._send(200, {"ok": True})
             if path == "/api/company/import":
                 self._admin()
-                added, errors = app.store.import_text(data.get("text"))
+                if app.vp_info(self.T.id).get("max_dn"):
+                    new = {m for m in re.findall(r"(?m)^\s*(\d{10}(?:-\d{3})?)", data.get("text") or "")
+                           if not self.T.store.get(m)}
+                    self._check_max_dn(len(new))
+                added, errors = self.T.store.import_text(data.get("text"))
                 client, filled = None, 0
-                for c in app.store.public():
+                for c in self.T.store.public():
                     if c["ten"] or filled >= 100:
                         continue
                     try:
                         client = client or app.client_factory()
-                        app.store.upsert(c["mst"], client.lookup_company(c["mst"])["ten"])
+                        self.T.store.upsert(c["mst"], client.lookup_company(c["mst"])["ten"])
                         filled += 1
                     except (PortalError, ValueError) as e:
                         errors.append("%s: không lấy được tên (%s)" % (c["mst"], e))
                 return self._send(200, {"added": added, "errors": errors})
             if path == "/api/run":
+                self._perm("dongbo")
                 job = app.job_for(self.user)
                 if job.running:
                     return self._send(409, {"error": "Đang xử lý, vui lòng chờ hoặc bấm Dừng"})
                 if app.server and app.running_jobs() >= app.max_jobs:
                     return self._send(429, {"error": "Máy chủ đang chạy %d lượt đồng bộ – chờ một chút rồi thử lại" % app.max_jobs})
+                vlim = app.vp_info(self.T.id).get("max_jobs") or 0
+                if app.server and vlim and app.running_jobs(self.T.id) >= vlim:
+                    return self._send(429, {"error": "Văn phòng đang chạy %d lượt đồng bộ (tối đa theo gói) – chờ xong rồi thử lại" % vlim})
                 msts = [m for m in (data.get("msts") or []) if self._can(m)]
                 if not msts:
                     raise ValueError("Chưa có doanh nghiệp nào để xử lý")
-                busy = busy_msts()
+                busy = busy_msts(self.T.root)
                 if all(m in busy for m in msts):
                     raise ValueError("Doanh nghiệp đang được đồng bộ (bởi bạn hoặc người khác) – chờ xong rồi thử lại")
                 test = bool(data.get("test"))
@@ -5879,7 +6186,7 @@ def make_handler(app, port):
                     if not kinds:
                         raise ValueError("Chọn ít nhất mua vào hoặc bán ra")
                 app.start_job(self.user, msts, kinds, start, end, bool(data.get("mtt")), bool(data.get("xml")), test,
-                              bool(data.get("pdf")))
+                              bool(data.get("pdf")) and "hdgoc" in UserStore.perms(self.user))
                 return self._send(200, {"ok": True})
             if path == "/api/notices":
                 if data.get("read"):
@@ -5888,18 +6195,18 @@ def make_handler(app, port):
             if path in ("/api/auto/save", "/api/auto/run"):
                 self._admin()
                 if path == "/api/auto/run":
-                    job = app.jobs.get(AUTO_USER["username"])
+                    job = app.jobs.get(app.auto_user(self.T.id)["username"])
                     if job and job.running:
                         raise ValueError("Đồng bộ tự động đang chạy")
-                    app.run_auto(wait=False)
-                    app.audit(self.user["username"], "chạy đồng bộ tự động")
+                    app.run_auto(wait=False, vp=self.T.id)
+                    self._audit("chạy đồng bộ tự động")
                     return self._send(200, {"ok": True})
                 gio = str(data.get("gio") or "06:00")
                 if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", gio):
                     raise ValueError("Giờ không hợp lệ (vd 06:00)")
                 if data.get("ky") not in AUTO_KY:
                     raise ValueError("Kỳ không hợp lệ")
-                return self._send(200, app.save_auto(on=bool(data.get("on")), gio=gio, ky=data["ky"]))
+                return self._send(200, app.save_auto(self.T.id, on=bool(data.get("on")), gio=gio, ky=data["ky"]))
             if path == "/api/captcha":
                 app.job_for(self.user).answer(data.get("answer"))
                 return self._send(200, {"ok": True})
@@ -5907,20 +6214,26 @@ def make_handler(app, port):
                         "/api/invoice/fetch-pdf", "/api/invoice/fetch-pdf-bulk", "/api/invoice/pdf-import",
                         "/api/invoice/scan-downloads"):
                 mst = data.get("mst", "")
-                company = app.store.get(mst)
+                company = self.T.store.get(mst)
                 if not company:
                     raise ValueError("Chọn doanh nghiệp")
                 if not self._can(mst):
                     raise PermissionError("Không có quyền với doanh nghiệp này")
+                need = {"/api/export": "ketxuat", "/api/invoice/update": "sua", "/api/invoice/update-bulk": "sua",
+                        "/api/invoice/pdf": "hdgoc", "/api/invoice/fetch-pdf": "hdgoc",
+                        "/api/invoice/fetch-pdf-bulk": "hdgoc", "/api/invoice/pdf-import": "hdgoc",
+                        "/api/invoice/scan-downloads": "hdgoc"}.get(path)
+                if need:
+                    self._perm(need)
                 if path == "/api/invoices":
-                    return self._send(200, {"rows": query_invoices(app.out_root, mst, data.get("filters") or {})})
+                    return self._send(200, {"rows": query_invoices(self.T.root, mst, data.get("filters") or {})})
                 if path == "/api/invoice/scan-downloads":
                     if app.server:  # máy chủ không nhìn thấy thư mục Downloads trên máy người dùng
                         return self._send(200, {"results": [], "folders": [], "folder": "", "prompt": False, "server": True})
                     folders, prompt = watch_dirs(app)
                     if data.get("info_only"):
                         return self._send(200, {"folders": folders, "prompt": prompt})
-                    res = scan_downloads(app.out_root, mst, folders, float(data.get("since") or 0), app.seen_downloads)
+                    res = scan_downloads(self.T.root, mst, folders, float(data.get("since") or 0), app.seen_downloads)
                     return self._send(200, {"results": res, "folder": ", ".join(folders), "prompt": prompt})
                 if path == "/api/invoice/pdf-import":
                     import base64
@@ -5930,20 +6243,20 @@ def make_handler(app, port):
                             files.append((f.get("name"), base64.b64decode(f.get("data") or "", validate=True)))
                         except ValueError:
                             files.append((f.get("name"), b""))
-                    return self._send(200, {"results": import_pdfs(app.out_root, mst, files)})
+                    return self._send(200, {"results": import_pdfs(self.T.root, mst, files)})
                 if path == "/api/invoice/fetch-pdf":
                     try:
-                        return self._send(200, fetch_original(app.out_root, mst, data.get("kind"), data.get("key")))
+                        return self._send(200, fetch_original(self.T.root, mst, data.get("kind"), data.get("key")))
                     except PortalError as e:
                         raise ValueError(str(e))
                 if path == "/api/invoice/fetch-pdf-bulk":
                     f = data.get("filters") or {}
                     kind = (f.get("kind") or "purchase").replace("_dv", "")
-                    rows = [r for r in query_invoices(app.out_root, mst, f) if r["need_goc"]][:300]
+                    rows = [r for r in query_invoices(self.T.root, mst, f) if r["need_goc"]][:300]
                     ok, errs = 0, []
                     for r in rows:
                         try:
-                            got = fetch_original(app.out_root, mst, kind, r["key"])
+                            got = fetch_original(self.T.root, mst, kind, r["key"])
                             ok += 1
                             if got["xml_err"]:
                                 errs.append("%s/%s: XML gốc – %s" % (r["khhdon"], r["shdon"], got["xml_err"]))
@@ -5957,22 +6270,22 @@ def make_handler(app, port):
                         raw = base64.b64decode(data.get("data") or "", validate=True)
                     except ValueError:
                         raise ValueError("Dữ liệu file không hợp lệ")
-                    return self._send(200, {"pdf": attach_pdf(app.out_root, mst, data.get("kind"), data.get("key"), raw)})
+                    return self._send(200, {"pdf": attach_pdf(self.T.root, mst, data.get("kind"), data.get("key"), raw)})
                 if path == "/api/invoice/update-bulk":
                     if data.get("duyet") is not None and data["duyet"] not in DUYET_OPTIONS:
                         raise ValueError("Trạng thái duyệt không hợp lệ")
                     keys = [str(k) for k in (data.get("keys") or [])][:5000]
-                    n = update_invoices(app.out_root, mst, data.get("kind"), keys, duyet=data.get("duyet"),
+                    n = update_invoices(self.T.root, mst, data.get("kind"), keys, duyet=data.get("duyet"),
                                         dv=data.get("dv"))
                     return self._send(200, {"ok": True, "updated": n})
                 if path == "/api/invoice/update":
                     if data.get("duyet") is not None and data["duyet"] not in DUYET_OPTIONS:
                         raise ValueError("Trạng thái duyệt không hợp lệ")
-                    update_invoice(app.out_root, mst, data.get("kind"), data.get("key"), note=data.get("note"),
+                    update_invoice(self.T.root, mst, data.get("kind"), data.get("key"), note=data.get("note"),
                                    duyet=data.get("duyet"), dv=data.get("dv"))
                     return self._send(200, {"ok": True})
-                out = export_invoices(app.out_root, mst, company.get("ten"), data.get("filters") or {}, data.get("fmt"))
-                rel = os.path.relpath(out, company_dir(app.out_root, mst))
+                out = export_invoices(self.T.root, mst, company.get("ten"), data.get("filters") or {}, data.get("fmt"))
+                rel = os.path.relpath(out, company_dir(self.T.root, mst))
                 return self._send(200, {"url": "/file?" + urllib.parse.urlencode({"k": self._k(), "mst": mst, "p": rel})})
             if path == "/api/stop":
                 app.job_for(self.user).stop()
@@ -5980,6 +6293,19 @@ def make_handler(app, port):
             self._send(404, {"error": "Không tìm thấy"})
 
     return Handler
+
+
+def migrate_owner(app):
+    """Lên bản nhiều văn phòng: chưa ai là chủ hệ thống → các quản trị đang hoạt động của văn phòng chính là chủ hệ thống.
+    Dữ liệu cũ giữ nguyên chỗ (văn phòng chính dùng thư mục dữ liệu cũ), người dùng cũ thuộc văn phòng chính."""
+    if any(u.get("owner") for u in app.users.items):
+        return 0
+    n = 0
+    for u in list(app.users.items):
+        if u["role"] == "admin" and u.get("active", True) and user_vp(u) == DEFAULT_VP:
+            app.users.upsert(u["username"], owner=True)
+            n += 1
+    return n
 
 
 def self_test():
@@ -6057,7 +6383,11 @@ def main(argv=None):
         import getpass
         pw = os.environ.get("TAIHOADON_NEW_PASSWORD") or getpass.getpass("Mật khẩu mới cho %s: " % args.set_password)
         exists = app.users.get(args.set_password)
-        app.users.upsert(args.set_password, password=pw, role="admin", active=True,
+        if exists and user_vp(exists) != DEFAULT_VP:
+            print("%s thuộc văn phòng %s – đổi mật khẩu trong trang Quản trị của văn phòng đó" % (
+                args.set_password, user_vp(exists)))
+            return 1
+        app.users.upsert(args.set_password, password=pw, role="admin", active=True, owner=True,
                          ten=None if exists else "Quản trị")
         print("Đã đặt mật khẩu quản trị cho %s" % args.set_password.lower())
         return 0
@@ -6070,13 +6400,14 @@ def main(argv=None):
         app.allowed_hosts = {h.strip().lower() for h in args.domain.split(",") if h.strip()}
         app.trust_proxy = args.trust_proxy
         app.max_jobs = max(1, args.max_jobs)
-        n = app.store.reencrypt()
+        n = sum(app.t(t["id"]).store.reencrypt() for t in app.tenants.list())
         if n:
             print("Đã mã hoá lại %d mật khẩu doanh nghiệp bằng khoá máy chủ." % n)
+        migrate_owner(app)
         if not app.users.count():
             name = (os.environ.get("TAIHOADON_ADMIN_USER") or "admin").lower()
             pw = os.environ.get("TAIHOADON_ADMIN_PASSWORD") or secrets.token_urlsafe(9)
-            app.users.upsert(name, ten="Quản trị", role="admin", password=pw)
+            app.users.upsert(name, ten="Quản trị", role="admin", password=pw, owner=True)
             print("=" * 60)
             print("Tạo tài khoản quản trị đầu tiên: %s" % name)
             if not os.environ.get("TAIHOADON_ADMIN_PASSWORD"):

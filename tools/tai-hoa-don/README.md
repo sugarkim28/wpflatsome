@@ -52,11 +52,14 @@ Hoặc chạy từ mã nguồn:
 3. Trình duyệt mở `http://127.0.0.1:8765` → **Thêm doanh nghiệp** hoặc **Nhập danh sách từ Excel** → **Xử lý hàng loạt**.
 4. Khi khung *Nhập captcha* hiện ra, gõ ký tự trong ảnh rồi Enter.
 
-## Bản web trên VPS (nhiều nhân viên)
+## Bản web trên VPS (nhiều văn phòng, nhiều nhân viên)
 
 Cùng một file `taihoadon.py`, chạy với `--server` thành **bản web**: mọi người làm việc qua trình duyệt tại `https://tên-miền-của-bạn`, dữ liệu nằm chung trên máy chủ.
 
-- **Đăng nhập & phân quyền**: *Quản trị* thấy tất cả doanh nghiệp, thêm/xoá/nhập DN, quản lý người dùng; *Nhân viên* chỉ thấy và đồng bộ các DN được giao (tab **Quản trị** → *Thêm người dùng* → tích các DN). Khoá tài khoản hoặc đặt lại mật khẩu thì phiên của người đó bị đăng xuất ngay.
+- **Nhiều văn phòng (từ bản 4.0)**: một máy chủ phục vụ nhiều công ty dịch vụ kế toán. Mỗi *văn phòng* có doanh nghiệp, người dùng, cài đặt đồng bộ tự động, thông báo, nhật ký và thư mục dữ liệu riêng (`data/_vp/<mã>/`), không thấy nhau; cùng một MST ở hai văn phòng là hai bản dữ liệu riêng. Văn phòng đầu tiên (*goc*) dùng nguyên thư mục dữ liệu cũ – lên bản 4.0 không phải chuyển file.
+  - *Chủ hệ thống* (quản trị cũ của văn phòng chính tự thành chủ hệ thống): tab **Quản trị** → *Văn phòng khách hàng* → thêm văn phòng kèm tài khoản quản trị đầu tiên, đặt giới hạn số DN và số lượt đồng bộ chạy cùng lúc theo gói, khoá / mở văn phòng (khoá thì mọi người dùng văn phòng đó bị đăng xuất). Chủ hệ thống không xem được hoá đơn của văn phòng khác.
+  - Tên đăng nhập là duy nhất trên cả máy chủ (mọi văn phòng đăng nhập cùng một địa chỉ web).
+- **Đăng nhập & phân quyền**: *Quản trị văn phòng* thấy tất cả doanh nghiệp của văn phòng, thêm/xoá/nhập DN, quản lý người dùng; *Nhân viên* chỉ thấy các DN được giao (tab **Quản trị** → *Thêm người dùng* → tích các DN) và chỉ làm được các mục được tích: đồng bộ / tải hoá đơn; tải và gắn hoá đơn gốc; ghi chú, duyệt nội bộ, HĐ dịch vụ; kết xuất Excel / ZIP; sao kê ngân hàng; thêm / sửa doanh nghiệp và mật khẩu cổng thuế (nhân viên tự thêm DN thì được giao luôn). Xem hoá đơn và ghi chú công việc của DN được giao thì luôn có. Máy chủ kiểm tra quyền ở từng yêu cầu, không chỉ ẩn nút. Nhân viên tạo trước bản 4.0 giữ nguyên quyền như cũ. Khoá tài khoản hoặc đặt lại mật khẩu thì phiên của người đó bị đăng xuất ngay.
 - Mỗi người một lượt đồng bộ riêng, chạy song song (mặc định tối đa 4 lượt cùng lúc trên máy chủ); hai người không đồng bộ trùng một DN cùng lúc.
 - **Đồng bộ tự động hằng ngày** (tab Quản trị): đến giờ đặt sẵn, máy chủ tự đồng bộ mua vào + bán ra cho mọi DN đang hiển thị, tự giải captcha. Kỳ mặc định: tháng này, tới ngày 20 thì gồm cả tháng trước (kịp kê khai).
 - **Chuông thông báo**: HĐ đổi trạng thái (bị huỷ, thay thế, điều chỉnh), HĐ mới và lỗi của lượt tự động – mỗi người chỉ thấy thông báo của DN mình phụ trách.
