@@ -677,6 +677,55 @@ class Tests(unittest.TestCase):
             self.assertEqual(t.scan_downloads(self.tmp, "0309999999", dl, since, seen), [])   # không đọc lại
         self.assertTrue(t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"})[0]["pdf"])
 
+    def test_ts24(self):
+        """TS24 (tracuu.xuathoadon.vn): mã tra cứu = mã CQT; tải /invoice/download/{xml,pdf}/1/<mã>; chỉ gắn file khớp."""
+        import unittest.mock as m
+        x = os.path.join(self.tmp, "ts24.xml")
+        with open(x, "w", encoding="utf-8") as fh:
+            fh.write('<HDon><DLHDon><TTChung><MSTTCGP>0309478306</MSTTCGP></TTChung></DLHDon>'
+                     '<MCCQT>00673054AC956345B19B1F162BD981782B</MCCQT></HDon>')
+        lk = t.lookup_info(t.parse_invoice_xml(x))
+        self.assertEqual((lk["url"], lk["code"], lk["ncc_mst"]),
+                         ("https://tracuu.xuathoadon.vn/", "00673054AC956345B19B1F162BD981782B", "0309478306"))
+        self.assertEqual(t.browser_xml_url(lk),
+                         "https://tracuu.xuathoadon.vn/invoice/download/xml/1/00673054AC956345B19B1F162BD981782B")
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        self.run_job(["0309999999"], kinds=("purchase",), start=date(2026, 10, 1), end=date(2026, 10, 31))
+        key = t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"})[0]["key"]
+        nb, mau, kh, so = key.split("|")
+        t._set_entry(self.tmp, "0309999999", "purchase", key, tra_cuu=dict(lk))
+        xml = ('<?xml version="1.0"?><HDon><DLHDon><TTChung><KHMSHDon>%s</KHMSHDon><KHHDon>%s</KHHDon><SHDon>%s</SHDon>'
+               '</TTChung><NDHDon><NBan><MST>%s</MST></NBan></NDHDon></DLHDon></HDon>' % (mau, kh, so, nb)).encode()
+        calls = []
+
+        class Ts(BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_GET(self):
+                calls.append(self.path)
+                body = {"/invoice/download/xml/1/00673054AC956345B19B1F162BD981782B": xml,
+                        "/invoice/download/pdf/1/00673054AC956345B19B1F162BD981782B": b"%PDF ts24"}.get(self.path)
+                self.send_response(200 if body else 404)
+                self.end_headers()
+                self.wfile.write(body or b"not found")
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), Ts)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            with m.patch.object(t, "TS24_BASE", "http://127.0.0.1:%d" % srv.server_port):
+                with m.patch.object(t, "_pdf_text", lambda d: "Ký hiệu 1C26TAA Số: 5 Mã số thuế 0101234567"):
+                    with self.assertRaisesRegex(t.PortalError, "không khớp.*đã gắn XML gốc"):
+                        t.fetch_original(self.tmp, "0309999999", "purchase", key)
+                with m.patch.object(t, "_pdf_text", lambda d: "Ký hiệu %s Số: %s Mã số thuế %s" % (kh, so, nb)):
+                    got = t.fetch_original(self.tmp, "0309999999", "purchase", key)
+        finally:
+            srv.shutdown()
+            srv.server_close()
+        self.assertTrue(got["pdf"] and got["xml"], got)
+        self.assertEqual(calls[-1], "/invoice/download/pdf/1/00673054AC956345B19B1F162BD981782B")
+        r = t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"})[0]
+        self.assertFalse(r["need_goc"])
+
     def test_browser_download_settings(self):
         base = os.path.join(self.tmp, "LocalAppData")
         chrome = os.path.join(base, "Google", "Chrome", "User Data")

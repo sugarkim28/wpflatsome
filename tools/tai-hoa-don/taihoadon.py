@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.8.3"
+__version__ = "3.9.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -573,6 +573,7 @@ PROVIDERS = {
     "0100686209": ("MobiFone Invoice", "http://tracuuhoadon.mobifoneinvoice.vn/trang-chu"),
     "0101300842": ("Thái Sơn E-invoice", "https://einvoice.vn/tra-cuu"),
     "0100727825": ("FAST e-Invoice", "https://einvoice.fast.com.vn/"),
+    "0309478306": ("TS24 (xuathoadon.vn)", "https://tracuu.xuathoadon.vn/"),  # mã tra cứu = mã của cơ quan thuế
 }
 # Tên trường "mã tra cứu" trong phần thông tin khác (TTKhac) của XML, đã bỏ dấu, chữ thường, bỏ khoảng trắng.
 LOOKUP_FIELDS = ("transactionid", "masobimat", "reservationcode", "matracuu", "fkey", "keysearch", "matc",
@@ -599,6 +600,8 @@ def lookup_info(info):
             break
     if mst.startswith("0101360697") and not code:
         field, code = "InvoiceGUID", info.get("dlhdon_id", "")
+    if mst.startswith("0309478306") and not code and info.get("mccqt"):
+        field, code = "Mã của cơ quan thuế", info["mccqt"]
     if url.endswith("=") and code:
         url += urllib.parse.quote(code)
     elif url.endswith("=") or "{nbmst}" in url:
@@ -931,8 +934,35 @@ def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
     raise PortalError("EasyInvoice: thử %d lần chưa được (%s)" % (tries, last))
 
 
+# ---- TS24 (tracuu.xuathoadon.vn): tra bằng mã của cơ quan thuế, link tải trực tiếp ----
+TS24_BASE = "https://tracuu.xuathoadon.vn"
+
+
+def ts24_url(code, typ):
+    """Link nút "Tải XML" (đã xác nhận trên trang thật: /invoice/download/xml/1/<mã CQT>); "Tải PDF" cùng dạng
+    /invoice/download/pdf/1/<mã CQT> – file PDF chỉ được gắn khi nội dung khớp đúng hoá đơn."""
+    return "%s/invoice/download/%s/1/%s" % (TS24_BASE, typ, urllib.parse.quote(code, safe=""))
+
+
+def ts24_files(t, want_pdf=True, want_xml=True):
+    out = {"pdf": None, "xml": None, "xml_err": "", "pdf_check": True}
+    if want_xml:
+        try:
+            out["xml"] = _pick_file(_http_get(ts24_url(t["code"], "xml"), 60), "xml")
+            if not out["xml"]:
+                out["xml_err"] = "TS24 không trả file XML"
+        except PortalError as e:
+            out["xml_err"] = str(e)
+    if want_pdf:
+        out["pdf"] = _pick_file(_http_get(ts24_url(t["code"], "pdf"), 60), "pdf")
+        if not out["pdf"]:
+            raise PortalError("TS24 không trả file PDF cho mã %s" % t["code"])
+    return out
+
+
 # MST nhà cung cấp → hàm tải PDF gốc (nhận thông tin tra cứu). Viettel, VNPT… chưa tự động được.
-PDF_FETCHERS = {"0101243150": lambda t: misa_pdf(t["code"]), "0105987432": easyinvoice_pdf}
+PDF_FETCHERS = {"0101243150": lambda t: misa_pdf(t["code"]), "0105987432": easyinvoice_pdf,
+                "0309478306": lambda t: ts24_files(t, want_xml=False)["pdf"]}
 
 
 def _misa_both(t, want_pdf=True, want_xml=True):
@@ -946,14 +976,14 @@ def _misa_both(t, want_pdf=True, want_xml=True):
 
 
 # MST nhà cung cấp → hàm tải cả PDF và XML gốc từ trang tra cứu: trả {'pdf', 'xml', 'xml_err'}.
-ORIGINAL_FETCHERS = {"0101243150": _misa_both, "0105987432": easyinvoice_files}
+ORIGINAL_FETCHERS = {"0101243150": _misa_both, "0105987432": easyinvoice_files, "0309478306": ts24_files}
 
 
 # Link tải PDF gốc mà trình duyệt của người dùng mở được (MISA chặn chương trình tự động nhưng không chặn trình duyệt).
 PDF_BROWSER_URLS = {"0101243150": lambda code: MISA_WWW + "/tra-cuu/DownloadHandler.ashx?Type=pdf&Code=" +
-                    urllib.parse.quote(code)}
+                    urllib.parse.quote(code), "0309478306": lambda code: ts24_url(code, "pdf")}
 XML_BROWSER_URLS = {"0101243150": lambda code: MISA_WWW + "/tra-cuu/DownloadHandler.ashx?Type=xml&Code=" +
-                    urllib.parse.quote(code)}
+                    urllib.parse.quote(code), "0309478306": lambda code: ts24_url(code, "xml")}
 
 
 def browser_xml_url(tra_cuu):
@@ -1072,6 +1102,13 @@ def fetch_original(out_root, mst, kind, key):
     has_pdf = bool(e.get("pdf") and os.path.exists(os.path.join(base, e["pdf"])))
     has_xml = bool(e.get("xml_goc") and os.path.exists(os.path.join(base, e["xml_goc"])))
     got = ORIGINAL_FETCHERS[prov](e["tra_cuu"], want_pdf=not has_pdf, want_xml=not has_xml)
+    if got.get("pdf") and got.get("pdf_check"):  # đường dẫn PDF chưa xác nhận → phải khớp đúng hoá đơn mới gắn
+        try:
+            ok_pdf = match_pdf_text(_pdf_text(got["pdf"]), {kind: {key: e}}) == [(kind, key)]
+        except ValueError:
+            ok_pdf = False
+        if not ok_pdf:
+            got["pdf"], got["pdf_err"] = None, "PDF tải về không khớp ký hiệu / số / MST của hoá đơn này – không gắn"
     pdf = attach_pdf(out_root, mst, kind, key, got["pdf"]) if got.get("pdf") else (e.get("pdf") or "")
     xml = ""
     if got.get("xml"):
@@ -1085,6 +1122,8 @@ def fetch_original(out_root, mst, kind, key):
         xml = e.get("xml_goc")
     if not xml and not has_xml:
         _set_entry(out_root, mst, kind, key, xml_goc_loi=got.get("xml_err") or "không tải được")
+    if got.get("pdf_err") and not pdf:
+        raise PortalError(got["pdf_err"] + (" (đã gắn XML gốc)" if xml else ""))
     return {"pdf": pdf, "xml": xml or "", "xml_err": "" if xml else (got.get("xml_err") or "")}
 
 
@@ -1092,7 +1131,7 @@ def parse_invoice_xml(xml_path):
     """Đọc XML hoá đơn → {'items': [...], 'rates': [...], 'httt', 'nb_dchi', 'nm_dchi', 'nky'}."""
     import xml.etree.ElementTree as ET
     info = {"items": [], "rates": [], "httt": "", "nb_dchi": "", "nm_dchi": "", "nky": None, "msttcgp": "",
-            "ttkhac": {}, "dlhdon_id": "", "nb": {}, "nm": {}, "ttchung": {}, "tong": {}}
+            "ttkhac": {}, "dlhdon_id": "", "nb": {}, "nm": {}, "ttchung": {}, "tong": {}, "mccqt": ""}
     try:
         root = ET.parse(xml_path).getroot()
     except (ET.ParseError, OSError):
@@ -1140,6 +1179,8 @@ def parse_invoice_xml(xml_path):
                                   "tax": _float(text(el, "TThue"))})
         elif tag == "MSTTCGP" and not info["msttcgp"]:
             info["msttcgp"] = (el.text or "").strip()
+        elif tag == "MCCQT" and not info["mccqt"]:
+            info["mccqt"] = (el.text or "").strip()
         elif tag == "TTin":
             k, v = text(el, "TTruong"), text(el, "DLieu")
             if k and v:
@@ -4250,7 +4291,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
       <label>Từ ngày</label><input type="date" id="sFrom"><label>Đến ngày</label><input type="date" id="sTo">
       <div class="chk"><label><input type="checkbox" id="sMtt" checked> Gồm máy tính tiền</label>
         <label><input type="checkbox" id="sXml" checked> Tải XML</label>
-        <label title="Tự tải PDF và XML gốc của người bán (như nút Tải hoá đơn dạng PDF / XML trên trang tra cứu) khi nhà cung cấp cho phép (MISA, EasyInvoice)"><input type="checkbox" id="sPdf" checked> Tải HĐ gốc (PDF + XML)</label></div>
+        <label title="Tự tải PDF và XML gốc của người bán (như nút Tải hoá đơn dạng PDF / XML trên trang tra cứu) khi nhà cung cấp cho phép (MISA, EasyInvoice, TS24)"><input type="checkbox" id="sPdf" checked> Tải HĐ gốc (PDF + XML)</label></div>
       <button class="bigbtn b-vao" onclick="runSync(['purchase'])">Đồng bộ HĐĐT ĐẦU VÀO</button>
       <button class="bigbtn b-ra" onclick="runSync(['sold'])">Đồng bộ HĐĐT ĐẦU RA</button>
       <button class="bigbtn b-vr" onclick="runSync(['purchase','sold'])">Đồng bộ HĐĐT VÀO/RA</button>
@@ -4377,7 +4418,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     <label><input type="checkbox" id="bRa" checked> Bán ra</label>
     <label><input type="checkbox" id="bMtt" checked> Gồm máy tính tiền</label>
     <label><input type="checkbox" id="bXml" checked> Tải XML + chi tiết hàng hoá</label>
-    <label title="MISA, EasyInvoice"><input type="checkbox" id="bPdf" checked> Tải HĐ gốc (PDF + XML)</label>
+    <label title="MISA, EasyInvoice, TS24"><input type="checkbox" id="bPdf" checked> Tải HĐ gốc (PDF + XML)</label>
   </div>
   <div class="hint">Chỉ đồng bộ chiều đầu vào/đầu ra đang bật trong cài đặt từng doanh nghiệp.</div>
   <div class="err" id="bErr"></div>
@@ -5037,7 +5078,7 @@ function renderDetails(tr, r, kind) {
     if (r.need_goc && (r.pdf_url || r.can_fetch)) {
       const g = el('a', 'lk', 'Tải HĐ gốc'); g.href = '#'; g.title = 'Tải PDF + XML gốc từ ' + t.ncc + ' rồi tự gắn vào hoá đơn';
       g.onclick = async ev => { ev.preventDefault();
-        if (me.server || !r.pdf_url) {  // máy chủ / phần mềm tự tải (EasyInvoice tự giải captcha)
+        if (me.server || !r.pdf_url || !browserFirst(r)) {  // máy chủ / phần mềm tự tải (EasyInvoice, TS24)
           g.textContent = 'Đang tải…'; $('hErr').textContent = '';
           try { const d = await post('/api/invoice/fetch-pdf', {mst: $('hMst').value, kind, key: r.key}); await loadInv();
                 if (d.xml_err) $('hErr').textContent = r.shdon + ': đã có PDF gốc, chưa lấy được XML gốc – ' + d.xml_err; return; }
@@ -5076,9 +5117,9 @@ $('hImpFiles').onchange = async () => {
 async function bulkPdf() {
   const sel = hRows.filter(r => hSel.has(r.key)), src = sel.length ? sel : hRows;
   let need = src.filter(r => r.need_goc && (r.pdf_url || r.can_fetch));
-  if (!need.length) { $('hErr').textContent = 'Không có hoá đơn nào cần tải hoá đơn gốc (hiện tự tải được: MISA, EasyInvoice). Nhà cung cấp khác: bấm "Tra cứu" rồi "Gắn HĐ gốc có sẵn".'; return; }
+  if (!need.length) { $('hErr').textContent = 'Không có hoá đơn nào cần tải hoá đơn gốc (hiện tự tải được: MISA, EasyInvoice, TS24). Nhà cung cấp khác: bấm "Tra cứu" rồi "Gắn HĐ gốc có sẵn".'; return; }
   // Phần mềm tự tải trước (EasyInvoice; bản web: cả MISA), từng nhóm 10 HĐ; MISA bản máy: trình duyệt tải.
-  const auto = need.filter(r => r.can_fetch && (me.server || !r.pdf_url)), errs = [];
+  const auto = need.filter(r => r.can_fetch && (me.server || !r.pdf_url || !browserFirst(r))), errs = [];
   if (auto.length) {
     const b = $('hBulkPdf'); b.disabled = true; let done = 0;
     for (let i = 0; i < auto.length; i += 10) {
@@ -5096,6 +5137,8 @@ async function bulkPdf() {
   }
   browserDownload(browserUrls(need));
 }
+// MISA chặn chương trình tự động → bản máy để trình duyệt tải trước; nhà cung cấp khác phần mềm tự tải.
+function browserFirst(r) { return (r.tra_cuu || {}).ncc_mst === '0101243150'; }
 // Link trình duyệt tải PDF + XML gốc (phần nào còn thiếu).
 function browserUrls(rows) {
   return rows.flatMap(r => [r.pdf ? '' : r.pdf_url, r.xml_goc ? '' : r.xml_url]).filter(Boolean);
