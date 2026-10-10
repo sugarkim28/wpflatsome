@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.2.0"
+__version__ = "4.2.1"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -147,6 +147,13 @@ def safe_name(text):
 # Client cổng hoá đơn điện tử
 # ---------------------------------------------------------------------------
 
+def _is_busy(e):
+    """Lỗi do cổng quá tải / không trả lời kịp (khác lỗi nghiệp vụ như sai mật khẩu)."""
+    t = str(e).lower()
+    return any(w in t for w in ("timeout", "timed out", "quá tải", "http 5", "không kết nối được", "connection reset",
+                                "remote end closed"))
+
+
 class PortalHealth:
     """Theo dõi tình trạng cổng hoadondientu.gdt.gov.vn từ các lần gọi gần đây của mọi người dùng trên máy chủ:
     tỷ lệ lỗi quá tải / không kết nối và thời gian trả lời → cảnh báo "trang thuế chậm / quá tải"."""
@@ -181,6 +188,35 @@ class PortalHealth:
 
 
 PORTAL_HEALTH = PortalHealth()
+
+
+class MttHealth:
+    """Phần tra hoá đơn máy tính tiền (/sco-query) của cổng hay treo riêng trong khi phần còn lại vẫn chạy.
+    Một lượt tra MTT bị treo → tự bỏ qua MTT cho mọi lượt đồng bộ trong 30 phút rồi thử lại."""
+    PAUSE = 1800
+
+    def __init__(self):
+        self.down_at = 0.0
+
+    def mark_down(self):
+        self.down_at = time.time()
+
+    def mark_up(self):
+        self.down_at = 0.0
+
+    def is_down(self):
+        return bool(self.down_at) and time.time() - self.down_at < self.PAUSE
+
+    def status(self):
+        if not self.is_down():
+            return ""
+        return ("Phần tra hoá đơn MÁY TÍNH TIỀN của trang hoadondientu.gdt.gov.vn đang treo – phần mềm tạm bỏ qua phần này "
+                "(tự thử lại sau %d phút). Các hoá đơn khác vẫn đồng bộ bình thường; đối chiếu kỹ số lượng HĐ máy tính tiền "
+                "trước khi làm sổ sách." % max(1, int((self.PAUSE - (time.time() - self.down_at)) / 60)))
+
+
+MTT_HEALTH = MttHealth()
+MTT_TIMEOUT = 25  # giây – phần MTT treo thì bỏ nhanh, không chờ lâu
 
 
 class HoaDonClient:
@@ -218,7 +254,7 @@ class HoaDonClient:
         return h
 
     def _request(self, method, path, params=None, body=None, raw=False, retries=3, profile="query", action=None,
-                 url=None):
+                 url=None, timeout=None, health=True):
         url = url or self.base_url + path
         if params:
             url += "?" + urllib.parse.urlencode(params, safe=":,;=/")
@@ -230,13 +266,15 @@ class HoaDonClient:
             req = urllib.request.Request(url, data=data, headers=headers, method=method)
             t0 = time.time()
             try:
-                with opener.open(req, timeout=self.timeout) as resp:
+                with opener.open(req, timeout=timeout or self.timeout) as resp:
                     content = resp.read()
-                PORTAL_HEALTH.record(True, time.time() - t0)
+                if health:
+                    PORTAL_HEALTH.record(True, time.time() - t0)
                 break
             except urllib.error.HTTPError as e:
                 content = e.read()
-                PORTAL_HEALTH.record(e.code not in (429, 500, 502, 503, 504), time.time() - t0)
+                if health:
+                    PORTAL_HEALTH.record(e.code not in (429, 500, 502, 503, 504), time.time() - t0)
                 # Chỉ thử lại khi cổng quá tải; cổng đã trả thông báo cụ thể (vd "Không tồn tại hồ sơ gốc") thì không.
                 if e.code in (429, 500, 502, 503, 504) and attempt < retries and \
                         NO_XML_MSG not in _plain(self._error_message(content) or ""):
@@ -250,7 +288,8 @@ class HoaDonClient:
                     msg += " (tường lửa của cổng chặn; chờ vài phút rồi thử lại, nếu vẫn bị hãy báo để cập nhật phần mềm)"
                 raise PortalError(msg)
             except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
-                PORTAL_HEALTH.record(False, time.time() - t0)
+                if health:
+                    PORTAL_HEALTH.record(False, time.time() - t0)
                 if attempt < retries:
                     time.sleep(2 ** attempt * 2)
                     continue
@@ -357,13 +396,34 @@ class HoaDonClient:
         if kind not in ("purchase", "sold"):
             raise ValueError("kind phải là 'purchase' hoặc 'sold'")
         results, seen = [], set()
+        self.mtt_skipped = False
+        if include_mtt and MTT_HEALTH.is_down():
+            include_mtt = False
+            self.mtt_skipped = True
+            if progress:
+                progress("Bỏ qua HĐ máy tính tiền: phần này của trang thuế đang treo (vừa thử không được) – sẽ tự thử lại sau")
         for prefix, ttxly, label in self._sources(kind, include_mtt):
+            mtt = prefix == "/sco-query"
             for a, b in month_ranges(start, end):
                 if progress:
                     progress("Tra %s %s → %s (%s)" % (
                         "mua vào" if kind == "purchase" else "bán ra",
                         a.strftime("%d/%m/%Y"), b.strftime("%d/%m/%Y"), label))
-                for inv in self._fetch_range(prefix, kind, a, b, ttxly, progress):
+                try:
+                    found = self._fetch_range(prefix, kind, a, b, ttxly, progress, mtt=mtt)
+                except PortalError as e:
+                    if not mtt or not _is_busy(e):
+                        raise
+                    # Phần MTT treo: không làm hỏng cả lượt – giữ các HĐ có mã / không mã đã tra được.
+                    MTT_HEALTH.mark_down()
+                    self.mtt_skipped = True
+                    if progress:
+                        progress("CẢNH BÁO: phần HĐ máy tính tiền của trang thuế không trả lời (treo) – tạm bỏ qua, "
+                                 "các hoá đơn khác vẫn đồng bộ. Đồng bộ lại sau để lấy HĐ máy tính tiền.")
+                    break
+                if mtt:
+                    MTT_HEALTH.mark_up()
+                for inv in found:
                     key = (inv.get("nbmst"), inv.get("khmshdon"), inv.get("khhdon"), inv.get("shdon"))
                     if key in seen:
                         continue
@@ -376,15 +436,17 @@ class HoaDonClient:
         results.sort(key=lambda i: (str(i.get("tdlap") or ""), str(i.get("khhdon") or ""), _num(i.get("shdon"))))
         return results
 
-    def _fetch_range(self, prefix, kind, a, b, ttxly, progress=None):
-        """Tra một khoảng ngày (có lật trang). Cổng quá tải (timeout) thì chia nhỏ theo tuần rồi tra lại."""
+    def _fetch_range(self, prefix, kind, a, b, ttxly, progress=None, mtt=False):
+        """Tra một khoảng ngày (có lật trang). Cổng quá tải (timeout) thì chia nhỏ theo tuần rồi tra lại.
+        mtt=True (máy tính tiền): chờ ngắn, thử lại 1 lần, không chia nhỏ – phần này treo thì bỏ qua cho nhanh."""
         try:
             out, state = [], None
             while True:
                 params = {"sort": "tdlap:desc", "size": PAGE_SIZE, "search": search_query(a, b, ttxly)}
                 if state:
                     params["state"] = state
-                data = self._request("GET", "%s/invoices/%s" % (prefix, kind), params=params, retries=2)
+                data = self._request("GET", "%s/invoices/%s" % (prefix, kind), params=params, retries=1 if mtt else 2,
+                                     timeout=MTT_TIMEOUT if mtt else None, health=not mtt)
                 page = data.get("datas") or []
                 out.extend(page)
                 state = data.get("state")
@@ -392,8 +454,8 @@ class HoaDonClient:
                     return out
                 time.sleep(self.delay)
         except PortalError as e:
-            busy = any(w in str(e).lower() for w in ("timeout", "quá tải", "http 5"))
-            if not busy or (b - a).days < 1:
+            busy = _is_busy(e)
+            if mtt or not busy or (b - a).days < 1:
                 if busy:
                     raise PortalError("Cổng thuế đang quá tải, không trả được dữ liệu ngày %s – %s. Vui lòng đồng bộ "
                                       "lại sau ít phút. (%s)" % (a.strftime("%d/%m/%Y"), b.strftime("%d/%m/%Y"), e))
@@ -5068,7 +5130,7 @@ function renderSys(sys) {
     : id === 'sbPortal' ? 'sb-portal ' + (cls || '') : 'sb-goi ' + (cls || ''); e.classList.toggle('hide', !txt); };
   set('sbAnn', sys.thong_bao ? '⚠ ' + sys.thong_bao + (sys.bo_qua_mtt ? '\n⚠ Tạm thời bỏ qua đồng bộ hoá đơn từ máy tính tiền – đối chiếu kỹ số lượng hoá đơn trước khi làm sổ sách.' : '')
     : (sys.bo_qua_mtt ? '⚠ Trang thuế đang lỗi phần hoá đơn máy tính tiền – tạm thời bỏ qua đồng bộ phần này. Đối chiếu kỹ số lượng hoá đơn trước khi làm sổ sách.' : ''));
-  set('sbHint', sys.goi_y ? '💡 ' + sys.goi_y : '');
+  set('sbHint', [sys.goi_y ? '💡 ' + sys.goi_y : '', sys.mtt && !sys.bo_qua_mtt ? '⚠ ' + sys.mtt : ''].filter(Boolean).join('\n'));
   set('sbPortal', sys.portal && sys.portal.text ? (sys.portal.level === 'err' ? '⛔ ' : '⏳ ') + sys.portal.text : '', sys.portal && sys.portal.level);
   const g = me.goi; let gt = '', gc = '';
   if (g) {
@@ -5082,7 +5144,7 @@ function renderSys(sys) {
   }
   set('sbGoi', gt, gc);
   if (gt) $('sbGoi').append(el('br'), el('small', '', 'Hoá đơn đã tải rồi thì đồng bộ bao nhiêu lần cũng chỉ tính 1 hoá đơn – cứ đồng bộ lại thoải mái để cập nhật trạng thái.'));
-  $('sysBar').classList.toggle('hide', !(sys.thong_bao || sys.bo_qua_mtt || sys.goi_y || (sys.portal && sys.portal.text) || gt));
+  $('sysBar').classList.toggle('hide', !(sys.thong_bao || sys.bo_qua_mtt || sys.goi_y || sys.mtt || (sys.portal && sys.portal.text) || gt));
 }
 function renderGoi() {
   const g = me.goi; if (!g) { $('goiInfo').textContent = ''; return; }
@@ -6314,7 +6376,8 @@ def make_handler(app, port):
                                                "vp": self.T.id, "vp_ten": app.vp_info(self.T.id).get("ten", ""),
                                                "goi": app.quota(self.T.id).info() if app.server else None,
                                                "email": u.get("email", "")},
-                                        "sys": dict(app.system(), portal=PORTAL_HEALTH.status()) if app.server else None,
+                                        "sys": dict(app.system(), portal=PORTAL_HEALTH.status(), mtt=MTT_HEALTH.status())
+                                        if app.server else None,
                                         "unread": app.notices_for(u, 0)["unread"] if app.server else 0,
                                         "auto": self._auto_state() if app.server and u["role"] == "admin" else None,
                                         "captcha": {"count": app.solver.count(), "chars": app.solver.chars()}})

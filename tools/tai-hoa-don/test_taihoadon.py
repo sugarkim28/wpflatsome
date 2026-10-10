@@ -76,6 +76,7 @@ XML = ('<?xml version="1.0" encoding="UTF-8"?><HDon><DLHDon><NDHDon>'
 
 class FakePortal(BaseHTTPRequestHandler):
     calls = []
+    mtt_hang = 0  # giây: giả lập phần máy tính tiền của cổng bị treo
     captchas = {}
     logins = []
     headers = []
@@ -148,6 +149,8 @@ class FakePortal(BaseHTTPRequestHandler):
                 datas.append(k)
             return self._json(200, {"datas": datas, "total": len(datas)})
         if u.path in ("/query/invoices/sold", "/sco-query/invoices/purchase", "/sco-query/invoices/sold"):
+            if u.path.startswith("/sco-query") and FakePortal.mtt_hang:
+                time.sleep(FakePortal.mtt_hang)
             return self._json(200, {"datas": [], "total": 0})
         if u.path == "/query/invoices/detail":  # dữ liệu "Xem hoá đơn" của cổng
             return self._json(200, {"nbten": "Cong ty Ban K", "nbmst": q.get("nbmst"), "nbdchi": "So 2 Le Loi",
@@ -1084,6 +1087,28 @@ class Tests(unittest.TestCase):
         log = "\n".join(job.log)
         self.assertIn("Tạm bỏ qua hoá đơn từ máy tính tiền", log)
         self.assertNotIn("(Máy tính tiền)", log)
+
+    def test_mtt_hang_does_not_break_sync(self):
+        """Phần máy tính tiền của cổng treo: vẫn lấy đủ HĐ có mã / không mã, cảnh báo, tạm bỏ qua MTT 30 phút."""
+        import unittest.mock as mock
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        FakePortal.mtt_hang = 3
+        t.MTT_HEALTH.mark_up()
+        try:
+            with mock.patch.object(t, "MTT_TIMEOUT", 1):
+                job, _ = self.run_job(["0309999999"], kinds=("purchase",), start=date(2026, 10, 1), end=date(2026, 10, 31))
+                log = "\n".join(job.log)
+                self.assertIn("phần HĐ máy tính tiền của trang thuế không trả lời", log)
+                self.assertNotIn("LỖI", log)
+                self.assertTrue(t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"}))
+                self.assertTrue(t.MTT_HEALTH.is_down())
+                self.assertIn("MÁY TÍNH TIỀN", t.MTT_HEALTH.status())
+                job, _ = self.run_job(["0309999999"], kinds=("purchase",), start=date(2026, 10, 1), end=date(2026, 10, 31))
+                self.assertIn("Bỏ qua HĐ máy tính tiền", "\n".join(job.log))   # lượt sau bỏ qua ngay, không chờ treo
+        finally:
+            FakePortal.mtt_hang = 0
+            t.MTT_HEALTH.mark_up()
+        self.assertTrue(t._is_busy(t.PortalError("Không kết nối được cổng hoá đơn điện tử: The read operation timed out")))
 
     def test_auto_sync_and_notices(self):
         self.assertEqual(t.auto_range("auto", date(2026, 10, 9)), (date(2026, 9, 1), date(2026, 10, 9)))
