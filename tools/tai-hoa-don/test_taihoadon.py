@@ -705,7 +705,7 @@ class Tests(unittest.TestCase):
             def do_GET(self):
                 calls.append(self.path)
                 body = {"/invoice/download/xml/1/00673054AC956345B19B1F162BD981782B": xml,
-                        "/invoice/download/pdf/1/00673054AC956345B19B1F162BD981782B": b"%PDF ts24"}.get(self.path)
+                        "/invoice/download/pdf/1/00673054AC956345B19B1F162BD981782B?status_image=true": b"%PDF ts24"}.get(self.path)
                 self.send_response(200 if body else 404)
                 self.end_headers()
                 self.wfile.write(body or b"not found")
@@ -722,7 +722,7 @@ class Tests(unittest.TestCase):
             srv.shutdown()
             srv.server_close()
         self.assertTrue(got["pdf"] and got["xml"], got)
-        self.assertEqual(calls[-1], "/invoice/download/pdf/1/00673054AC956345B19B1F162BD981782B")
+        self.assertEqual(calls[-1], "/invoice/download/pdf/1/00673054AC956345B19B1F162BD981782B?status_image=true")
         r = t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"})[0]
         self.assertFalse(r["need_goc"])
 

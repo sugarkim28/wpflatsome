@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.9.0"
+__version__ = "3.9.1"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -939,9 +939,11 @@ TS24_BASE = "https://tracuu.xuathoadon.vn"
 
 
 def ts24_url(code, typ):
-    """Link nút "Tải XML" (đã xác nhận trên trang thật: /invoice/download/xml/1/<mã CQT>); "Tải PDF" cùng dạng
-    /invoice/download/pdf/1/<mã CQT> – file PDF chỉ được gắn khi nội dung khớp đúng hoá đơn."""
-    return "%s/invoice/download/%s/1/%s" % (TS24_BASE, typ, urllib.parse.quote(code, safe=""))
+    """Đúng link các nút trên trang tra cứu (lấy từ trang thật): "Tải XML" = /invoice/download/xml/1/<mã CQT>;
+    "Tải PDF" = /invoice/download/pdf/1/<mã CQT>?status_image=true (ô "In có hình trạng thái" mặc định được tích).
+    Ô tra cứu của trang có Cloudflare Turnstile nhưng link tải là link trực tiếp theo mã CQT."""
+    url = "%s/invoice/download/%s/1/%s" % (TS24_BASE, typ, urllib.parse.quote(code, safe=""))
+    return url + "?status_image=true" if typ == "pdf" else url
 
 
 def ts24_files(t, want_pdf=True, want_xml=True):
@@ -1102,7 +1104,7 @@ def fetch_original(out_root, mst, kind, key):
     has_pdf = bool(e.get("pdf") and os.path.exists(os.path.join(base, e["pdf"])))
     has_xml = bool(e.get("xml_goc") and os.path.exists(os.path.join(base, e["xml_goc"])))
     got = ORIGINAL_FETCHERS[prov](e["tra_cuu"], want_pdf=not has_pdf, want_xml=not has_xml)
-    if got.get("pdf") and got.get("pdf_check"):  # đường dẫn PDF chưa xác nhận → phải khớp đúng hoá đơn mới gắn
+    if got.get("pdf") and got.get("pdf_check"):  # PDF tải theo mã → kiểm tra lại đúng hoá đơn rồi mới gắn
         try:
             ok_pdf = match_pdf_text(_pdf_text(got["pdf"]), {kind: {key: e}}) == [(kind, key)]
         except ValueError:
