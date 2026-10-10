@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.1.2"
+__version__ = "3.2.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -2667,6 +2667,352 @@ def split_pdf(name, data, ranges_text):
 
 
 # ---------------------------------------------------------------------------
+# Sao kê ngân hàng → file KTSC nhập phần mềm kế toán (Smart Pro), theo mẫu Nibot
+# ---------------------------------------------------------------------------
+
+BANK_NAMES = (("VIETINBANK", "VIETIN"), ("CONG THUONG", "VIETIN"), ("VIETCOMBANK", "VCB"), ("NGOAI THUONG", "VCB"),
+              ("TECHCOMBANK", "TCB"), ("KY THUONG", "TCB"), ("BIDV", "BIDV"), ("DAU TU VA PHAT TRIEN", "BIDV"),
+              ("AGRIBANK", "AGRIBANK"), ("ACB", "ACB"), ("A CHAU", "ACB"), ("MBBANK", "MB"), ("QUAN DOI", "MB"),
+              ("SACOMBANK", "SACOMBANK"), ("SAI GON THUONG TIN", "SACOMBANK"), ("VPBANK", "VPBANK"),
+              ("TPBANK", "TPBANK"), ("TIEN PHONG", "TPBANK"), ("SHB", "SHB"), ("HDBANK", "HDBANK"), ("OCB", "OCB"),
+              ("VIB", "VIB"), ("EXIMBANK", "EXIMBANK"), ("SEABANK", "SEABANK"), ("MSB", "MSB"), ("HANG HAI", "MSB"),
+              ("SHINHAN", "SHINHAN"), ("WOORI", "WOORI"))
+KTSC_BANK_COLS = ("LCTG", "NGAYCT", "SOCT", "DIENGIAI", "TKNO", "MADTPNNO", "TKCO", "MADTPNCO", "TTVND", "TTVND_TT",
+                  "TENKH", "ID_NGHIEPVU", "GHICHU", "GUID")
+
+
+def _bank_plain(v):
+    return re.sub(r"[^a-z0-9/]+", "", _plain(v))
+
+
+def read_table_file(name, data):
+    """Đọc file bảng tính sao kê → [(tên sheet, [hàng [ô...]])]. Hỗ trợ .xlsx, .xls (Excel 97-2003, cần xlrd),
+    .xls/.html dạng bảng HTML (nhiều ngân hàng xuất kiểu này) và .csv."""
+    head = data[:8]
+    if head[:2] == b"PK":
+        try:
+            import openpyxl
+        except ImportError:
+            raise ValueError("Chưa cài openpyxl (pip install openpyxl)")
+        try:
+            wb = openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)
+        except Exception as e:
+            raise ValueError("Không đọc được file Excel %s: %s" % (name, e))
+        return [(ws.title, [list(r) for r in ws.iter_rows(values_only=True)]) for ws in wb.worksheets]
+    if head == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1":
+        try:
+            import xlrd
+        except ImportError:
+            raise ValueError("Đọc file .xls (Excel 97-2003) cần thư viện xlrd: pip install xlrd "
+                             "(bản web: khởi động lại dịch vụ để tự cài) – hoặc mở file bằng Excel, lưu lại dạng .xlsx")
+        try:
+            book = xlrd.open_workbook(file_contents=data)
+        except Exception as e:
+            raise ValueError("Không đọc được file .xls %s: %s" % (name, e))
+        sheets = []
+        for sh in book.sheets():
+            rows = []
+            for r in range(sh.nrows):
+                row = []
+                for c in range(sh.ncols):
+                    cell = sh.cell(r, c)
+                    if cell.ctype == xlrd.XL_CELL_DATE:
+                        try:
+                            row.append(xlrd.xldate_as_datetime(cell.value, book.datemode))
+                            continue
+                        except Exception:
+                            pass
+                    row.append(cell.value)
+                rows.append(row)
+            sheets.append((sh.name, rows))
+        return sheets
+    text = None
+    for enc in ("utf-8-sig", "utf-16", "cp1258", "cp1252"):
+        try:
+            text = data.decode(enc)
+            if enc != "utf-16" or "\x00" not in text:
+                break
+        except UnicodeDecodeError:
+            continue
+    if text is None:
+        raise ValueError("Không nhận ra định dạng file %s" % name)
+    if re.search(r"<\s*(table|tr)\b", text[:200000], re.I):
+        from html.parser import HTMLParser
+
+        class P(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.rows, self.row, self.cell = [], None, None
+
+            def handle_starttag(self, tag, attrs):
+                if tag == "tr":
+                    self.row = []
+                elif tag in ("td", "th") and self.row is not None:
+                    self.cell = []
+                elif tag == "br" and self.cell is not None:
+                    self.cell.append(" ")
+
+            def handle_endtag(self, tag):
+                if tag in ("td", "th") and self.cell is not None and self.row is not None:
+                    self.row.append(re.sub(r"\s+", " ", "".join(self.cell)).strip())
+                    self.cell = None
+                elif tag == "tr" and self.row is not None:
+                    self.rows.append(self.row)
+                    self.row = None
+
+            def handle_data(self, d):
+                if self.cell is not None:
+                    self.cell.append(d)
+        p = P()
+        p.feed(text)
+        return [(os.path.splitext(name)[0], p.rows)]
+    sample = text[:5000]
+    delim = max((";", ",", "\t", "|"), key=sample.count)
+    return [(os.path.splitext(name)[0], [r for r in csv.reader(io.StringIO(text), delimiter=delim)])]
+
+
+def _bank_amount(v):
+    if v is None or v == "":
+        return 0.0
+    if isinstance(v, (int, float)):
+        return float(v)
+    s = re.sub(r"[^\d,.\-()]", "", str(v))
+    neg = s.startswith("-") or (s.startswith("(") and s.endswith(")"))
+    s = s.strip("-()")
+    if not s:
+        return 0.0
+    if "," in s and "." in s:  # 1,234,567.89 hoặc 1.234.567,89
+        dec = "." if s.rfind(".") > s.rfind(",") else ","
+        s = s.replace("." if dec == "," else ",", "").replace(dec, ".")
+    elif s.count(",") > 1 or s.count(".") > 1 or re.fullmatch(r"\d{1,3}([.,]\d{3})+", s):
+        s = s.replace(",", "").replace(".", "")  # dấu ngăn cách hàng nghìn
+    else:
+        s = s.replace(",", ".")
+    try:
+        f = float(s)
+    except ValueError:
+        return 0.0
+    return -f if neg else f
+
+
+def _bank_date(v):
+    if isinstance(v, datetime):
+        return v
+    if isinstance(v, date):
+        return datetime(v.year, v.month, v.day)
+    s = str(v or "").strip()
+    m = re.match(r"(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})(?:\D+(\d{1,2}):(\d{2})(?::(\d{2}))?)?", s)
+    if m:
+        d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        hh, mm, ss = (int(m.group(i) or 0) for i in (4, 5, 6))
+    else:
+        m = re.match(r"(\d{4})[/.-](\d{1,2})[/.-](\d{1,2})(?:\D+(\d{1,2}):(\d{2})(?::(\d{2}))?)?", s)
+        if not m:
+            return None
+        y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        hh, mm, ss = (int(m.group(i) or 0) for i in (4, 5, 6))
+    try:
+        return datetime(y, mo, d, hh, mm, ss)
+    except ValueError:
+        return None
+
+
+def _bank_col(text):
+    """Tên cột sao kê → loại cột (date, desc, out, in, amount, ref, name, None)."""
+    p = _bank_plain(text)
+    toks = set(re.split(r"[^a-z0-9]+", _plain(text)))
+    if not p or "stt" in toks or p.startswith("stt") or "sodu" in p or "balance" in p or "luyke" in p:
+        return None
+    if "ten" in p and ("doiung" in p or "corresponsive" in p or "thuhuong" in p or "nguoichuyen" in p
+                       or "nguoinhan" in p or "khachhang" in p or "counterpart" in p or "beneficiary" in p):
+        return "name"
+    if "sotaikhoan" in p or "accountno" in p or "taikhoandoiung" in p or "virtualaccount" in p:
+        return None
+    if any(k in p for k in ("sogiaodich", "transactionnumber", "sothamchieu", "reference", "refno", "magiaodich",
+                            "sobut", "soct", "transactionid", "transno")):
+        return "ref"
+    if any(k in p for k in ("mota", "noidung", "diengiai", "description", "details", "remark", "narrative")):
+        return "desc"
+    if "ngay" in p or "date" in p:
+        return "date"
+    if any(k in p for k in ("ghino", "sotienno", "phatsinhno", "debit", "withdraw", "sotienchi", "tienra", "rut")) \
+            or p.startswith("no/") or p == "no" or p.startswith("chi"):
+        return "out"
+    if any(k in p for k in ("ghico", "sotienco", "phatsinhco", "credit", "deposit", "sotienthu", "tienvao")) \
+            or p.startswith("co/") or p == "co" or p.startswith("thu"):
+        return "in"
+    if "sotien" in p or "amount" in p:
+        return "amount"
+    return None
+
+
+def parse_bank_statement(name, data):
+    """Đọc sao kê ngân hàng → thông tin tài khoản + danh sách giao dịch (theo thứ tự trong file)."""
+    best = None
+    for sheet, rows in read_table_file(name, data):
+        for i, row in enumerate(rows[:80]):
+            cols = {}
+            for j, v in enumerate(row):
+                kind = _bank_col(v) if isinstance(v, str) else None
+                if kind and kind not in cols:
+                    cols[kind] = j
+            if "date" in cols and ("desc" in cols or "ref" in cols) and (
+                    ("in" in cols and "out" in cols) or "amount" in cols):
+                best = (sheet, rows, i, cols)
+                break
+        if best:
+            break
+    if not best:
+        raise ValueError("%s: không tìm thấy bảng giao dịch (cần các cột Ngày, Mô tả/Nội dung, Nợ/Có hoặc Số tiền)" % name)
+    sheet, rows, hdr, cols = best
+    top = " ".join(_plain(c) if isinstance(c, str) else str(c or "") for r in rows[:hdr] for c in r)
+    top += " " + _plain(name)
+    if data[:2] != b"PK" and data[:4] != b"\xd0\xcf\x11\xe0":  # file dạng chữ (html/csv): tên ngân hàng có thể nằm ngoài bảng
+        top += " " + _plain(re.sub(r"<[^>]+>", " ", data[:20000].decode("utf-8", "ignore")))
+    info = {"file": name, "bank": "", "account": "", "company": "", "from": "", "to": "",
+            "opening": None, "closing": None, "total_in": None, "total_out": None, "rows": [], "warnings": []}
+    for key, code in BANK_NAMES:
+        if _plain(key).replace(" ", "") in top.replace(" ", ""):
+            info["bank"] = code
+            break
+
+    def label_value(*labels):
+        for r in rows[:hdr]:
+            for j, c in enumerate(r):
+                if isinstance(c, str) and any(lb in _bank_plain(c) for lb in labels):
+                    rest = [x for x in r[j + 1:] if x not in (None, "")]
+                    if rest:
+                        return rest[0]
+                    m = re.search(r":\s*(.+)$", c)
+                    if m:
+                        return m.group(1).strip()
+        return None
+    acc = label_value("sotaikhoan", "accountno", "taikhoanso")
+    info["account"] = re.sub(r"[^\dA-Za-z]", "", str(acc or ""))[:30]
+    info["company"] = str(label_value("congty/companyname", "tenkhachhang", "tentaikhoan", "chutaikhoan",
+                                      "companyname", "accountname") or "").strip()
+    for key, labels in (("opening", ("sodudauky", "openingbalance")), ("closing", ("soducuoiky", "closingbalance")),
+                        ("total_in", ("tonggiatrighico", "tongghico", "totalcredit", "tongsotienghico")),
+                        ("total_out", ("tonggiatrighino", "tongghino", "totaldebit", "tongsotienghino"))):
+        v = label_value(*labels)
+        if v not in (None, ""):
+            info[key] = _bank_amount(v)
+    # Hàng "Tổng giá trị ghi có ... Tổng giá trị ghi nợ" nằm cùng một hàng: tìm riêng từng nhãn
+    for r in rows[:hdr]:
+        for j, c in enumerate(r):
+            if not isinstance(c, str):
+                continue
+            p = _bank_plain(c)
+            nxt = next((x for x in r[j + 1:] if x not in (None, "")), None)
+            if nxt is None:
+                continue
+            if "ghico" in p and "tong" in p and "so" not in p.replace("tongso", "") and "giaodich" not in p:
+                info["total_in"] = _bank_amount(nxt)
+            elif "ghino" in p and "tong" in p and "giaodich" not in p:
+                info["total_out"] = _bank_amount(nxt)
+    ncol = max(cols.values()) + 1
+    for r in rows[hdr + 1:]:
+        r = list(r) + [None] * (ncol - len(r))
+        d = _bank_date(r[cols["date"]])
+        if not d:
+            continue
+        if "amount" in cols and not ("in" in cols and "out" in cols):
+            a = _bank_amount(r[cols["amount"]])
+            tin, tout = (a, 0.0) if a > 0 else (0.0, -a)
+        else:
+            tin, tout = abs(_bank_amount(r[cols["in"]])), abs(_bank_amount(r[cols["out"]]))
+        if not tin and not tout:
+            continue
+        val = lambda k: re.sub(r"[\r\n\t]+", " ", str(r[cols[k]] if k in cols and r[cols[k]] is not None else "")).strip()
+        ref = val("ref")
+        if ref.endswith(".0") and ref[:-2].isdigit():
+            ref = ref[:-2]
+        info["rows"].append({"date": d.strftime("%Y-%m-%d"), "time": d.strftime("%H:%M:%S"), "ref": ref,
+                             "desc": val("desc"), "name": val("name"), "in": tin, "out": tout})
+    if not info["rows"]:
+        raise ValueError("%s: không có giao dịch nào" % name)
+    ds = sorted(x["date"] for x in info["rows"])
+    info["from"], info["to"] = ds[0], ds[-1]
+    s_in, s_out = sum(x["in"] for x in info["rows"]), sum(x["out"] for x in info["rows"])
+    info["sum_in"], info["sum_out"] = s_in, s_out
+    if info["total_in"] is not None and abs(info["total_in"] - s_in) > 0.5:
+        info["warnings"].append("Tổng ghi có trên sao kê %s ≠ tổng các dòng đọc được %s" % (
+            "{:,.0f}".format(info["total_in"]), "{:,.0f}".format(s_in)))
+    if info["total_out"] is not None and abs(info["total_out"] - s_out) > 0.5:
+        info["warnings"].append("Tổng ghi nợ trên sao kê %s ≠ tổng các dòng đọc được %s" % (
+            "{:,.0f}".format(info["total_out"]), "{:,.0f}".format(s_out)))
+    if info["opening"] is not None and info["closing"] is not None and \
+            abs(info["opening"] + s_in - s_out - info["closing"]) > 0.5:
+        info["warnings"].append("Số dư đầu kỳ + thu − chi không bằng số dư cuối kỳ – kiểm tra lại file")
+    return info
+
+
+def bank_ktsc_rows(rows, opts=None):
+    """Giao dịch → các dòng KTSC. Mặc định giống Nibot: chỉ ghi TK ngân hàng, để trống TK đối ứng.
+    opts: tk (1121), ma_dt (mã đối tượng của TK ngân hàng), tk_thu / tk_chi (TK đối ứng tiền vào / tiền ra),
+    nghiep_vu (TIENHANG), ghi_chu."""
+    o = opts or {}
+    tk = str(o.get("tk") or "1121").strip()
+    ma = str(o.get("ma_dt") or "").strip()
+    tk_thu, tk_chi = str(o.get("tk_thu") or "").strip(), str(o.get("tk_chi") or "").strip()
+    out = []
+    for x in rows:
+        incoming = x["in"] > 0
+        amt = x["in"] if incoming else x["out"]
+        amt = int(amt) if float(amt).is_integer() else amt
+        out.append({"LCTG": "CTNH", "NGAYCT": datetime.strptime(x["date"], "%Y-%m-%d"), "SOCT": x.get("ref") or "",
+                    "DIENGIAI": x.get("desc") or "",
+                    "TKNO": tk if incoming else (str(x.get("tkdu") or "").strip() or tk_chi),
+                    "MADTPNNO": ma if incoming else "",
+                    "TKCO": (str(x.get("tkdu") or "").strip() or tk_thu) if incoming else tk,
+                    "MADTPNCO": "" if incoming else ma,
+                    "TTVND": amt, "TTVND_TT": amt, "TENKH": x.get("name") or "",
+                    "ID_NGHIEPVU": str(o.get("nghiep_vu") or "TIENHANG"), "GHICHU": str(o.get("ghi_chu") or "TAIHOADON IMPORT"),
+                    "GUID": ""})
+    return out
+
+
+def merge_bank_statements(infos):
+    """Gộp nhiều sao kê, bỏ giao dịch trùng (sao kê tháng sau hay lặp giao dịch cuối tháng trước)."""
+    seen, rows, dups = set(), [], 0
+    for info in infos:
+        for x in info["rows"]:
+            k = (info.get("account"), x["date"], x["time"], x["ref"], x["in"], x["out"], x["desc"])
+            if k in seen:
+                dups += 1
+                continue
+            seen.add(k)
+            rows.append(dict(x, account=info.get("account", ""), bank=info.get("bank", "")))
+    return rows, dups
+
+
+def write_bank_ktsc(rows, opts=None):
+    """→ bytes file .xlsx sheet KTSC (14 cột như file Nibot)."""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font
+    except ImportError:
+        raise ValueError("Chưa cài openpyxl (pip install openpyxl)")
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "KTSC"
+    ws.append(list(KTSC_BANK_COLS))
+    for c in ws[1]:
+        c.font = Font(bold=True)
+    for r in bank_ktsc_rows(rows, opts):
+        ws.append([r[k] for k in KTSC_BANK_COLS])
+        ws.cell(ws.max_row, 2).number_format = "dd/mm/yyyy"
+        for col in (9, 10):
+            ws.cell(ws.max_row, col).number_format = "#,##0"
+    for col, w in zip("ABCDEFGHIJKLMN", (7, 11, 20, 70, 7, 12, 7, 12, 14, 14, 40, 12, 16, 6)):
+        ws.column_dimensions[col].width = w
+    ws.freeze_panes = "A2"
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+# ---------------------------------------------------------------------------
 # Giao diện web chạy trên máy (127.0.0.1)
 # ---------------------------------------------------------------------------
 
@@ -2794,6 +3140,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     <div class="tmenu">
       <a href="#" data-t="xml" class="on">Đọc hoá đơn XML</a><a href="#" data-t="mst">Kiểm tra MST DN</a>
       <a href="#" data-t="merge">Nối file PDF</a><a href="#" data-t="split">Tách file PDF</a>
+      <a href="#" data-t="bank">Sao kê ngân hàng</a>
     </div>
     <div>
       <div class="tpane" id="t-xml"><h3>Đọc và xem hoá đơn XML</h3>
@@ -2814,6 +3161,23 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
         <input type="file" id="splitFile" accept="application/pdf">
         <label>Khoảng trang (để trống = mỗi trang một file)</label><input type="text" id="splitRanges" placeholder="vd: 1-3, 4, 5-8">
         <div class="bar"><button onclick="toolSplit()">Tách file</button></div><div class="err" id="splitErr"></div></div>
+      <div class="tpane hide" id="t-bank"><h3>Sao kê ngân hàng → file nhập phần mềm kế toán (KTSC)</h3>
+        <div class="hint">Chọn một hoặc nhiều file sao kê tải từ internet banking (.xls, .xlsx, .csv). Phần mềm tự tìm bảng giao dịch,
+          đối chiếu với tổng ghi có / ghi nợ và số dư trên sao kê, bỏ giao dịch trùng giữa các tháng, rồi xuất Excel sheet KTSC
+          theo mẫu Nibot để nhập Smart Pro. Tiền vào: Nợ TK ngân hàng; tiền ra: Có TK ngân hàng.</div>
+        <input type="file" id="bankFiles" multiple accept=".xls,.xlsx,.csv,.htm,.html,.txt" style="margin-top:8px">
+        <div class="flt" style="margin-top:10px">
+          <label>TK ngân hàng<input type="text" id="bkTk" value="1121"></label>
+          <label>Mã đối tượng TK ngân hàng<input type="text" id="bkMa" placeholder="vd 112_VIETTIN"></label>
+          <label>TK đối ứng tiền vào<input type="text" id="bkThu" placeholder="để trống như Nibot, vd 131"></label>
+          <label>TK đối ứng tiền ra<input type="text" id="bkChi" placeholder="để trống như Nibot, vd 331"></label>
+          <label>Mã nghiệp vụ<input type="text" id="bkNv" value="TIENHANG"></label>
+          <label>Ghi chú<input type="text" id="bkGc" value="NIBOT IMPORT"></label>
+        </div>
+        <div class="err" id="bankErr"></div><div id="bankInfo"></div>
+        <div class="bar"><button id="bankExp" class="hide" onclick="bankExport()">Xuất Excel KTSC</button>
+          <span class="mute" id="bankSum"></span></div>
+        <div class="tbl"><table id="bankTbl"></table></div></div>
     </div>
   </div>
 </section>
@@ -3257,6 +3621,60 @@ async function toolSplit() {
   try { const d = await post('/api/tool/pdf-split', {name: f.name, data: await readB64(f), ranges: $('splitRanges').value});
         download(d.name, d.data, 'application/zip'); $('splitErr').textContent = ''; }
   catch (e) { $('splitErr').textContent = e.message; }
+}
+
+// ---- Sao kê ngân hàng ----
+let bankRows = [], bankMeta = {};
+const BK_OPTS = ['bkTk', 'bkMa', 'bkThu', 'bkChi', 'bkNv', 'bkGc'];
+BK_OPTS.forEach(id => { try { const v = localStorage.getItem('opt_' + id); if (v !== null) $(id).value = v; } catch (e) {}
+  $(id).addEventListener('change', () => { try { localStorage.setItem('opt_' + id, $(id).value); } catch (e) {} renderBank(); }); });
+$('bankFiles').onchange = async () => {
+  const fs = [...$('bankFiles').files]; $('bankFiles').value = ''; if (!fs.length) return;
+  $('bankErr').textContent = 'Đang đọc ' + fs.length + ' file…'; $('bankInfo').innerHTML = ''; bankRows = []; renderBank();
+  try {
+    const files = []; for (const f of fs) files.push({name: f.name, data: await readB64(f)});
+    const d = await post('/api/tool/bank-parse', {files});
+    $('bankErr').innerHTML = ''; d.errors.forEach(x => $('bankErr').append(el('div', 'err', x)));
+    const info = $('bankInfo');
+    d.statements.forEach(st => {
+      const ok = !st.warnings.length, box = el('div', ok ? 'ok' : 'err');
+      box.textContent = st.file + ': ' + [st.bank, st.account, st.company].filter(Boolean).join(' – ') + ' · ' + vnd(st.from) + ' → ' + vnd(st.to) +
+        ' · thu ' + fmt(st.sum_in) + ' · chi ' + fmt(st.sum_out) + (ok ? (st.total_in != null ? ' · khớp tổng trên sao kê ✓' : '') : '');
+      info.append(box); st.warnings.forEach(w => info.append(el('div', 'err', '⚠ ' + w)));
+    });
+    if (d.dups) info.append(el('div', 'mute', 'Đã bỏ ' + d.dups + ' giao dịch trùng giữa các file.'));
+    const st0 = d.statements[0] || {};
+    bankMeta = {bank: st0.bank || '', account: st0.account || ''};
+    if (!$('bkMa').value && st0.bank) $('bkMa').placeholder = 'vd 112_' + st0.bank;
+    bankRows = d.rows; renderBank();
+  } catch (e) { $('bankErr').textContent = e.message; }
+};
+function renderBank() {
+  const t = $('bankTbl'); t.innerHTML = '';
+  $('bankExp').classList.toggle('hide', !bankRows.length);
+  if (!bankRows.length) { $('bankSum').textContent = ''; return; }
+  const h = t.insertRow(); ['Ngày', 'Số GD', 'Diễn giải', 'Đối tượng', 'Tiền vào', 'Tiền ra', 'Nợ', 'Có'].forEach((x, i) => {
+    const th = el('th', i === 4 || i === 5 ? 'n' : '', x); h.append(th); });
+  const tk = $('bkTk').value || '1121';
+  bankRows.forEach(r => {
+    const tr = t.insertRow(), inc = r.in > 0;
+    [vnd(r.date), r.ref, r.desc, r.name].forEach(v => tr.insertCell().textContent = v);
+    [r.in, r.out].forEach(v => { const c = tr.insertCell(); c.className = 'n'; c.textContent = v ? fmt(v) : ''; });
+    const du = el('input', 'note'); du.style.width = '70px'; du.value = r.tkdu || ''; du.placeholder = inc ? ($('bkThu').value || '') : ($('bkChi').value || '');
+    du.title = 'TK đối ứng riêng cho dòng này (để trống = theo mặc định)'; du.onchange = () => { r.tkdu = du.value.trim(); };
+    const no = tr.insertCell(), co = tr.insertCell();
+    if (inc) { no.textContent = tk; co.append(du); } else { no.append(du); co.textContent = tk; }
+  });
+  const si = bankRows.reduce((a, r) => a + r.in, 0), so = bankRows.reduce((a, r) => a + r.out, 0);
+  $('bankSum').textContent = bankRows.length + ' giao dịch · tiền vào ' + fmt(si) + ' · tiền ra ' + fmt(so);
+}
+async function bankExport() {
+  try {
+    const opts = {tk: $('bkTk').value, ma_dt: $('bkMa').value, tk_thu: $('bkThu').value, tk_chi: $('bkChi').value,
+                  nghiep_vu: $('bkNv').value, ghi_chu: $('bkGc').value};
+    const d = await post('/api/tool/bank-export', {rows: bankRows, opts, bank: bankMeta.bank, account: bankMeta.account});
+    download(d.name, d.data, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  } catch (e) { $('bankErr').textContent = e.message; }
 }
 
 // ---- Trang Đồng bộ ----
@@ -4075,6 +4493,29 @@ def make_handler(app, port):
                     except (PortalError, ValueError) as e:
                         rows.append({"mst": m, "ten": "", "dia_chi": "", "cqt": "", "tthai_text": "", "loi": str(e)})
                 return self._send(200, {"rows": rows})
+            if name == "bank-parse":
+                infos, errors = [], []
+                for f in (data.get("files") or [])[:24]:
+                    try:
+                        infos.append(parse_bank_statement(f.get("name") or "sao-ke", b64(f.get("data"))))
+                    except ValueError as e:
+                        errors.append(str(e))
+                rows, dups = merge_bank_statements(infos)
+                for i in infos:
+                    i.pop("rows")
+                return self._send(200, {"statements": infos, "rows": rows, "dups": dups, "errors": errors})
+            if name == "bank-export":
+                rows = [r for r in (data.get("rows") or []) if isinstance(r, dict) and r.get("date")]
+                if not rows:
+                    raise ValueError("Chưa có giao dịch nào")
+                for r in rows:
+                    r["in"], r["out"] = _float(r.get("in")), _float(r.get("out"))
+                    datetime.strptime(str(r["date"]), "%Y-%m-%d")
+                out = write_bank_ktsc(rows, data.get("opts") or {})
+                ds = sorted(r["date"] for r in rows)
+                label = safe_name("_".join(x for x in ("SAO_KE", str(data.get("bank") or ""), str(data.get("account") or ""),
+                                                       ds[0].replace("-", ""), ds[-1].replace("-", "")) if x))
+                return self._send(200, {"name": label + ".xlsx", "data": base64.b64encode(out).decode()})
             if name == "pdf-merge":
                 files = [(f.get("name"), b64(f.get("data"))) for f in (data.get("files") or [])]
                 out = merge_pdfs(files)

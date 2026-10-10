@@ -39,7 +39,7 @@ id taihoadon >/dev/null 2>&1 || useradd --system --home "$APP" --shell /usr/sbin
 mkdir -p "$APP" "$DATA"
 [ -x "$APP/venv/bin/python" ] || python3 -m venv "$APP/venv"
 "$APP/venv/bin/pip" install -q --upgrade pip
-"$APP/venv/bin/pip" install -q openpyxl==3.1.5 pypdf==5.1.0 cryptography==43.0.3
+"$APP/venv/bin/pip" install -q openpyxl==3.1.5 pypdf==5.1.0 cryptography==43.0.3 xlrd==2.0.1
 install -m 644 "$SRC" "$APP/taihoadon.py"
 chown -R taihoadon:taihoadon "$DATA"
 chmod 700 "$DATA"

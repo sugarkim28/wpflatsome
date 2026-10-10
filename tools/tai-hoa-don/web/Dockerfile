@@ -5,7 +5,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 TZ=Asia/Ho_Chi_Minh \
 
 RUN apt-get update && apt-get install -y --no-install-recommends tzdata \
     && rm -rf /var/lib/apt/lists/* \
-    && pip install --no-cache-dir openpyxl==3.1.5 pypdf==5.1.0 cryptography==43.0.3 \
+    && pip install --no-cache-dir openpyxl==3.1.5 pypdf==5.1.0 cryptography==43.0.3 xlrd==2.0.1 \
     && useradd -m -u 1000 app && mkdir /data && chown app /data
 
 WORKDIR /app

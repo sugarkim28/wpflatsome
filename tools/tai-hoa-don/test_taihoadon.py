@@ -978,6 +978,81 @@ class Tests(unittest.TestCase):
             hits = t.match_pdf_text(text, {"purchase": entries(nb, nm, kh, so)})
             self.assertEqual(hits, [("purchase", "%s|1|%s|%d" % (nb, kh, so))], text[:40])
 
+    def _vietin_xlsx(self, rows, opening=1000000):
+        import openpyxl
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "LICH SU GIAO DICH"
+        ws.append(["NGÂN HÀNG TMCP CÔNG THƯƠNG VIỆT NAM"])
+        ws.append([None, "  VIETINBANK"])
+        ws.append([None, "Công ty/Company name:", "CONG TY A"])
+        ws.append([None, "Số tài khoản/ Account No.:", "117000000001"])
+        tin = sum(r[3] for r in rows)
+        tout = sum(r[2] for r in rows)
+        ws.append([None, "Số dư đầu kỳ/Opening Balance:", opening])
+        ws.append([None, "Số dư cuối kỳ/Closing Balance:", opening + tin - tout])
+        ws.append([None, "Tổng giá trị ghi có/ Total credits:", tin, "Tổng giá trị ghi nợ/ Total debits:", tout])
+        ws.append([None, "Tổng số giao dịch ghi có/ Total number of credit :", "2", "Tổng số giao dịch ghi nợ/ Total number of debits:", "1"])
+        ws.append(["STT/No.", "Ngày hạch toán/Accounting date", "Mô tả giao dịch/ Transaction description", "Nợ/ Debit",
+                   "Có / Credit", "Số dư TK/ Account Balance", "Số giao dịch/ Transaction number",
+                   "Số tài khoản đối ứng/ Corresponsive account", "Tên tài khoản đối ứng/ Corresponsive name",
+                   "MTID/ CITAD", "Mã định danh TK thụ hưởng/ To virtual account", "Ngày phát sinh giao dịch/ Transaction date"])
+        for i, (d, desc, out, inn, ref, name) in enumerate(rows, 1):
+            ws.append([i, d, desc, out, inn, 0, ref, "123", name, "", "", d])
+        ws.append(["Từ ngày 21/03/2025, VietinBank thực hiện cập nhật lại báo cáo sao kê"])
+        buf = io.BytesIO()
+        wb.save(buf)
+        return buf.getvalue()
+
+    def test_bank_statement(self):
+        rows = [("31-01-2026 14:34:15", "CT DI:928K NEW SUN THANH TOAN CHO CONG TY B HOA DON SO 967", 20850300, 0, "928K2611", "CONG TY B"),
+                ("31-01-2026 01:57:49", "Tra lai tai khoan DDA", 0, 67629, "2937", ""),
+                ("30-01-2026 20:09:36", "CT DEN:2009  TT tien in", 0, 25128080, "928S2611", "CONG TY C")]
+        info = t.parse_bank_statement("a.xlsx", self._vietin_xlsx(rows))
+        self.assertEqual((info["bank"], info["account"], info["company"]), ("VIETIN", "117000000001", "CONG TY A"))
+        self.assertEqual((info["from"], info["to"], len(info["rows"]), info["warnings"]), ("2026-01-30", "2026-01-31", 3, []))
+        self.assertEqual(info["rows"][0], {"date": "2026-01-31", "time": "14:34:15", "ref": "928K2611", "in": 0.0,
+                                           "out": 20850300.0, "name": "CONG TY B",
+                                           "desc": "CT DI:928K NEW SUN THANH TOAN CHO CONG TY B HOA DON SO 967"})
+        self.assertEqual(info["rows"][2]["desc"], "CT DEN:2009  TT tien in")   # giữ nguyên như sao kê
+        k = t.bank_ktsc_rows(info["rows"], {"ghi_chu": "NIBOT IMPORT"})
+        self.assertEqual([(r["TKNO"], r["TKCO"], r["TTVND"], r["TTVND_TT"]) for r in k],
+                         [("", "1121", 20850300, 20850300), ("1121", "", 67629, 67629), ("1121", "", 25128080, 25128080)])
+        self.assertEqual((k[0]["LCTG"], k[0]["SOCT"], k[0]["TENKH"], k[0]["ID_NGHIEPVU"], k[0]["GHICHU"]),
+                         ("CTNH", "928K2611", "CONG TY B", "TIENHANG", "NIBOT IMPORT"))
+        # TK đối ứng mặc định + riêng từng dòng, mã đối tượng ngân hàng nằm bên TK ngân hàng
+        info["rows"][1]["tkdu"] = "515"
+        k = t.bank_ktsc_rows(info["rows"], {"tk_thu": "131", "tk_chi": "331", "ma_dt": "112_VIETTIN"})
+        self.assertEqual([(r["TKNO"], r["MADTPNNO"], r["TKCO"], r["MADTPNCO"]) for r in k],
+                         [("331", "", "1121", "112_VIETTIN"), ("1121", "112_VIETTIN", "515", ""),
+                          ("1121", "112_VIETTIN", "131", "")])
+        import openpyxl
+        ws = openpyxl.load_workbook(io.BytesIO(t.write_bank_ktsc(info["rows"])))["KTSC"]
+        self.assertEqual([c.value for c in ws[1]], list(t.KTSC_BANK_COLS))
+        self.assertEqual(ws.max_row, 4)
+        # Sao kê tháng sau lặp giao dịch cuối tháng trước → bỏ trùng khi gộp
+        feb = t.parse_bank_statement("b.xlsx", self._vietin_xlsx([rows[1], ("02-02-2026", "Phi", 3500, 0, "2990", "")]))
+        merged, dups = t.merge_bank_statements([info, feb])
+        self.assertEqual((len(merged), dups), (4, 1))
+
+    def test_bank_statement_other_formats(self):
+        csv_data = ("Ngày giao dịch;Số tham chiếu;Nội dung;Ghi nợ;Ghi có;Số dư\n"
+                    "05/03/2026;FT123;Chuyen tien hang;1.500.000;;9.000.000\n"
+                    "06/03/2026;FT124;Nhan tien;;2.000.000,50;11.000.000\n").encode("utf-8")
+        info = t.parse_bank_statement("vcb.csv", csv_data)
+        self.assertEqual([(r["date"], r["ref"], r["in"], r["out"]) for r in info["rows"]],
+                         [("2026-03-05", "FT123", 0.0, 1500000.0), ("2026-03-06", "FT124", 2000000.5, 0.0)])
+        html_data = ("<html><body><p>TECHCOMBANK</p><table><tr><th>Ngày</th><th>Diễn giải</th><th>Số tiền</th>"
+                     "<th>Tên người chuyển</th></tr><tr><td>2026-03-07</td><td>Thu tien</td><td>3,000,000</td><td>NGUYEN A</td></tr>"
+                     "<tr><td>2026-03-08</td><td>Tra tien</td><td>-500,000</td><td></td></tr></table></body></html>").encode()
+        info = t.parse_bank_statement("tcb.xls", html_data)
+        self.assertEqual(info["bank"], "TCB")
+        self.assertEqual([(r["in"], r["out"], r["name"]) for r in info["rows"]], [(3000000.0, 0.0, "NGUYEN A"), (0.0, 500000.0, "")])
+        with self.assertRaisesRegex(ValueError, "không tìm thấy bảng giao dịch"):
+            t.parse_bank_statement("x.csv", b"a;b;c\n1;2;3\n")
+        self.assertEqual(t._bank_amount("(1.234.567)"), -1234567.0)
+        self.assertEqual(t._bank_amount("1,234.5"), 1234.5)
+
 
 if __name__ == "__main__":
     unittest.main()
