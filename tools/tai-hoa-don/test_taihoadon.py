@@ -956,6 +956,28 @@ class Tests(unittest.TestCase):
             srv.shutdown()
             srv.server_close()
 
+    def test_match_pdf_layouts(self):
+        """Các kiểu trình bày PDF của nhiều nhà cung cấp (chữ giả lập theo PDF thật)."""
+        def entries(nb, nm, kh, so):
+            return {"%s|1|%s|%d" % (nb, kh, s): {"inv": {"nmmst": nm}} for s in (so, so + 1, 1, 2, 99, 100)}
+        cases = [
+            # chữ PDF bị đảo thứ tự: số trước nhãn, ký hiệu in thành C25TAD1
+            ("0309999999:Mã số thuế CONG TY A:Đơn vị bán hàng 00000165:Số C25TAD1:Ký hiệu HOÁ ĐƠN 0101234567:Mã số thuế",
+             "0309999999", "0101234567", "C25TAD", 165),
+            # số đứng ngay sau ký hiệu, không có nhãn
+            ("Mã số thuế 0309999999 Ngày 24 tháng 02 năm 2025 1C25TQP 106 Ký hiệu Số 0099 Mã số thuế 0101234567",
+             "0309999999", "0101234567", "C25TQP", 106),
+            # MISA: "Ký hiệu: Số: 1C25TLV 00004279" – không đọc nhầm số 1 của ký hiệu
+            ("Mã số thuế: 0309999999 Ký hiệu: Số: 1C25TLV 00004279 09 tháng 4 2025 Mã số thuế: 0101234567",
+             "0309999999", "0101234567", "C25TLV", 4279),
+            # ký hiệu không có số 1 đầu, MST in cách chữ số, nhãn "Số (No):"
+            ("Ký hiệu (Serial No): C26TMS Số (No): 268 Mã số thuế (Tax code): 0 3 0 9 9 9 9 9 9 9 Mã số thuế: 0101234567",
+             "0309999999", "0101234567", "C26TMS", 268),
+        ]
+        for text, nb, nm, kh, so in cases:
+            hits = t.match_pdf_text(text, {"purchase": entries(nb, nm, kh, so)})
+            self.assertEqual(hits, [("purchase", "%s|1|%s|%d" % (nb, kh, so))], text[:40])
+
 
 if __name__ == "__main__":
     unittest.main()

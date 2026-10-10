@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.1.1"
+__version__ = "3.1.2"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -2277,13 +2277,23 @@ def match_pdf_text(text, entries_by_kind):
         n = int(tkn)
         s_ = 3 if (tkn.startswith("0") and len(tkn) >= 7) else (2 if len(tkn) >= 6 else 1)
         score[n] = max(score.get(n, 0), s_)
-    for m in re.finditer(r"Số\s*(?:\(No\.?\)\s*:?|:)\s*0*(\d{1,10})(?![\d.,]\d)|(?<![\d.,])(\d{1,10})\s*\(No\)", flat):
-        n = int(m.group(1) or m.group(2))
-        score[n] = 4  # đúng vị trí nhãn số hoá đơn – hơn số nhắc tới trong nội dung (vd HĐ bị điều chỉnh)
+    labeled = (
+        # "Số: 123", "Số (No.): 123" – số không được dính chữ phía sau (vd "Số: 1C25TLV" không phải số 1)
+        r"Số\s*(?:\(No\.?\)\s*:?|:)\s*0*(\d{1,10})(?![\d.,]\d)(?![A-Za-z])",
+        r"(?<![\d.,])(\d{1,10})\s*\(No\)",
+        # số đứng ngay sau ký hiệu: "1C25TQP 106", "Số: 1C25TLV 00004279", "Ký hiệu: 1C26TAA Số: 1614"
+        r"(?<![A-Z0-9])[12]?[CK]\d{2}[A-Z]{2,3}\s+(?:Số\s*(?:\([^)]{0,8}\))?\s*:?\s*)?0*(\d{1,10})(?![\d.,]\d)(?![A-Za-z])",
+        # chữ PDF bị đảo thứ tự: "00000165:Số"
+        r"(?<![\d.,])0*(\d{1,10})\s*:\s*Số(?!\s*(?:tài|TK|điện))",
+    )
+    for pat in labeled:
+        for m in re.finditer(pat, flat):
+            score[int(m.group(1))] = 4  # đúng vị trí số hoá đơn – hơn số nhắc tới trong nội dung (vd HĐ bị điều chỉnh)
     msts = set(re.findall(r"(?<!\d)(\d{10}(?:-\d{3})?)(?!\d)", flat))
     msts |= {re.sub(r"\s", "", m) for m in re.findall(r"(?<!\d)((?:\d ){9}\d)(?!\d)", flat)}
     msts |= {m.split("-")[0] for m in msts}
-    khs = {k[-6:] for k in re.findall(r"(?<![A-Z0-9])[12]?[CK]\d{2}[A-Z]{2,3}(?![A-Z0-9])", flat)}
+    # Ký hiệu 1C25TAA; PDF đảo thứ tự chữ có thể in thành C25TAA1
+    khs = set(re.findall(r"(?<![A-Z0-9])[12]?([CK]\d{2}[A-Z]{2,3})[12]?(?![A-Z0-9])", flat))
     found = []
     for kind, entries in entries_by_kind.items():
         for key in entries:
@@ -2309,7 +2319,10 @@ def import_pdfs(out_root, mst, files):
         try:
             if not data.startswith(b"%PDF"):
                 raise ValueError("không phải file PDF")
-            hits = match_pdf_text(_pdf_text(data), {k: idx.get(k, {}) for k in ("purchase", "sold")})
+            text = _pdf_text(data)
+            if re.search(r"chưa\s*cấp\s*số", text, re.I):
+                raise ValueError("PDF là bản nháp, hoá đơn chưa được cấp số – lấy bản PDF sau khi người bán đã phát hành")
+            hits = match_pdf_text(text, {k: idx.get(k, {}) for k in ("purchase", "sold")})
             if not hits:
                 raise ValueError("không khớp hoá đơn nào trong kho (đã đồng bộ kỳ này chưa?)")
             if len(hits) > 1:
