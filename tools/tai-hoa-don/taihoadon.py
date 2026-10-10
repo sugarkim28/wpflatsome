@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.9.1"
+__version__ = "3.9.2"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -5074,6 +5074,7 @@ function renderDetails(tr, r, kind) {
       a.title = (t.ncc || '') + (t.code ? '\n' + t.field + ': ' + t.code + ' (đã chép, dán vào trang tra cứu)' : '') +
                 (t.ncc && t.ncc.startsWith('Viettel') ? '\nMST bên bán: ' + r.mst : '');
       a.onclick = ev => { ev.preventDefault(); if (t.code && navigator.clipboard) navigator.clipboard.writeText(t.code).catch(() => {});
+        if (t.ncc && t.ncc.startsWith('Viettel')) lookupPanel(t, r);  // Viettel cần 2 ô: MST bên bán + mã số bí mật
         if (t.url) window.open(t.url, '_blank'); else prompt((t.ncc || '') + ' – mã tra cứu', t.code); };
       ct.append(a);
     }
@@ -5096,6 +5097,19 @@ function renderDetails(tr, r, kind) {
         catch (e) { $('hErr').textContent = e.message; } };
       fi.click(); };
     ct.append(up);
+}
+// Ô chép nhanh các thông tin cần dán vào trang tra cứu (trang có xác thực "trượt hình" nên phải làm tay).
+function lookupPanel(t, r) {
+  const box = $('hErr'); box.innerHTML = '';
+  box.append(el('div', 'ok', (t.ncc || '') + ' – HĐ ' + r.khhdon + '/' + r.shdon +
+    ': dán 2 thông tin dưới đây vào trang tra cứu, kéo thanh trượt, tải PDF/XML rồi bấm "Gắn HĐ gốc có sẵn".'));
+  [['MST bên bán', r.mst], [t.field || 'Mã số bí mật', t.code]].forEach(([k, v]) => {
+    if (!v) return;
+    const line = el('div', 'mute'); line.append(k + ': ', el('b', '', v), ' ');
+    const c = el('a', 'lk', 'Chép'); c.href = '#';
+    c.onclick = ev => { ev.preventDefault(); navigator.clipboard && navigator.clipboard.writeText(v).then(() => { c.textContent = 'Đã chép'; }).catch(() => {}); };
+    line.append(c); box.append(line);
+  });
 }
 async function bulkUpdate(fields) {
   const keys = hRows.filter(r => hSel.has(r.key)).map(r => r.key);
