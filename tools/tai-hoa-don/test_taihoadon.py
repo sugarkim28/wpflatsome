@@ -1175,6 +1175,35 @@ class Tests(unittest.TestCase):
         self.assertEqual(sum(1 for p_, _ in FakePortal.calls if p_.endswith("export-xml")), n + 1)
         self.assertTrue(os.path.isdir(goc))
 
+    def test_download_everything(self):
+        """Đồng bộ kèm PDF gốc (nhà cung cấp lỗi liên tiếp thì tạm bỏ qua) và kết xuất Tất cả: XML + PDF + Excel."""
+        import unittest.mock as mock
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        calls = []
+
+        def broken(t_):
+            calls.append(t_["code"])
+            raise t.PortalError("MISA chặn")
+        job = t.Job()
+        job.running = True
+        job.want_pdf = True
+        helper = AutoAnswer(job)
+        helper.start()
+        with mock.patch.dict(t.PDF_FETCHERS, {"0101243150": broken}):
+            t.run_batch(job, self.app.store, self.app.solver, ["0309999999"], ["purchase"], date(2026, 9, 1),
+                        date(2026, 10, 31), True, True, self.tmp, False, self.app.client_factory)
+        helper.join(1)
+        self.assertEqual(len(calls), 3, "lỗi 3 lần liên tiếp thì không thử tiếp các hoá đơn MISA còn lại")
+        log = "\n".join(job.log)
+        self.assertIn("bỏ qua PDF gốc của nhà cung cấp này", log)
+        self.assertTrue(any("PDF gốc: bỏ qua" in r["ketqua"] for r in job.rows))
+        with mock.patch.object(t, "find_browser", return_value=None):
+            zp = t.export_invoices(self.tmp, "0309999999", "A", {"kind": "purchase"}, "all")
+        names = zipfile.ZipFile(zp).namelist()
+        self.assertEqual(sum(n.startswith("XML/") for n in names), 61)
+        self.assertEqual(sum(n.startswith("PDF/") for n in names), 61)
+        self.assertEqual(sum(n.endswith(".xlsx") for n in names), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

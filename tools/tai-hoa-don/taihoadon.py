@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.6.2"
+__version__ = "3.7.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -2099,16 +2099,31 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
             known[k].get("pdf") and os.path.exists(os.path.join(base_dir, known[k]["pdf"])))]
         if todo:
             job.say("%s: tải PDF gốc %d hoá đơn" % (mst, len(todo)))
+            job.phase = "đang tải PDF gốc"
+            with job.lock:
+                job.total += len(todo)
+        fails = {}  # nhà cung cấp → số lần lỗi liên tiếp
         for k in todo:
             if job.cancel:
                 raise Cancelled()
-            try:
-                fetch_original_pdf(out_root, mst, kind, k)
-                by_key[k]["ketqua"] += " + PDF gốc"
-            except (PortalError, ValueError) as e:
-                by_key[k]["ketqua"] += " (PDF gốc: lỗi)"
-                job.say("%s: không tải được PDF gốc %s: %s" % (mst, k.split("|", 2)[-1].replace("|", "/"), e))
-            time.sleep(0.3)
+            prov = can_fetch_pdf(known[k].get("tra_cuu"))[1]
+            if fails.get(prov, 0) >= 3:  # nhà cung cấp đang chặn / lỗi → không thử tiếp trong lượt này
+                by_key[k]["ketqua"] += " (PDF gốc: bỏ qua)"
+            else:
+                try:
+                    fetch_original_pdf(out_root, mst, kind, k)
+                    by_key[k]["ketqua"] += " + PDF gốc"
+                    fails[prov] = 0
+                except Exception as e:  # lỗi một hoá đơn không được làm dừng cả lượt đồng bộ
+                    fails[prov] = fails.get(prov, 0) + 1
+                    by_key[k]["ketqua"] += " (PDF gốc: lỗi)"
+                    job.say("%s: không tải được PDF gốc %s: %s" % (mst, k.split("|", 2)[-1].replace("|", "/"), e))
+                    if fails[prov] == 3:
+                        job.say("%s: %s lỗi 3 lần liên tiếp – bỏ qua PDF gốc của nhà cung cấp này trong lượt này "
+                                "(tải sau bằng nút Tải HĐ gốc hàng loạt)" % (mst, (known[k].get("tra_cuu") or {}).get("ncc") or prov))
+                time.sleep(0.3)
+            with job.lock:
+                job.done += 1
     with job.lock:
         job.rows.extend(rows)
 
@@ -2968,6 +2983,23 @@ def export_invoices(out_root, mst, company_name, f, fmt):
         end = parse_date(f["to"]) if f.get("to") else max(dates)
         path = os.path.join(out_dir, "%s_%s_%s.xlsx" % (label, mst, stamp))
         return write_nibot_workbook(path, kind, invoices, mst, company_name, start, end)
+    if fmt == "all":  # tải hết: XML gốc + PDF (gốc của người bán, không có thì PDF thuế) + bảng kê Excel
+        path = os.path.join(out_dir, "%s_TAT_CA_%s_%s.zip" % (label, mst, stamp))
+        xlsx = export_invoices(out_root, mst, company_name, f, "xlsx")
+        with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+            z.write(xlsx, os.path.basename(xlsx))
+            for r in rows:
+                if r["xml"]:
+                    z.write(os.path.join(base, r["xml"]), "XML/" + os.path.basename(r["xml"]))
+                if r["pdf"]:
+                    z.write(os.path.join(base, r["pdf"]), "PDF/" + os.path.basename(r["pdf"]))
+                else:
+                    try:
+                        cq = tax_pdf(out_root, mst, kind, r["key"])
+                        z.write(os.path.join(base, cq), "PDF/" + os.path.basename(cq))
+                    except (ValueError, OSError):
+                        pass
+        return path
     if fmt == "cqt":
         files = [tax_pdf(out_root, mst, kind, r["key"]) for r in rows]
         path = os.path.join(out_dir, "%s_PDF_THUE_%s_%s.zip" % (label, mst, stamp))
@@ -3984,7 +4016,8 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
       <button class="sec sm" onclick="resetGrid()" title="Bỏ sắp xếp và lọc theo cột">Bỏ lọc cột</button>
       <select class="sm" id="hExp" style="width:auto" onchange="exportInv(this.value);this.value=''">
         <option value="">Kết xuất…</option><option value="xlsx">Excel (mẫu Nibot)</option><option value="xml">XML.ZIP</option>
-        <option value="html">HTML.ZIP</option><option value="pdf">PDF gốc.ZIP</option><option value="cqt">PDF thuế.ZIP</option></select>
+        <option value="all">Tất cả (XML + PDF + Excel).ZIP</option><option value="html">HTML.ZIP</option>
+        <option value="pdf">PDF gốc.ZIP</option><option value="cqt">PDF thuế.ZIP</option></select>
     </div>
     <div class="bulk hide" id="hBulk">
       <b id="hSelInfo"></b>
@@ -4008,7 +4041,8 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
         <input type="number" id="sYear" style="width:90px"></div>
       <label>Từ ngày</label><input type="date" id="sFrom"><label>Đến ngày</label><input type="date" id="sTo">
       <div class="chk"><label><input type="checkbox" id="sMtt" checked> Gồm máy tính tiền</label>
-        <label><input type="checkbox" id="sXml" checked> Tải XML</label></div>
+        <label><input type="checkbox" id="sXml" checked> Tải XML</label>
+        <label title="Tự tải PDF gốc của người bán khi nhà cung cấp cho phép (MISA, EasyInvoice)"><input type="checkbox" id="sPdf" checked> Tải PDF gốc</label></div>
       <button class="bigbtn b-vao" onclick="runSync(['purchase'])">Đồng bộ HĐĐT ĐẦU VÀO</button>
       <button class="bigbtn b-ra" onclick="runSync(['sold'])">Đồng bộ HĐĐT ĐẦU RA</button>
       <button class="bigbtn b-vr" onclick="runSync(['purchase','sold'])">Đồng bộ HĐĐT VÀO/RA</button>
@@ -4135,6 +4169,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     <label><input type="checkbox" id="bRa" checked> Bán ra</label>
     <label><input type="checkbox" id="bMtt" checked> Gồm máy tính tiền</label>
     <label><input type="checkbox" id="bXml" checked> Tải XML + chi tiết hàng hoá</label>
+    <label title="MISA, EasyInvoice"><input type="checkbox" id="bPdf" checked> Tải PDF gốc</label>
   </div>
   <div class="hint">Chỉ đồng bộ chiều đầu vào/đầu ra đang bật trong cài đặt từng doanh nghiệp.</div>
   <div class="err" id="bErr"></div>
@@ -4248,7 +4283,8 @@ function openBatch(msts) {
 async function runBatch() {
   const kinds = []; if ($('bVao').checked) kinds.push('purchase'); if ($('bRa').checked) kinds.push('sold');
   const msts = batchMsts.length ? batchMsts : companies.filter(c => !c.an).map(c => c.mst);
-  try { await start({msts, kinds, from: $('bFrom').value, to: $('bTo').value, mtt: $('bMtt').checked, xml: $('bXml').checked});
+  try { await start({msts, kinds, from: $('bFrom').value, to: $('bTo').value, mtt: $('bMtt').checked, xml: $('bXml').checked,
+                     pdf: $('bPdf').checked && $('bXml').checked});
         hide('mBatch'); } catch (e) { $('bErr').textContent = e.message; }
 }
 async function start(body) { await post('/api/run', body); show('jobCard'); poll(); }
@@ -4471,18 +4507,18 @@ async function bankExport() {
 
 // ---- Trang Đồng bộ ----
 let syncMst = '', syncRange = null, syncRows = [];
-const SPER = [['today', 'Hôm nay'], ['week', '1 tuần'], ['month', 'Tháng này']]
-  .concat([...Array(12).keys()].map(i => ['m' + (i + 1), 'Tháng ' + (i + 1)])).concat([1, 2, 3, 4].map(i => ['q' + i, 'Quý ' + i]))
-  .concat([['h1', '6 tháng đầu năm'], ['h2', '6 tháng cuối năm'], ['y', 'Cả năm']]);
+// Tháng 1, 2, 3, Quý 1, Tháng 4, 5, 6, Quý 2, …
+const MQ = [1, 2, 3, 4].flatMap(q => [0, 1, 2].map(i => ['m' + (q * 3 - 2 + i), 'Tháng ' + (q * 3 - 2 + i)]).concat([['q' + q, 'Quý ' + q]]));
+const weekStart = d => { const a = new Date(d); a.setDate(d.getDate() - (d.getDay() + 6) % 7); return a; };  // thứ Hai
+const SPER = [['today', 'Hôm nay'], ['week', 'Tuần này'], ['month', 'Tháng này']].concat(MQ, [['y', 'Cả năm']]);
 SPER.forEach(([v, t]) => $('sPer').append(new Option(t, v)));
 function sPeriod() {
   const v = $('sPer').value, now = new Date(), y = +$('sYear').value || now.getFullYear(); let a, b;
   if (v === 'today') a = b = now;
-  else if (v === 'week') { a = new Date(now); a.setDate(now.getDate() - 7); b = now; }
+  else if (v === 'week') { a = weekStart(now); b = now; }
   else if (v === 'month') { a = new Date(now.getFullYear(), now.getMonth(), 1); b = now; }
   else if (v[0] === 'm') { const m = +v.slice(1) - 1; a = new Date(y, m, 1); b = new Date(y, m + 1, 0); }
   else if (v === 'y') { a = new Date(y, 0, 1); b = new Date(y, 11, 31); }
-  else if (v[0] === 'h') { const h = +v.slice(1) - 1; a = new Date(y, h * 6, 1); b = new Date(y, h * 6 + 6, 0); }
   else { const q = +v.slice(1) - 1; a = new Date(y, q * 3, 1); b = new Date(y, q * 3 + 3, 0); }
   if (b > now && a <= now) b = now;  // năm nay: tới hôm nay
   $('sFrom').value = isoD(a); $('sTo').value = isoD(b);
@@ -4493,7 +4529,7 @@ function openSync(mst) { openCompany(mst, 'dong-bo'); }
 async function runSync(kinds) {
   syncRange = [$('sFrom').value, $('sTo').value];
   try { await start({msts: [syncMst], kinds, from: syncRange[0], to: syncRange[1], mtt: $('sMtt').checked, xml: $('sXml').checked,
-                     pdf: false}); }
+                     pdf: $('sPdf').checked && $('sXml').checked}); }
   catch (e) { alert(e.message); }
 }
 function openInvoicesFromSync() {
@@ -4549,13 +4585,13 @@ TTHAI.forEach((t, i) => { if (t) $('hTthai').append(new Option(t, i)); });
 KQ.forEach((t, i) => $('hKq').append(new Option(t, i)));
 let curTab = 'DN', hRows = [], hPage = 0, hSize = 20, hSel = new Set();
 const isoD = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-const PERIODS = [['', '--Tuỳ chọn ngày--'], ['today', 'Hôm nay'], ['month', 'Tháng này']]
-  .concat([...Array(12).keys()].map(i => ['m' + (i + 1), 'Tháng ' + (i + 1)]))
-  .concat([1, 2, 3, 4].map(i => ['q' + i, 'Quý ' + i])).concat([['year', 'Năm nay'], ['lastyear', 'Năm trước']]);
+const PERIODS = [['', '--Tuỳ chọn ngày--'], ['today', 'Hôm nay'], ['week', 'Tuần này'], ['month', 'Tháng này']]
+  .concat(MQ, [['year', 'Cả năm (năm nay)'], ['lastyear', 'Năm trước']]);
 PERIODS.forEach(([v, t]) => $('hPer').append(new Option(t, v)));
 $('hPer').onchange = () => {
   const v = $('hPer').value, now = new Date(), y = now.getFullYear(); let a, b;
   if (v === 'today') a = b = now;
+  else if (v === 'week') { a = weekStart(now); b = now; }
   else if (v === 'month') { a = new Date(y, now.getMonth(), 1); b = now; }
   else if (v[0] === 'm') { const m = +v.slice(1) - 1; a = new Date(y, m, 1); b = new Date(y, m + 1, 0); }
   else if (v[0] === 'q') { const q = +v.slice(1) - 1; a = new Date(y, q * 3, 1); b = new Date(y, q * 3 + 3, 0); }
