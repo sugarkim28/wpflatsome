@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "3.6.1"
+__version__ = "3.6.2"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -4472,7 +4472,8 @@ async function bankExport() {
 // ---- Trang Đồng bộ ----
 let syncMst = '', syncRange = null, syncRows = [];
 const SPER = [['today', 'Hôm nay'], ['week', '1 tuần'], ['month', 'Tháng này']]
-  .concat([...Array(12).keys()].map(i => ['m' + (i + 1), 'Tháng ' + (i + 1)])).concat([1, 2, 3, 4].map(i => ['q' + i, 'Quý ' + i]));
+  .concat([...Array(12).keys()].map(i => ['m' + (i + 1), 'Tháng ' + (i + 1)])).concat([1, 2, 3, 4].map(i => ['q' + i, 'Quý ' + i]))
+  .concat([['h1', '6 tháng đầu năm'], ['h2', '6 tháng cuối năm'], ['y', 'Cả năm']]);
 SPER.forEach(([v, t]) => $('sPer').append(new Option(t, v)));
 function sPeriod() {
   const v = $('sPer').value, now = new Date(), y = +$('sYear').value || now.getFullYear(); let a, b;
@@ -4480,8 +4481,10 @@ function sPeriod() {
   else if (v === 'week') { a = new Date(now); a.setDate(now.getDate() - 7); b = now; }
   else if (v === 'month') { a = new Date(now.getFullYear(), now.getMonth(), 1); b = now; }
   else if (v[0] === 'm') { const m = +v.slice(1) - 1; a = new Date(y, m, 1); b = new Date(y, m + 1, 0); }
+  else if (v === 'y') { a = new Date(y, 0, 1); b = new Date(y, 11, 31); }
+  else if (v[0] === 'h') { const h = +v.slice(1) - 1; a = new Date(y, h * 6, 1); b = new Date(y, h * 6 + 6, 0); }
   else { const q = +v.slice(1) - 1; a = new Date(y, q * 3, 1); b = new Date(y, q * 3 + 3, 0); }
-  if (b > now) b = now;
+  if (b > now && a <= now) b = now;  // năm nay: tới hôm nay
   $('sFrom').value = isoD(a); $('sTo').value = isoD(b);
   $('sYear').classList.toggle('hide', ['today', 'week', 'month'].includes(v));
 }
