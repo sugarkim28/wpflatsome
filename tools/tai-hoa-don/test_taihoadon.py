@@ -1667,6 +1667,8 @@ class Tests(unittest.TestCase):
         self.assertFalse(res[1]["ok"])
         r = [x for x in t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"}) if x["key"] == r["key"]][0]
         self.assertTrue(r["xml_goc"])
+        names = zipfile.ZipFile(t.export_invoices(self.tmp, "0309999999", "A", {"kind": "purchase", "keys": [r["key"]]}, "pdf")).namelist()
+        self.assertEqual(names, ["XML_goc/" + os.path.basename(r["xml_goc"])])  # PDF gốc.ZIP gồm cả XML gốc
 
 
 if __name__ == "__main__":

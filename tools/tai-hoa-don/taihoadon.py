@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.3.8"
+__version__ = "4.3.9"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -3778,7 +3778,16 @@ def export_invoices(out_root, mst, company_name, f, fmt):
             for rel in files:
                 z.write(os.path.join(base, rel), os.path.basename(rel))
         return path
-    if fmt not in ("xml", "html", "pdf"):
+    if fmt == "pdf":  # hoá đơn gốc của người bán: PDF gốc + XML gốc (nếu có)
+        files = [(r["pdf"], "") for r in rows if r["pdf"]] + [(r["xml_goc"], "XML_goc/") for r in rows if r["xml_goc"]]
+        if not files:
+            raise ValueError("Các hoá đơn đang lọc chưa có hoá đơn gốc (PDF/XML của người bán)")
+        path = os.path.join(out_dir, "%s_HD_GOC_%s_%s.zip" % (label, mst, stamp))
+        with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+            for rel, folder in files:
+                z.write(os.path.join(base, rel), folder + os.path.basename(rel))
+        return path
+    if fmt not in ("xml", "html"):
         raise ValueError("Định dạng kết xuất không hợp lệ")
     files = [r[fmt] for r in rows if r[fmt]]
     if not files:
@@ -5942,15 +5951,10 @@ async function bulkPdf() {
   let need = src.filter(r => r.need_goc && (r.pdf_url || r.can_fetch));
   if (!need.length) { $('hErr').textContent = 'Không có hoá đơn nào cần tải hoá đơn gốc (hiện tự tải được: MISA, EasyInvoice, TS24, BKAV). Nhà cung cấp khác: bấm "Tra cứu" rồi "Gắn HĐ gốc có sẵn".'; return; }
   // Phần mềm tự tải trước (EasyInvoice; bản web: cả MISA), từng nhóm 10 HĐ; MISA bản máy: trình duyệt tải.
-  const auto = need.filter(r => r.can_fetch && (me.server || !r.pdf_url || !browserFirst(r))), errs = [];
+  const auto = need.filter(r => r.can_fetch && (me.server || !r.pdf_url || !browserFirst(r)));
   if (auto.length) {
-    const b = $('hBulkPdf'); b.disabled = true; let done = 0;
-    for (let i = 0; i < auto.length; i += 10) {
-      b.textContent = 'Đang tải HĐ gốc ' + Math.min(i + 10, auto.length) + '/' + auto.length + '…';
-      try { const f = hFilters(false); f.keys = auto.slice(i, i + 10).map(r => r.key);
-        const d = await post('/api/invoice/fetch-pdf-bulk', {mst: $('hMst').value, filters: f}); done += d.ok; errs.push(...d.errors); }
-      catch (e) { errs.push(e.message); }
-    }
+    const b = $('hBulkPdf'); b.disabled = true;
+    const {done, errs} = await fetchOriginals(auto, n => { b.textContent = 'Đang tải HĐ gốc ' + n + '/' + auto.length + '…'; });
     b.disabled = false; b.textContent = 'Tải HĐ gốc hàng loạt';
     await loadInv();
     const keys = new Set(need.map(r => r.key)); need = hRows.filter(r => keys.has(r.key) && r.need_goc && r.pdf_url);
@@ -5959,6 +5963,17 @@ async function bulkPdf() {
     if (!need.length) return;
   }
   browserDownload(browserUrls(need));
+}
+// Phần mềm tự tải HĐ gốc cho các dòng (từng nhóm 10 HĐ). Trả {done, errs}.
+async function fetchOriginals(rows, progress) {
+  let done = 0; const errs = [];
+  for (let i = 0; i < rows.length; i += 10) {
+    progress(Math.min(i + 10, rows.length));
+    try { const f = hFilters(false); f.keys = rows.slice(i, i + 10).map(r => r.key);
+      const d = await post('/api/invoice/fetch-pdf-bulk', {mst: $('hMst').value, filters: f}); done += d.ok; errs.push(...d.errors); }
+    catch (e) { errs.push(e.message); if (/hạn mức/i.test(e.message)) break; }
+  }
+  return {done, errs};
 }
 // MISA chặn chương trình tự động → bản máy để trình duyệt tải trước; nhà cung cấp khác phần mềm tự tải.
 function browserFirst(r) { return (r.tra_cuu || {}).ncc_mst === '0101243150'; }
@@ -6016,8 +6031,26 @@ async function updInv(r, fields) {
 }
 async function exportInv(fmtx) {
   if (!fmtx) return; $('hErr').textContent = '';
-  try { const d = await post('/api/export', {mst: $('hMst').value, filters: hFilters(true), fmt: fmtx}); window.open(d.url, '_blank'); }
+  const sel = hRows.filter(r => hSel.has(r.key)), src = sel.length ? sel : hRows;
+  let errs = [], done = 0, need = [];
+  if ((fmtx === 'pdf' || fmtx === 'all') && can('hdgoc')) {
+    // kết xuất HĐ gốc: phần mềm tự tải trước những hoá đơn còn thiếu mà tải được (MISA, EasyInvoice, TS24, BKAV) rồi mới nén
+    need = src.filter(r => r.need_goc && r.can_fetch);
+    if (need.length) {
+      ({done, errs} = await fetchOriginals(need, n => { $('hErr').textContent = 'Đang tải hoá đơn gốc còn thiếu ' + n + '/' + need.length + ' trước khi kết xuất…'; }));
+      await loadInv();
+    }
+  }
+  try { const d = await post('/api/export', {mst: $('hMst').value, filters: hFilters(true), fmt: fmtx}); window.open(d.url, '_blank');
+        $('hErr').textContent = ''; }
   catch (e) { $('hErr').textContent = e.message; }
+  if (need.length) {
+    $('hErr').append(el('div', 'ok', 'Đã tự tải thêm hoá đơn gốc ' + done + '/' + need.length + ' hoá đơn trước khi kết xuất.'));
+    errs.slice(0, 10).forEach(x => $('hErr').append(el('div', 'err', x)));
+  }
+  const miss = hRows.filter(r => (!sel.length || hSel.has(r.key)) && !r.pdf).length;
+  if (fmtx === 'pdf' && miss) $('hErr').append(el('div', 'mute', miss + ' hoá đơn chưa có PDF gốc (nhà cung cấp chưa hỗ trợ tự tải hoặc tải lỗi) – không có trong file ZIP. ' +
+                                                    'Bấm "Tra cứu" để tải tay rồi "Gắn HĐ gốc có sẵn".'));
 }
 ['hFile', 'hDuyet', 'hTthai', 'hKq'].forEach(id => $(id).onchange = () => { hPage = 0; loadInv(); });
 ['hKh', 'hSo', 'hQ'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { hPage = 0; loadInv(); } }));
