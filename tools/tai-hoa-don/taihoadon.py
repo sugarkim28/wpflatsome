@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.3.6"
+__version__ = "4.3.7"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -203,9 +203,12 @@ class PortalHealth:
         if bad / len(ev) >= 0.4:
             return {"level": "err", "text": "Trang hoadondientu.gdt.gov.vn đang quá tải hoặc lỗi (%d/%d lần gọi gần đây "
                     "không thành công) – đồng bộ có thể thiếu hoá đơn, nên thử lại sau (thường ổn hơn sau 17h)." % (bad, len(ev))}
-        if med >= 15 or bad / len(ev) >= 0.15:
+        if med >= 15:
             return {"level": "warn", "text": "Trang hoadondientu.gdt.gov.vn đang chậm (trung bình %d giây mỗi lần gọi) – "
                     "đồng bộ sẽ lâu hơn bình thường." % med}
+        if bad / len(ev) >= 0.15:
+            return {"level": "warn", "text": "Trang hoadondientu.gdt.gov.vn chập chờn (%d/%d lần gọi gần đây bị lỗi, phần mềm "
+                    "đã tự thử lại) – đồng bộ sẽ lâu hơn bình thường." % (bad, len(ev))}
         return {"level": "", "text": ""}
 
 
@@ -3713,7 +3716,7 @@ def query_invoices(out_root, mst, f):
             "xml": xml, "html": html, "pdf": pdf or (e.get("pdf") if e.get("pdf") and
                                                      os.path.exists(os.path.join(base, e["pdf"])) else ""),
             "xml_goc": e.get("xml_goc") if e.get("xml_goc") and os.path.exists(os.path.join(base, e["xml_goc"])) else "",
-            "need_goc": needs_original(base, e), "xml_url": browser_xml_url(e.get("tra_cuu")),
+            "need_goc": needs_original(base, e), "xml_goc_loi": e.get("xml_goc_loi", ""), "xml_url": browser_xml_url(e.get("tra_cuu")),
             "tra_cuu": fix_lookup(e.get("tra_cuu"), inv.get("nbmst")), "pdf_url": browser_pdf_url(e.get("tra_cuu")),
             "can_fetch": can_fetch_pdf(e.get("tra_cuu"))[0], "cqt": _cqt_rel(base, e)})
     rows.sort(key=lambda r: r.pop("_sort"))
@@ -5719,8 +5722,22 @@ async function loadInv() {
 }
 function fileLink(rel, text) {
   const a = el('a', 'lk', text); a.href = '/file?k=' + encodeURIComponent(KEY) + '&mst=' + encodeURIComponent($('hMst').value) + '&p=' + encodeURIComponent(rel);
-  if (/\.xml$/i.test(rel)) { a.href += '&zip=1'; a.title = 'Tải file XML (đã nén .zip để trình duyệt không chặn)'; }
-  a.target = '_blank'; return a;
+  a.target = '_blank';
+  if (!/\.xml$/i.test(rel)) return a;
+  // XML: bấm để xem ngay trong Tiện ích › Đọc hoá đơn XML; nút ⇩ tải file (nén .zip để trình duyệt không chặn)
+  const url = a.href; a.title = 'Xem hoá đơn XML trong Tiện ích';
+  a.onclick = ev => { ev.preventDefault(); openXml(url, rel.split('/').pop()); };
+  const dl = el('a', 'lk', '⇩'); dl.href = url + '&zip=1'; dl.title = 'Tải file ' + text + ' (.zip)';
+  const w = el('span', 'nw'); w.append(a, dl); return w;
+}
+async function openXml(url, name) {
+  tab('TI'); document.querySelector('.tmenu a[data-t=xml]').click();
+  $('xmlErr').textContent = 'Đang mở ' + name + '…'; hide('xmlFrame'); hide('xmlPrint');
+  try { const res = await fetch(url, {credentials: 'same-origin'}); if (!res.ok) throw new Error('Không mở được file (' + res.status + ')');
+        const u = new Uint8Array(await res.arrayBuffer()); let bin = ''; for (let i = 0; i < u.length; i += 8192) bin += String.fromCharCode.apply(null, u.subarray(i, i + 8192));
+        const d = await post('/api/tool/xml-view', {data: btoa(bin)});
+        $('xmlErr').textContent = name; $('xmlFrame').srcdoc = d.html; show('xmlFrame'); show('xmlPrint'); }
+  catch (e) { $('xmlErr').textContent = e.message; }
 }
 
 // ---- Bảng hoá đơn: sắp xếp, lọc theo cột, chọn dòng ----
@@ -5854,14 +5871,18 @@ function renderDetails(tr, r, kind) {
         if (t.url) window.open(t.url, '_blank'); else prompt((t.ncc || '') + ' – mã tra cứu', t.code); };
       ct.append(a);
     }
-    if (r.need_goc && (r.pdf_url || r.can_fetch)) {
-      const g = el('a', 'lk q-hdgoc', 'Tải HĐ gốc'); g.href = '#'; g.title = 'Tải PDF + XML gốc từ ' + t.ncc + ' rồi tự gắn vào hoá đơn';
+    const onlyXml = r.pdf && !r.xml_goc && r.can_fetch;  // đã có PDF gốc, còn thiếu XML gốc
+    if ((r.need_goc && (r.pdf_url || r.can_fetch)) || (onlyXml && r.xml_goc_loi)) {
+      const label = onlyXml ? (r.xml_goc_loi ? 'Thử lại XML gốc' : 'Tải XML gốc') : 'Tải HĐ gốc';
+      const g = el('a', 'lk q-hdgoc', label); g.href = '#';
+      g.title = onlyXml ? 'Đã có PDF gốc – tải thêm file XML gốc từ ' + t.ncc + (r.xml_goc_loi ? '\nLần trước: ' + r.xml_goc_loi : '')
+                        : 'Tải PDF + XML gốc từ ' + t.ncc + ' rồi tự gắn vào hoá đơn';
       g.onclick = async ev => { ev.preventDefault();
-        if (me.server || !r.pdf_url || !browserFirst(r)) {  // máy chủ / phần mềm tự tải (EasyInvoice, TS24)
+        if (onlyXml || me.server || !r.pdf_url || !browserFirst(r)) {  // máy chủ / phần mềm tự tải (EasyInvoice, TS24, BKAV)
           g.textContent = 'Đang tải…'; $('hErr').textContent = '';
           try { const d = await post('/api/invoice/fetch-pdf', {mst: $('hMst').value, kind, key: r.key}); await loadInv();
-                if (d.xml_err) $('hErr').textContent = r.shdon + ': đã có PDF gốc, chưa lấy được XML gốc – ' + d.xml_err; return; }
-          catch (e) { g.textContent = 'Tải HĐ gốc'; if (!r.pdf_url) { $('hErr').textContent = r.shdon + ': ' + e.message; return; } } }
+                if (d.xml_err) $('hErr').textContent = r.khhdon + '/' + r.shdon + ': đã có PDF gốc, chưa lấy được XML gốc – ' + d.xml_err; return; }
+          catch (e) { g.textContent = label; if (onlyXml || !r.pdf_url) { $('hErr').textContent = r.khhdon + '/' + r.shdon + ': ' + e.message; return; } } }
         browserDownload(browserUrls([r])); };
       ct.append(g);
     }
