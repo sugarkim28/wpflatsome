@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.3.1"
+__version__ = "4.3.2"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -996,6 +996,20 @@ def easyinvoice_pdf(tra_cuu, tries=8):
 
 
 
+DEBUG_DIR = None  # thư mục lưu trang lỗi của nhà cung cấp để chẩn đoán (đặt khi khởi động)
+
+
+def _save_debug(name, text):
+    if not DEBUG_DIR:
+        return
+    try:
+        os.makedirs(DEBUG_DIR, exist_ok=True)
+        with open(os.path.join(DEBUG_DIR, name), "w", encoding="utf-8") as f:
+            f.write(text if isinstance(text, str) else text.decode("utf-8", "replace"))
+    except OSError:
+        pass
+
+
 def easy_origin(url):
     """https://<MST>hd.easyinvoice.com.vn từ link tra cứu (kể cả link cũ dạng http://… không có /Search/Index)."""
     m = re.match(EASY_BASE_RE, url or "")
@@ -1020,18 +1034,26 @@ def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
     jar = http.cookiejar.CookieJar()
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
 
+    last_resp = {}
+
     def call(path, form=None, ajax=False):
-        headers = {"User-Agent": UA_LOGIN, "Accept": "*/*", "Accept-Language": "vi-VN,vi;q=0.9", "Referer": base + "/"}
+        # Giống trình duyệt: trang tra cứu là /Search/Index, mọi yêu cầu sau đó có Referer là trang này
+        headers = {"User-Agent": UA_LOGIN, "Accept-Language": "vi-VN,vi;q=0.9", "Referer": base + "/Search/Index",
+                   "Accept": "*/*" if ajax or path.startswith(("/Captcha", "/Invoice")) else
+                   "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"}
         if ajax:
             headers["X-Requested-With"] = "XMLHttpRequest"
         body = urllib.parse.urlencode(form).encode() if form is not None else None
         if body is not None:
-            headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
+            headers["Content-Type"] = ("application/x-www-form-urlencoded; charset=UTF-8" if ajax
+                                       else "application/x-www-form-urlencoded")
             headers["Origin"] = base
         try:
             with opener.open(urllib.request.Request(base + path, data=body, headers=headers), timeout=60) as r:
+                last_resp.update(code=r.status, url=r.geturl())
                 return r.read()
         except urllib.error.HTTPError as e:
+            last_resp.update(code=e.code, url=e.geturl())
             return e.read() or b""
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
             raise PortalError("Không kết nối được %s: %s" % (base, getattr(e, "reason", e)))
@@ -1064,7 +1086,9 @@ def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
             else:  # ghi lại chữ trên trang để biết lý do
                 txt = re.sub(r"\s+", " ", H.unescape(re.sub(r"<script.*?</script>|<style.*?</style>|<[^>]+>", " ", res,
                                                              flags=re.S | re.I))).strip()
-                last = "trang tra cứu không trả kết quả (%s)" % (txt[:160] or "trang trống")
+                last = "trang tra cứu không trả kết quả – HTTP %s tại %s (%s)" % (
+                    last_resp.get("code"), last_resp.get("url"), txt[:160] or "trang trống")
+                _save_debug("easyinvoice-tra-cuu.html", res)
             if re.search(r"x[aá]c th[ựu]c|captcha|capcha", _plain(last) + last.lower()):
                 continue  # đọc sai captcha → thử captcha khác
             raise PortalError("EasyInvoice: %s" % last)
@@ -7196,6 +7220,8 @@ def main(argv=None):
                 with os.fdopen(fd, "w", encoding="utf-8") as f:
                     f.write("Tên đăng nhập: %s\nMật khẩu: %s\nĐăng nhập, đổi mật khẩu rồi XOÁ file này.\n" % (name, pw))
             print("=" * 60)
+    global DEBUG_DIR
+    DEBUG_DIR = os.path.join(cfg, "chan-doan")  # trang lỗi gần nhất của nhà cung cấp (gửi cho người hỗ trợ)
     server = ThreadingHTTPServer((host, args.port), make_handler(app, args.port))
     if app.server:
         threading.Thread(target=auto_sync_loop, args=(app,), daemon=True).start()
