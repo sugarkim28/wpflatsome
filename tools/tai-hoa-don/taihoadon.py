@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.2.3"
+__version__ = "4.3.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -752,6 +752,7 @@ def lookup_info(info):
             break
     if mst.startswith("0101360697") and not code:
         field, code = "InvoiceGUID", info.get("dlhdon_id", "")
+    guid = info.get("dlhdon_id", "") if mst.startswith("0101360697") else ""
     if mst.startswith("0309478306") and not code and info.get("mccqt"):
         field, code = "Mã của cơ quan thuế", info["mccqt"]
     if url.endswith("=") and code:
@@ -759,8 +760,13 @@ def lookup_info(info):
     elif url.endswith("=") or "{nbmst}" in url:
         url = url.split("?")[0] if url.endswith("=") else url
     url = url.replace("{nbmst}", (info.get("nb") or {}).get("MST", "").split("-")[0])
-    return {"ncc": name or (("MST " + mst) if mst else ""), "url": url, "field": field, "code": code,
-            "ncc_mst": mst.split("-")[0]}
+    out = {"ncc": name or (("MST " + mst) if mst else ""), "url": url, "field": field, "code": code,
+           "ncc_mst": mst.split("-")[0]}
+    if guid:
+        out["guid"] = guid
+        if GUID_RE.fullmatch(guid):  # BKAV: trang Lookup?InvoiceGUID= mở thẳng hoá đơn, không captcha
+            out["url"] = PROVIDERS["0101360697"][1] + urllib.parse.quote(guid)
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -1093,6 +1099,68 @@ def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
     raise PortalError("EasyInvoice: thử %d lần chưa được (%s)" % (tries, last))
 
 
+# ---- BKAV eHoadon (van.ehoadon.vn): trang Lookup?InvoiceGUID=<GUID> (ASP.NET, không captcha) ----
+GUID_RE = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+BKAV_BASE = "https://van.ehoadon.vn"
+
+
+def bkav_files(t, want_pdf=True, want_xml=True):
+    """Đúng như bấm nút trên trang tra cứu thật: mở Lookup?InvoiceGUID=<GUID>, rồi gửi lại biểu mẫu với
+    __EVENTTARGET = 'lbtDownloadAsPdf' (Download file Hóa đơn dạng PDF) / 'LinkDownXML' (dạng XML)."""
+    import html as H
+    guid = next((g for g in (t.get("guid"), t.get("code")) if g and GUID_RE.fullmatch(str(g))), "")
+    if not guid:
+        raise PortalError("Không có mã InvoiceGUID của hoá đơn BKAV (lấy từ XML) – bấm Tra cứu để tải tay")
+    url = BKAV_BASE + "/Lookup?InvoiceGUID=" + urllib.parse.quote(guid)
+    jar = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+
+    def call(u, form=None):
+        headers = {"User-Agent": UA_LOGIN, "Accept": "*/*", "Accept-Language": "vi-VN,vi;q=0.9", "Referer": url}
+        body = None
+        if form is not None:
+            body = urllib.parse.urlencode(form).encode()
+            headers.update({"Content-Type": "application/x-www-form-urlencoded", "Origin": BKAV_BASE})
+        try:
+            return _open_with_deadline(opener, urllib.request.Request(u, data=body, headers=headers), 60)
+        except urllib.error.HTTPError as e:
+            return e.read() or b""
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            raise PortalError("Không kết nối được van.ehoadon.vn: %s" % getattr(e, "reason", e))
+
+    page = call(url).decode("utf-8", "replace")
+    form = re.search(r'<form[^>]*id="formMain"[^>]*>(.*)</form>', page, re.S | re.I)
+    if not form or "__VIEWSTATE" not in page:
+        raise PortalError("BKAV không mở được trang hoá đơn (InvoiceGUID %s)" % guid)
+    fields = {}
+    for tag in re.findall(r"<input[^>]*>", form.group(1)):
+        name = re.search(r'name="([^"]*)"', tag)
+        typ = (re.search(r'type="([^"]*)"', tag) or [None, "text"])[1].lower()
+        if name and typ in ("hidden", "text"):
+            val = re.search(r'value="([^"]*)"', tag)
+            fields[H.unescape(name.group(1))] = H.unescape(val.group(1)) if val else ""
+
+    def grab(target, typ):
+        data = call(url, dict(fields, __EVENTTARGET=target, __EVENTARGUMENT=""))
+        got = _pick_file(data, typ)
+        if got:
+            return got
+        link = re.search(rb"(/DownloadFile\?FilePath=[^\"'<>\s]+)", data)  # trang trả link tải thay cho file
+        if link:
+            return _pick_file(call(BKAV_BASE + H.unescape(link.group(1).decode())), typ)
+        return None
+    out = {"pdf": None, "xml": None, "xml_err": "", "pdf_check": True}
+    if want_xml:
+        out["xml"] = grab("LinkDownXML", "xml")
+        if not out["xml"]:
+            out["xml_err"] = "BKAV không trả file XML"
+    if want_pdf:
+        out["pdf"] = grab("lbtDownloadAsPdf", "pdf")
+        if not out["pdf"]:
+            raise PortalError("BKAV không trả file PDF cho hoá đơn %s" % guid)
+    return out
+
+
 # ---- TS24 (tracuu.xuathoadon.vn): tra bằng mã của cơ quan thuế, link tải trực tiếp ----
 TS24_BASE = "https://tracuu.xuathoadon.vn"
 
@@ -1123,7 +1191,8 @@ def ts24_files(t, want_pdf=True, want_xml=True):
 
 # MST nhà cung cấp → hàm tải PDF gốc (nhận thông tin tra cứu). Viettel, VNPT… chưa tự động được.
 PDF_FETCHERS = {"0101243150": lambda t: misa_pdf(t["code"]), "0105987432": easyinvoice_pdf,
-                "0309478306": lambda t: ts24_files(t, want_xml=False)["pdf"]}
+                "0309478306": lambda t: ts24_files(t, want_xml=False)["pdf"],
+                "0101360697": lambda t: bkav_files(t, want_xml=False)["pdf"]}
 
 
 def _misa_both(t, want_pdf=True, want_xml=True):
@@ -1137,7 +1206,8 @@ def _misa_both(t, want_pdf=True, want_xml=True):
 
 
 # MST nhà cung cấp → hàm tải cả PDF và XML gốc từ trang tra cứu: trả {'pdf', 'xml', 'xml_err'}.
-ORIGINAL_FETCHERS = {"0101243150": _misa_both, "0105987432": easyinvoice_files, "0309478306": ts24_files}
+ORIGINAL_FETCHERS = {"0101243150": _misa_both, "0105987432": easyinvoice_files, "0309478306": ts24_files,
+                     "0101360697": bkav_files}
 
 
 # Link tải PDF gốc mà trình duyệt của người dùng mở được (MISA chặn chương trình tự động nhưng không chặn trình duyệt).
@@ -1233,7 +1303,7 @@ def _new_pdfs(folder, names, since, seen):
 def can_fetch_pdf(tra_cuu):
     t = tra_cuu or {}
     mst = t.get("ncc_mst") or ("0101243150" if str(t.get("ncc", "")).startswith("MISA") else "")
-    return bool(t.get("code")) and mst in PDF_FETCHERS, mst
+    return bool(t.get("code") or t.get("guid")) and mst in PDF_FETCHERS, mst
 
 
 def fetch_original_pdf(out_root, mst, kind, key):
@@ -4757,7 +4827,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
       <label>Từ ngày</label><input type="date" id="sFrom"><label>Đến ngày</label><input type="date" id="sTo">
       <div class="chk"><label><input type="checkbox" id="sMtt" checked> Gồm máy tính tiền</label>
         <label><input type="checkbox" id="sXml" checked> Tải XML</label>
-        <label title="Tự tải PDF và XML gốc của người bán (như nút Tải hoá đơn dạng PDF / XML trên trang tra cứu) khi nhà cung cấp cho phép (MISA, EasyInvoice, TS24)"><input type="checkbox" id="sPdf" checked> Tải HĐ gốc (PDF + XML)</label></div>
+        <label title="Tự tải PDF và XML gốc của người bán (như nút Tải hoá đơn dạng PDF / XML trên trang tra cứu) khi nhà cung cấp cho phép (MISA, EasyInvoice, TS24, BKAV)"><input type="checkbox" id="sPdf" checked> Tải HĐ gốc (PDF + XML)</label></div>
       <button class="bigbtn b-vao" onclick="runSync(['purchase'])">Đồng bộ HĐĐT ĐẦU VÀO</button>
       <button class="bigbtn b-ra" onclick="runSync(['sold'])">Đồng bộ HĐĐT ĐẦU RA</button>
       <button class="bigbtn b-vr" onclick="runSync(['purchase','sold'])">Đồng bộ HĐĐT VÀO/RA</button>
@@ -4916,7 +4986,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     <label><input type="checkbox" id="bRa" checked> Bán ra</label>
     <label><input type="checkbox" id="bMtt" checked> Gồm máy tính tiền</label>
     <label><input type="checkbox" id="bXml" checked> Tải XML + chi tiết hàng hoá</label>
-    <label title="MISA, EasyInvoice, TS24"><input type="checkbox" id="bPdf" checked> Tải HĐ gốc (PDF + XML)</label>
+    <label title="MISA, EasyInvoice, TS24, BKAV"><input type="checkbox" id="bPdf" checked> Tải HĐ gốc (PDF + XML)</label>
   </div>
   <div class="hint">Chỉ đồng bộ chiều đầu vào/đầu ra đang bật trong cài đặt từng doanh nghiệp.</div>
   <div class="err" id="bErr"></div>
@@ -5767,7 +5837,7 @@ $('hImpFiles').onchange = async () => {
 async function bulkPdf() {
   const sel = hRows.filter(r => hSel.has(r.key)), src = sel.length ? sel : hRows;
   let need = src.filter(r => r.need_goc && (r.pdf_url || r.can_fetch));
-  if (!need.length) { $('hErr').textContent = 'Không có hoá đơn nào cần tải hoá đơn gốc (hiện tự tải được: MISA, EasyInvoice, TS24). Nhà cung cấp khác: bấm "Tra cứu" rồi "Gắn HĐ gốc có sẵn".'; return; }
+  if (!need.length) { $('hErr').textContent = 'Không có hoá đơn nào cần tải hoá đơn gốc (hiện tự tải được: MISA, EasyInvoice, TS24, BKAV). Nhà cung cấp khác: bấm "Tra cứu" rồi "Gắn HĐ gốc có sẵn".'; return; }
   // Phần mềm tự tải trước (EasyInvoice; bản web: cả MISA), từng nhóm 10 HĐ; MISA bản máy: trình duyệt tải.
   const auto = need.filter(r => r.can_fetch && (me.server || !r.pdf_url || !browserFirst(r))), errs = [];
   if (auto.length) {

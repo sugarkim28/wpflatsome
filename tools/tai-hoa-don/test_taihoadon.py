@@ -735,6 +735,64 @@ class Tests(unittest.TestCase):
         r = t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"})[0]
         self.assertFalse(r["need_goc"])
 
+    def test_bkav(self):
+        """BKAV (van.ehoadon.vn): mở Lookup?InvoiceGUID=..., gửi lại biểu mẫu ASP.NET với lbtDownloadAsPdf / LinkDownXML."""
+        import unittest.mock as m
+        guid = "190586ae-4f88-4d2d-b361-1352d79d1acf"
+        posts = []
+        page = ('<html><body><form method="post" action="/Lookup?InvoiceGUID=%s" id="formMain">'
+                '<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="">'
+                '<input type="hidden" name="__EVENTARGUMENT" value="">'
+                '<input type="hidden" name="__VIEWSTATE" value="VS123">'
+                '<input type="hidden" name="UcHtmlPdfToolbar$txtIsToolbarDisplay" value="True">'
+                '<input id="btnDownload" type="image" src="x.png">'
+                '<a id="LinkDownPDF" onclick="javascript:__doPostBack(\'lbtDownloadAsPdf\',\'\');">PDF</a>'
+                '</form></body></html>' % guid).encode()
+
+        class Bkav(BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def _out(self, body, ctype="text/html"):
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Set-Cookie", "ASP.NET_SessionId=s1; path=/")
+                self.end_headers()
+                self.wfile.write(body)
+
+            def do_GET(self):
+                if self.path == "/Lookup?InvoiceGUID=" + guid:
+                    return self._out(page)
+                if self.path.startswith("/DownloadFile?FilePath="):
+                    return self._out(b'<?xml version="1.0"?><HDon>bkav</HDon>', "text/xml")
+                self.send_error(404)
+
+            def do_POST(self):
+                form = dict(urllib.parse.parse_qsl(self.rfile.read(int(self.headers["Content-Length"])).decode()))
+                posts.append(form)
+                ok = form.get("__VIEWSTATE") == "VS123" and "s1" in (self.headers.get("Cookie") or "")
+                if ok and form.get("__EVENTTARGET") == "lbtDownloadAsPdf":
+                    return self._out(b"%PDF-1.4 bkav", "application/pdf")
+                if ok and form.get("__EVENTTARGET") == "LinkDownXML":   # trang trả link tải thay vì file
+                    return self._out(b'<script>window.location.href="/DownloadFile?FilePath=a%2Fb.xml&BFType=1"</script>')
+                return self._out(page)
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), Bkav)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            with m.patch.object(t, "BKAV_BASE", "http://127.0.0.1:%d" % srv.server_port):
+                got = t.bkav_files({"ncc_mst": "0101360697", "code": "Q3ROP3MUAH9", "guid": guid})
+                with self.assertRaisesRegex(t.PortalError, "InvoiceGUID"):
+                    t.bkav_files({"ncc_mst": "0101360697", "code": "Q3ROP3MUAH9"})
+        finally:
+            srv.shutdown()
+            srv.server_close()
+        self.assertEqual((got["pdf"], got["xml"]), (b"%PDF-1.4 bkav", b'<?xml version="1.0"?><HDon>bkav</HDon>'))
+        self.assertEqual(posts[0]["UcHtmlPdfToolbar$txtIsToolbarDisplay"], "True")
+        self.assertNotIn("btnDownload", posts[0])
+        lk = t.lookup_info({"msttcgp": "0101360697", "dlhdon_id": guid, "ttkhac": {"Mã tra cứu": "Q3ROP3MUAH9"}})
+        self.assertEqual((lk["guid"], lk["url"]), (guid, "https://van.ehoadon.vn/Lookup?InvoiceGUID=" + guid))
+        self.assertTrue(t.can_fetch_pdf(lk)[0])
+
     def test_browser_download_settings(self):
         base = os.path.join(self.tmp, "LocalAppData")
         chrome = os.path.join(base, "Google", "Chrome", "User Data")

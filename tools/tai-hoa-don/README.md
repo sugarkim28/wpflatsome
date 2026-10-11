@@ -37,6 +37,7 @@ Tải hàng loạt hoá đơn **mua vào / bán ra** từ cổng [hoadondientu.g
   - Viettel, VNPT…: trang tra cứu bắt nhập captcha nên chưa tự động – dùng *Tra cứu* (chép sẵn mã) rồi *+PDF*.
   - **Gắn HĐ gốc có sẵn** (tab Hoá đơn): chọn cùng lúc nhiều file PDF / XML / ZIP hoá đơn đã có trên máy – phần mềm đọc ký hiệu, số hoá đơn, MST trong PDF và tự gắn vào đúng hoá đơn (chỉ gắn khi khớp chắc chắn một hoá đơn; báo rõ file nào không khớp).
   - **Tự tải hoá đơn gốc – TS24 (tracuu.xuathoadon.vn, nhà cung cấp MST 0309478306)**: mã tra cứu là mã của cơ quan thuế trong XML; phần mềm tải XML qua link nút "Tải XML" (`/invoice/download/xml/1/<mã CQT>`) và PDF qua link nút "Tải PDF" (`/invoice/download/pdf/1/<mã CQT>?status_image=true`) – cả hai lấy từ trang tra cứu thật. File chỉ được gắn khi ký hiệu, số, MST trong PDF khớp đúng hoá đơn.
+  - **Tự tải hoá đơn gốc – BKAV eHoadon (van.ehoadon.vn, MST 0101360697)**: mở trang `Lookup?InvoiceGUID=<GUID trong XML>` (không captcha) rồi gửi lại biểu mẫu đúng như bấm *Download file Hóa đơn dạng PDF / XML* (`lbtDownloadAsPdf`, `LinkDownXML`). Chỉ gắn file khớp đúng hoá đơn.
   - **Tự tải PDF gốc – EasyInvoice (SoftDreams)**: *Tải PDF gốc* / *Tải HĐ gốc hàng loạt* – phần mềm tự vào trang tra cứu của người bán (`<MST>hd.easyinvoice.com.vn`), tự đọc captcha 4 chữ số, tra bằng mã tra cứu trong XML rồi tải PDF như nút "Tải PDF & đính kèm" và gắn vào hoá đơn.
   - Nút *Tra cứu*: MISA mở thẳng đúng hoá đơn (`?sc=<mã>`); EasyInvoice mở trang tra cứu riêng của người bán (`<MST>hd.easyinvoice.com.vn`).
 
