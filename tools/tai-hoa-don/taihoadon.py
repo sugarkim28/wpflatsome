@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.3.4"
+__version__ = "4.3.5"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -1006,6 +1006,10 @@ def _save_debug(name, text):
         return
     try:
         os.makedirs(DEBUG_DIR, exist_ok=True)
+        if isinstance(text, bytes) and not name.endswith((".html", ".txt")):
+            with open(os.path.join(DEBUG_DIR, name), "wb") as f:
+                f.write(text)
+            return
         with open(os.path.join(DEBUG_DIR, name), "w", encoding="utf-8") as f:
             f.write(text if isinstance(text, str) else text.decode("utf-8", "replace"))
     except OSError:
@@ -1075,7 +1079,8 @@ def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
             if name:
                 val = re.search(r'value="([^"]*)"', tag)
                 fields[name.group(1)] = H.unescape(val.group(1)) if val else ""
-        cap = solve_easy_captcha(call("/Captcha/Show"))
+        cap_img = call("/Captcha/Show")
+        cap = solve_easy_captcha(cap_img)
         if not cap:
             last = "không đọc được captcha"
             continue
@@ -1090,9 +1095,15 @@ def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
             else:  # ghi lại chữ trên trang để biết lý do
                 txt = re.sub(r"\s+", " ", H.unescape(re.sub(r"<script.*?</script>|<style.*?</style>|<[^>]+>", " ", res,
                                                              flags=re.S | re.I))).strip()
-                last = "trang tra cứu không trả kết quả – HTTP %s tại %s (%s)" % (
-                    last_resp.get("code"), last_resp.get("url"), txt[:160] or "trang trống")
+                # dòng báo lỗi trên trang (nếu có) – thường nằm ở khối thông báo / kiểm tra dữ liệu
+                warn = re.findall(r'class="[^"]*(?:validation|error|danger|alert|red)[^"]*"[^>]*>([^<]{3,200})<', res)
+                last = "trang tra cứu không trả kết quả – HTTP %s tại %s; captcha phần mềm đọc: %s; mã tra cứu: %s%s" % (
+                    last_resp.get("code"), last_resp.get("url"), cap, code,
+                    ("; trang báo: " + " | ".join(w.strip() for w in warn[:3])) if warn else "")
                 _save_debug("easyinvoice-tra-cuu.html", res)
+                _save_debug("easyinvoice-captcha.png", cap_img)
+                _save_debug("easyinvoice-gui-di.txt", "POST %s/Search/Search\n%s\ncookie: %s\n" % (
+                    base, urllib.parse.urlencode(fields), "; ".join(c.name for c in jar)))
             if re.search(r"x[aá]c th[ựu]c|captcha|capcha", _plain(last) + last.lower()):
                 continue  # đọc sai captcha → thử captcha khác
             raise PortalError("EasyInvoice: %s" % last)
@@ -4733,6 +4744,8 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
       <th class="n">HĐ đã tải / gói</th><th class="n">HĐ gốc đã tải / gói</th>
       <th class="n">Người dùng</th><th class="n">Lượt chạy cùng lúc</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr></thead><tbody id="vpRows"></tbody></table></div>
     <div class="err" id="vpErr"></div>
+    <div class="bar" style="margin:10px 0"><a class="sec" href="/chan-doan.zip" style="text-decoration:none">
+      <button type="button" class="sm sec">Tải file chẩn đoán (trang lỗi của nhà cung cấp – gửi người hỗ trợ)</button></a></div>
     <h3 style="margin:24px 0 6px">Thông báo hệ thống</h3>
     <div class="hint">Hiện trên đầu trang của mọi văn phòng. Cảnh báo "trang thuế chậm / quá tải" phần mềm tự hiện khi phát hiện nhiều lần gọi trang thuế bị lỗi hoặc chậm trong 10 phút gần nhất.</div>
     <label>Thông báo (vd: Trang thuế đang bảo trì phần máy tính tiền…)</label><textarea id="syAnn" rows="2" class="full"></textarea>
@@ -6559,6 +6572,16 @@ def make_handler(app, port):
             if not self._guard():
                 return
             path = self.path.split("?")[0]
+            if path == "/chan-doan.zip":  # chủ hệ thống: tải các trang lỗi của nhà cung cấp để gửi người hỗ trợ
+                if not self.user or not (self.user.get("owner") or not app.server):
+                    return self._send(403, {"error": "Không có quyền"})
+                buf = io.BytesIO()
+                with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+                    for n in sorted(os.listdir(DEBUG_DIR)) if DEBUG_DIR and os.path.isdir(DEBUG_DIR) else []:
+                        z.write(os.path.join(DEBUG_DIR, n), n)
+                    z.writestr("phien-ban.txt", __version__)
+                self._extra = [("Content-Disposition", 'attachment; filename="chan-doan.zip"')]
+                return self._send(200, buf.getvalue(), "application/zip")
             if path == "/dat-lai-mat-khau":  # link trong email: trang đặt mật khẩu mới
                 return self._send(200, LOGIN_PAGE.encode("utf-8"), "text/html; charset=utf-8")
             if path == "/":
