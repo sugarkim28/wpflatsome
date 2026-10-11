@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.2.2"
+__version__ = "4.2.3"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -171,8 +171,9 @@ def _open_with_deadline(opener, req, seconds):
 def _is_busy(e):
     """Lỗi do cổng quá tải / không trả lời kịp (khác lỗi nghiệp vụ như sai mật khẩu)."""
     t = str(e).lower()
-    return any(w in t for w in ("timeout", "timed out", "quá tải", "http 5", "không kết nối được", "connection reset",
-                                "remote end closed"))
+    return any(w in t for w in ("timeout", "timed out", "quá tải", "http 5", "http 429", "không kết nối được",
+                                "connection reset", "remote end closed", "service unavailable", "bad gateway",
+                                "gateway time", "too many requests", "internal server error"))
 
 
 class PortalHealth:
@@ -305,6 +306,8 @@ class HoaDonClient:
                     self.token = None
                     raise PortalError("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.")
                 msg = self._error_message(content) or "Cổng hoá đơn trả lỗi HTTP %d" % e.code
+                if e.code in (429, 500, 502, 503, 504) and "HTTP" not in msg:
+                    msg += " (HTTP %d – trang thuế quá tải)" % e.code
                 if "hành vi không hợp lệ" in msg:
                     msg += " (tường lửa của cổng chặn; chờ vài phút rồi thử lại, nếu vẫn bị hãy báo để cập nhật phần mềm)"
                 raise PortalError(msg)
@@ -385,9 +388,14 @@ class HoaDonClient:
         self.login_at = time.time()
         return token
 
+    SESSION_REUSE = 1200  # chỉ dùng lại phiên đăng nhập trong 20 phút (phiên cũ hơn cổng có thể trả lỗi 503)
+
     def token_valid(self, margin=120):
-        """Token còn hạn? Đọc 'exp' trong JWT; không đọc được thì coi hạn 30 phút kể từ lúc đăng nhập."""
+        """Token còn hạn? Đọc 'exp' trong JWT; không đọc được thì coi hạn 30 phút kể từ lúc đăng nhập.
+        Phiên đăng nhập quá 20 phút thì coi như hết hạn để đăng nhập mới (giống trình duyệt / Nibot)."""
         if not self.token:
+            return False
+        if time.time() - getattr(self, "login_at", 0) > self.SESSION_REUSE:
             return False
         import base64
         try:
@@ -2709,13 +2717,20 @@ def run_batch(job, store, solver, msts, kinds, start, end, include_mtt, want_xml
                 for kind in kinds:
                     if not company.get("vao" if kind == "purchase" else "ra", True):
                         continue
+                    gaps_before = len(getattr(job, "gaps", []))
+                    reused = "dùng lại" in (job.auth or "")
                     try:
                         total, new, known = sync_kind(job, client, company, kind, start, end, include_mtt,
                                                       want_xml, out_root)
+                        retry = reused and len(getattr(job, "gaps", [])) > gaps_before
                     except PortalError as e:
-                        if "hết hạn" not in str(e):
+                        if "hết hạn" not in str(e) and not (reused and _is_busy(e)):
                             raise
-                        job.say("%s: phiên hết hạn, đăng nhập lại" % mst)
+                        retry = True
+                    if retry:  # phiên cũ hết hạn / cổng trả lỗi khi dùng phiên cũ → đăng nhập mới rồi làm lại một lần
+                        job.say("%s: trang thuế báo lỗi khi dùng phiên đăng nhập cũ – đăng nhập lại rồi thử lại" % mst)
+                        if hasattr(job, "gaps"):
+                            del job.gaps[gaps_before:]
                         client.token = None
                         login_company(job, client, company, solver)
                         total, new, known = sync_kind(job, client, company, kind, start, end, include_mtt,

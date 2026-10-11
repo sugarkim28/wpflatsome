@@ -78,6 +78,7 @@ class FakePortal(BaseHTTPRequestHandler):
     calls = []
     mtt_hang = 0  # giây: giả lập phần máy tính tiền của cổng bị treo
     sold_hang = 0  # giây: giả lập phần tra bán ra (có mã) bị treo
+    sold_503 = False  # giả lập cổng trả 503 Service Unavailable cho phần bán ra
     captchas = {}
     logins = []
     headers = []
@@ -154,6 +155,8 @@ class FakePortal(BaseHTTPRequestHandler):
                 time.sleep(FakePortal.mtt_hang)
             if u.path == "/query/invoices/sold" and FakePortal.sold_hang:
                 time.sleep(FakePortal.sold_hang)
+            if u.path == "/query/invoices/sold" and FakePortal.sold_503:
+                return self._json(503, {"message": "Service Unavailable"})
             return self._json(200, {"datas": [], "total": 0})
         if u.path == "/query/invoices/detail":  # dữ liệu "Xem hoá đơn" của cổng
             return self._json(200, {"nbten": "Cong ty Ban K", "nbmst": q.get("nbmst"), "nbdchi": "So 2 Le Loi",
@@ -1132,6 +1135,26 @@ class Tests(unittest.TestCase):
         self.assertNotIn(": LỖI", log)
         self.assertTrue(job.snapshot()["gaps"])
         self.assertTrue(t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"}))   # mua vào vẫn đủ
+
+    def test_service_unavailable_is_not_fatal(self):
+        """Cổng trả 503 'Service Unavailable': báo thiếu phần đó, đăng nhập mới thử lại nếu đang dùng phiên cũ."""
+        import unittest.mock as mock
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        self.assertTrue(t._is_busy(t.PortalError("Service Unavailable")))
+        FakePortal.sold_503 = True
+        try:
+            with mock.patch("time.sleep"):
+                job, _ = self.run_job(["0309999999"], kinds=("purchase", "sold"), start=date(2026, 10, 1),
+                                      end=date(2026, 10, 31))
+        finally:
+            FakePortal.sold_503 = False
+        log = "\n".join(job.log)
+        self.assertIn("THIẾU DỮ LIỆU", log)
+        self.assertNotIn(": LỖI", log)
+        self.assertTrue(t.query_invoices(self.tmp, "0309999999", {"kind": "purchase"}))
+        c = t.HoaDonClient("http://x")
+        c.token, c.login_at = "a.e30.b", time.time() - 3600       # phiên quá 20 phút: không dùng lại
+        self.assertFalse(c.token_valid())
 
     def test_auto_sync_and_notices(self):
         self.assertEqual(t.auto_range("auto", date(2026, 10, 9)), (date(2026, 9, 1), date(2026, 10, 9)))
