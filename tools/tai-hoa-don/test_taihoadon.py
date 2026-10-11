@@ -1402,6 +1402,16 @@ class Tests(unittest.TestCase):
             # XML không có MST người bán → lấy MST người bán theo dữ liệu trang thuế (không còn https://hd.easyinvoice…)
             lk = t.lookup_info({"msttcgp": "0105987432", "nb": {}, "ttkhac": {"Fkey": "ABWAOE89S"}}, "0315326196")
             self.assertEqual(lk["url"], "https://0315326196hd.easyinvoice.com.vn/Search/Index")
+            # XML EasyInvoice thật: thẻ <NBan> thứ hai nằm trong phần chữ ký (DSCKS) – không được đè MST người bán
+            x = os.path.join(self.tmp, "easy.xml")
+            with open(x, "w", encoding="utf-8") as fh:
+                fh.write('<HDon><DLHDon><TTChung><MSTTCGP>0105987432</MSTTCGP></TTChung><NDHDon><NBan><Ten>A</Ten>'
+                         '<MST>0315326196</MST><TTKhac/></NBan><NMua><MST>0101234567</MST></NMua></NDHDon>'
+                         '<TTKhac><TTin><TTruong>Fkey</TTruong><DLieu>FHBX5PUHE</DLieu></TTin></TTKhac></DLHDon>'
+                         '<DSCKS><NBan><Signature><SignedInfo/></Signature></NBan></DSCKS></HDon>')
+            info = t.parse_invoice_xml(x)
+            self.assertEqual(info["nb"]["MST"], "0315326196")
+            self.assertEqual(t.lookup_info(info)["url"], "https://0315326196hd.easyinvoice.com.vn/Search/Index")
             bad = {"ncc_mst": "0105987432", "url": "https://hd.easyinvoice.com.vn", "code": "A"}
             self.assertEqual(t.fix_lookup(bad, "0315326196")["url"], "https://0315326196hd.easyinvoice.com.vn/Search/Index")
         finally:

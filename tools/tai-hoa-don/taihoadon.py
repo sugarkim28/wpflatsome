@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.3.3"
+__version__ = "4.3.4"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -1472,7 +1472,11 @@ def parse_invoice_xml(xml_path):
         elif tag == "DLHDon" and not info["dlhdon_id"]:
             info["dlhdon_id"] = el.get("Id", "")
         if tag in ("NBan", "NMua"):
-            info["nb" if tag == "NBan" else "nm"] = {_local(c.tag): (c.text or "").strip() for c in el if len(c) == 0}
+            # Chỉ lấy thẻ có thông tin (Tên / MST): phần chữ ký số (DSCKS) cũng có thẻ <NBan> chỉ chứa chữ ký,
+            # không được ghi đè thông tin người bán đã đọc.
+            d = {_local(c.tag): (c.text or "").strip() for c in el if len(c) == 0}
+            if d.get("MST") or d.get("Ten") or not info["nb" if tag == "NBan" else "nm"]:
+                info["nb" if tag == "NBan" else "nm"] = d
         elif tag == "TTChung":
             info["ttchung"] = {_local(c.tag): (c.text or "").strip() for c in el if len(c) == 0}
         elif tag == "TToan":
