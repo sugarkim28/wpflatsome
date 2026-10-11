@@ -763,6 +763,8 @@ class Tests(unittest.TestCase):
             def do_GET(self):
                 if self.path == "/Lookup?InvoiceGUID=" + guid:
                     return self._out(page)
+                if self.path == "/DownloadFile?FilePath=Temp/hd.pdf&BFType=2":
+                    return self._out(b"%PDF-1.4 bkav", "application/pdf")
                 if self.path.startswith("/DownloadFile?FilePath="):
                     return self._out(b'<?xml version="1.0"?><HDon>bkav</HDon>', "text/xml")
                 self.send_error(404)
@@ -772,7 +774,8 @@ class Tests(unittest.TestCase):
                 posts.append(form)
                 ok = form.get("__VIEWSTATE") == "VS123" and "s1" in (self.headers.get("Cookie") or "")
                 if ok and form.get("__EVENTTARGET") == "lbtDownloadAsPdf":
-                    return self._out(b"%PDF-1.4 bkav", "application/pdf")
+                    # trang gọi hàm DownloadFile(đường dẫn, loại) của InvoiceLookupDetails.js
+                    return self._out(b"<script>DownloadFile('Temp/hd.pdf', '2');</script>")
                 if ok and form.get("__EVENTTARGET") == "LinkDownXML":   # trang trả link tải thay vì file
                     return self._out(b'<script>window.location.href="/DownloadFile?FilePath=a%2Fb.xml&BFType=1"</script>')
                 return self._out(page)

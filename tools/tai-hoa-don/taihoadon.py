@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.3.9"
+__version__ = "4.4.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -833,22 +833,41 @@ def misa_file(code, typ="pdf"):
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
     lookup = MISA_WWW + "/tra-cuu/?sc=" + urllib.parse.quote(code)
 
-    def get(url, referer=lookup):
-        req = urllib.request.Request(url, headers={"User-Agent": UA_LOGIN, "Accept": "*/*", "Referer": referer,
-                                                   "Accept-Language": "vi-VN,vi;q=0.9"})
+    log = []  # chẩn đoán: mỗi lần gọi → mã HTTP, loại nội dung, độ dài, đầu nội dung
+
+    def get(url, referer=lookup, browser=False):
+        headers = {"User-Agent": UA_LOGIN, "Accept": "*/*", "Referer": referer, "Accept-Language": "vi-VN,vi;q=0.9"}
+        if browser:  # y như trình duyệt mở link tải (cách người dùng tải được)
+            headers = {"User-Agent": UA_LOGIN, "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
+                       "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                       "Upgrade-Insecure-Requests": "1", "Sec-Fetch-Dest": "document", "Sec-Fetch-Mode": "navigate",
+                       "Sec-Fetch-Site": "none", "Sec-Fetch-User": "?1"}
+        req = urllib.request.Request(url, headers=headers)
+        status, ctype, body = 0, "", b""
         try:
             with opener.open(req, timeout=30) as resp:
-                return resp.read()
+                status, ctype, body = resp.status, resp.headers.get("Content-Type", ""), resp.read()
+                final = resp.geturl()
         except urllib.error.HTTPError as e:
-            return e.read() or b""
+            status, ctype, body, final = e.code, e.headers.get("Content-Type", "") if e.headers else "", e.read() or b"", url
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            log.append("%s → lỗi kết nối %s" % (url, getattr(e, "reason", e)))
             raise PortalError("Không kết nối được meinvoice.vn: %s" % getattr(e, "reason", e))
+        log.append("%s%s → HTTP %s, %s, %d byte%s\n    %r" % (url, " (như trình duyệt)" if browser else "", status, ctype or "?",
+                   len(body), "" if final == url else ", chuyển tới " + final, body[:300]))
+        return body
+
+    def done(data):
+        _save_debug("misa-%s.txt" % typ, "\n".join(log) + "\n\nKẾT QUẢ: " + ("được file" if data else "không được file"))
+        return data
 
     urls, diag = [], []
     page = get(lookup, referer=MISA_WWW + "/tra-cuu/").decode("utf-8", "replace")  # lấy cookie như trình duyệt
-    direct = _pick_file(get(MISA_WWW + "/tra-cuu/DownloadHandler.ashx?Type=%s&Code=" % typ + urllib.parse.quote(code)), typ)
-    if direct:
-        return direct
+    link = MISA_WWW + "/tra-cuu/DownloadHandler.ashx?Type=%s&Code=" % typ + urllib.parse.quote(code)
+    for browser in (False, True):  # đúng link trình duyệt tải được (link "Tải HĐ gốc" bản cũ)
+        direct = _pick_file(get(link, browser=browser), typ)
+        if direct:
+            return done(direct)
     for link in re.findall(r"DownloadHandler\.ashx\?[^\"'<>\s]+", page, re.I):
         link = re.sub(r"(?i)type=pdf", "Type=" + typ, H.unescape(link))
         urls.append(urllib.parse.urljoin(MISA_WWW + "/tra-cuu/", "tra-cuu/" + link))
@@ -874,9 +893,10 @@ def misa_file(code, typ="pdf"):
         raw = get(url)
         data = _pick_file(raw, typ)
         if data:
-            return data
+            return done(data)
         data = raw
         got.append(re.sub(r"\s+", " ", re.sub(rb"<[^>]+>", b" ", data[:600]).decode("utf-8", "replace")).strip()[:70])
+    done(None)
     raise PortalError("MISA không trả file %s cho mã tra cứu %s (đã thử %d đường dẫn; GetRequestTimeEnCode trả: %s; "
                       "trang tải trả: %s)" % (typ.upper(), code, len(urls), " | ".join(diag) or "rỗng", " | ".join(got) or "rỗng"))
 
@@ -1197,12 +1217,19 @@ def bkav_files(t, want_pdf=True, want_xml=True):
 
     def grab(target, typ):
         data = call(url, dict(fields, __EVENTTARGET=target, __EVENTARGUMENT=""))
+        _save_debug("bkav-%s.html" % typ, data)  # chẩn đoán: trang BKAV trả về sau khi bấm nút tải
         got = _pick_file(data, typ)
         if got:
             return got
-        link = re.search(rb"(/DownloadFile\?FilePath=[^\"'<>\s]+)", data)  # trang trả link tải thay cho file
-        if link:
-            return _pick_file(call(BKAV_BASE + H.unescape(link.group(1).decode())), typ)
+        links = [H.unescape(m.decode()) for m in re.findall(rb"(/DownloadFile\?FilePath=[^\"'<>\s]+)", data)]
+        # trang trả lời gọi hàm JS DownloadFile('<đường dẫn>', '<loại>') – trong InvoiceLookupDetails.js của BKAV:
+        # window.location.href = "/DownloadFile?FilePath=" + filePath + "&BFType=" + BFType
+        for fp, bf in re.findall(rb"DownloadFile\(\s*['\"]([^'\"]+)['\"]\s*,\s*['\"]?([^'\")]*)['\"]?\s*\)", data):
+            links.append("/DownloadFile?FilePath=" + H.unescape(fp.decode()) + "&BFType=" + H.unescape(bf.decode()))
+        for link in dict.fromkeys(links):
+            got = _pick_file(call(urllib.parse.urljoin(BKAV_BASE + "/", link)), typ)
+            if got:
+                return got
         return None
     out = {"pdf": None, "xml": None, "xml_err": "", "pdf_check": True}
     if want_xml:
@@ -1397,7 +1424,7 @@ def fetch_original(out_root, mst, kind, key):
         raise ValueError("Không tìm thấy hoá đơn")
     ok, prov = can_fetch_pdf(e.get("tra_cuu"))
     if not ok:
-        raise ValueError("Chưa hỗ trợ tự tải hoá đơn gốc của nhà cung cấp này – bấm 'Tra cứu' để tải tay rồi '+PDF'")
+        raise ValueError("Chưa hỗ trợ tự tải hoá đơn gốc của nhà cung cấp này – bấm 'Tra cứu' để xem trên trang của nhà cung cấp")
     has_pdf = bool(e.get("pdf") and os.path.exists(os.path.join(base, e["pdf"])))
     has_xml = bool(e.get("xml_goc") and os.path.exists(os.path.join(base, e["xml_goc"])))
     got = ORIGINAL_FETCHERS[prov](fix_lookup(e["tra_cuu"], (e.get("inv") or {}).get("nbmst")),
@@ -4881,14 +4908,12 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     <div class="bar actions">
       <button class="sec" onclick="openSub('dong-bo')">⟳ Đồng bộ</button>
       <button class="sec q-hdgoc" id="hBulkPdf" onclick="bulkPdf()">Tải HĐ gốc hàng loạt</button>
-      <button class="sec q-hdgoc" id="hImpPdf" onclick="$('hImpFiles').click()" title="Chọn các file PDF / XML hoá đơn gốc có sẵn trên máy – phần mềm tự gắn vào đúng hoá đơn">Gắn HĐ gốc có sẵn</button>
-      <input type="file" id="hImpFiles" accept=".pdf,.xml,application/pdf,text/xml,application/xml" multiple class="hide">
       <span style="flex:1"></span>
       <button class="sec sm" onclick="resetGrid()" title="Bỏ sắp xếp và lọc theo cột">Bỏ lọc cột</button>
       <select class="sm q-ketxuat" id="hExp" style="width:auto" onchange="exportInv(this.value);this.value=''">
         <option value="">Kết xuất…</option><option value="xlsx">Excel (mẫu Nibot)</option><option value="xml">XML.ZIP</option>
         <option value="all">Tất cả (XML + PDF + Excel).ZIP</option><option value="html">HTML.ZIP</option>
-        <option value="pdf">PDF gốc.ZIP</option><option value="cqt">PDF thuế.ZIP</option></select>
+        <option value="pdf">Hoá đơn gốc (PDF + XML).ZIP</option><option value="cqt">PDF thuế.ZIP</option></select>
     </div>
     <div class="bulk hide" id="hBulk">
       <b id="hSelInfo"></b>
@@ -5901,24 +5926,16 @@ function renderOriginal(tr, r, kind) {
           g.textContent = 'Đang tải…'; $('hErr').textContent = '';
           try { const d = await post('/api/invoice/fetch-pdf', {mst: $('hMst').value, kind, key: r.key}); await loadInv();
                 if (d.xml_err) $('hErr').textContent = r.khhdon + '/' + r.shdon + ': đã có PDF gốc, chưa lấy được XML gốc – ' + d.xml_err; return; }
-          catch (e) { g.textContent = label; if (onlyXml || !r.pdf_url) { $('hErr').textContent = r.khhdon + '/' + r.shdon + ': ' + e.message; return; } } }
-        browserDownload(browserUrls([r])); };
+          catch (e) { g.textContent = label; if (onlyXml || me.server || !r.pdf_url) { $('hErr').textContent = r.khhdon + '/' + r.shdon + ': ' + e.message; return; } } }
+        if (!me.server) browserDownload(browserUrls([r])); };
       ct.append(g);
     }
-    const up = el('a', 'lk q-hdgoc', r.pdf ? '↻PDF' : '+PDF'); up.href = '#'; up.title = 'Gắn file PDF gốc đã tải từ trang tra cứu';
-    up.onclick = ev => { ev.preventDefault(); const fi = el('input'); fi.type = 'file'; fi.accept = 'application/pdf';
-      fi.onchange = async () => { const f = fi.files[0]; if (!f) return;
-        const b64 = await new Promise(res => { const rd = new FileReader(); rd.onload = () => res(String(rd.result).split(',')[1]); rd.readAsDataURL(f); });
-        try { await post('/api/invoice/pdf', {mst: $('hMst').value, kind, key: r.key, data: b64}); loadInv(); }
-        catch (e) { $('hErr').textContent = e.message; } };
-      fi.click(); };
-    ct.append(up);
 }
 // Ô chép nhanh các thông tin cần dán vào trang tra cứu (trang có xác thực "trượt hình" nên phải làm tay).
 function lookupPanel(t, r) {
   const box = $('hErr'); box.innerHTML = '';
   box.append(el('div', 'ok', (t.ncc || '') + ' – HĐ ' + r.khhdon + '/' + r.shdon +
-    ': dán 2 thông tin dưới đây vào trang tra cứu, kéo thanh trượt, tải PDF/XML rồi bấm "Gắn HĐ gốc có sẵn".'));
+    ': dán 2 thông tin dưới đây vào trang tra cứu, kéo thanh trượt để xem / tải hoá đơn.'));
   [['MST bên bán', r.mst], [t.field || 'Mã số bí mật', t.code]].forEach(([k, v]) => {
     if (!v) return;
     const line = el('div', 'mute'); line.append(k + ': ', el('b', '', v), ' ');
@@ -5934,35 +5951,23 @@ async function bulkUpdate(fields) {
         hRows.forEach(r => { if (hSel.has(r.key)) Object.assign(r, fields); }); buildHead(); renderInv(); }
   catch (e) { $('hErr').textContent = e.message; }
 }
-$('hImpFiles').onchange = async () => {
-  const fs = [...$('hImpFiles').files]; $('hImpFiles').value = ''; if (!fs.length) return;
-  const b = $('hImpPdf'); b.disabled = true; b.textContent = 'Đang gắn ' + fs.length + ' file…'; $('hErr').textContent = '';
-  try { const files = []; for (const f of fs) files.push({name: f.name, data: await readB64(f)});
-    const d = await post('/api/invoice/pdf-import', {mst: $('hMst').value, files});
-    const ok = d.results.filter(r => r.ok), bad = d.results.filter(r => !r.ok);
-    $('hErr').innerHTML = ''; $('hErr').append(el('div', 'ok', 'Đã gắn ' + ok.length + '/' + d.results.length + ' file.'));
-    bad.forEach(r => $('hErr').append(el('div', 'err', r.file + ': ' + r.loi)));
-    loadInv(); }
-  catch (e) { $('hErr').textContent = e.message; }
-  b.disabled = false; b.textContent = 'Gắn HĐ gốc có sẵn';
-};
 async function bulkPdf() {
   const sel = hRows.filter(r => hSel.has(r.key)), src = sel.length ? sel : hRows;
   let need = src.filter(r => r.need_goc && (r.pdf_url || r.can_fetch));
-  if (!need.length) { $('hErr').textContent = 'Không có hoá đơn nào cần tải hoá đơn gốc (hiện tự tải được: MISA, EasyInvoice, TS24, BKAV). Nhà cung cấp khác: bấm "Tra cứu" rồi "Gắn HĐ gốc có sẵn".'; return; }
-  // Phần mềm tự tải trước (EasyInvoice; bản web: cả MISA), từng nhóm 10 HĐ; MISA bản máy: trình duyệt tải.
+  if (!need.length) { $('hErr').textContent = 'Không có hoá đơn nào cần tải hoá đơn gốc (hiện tự tải được: MISA, EasyInvoice, TS24, BKAV). Nhà cung cấp khác: bấm "Tra cứu" để xem trên trang của nhà cung cấp.'; return; }
+  // Phần mềm tự tải (bản web: mọi nhà cung cấp); MISA bản máy: trình duyệt tải về Downloads rồi phần mềm tự gắn.
   const auto = need.filter(r => r.can_fetch && (me.server || !r.pdf_url || !browserFirst(r)));
   if (auto.length) {
     const b = $('hBulkPdf'); b.disabled = true;
     const {done, errs} = await fetchOriginals(auto, n => { b.textContent = 'Đang tải HĐ gốc ' + n + '/' + auto.length + '…'; });
     b.disabled = false; b.textContent = 'Tải HĐ gốc hàng loạt';
     await loadInv();
-    const keys = new Set(need.map(r => r.key)); need = hRows.filter(r => keys.has(r.key) && r.need_goc && r.pdf_url);
+    const keys = new Set(need.map(r => r.key)); need = me.server ? [] : hRows.filter(r => keys.has(r.key) && r.need_goc && r.pdf_url);
     $('hErr').innerHTML = ''; $('hErr').append(el('div', 'ok', 'Đã tải và gắn hoá đơn gốc ' + done + '/' + auto.length + ' hoá đơn.'));
     errs.slice(0, 10).forEach(x => $('hErr').append(el('div', 'err', x)));
     if (!need.length) return;
   }
-  browserDownload(browserUrls(need));
+  if (!me.server) browserDownload(browserUrls(need));
 }
 // Phần mềm tự tải HĐ gốc cho các dòng (từng nhóm 10 HĐ). Trả {done, errs}.
 async function fetchOriginals(rows, progress) {
@@ -5985,16 +5990,7 @@ function browserUrls(rows) {
 // phần mềm theo dõi Downloads và tự gắn file mới vào đúng hoá đơn.
 let scanTimer = null, promptOk = false;
 async function browserDownload(urls) {
-  if (me.server) {  // máy chủ không thấy thư mục Downloads trên máy bạn → tải về rồi gắn bằng "Gắn PDF gốc có sẵn"
-    urls.forEach((u, i) => setTimeout(() => {
-      const f = el('iframe'); f.style.display = 'none'; f.src = u; document.body.append(f); setTimeout(() => f.remove(), 120000);
-    }, i * 1200));
-    $('hErr').innerHTML = ''; $('hErr').append(el('div', 'ok', 'Trình duyệt đang tải ' + urls.length + ' file hoá đơn gốc (PDF/XML) về máy bạn (thư mục Downloads; nếu Chrome hỏi "tải nhiều tệp", chọn Cho phép). ' +
-      'Tải xong bấm "Gắn HĐ gốc có sẵn" và chọn các file vừa tải – phần mềm tự gắn vào đúng hoá đơn.'));
-    const box = el('div', 'mute'); box.append('Nếu không thấy tải, bấm từng link: '); $('hErr').append(box);
-    urls.slice(0, 50).forEach(u => { const a = el('a', 'lk', 'link'); a.href = u; a.target = '_blank'; box.append(a); });
-    return;
-  }
+  if (me.server || !urls.length) return;  // bản web: máy chủ tự tải, không tải qua trình duyệt
   if (urls.length > 1 && !promptOk) {
     try { const d = await post('/api/invoice/scan-downloads', {mst: $('hMst').value, info_only: true});
       if (d.prompt && !confirm('Chrome/Edge đang bật "Hỏi vị trí lưu từng tệp trước khi tải xuống" nên sẽ hiện hộp thoại Lưu cho TỪNG file.\n\n' +
@@ -6021,7 +6017,7 @@ async function browserDownload(urls) {
       $('hBulkPdf').textContent = attached ? ('Đã gắn ' + attached + '/' + urls.length + ' file') : 'Đang chờ file tải về…';
       if (attached >= urls.length || tries > 20 + urls.length * 3) { clearInterval(scanTimer); $('hBulkPdf').textContent = 'Tải HĐ gốc hàng loạt'; $('hBulkPdf').disabled = false;
         if (attached < urls.length) $('hErr').append(el('div', 'err', 'Mới gắn được ' + attached + '/' + urls.length +
-          ' file. Kiểm tra thư mục tải về (' + d.folder + ') hoặc dùng "Gắn HĐ gốc có sẵn".')); }
+          ' file. Kiểm tra thư mục tải về (' + d.folder + ').')); }
     } catch (e) { clearInterval(scanTimer); $('hBulkPdf').disabled = false; $('hErr').append(el('div', 'err', e.message)); }
   }, 3000);
 }
@@ -6049,8 +6045,7 @@ async function exportInv(fmtx) {
     errs.slice(0, 10).forEach(x => $('hErr').append(el('div', 'err', x)));
   }
   const miss = hRows.filter(r => (!sel.length || hSel.has(r.key)) && !r.pdf).length;
-  if (fmtx === 'pdf' && miss) $('hErr').append(el('div', 'mute', miss + ' hoá đơn chưa có PDF gốc (nhà cung cấp chưa hỗ trợ tự tải hoặc tải lỗi) – không có trong file ZIP. ' +
-                                                    'Bấm "Tra cứu" để tải tay rồi "Gắn HĐ gốc có sẵn".'));
+  if (fmtx === 'pdf' && miss) $('hErr').append(el('div', 'mute', miss + ' hoá đơn chưa có hoá đơn gốc (nhà cung cấp chưa hỗ trợ tự tải hoặc tải lỗi) – không có trong file ZIP.'));
 }
 ['hFile', 'hDuyet', 'hTthai', 'hKq'].forEach(id => $(id).onchange = () => { hPage = 0; loadInv(); });
 ['hKh', 'hSo', 'hQ'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { hPage = 0; loadInv(); } }));
