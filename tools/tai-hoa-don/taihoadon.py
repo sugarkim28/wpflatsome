@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.3.2"
+__version__ = "4.3.3"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -739,8 +739,9 @@ def _plain(text):
     return "".join(c for c in t if unicodedata.category(c) != "Mn").lower().replace(" ", "").replace("_", "")
 
 
-def lookup_info(info):
-    """{'ncc', 'url', 'field', 'code'} để tra cứu hoá đơn gốc trên trang của nhà cung cấp."""
+def lookup_info(info, nbmst=None):
+    """{'ncc', 'url', 'field', 'code'} để tra cứu hoá đơn gốc trên trang của nhà cung cấp.
+    nbmst: MST người bán theo dữ liệu trang thuế – dùng khi XML không có (trang EasyInvoice đặt theo MST người bán)."""
     mst = info.get("msttcgp", "")
     name, url = PROVIDERS.get(mst.split("-")[0], ("", ""))
     field = code = ""
@@ -760,7 +761,8 @@ def lookup_info(info):
         url += urllib.parse.quote(code)
     elif url.endswith("=") or "{nbmst}" in url:
         url = url.split("?")[0] if url.endswith("=") else url
-    url = url.replace("{nbmst}", (info.get("nb") or {}).get("MST", "").split("-")[0])
+    seller = ((info.get("nb") or {}).get("MST") or nbmst or "").strip()
+    url = url.replace("{nbmst}", seller.split("-")[0])
     out = {"ncc": name or (("MST " + mst) if mst else ""), "url": url, "field": field, "code": code,
            "ncc_mst": mst.split("-")[0]}
     if guid:
@@ -1028,6 +1030,8 @@ def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
     import base64
     import html as H
     base = easy_origin(tra_cuu.get("url"))
+    if re.match(r"https?://hd\.", base or ""):
+        raise PortalError("Link tra cứu EasyInvoice thiếu MST người bán (%s)" % base)
     code = tra_cuu.get("code") or ""
     if not base:
         raise PortalError("Không xác định được trang tra cứu EasyInvoice của người bán")
@@ -1335,11 +1339,16 @@ def _new_pdfs(folder, names, since, seen):
     return files
 
 
-def fix_lookup(t):
-    """Sửa link tra cứu đã lưu từ bản cũ: EasyInvoice phải là https://<MST>hd.easyinvoice.com.vn/Search/Index."""
+def fix_lookup(t, nbmst=None):
+    """Sửa link tra cứu đã lưu từ bản cũ: EasyInvoice phải là https://<MST người bán>hd.easyinvoice.com.vn/Search/Index
+    (bản cũ có thể thiếu MST → https://hd.easyinvoice.com.vn, trang báo lỗi 404)."""
     t = dict(t or {})
-    if t.get("ncc_mst") == "0105987432" and easy_origin(t.get("url")):
-        t["url"] = easy_origin(t["url"]) + "/Search/Index"
+    if t.get("ncc_mst") == "0105987432":
+        origin = easy_origin(t.get("url"))
+        if (not origin or re.match(r"https?://hd\.", origin)) and nbmst:
+            origin = "https://%shd.easyinvoice.com.vn" % str(nbmst).split("-")[0].strip()
+        if origin:
+            t["url"] = origin + "/Search/Index"
     return t
 
 
@@ -1375,7 +1384,8 @@ def fetch_original(out_root, mst, kind, key):
         raise ValueError("Chưa hỗ trợ tự tải hoá đơn gốc của nhà cung cấp này – bấm 'Tra cứu' để tải tay rồi '+PDF'")
     has_pdf = bool(e.get("pdf") and os.path.exists(os.path.join(base, e["pdf"])))
     has_xml = bool(e.get("xml_goc") and os.path.exists(os.path.join(base, e["xml_goc"])))
-    got = ORIGINAL_FETCHERS[prov](e["tra_cuu"], want_pdf=not has_pdf, want_xml=not has_xml)
+    got = ORIGINAL_FETCHERS[prov](fix_lookup(e["tra_cuu"], (e.get("inv") or {}).get("nbmst")),
+                                  want_pdf=not has_pdf, want_xml=not has_xml)
     if got.get("pdf") and got.get("pdf_check"):  # PDF tải theo mã → kiểm tra lại đúng hoá đơn rồi mới gắn
         try:
             ok_pdf = match_pdf_text(_pdf_text(got["pdf"]), {kind: {key: e}}) == [(kind, key)]
@@ -2713,7 +2723,7 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
             entry["xml"] = os.path.relpath(os.path.join(folder, inv["_xml"]), base)
             names = [it["name"] for it in inv["_xmlinfo"]["items"] if it["name"]]
             entry["mat_hang"] = "; ".join(names)[:500]
-            entry["tra_cuu"] = lookup_info(inv["_xmlinfo"])
+            entry["tra_cuu"] = lookup_info(inv["_xmlinfo"], inv.get("nbmst"))
         known[key] = entry
     save_index_kind(out_root, mst, kind, known)
     if getattr(job, "want_pdf", False):
@@ -3687,7 +3697,7 @@ def query_invoices(out_root, mst, f):
                                                      os.path.exists(os.path.join(base, e["pdf"])) else ""),
             "xml_goc": e.get("xml_goc") if e.get("xml_goc") and os.path.exists(os.path.join(base, e["xml_goc"])) else "",
             "need_goc": needs_original(base, e), "xml_url": browser_xml_url(e.get("tra_cuu")),
-            "tra_cuu": fix_lookup(e.get("tra_cuu")), "pdf_url": browser_pdf_url(e.get("tra_cuu")),
+            "tra_cuu": fix_lookup(e.get("tra_cuu"), inv.get("nbmst")), "pdf_url": browser_pdf_url(e.get("tra_cuu")),
             "can_fetch": can_fetch_pdf(e.get("tra_cuu"))[0], "cqt": _cqt_rel(base, e)})
     rows.sort(key=lambda r: r.pop("_sort"))
     return rows

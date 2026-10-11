@@ -1399,6 +1399,11 @@ class Tests(unittest.TestCase):
             self.assertEqual(lk["url"], "https://0315326196hd.easyinvoice.com.vn/Search/Index")
             old_link = {"ncc_mst": "0105987432", "url": "http://0315326196hd.easyinvoice.com.vn", "code": "A"}
             self.assertEqual(t.fix_lookup(old_link)["url"], "https://0315326196hd.easyinvoice.com.vn/Search/Index")
+            # XML không có MST người bán → lấy MST người bán theo dữ liệu trang thuế (không còn https://hd.easyinvoice…)
+            lk = t.lookup_info({"msttcgp": "0105987432", "nb": {}, "ttkhac": {"Fkey": "ABWAOE89S"}}, "0315326196")
+            self.assertEqual(lk["url"], "https://0315326196hd.easyinvoice.com.vn/Search/Index")
+            bad = {"ncc_mst": "0105987432", "url": "https://hd.easyinvoice.com.vn", "code": "A"}
+            self.assertEqual(t.fix_lookup(bad, "0315326196")["url"], "https://0315326196hd.easyinvoice.com.vn/Search/Index")
         finally:
             srv.shutdown()
             srv.server_close()
