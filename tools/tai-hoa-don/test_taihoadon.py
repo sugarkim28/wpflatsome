@@ -806,7 +806,7 @@ class Tests(unittest.TestCase):
 
     def test_easyinvoice_lookup(self):
         lk = t.lookup_info({"msttcgp": "0105987432", "ttkhac": {"Mã tra cứu": "8D3VYYQYD"}, "nb": {"MST": "0308783233"}})
-        self.assertEqual((lk["ncc"], lk["url"], lk["code"]), ("EasyInvoice (SoftDreams)", "http://0308783233hd.easyinvoice.com.vn", "8D3VYYQYD"))
+        self.assertEqual((lk["ncc"], lk["url"], lk["code"]), ("EasyInvoice (SoftDreams)", "https://0308783233hd.easyinvoice.com.vn/Search/Index", "8D3VYYQYD"))
 
     def test_expired_token(self):
         c = t.HoaDonClient(self.base, delay=0)
@@ -1333,7 +1333,7 @@ class Tests(unittest.TestCase):
                 self.wfile.write(body)
 
             def do_GET(self):
-                if self.path == "/":  # trang chủ không có ô tra cứu → phải sang /Search/Index
+                if self.path == "/":  # trang chủ (đăng nhập) không có ô tra cứu – trang tra cứu là /Search/Index
                     return self._out(b"<html>EasyInvoice</html>", cookie="ASP.NET_SessionId=abc; path=/")
                 if self.path == "/Search/Index":
                     return self._out(b'<form action="/Search/Search" id="Search" method="post">'
@@ -1346,19 +1346,19 @@ class Tests(unittest.TestCase):
                     return self._out(caps[(seen["n"] - 1) % 2], "image/png")
                 if self.path.startswith("/Invoice/Download?fileGuid=g1"):
                     return self._out(b"%PDF-1.4 easy goc", "application/pdf")
-                if self.path == "/Search/DownloadXML?token=XT%2F9%2B":
+                if self.path.startswith("/Invoice/Download?fileGuid=x1"):
                     return self._out(b'<?xml version="1.0"?><HDon>easy</HDon>', "text/xml")
                 self.send_error(404)
 
             def do_POST(self):
-                form = dict(urllib.parse.parse_qsl(self.rfile.read(int(self.headers["Content-Length"])).decode()))
+                form = dict(urllib.parse.parse_qsl(self.rfile.read(int(self.headers["Content-Length"])).decode(), keep_blank_values=True))
                 seen["posts"].append((self.path, form))
                 if "ASP.NET_SessionId=abc" not in (self.headers.get("Cookie") or ""):
                     return self._out(b'<input id="msg" name="msg" value="Phi&#234;n h&#7871;t h&#7841;n">')
                 if self.path == "/Search/Search":
                     if form.get("Capcha") != seen["cap"]:
                         return self._out('<input id="msg" name="msg" value="Mã xác thực không đúng">'.encode())
-                    if form.get("typeSearch") != "fKeySearch":  # không chọn kiểu tra → trang trả lại form trống
+                    if form.get("typeSearch") != "":  # trình duyệt gửi đúng giá trị của ô ẩn (để trống)
                         return self._out(b'<html><body><h3>Tra cuu hoa don</h3><input id="msg" name="msg" value=""></body></html>')
                     if form.get("FKey") != "HIUOVGNMC":
                         return self._out('<input id="msg" name="msg" value="Không tìm thấy hóa đơn">'.encode())
@@ -1367,6 +1367,10 @@ class Tests(unittest.TestCase):
                                       '<button onclick="downloadPdfAndFileAttachFromAvailableHtml(\'TOK/123+\');">'
                                       '<button onclick="downloadXML(\'XT/9+\')">Tải tệp XML</button>'
                                       % inv).encode())
+                if self.path == "/Invoice/DownloadXML":   # như downloadXML() trong BrowserDetectShare.js của trang thật
+                    ok = form.get("token") == "XT/9+"
+                    return self._out(json.dumps({"fileGuid": "x1" if ok else "", "fileName": "a.xml",
+                                                 "msg": "" if ok else "sai"}).encode(), "application/json")
                 if self.path == "/Invoice/DownloadPdfAndFileAttachFromAvailableHtml":
                     import base64
                     ok = form.get("token") == "TOK/123+" and base64.b64decode(form["html"]).decode() == \
@@ -1381,18 +1385,21 @@ class Tests(unittest.TestCase):
         try:
             url = "http://127.0.0.1:%d" % srv.server_port
             self.assertEqual(t.easyinvoice_pdf({"url": url, "code": "HIUOVGNMC"}), b"%PDF-1.4 easy goc")
-            self.assertEqual(seen["posts"][0][1]["typeSearch"], "fKeySearch")
-            got = t.easyinvoice_files({"url": url, "code": "HIUOVGNMC"})  # chưa biết đường dẫn XML thật → không đoán
-            self.assertEqual((got["pdf"], got["xml"]), (b"%PDF-1.4 easy goc", None))
-            self.assertIn("tải tay", got["xml_err"])
-            with mock.patch.object(t, "EASY_XML_PATHS", ("/Search/DownloadXML?token=",)):
-                got = t.easyinvoice_files({"url": url, "code": "HIUOVGNMC"})
-            self.assertEqual(got["xml"], b'<?xml version="1.0"?><HDon>easy</HDon>')
+            self.assertEqual(seen["posts"][0][1]["typeSearch"], "")
+            got = t.easyinvoice_files({"url": url + "/Search/Index", "code": "HIUOVGNMC"})
+            self.assertEqual((got["pdf"], got["xml"]), (b"%PDF-1.4 easy goc", b'<?xml version="1.0"?><HDon>easy</HDon>'))
             with self.assertRaisesRegex(t.PortalError, "Không tìm thấy"):
                 t.easyinvoice_pdf({"url": url, "code": "SAI"})
             self.assertTrue(t.can_fetch_pdf({"ncc_mst": "0105987432", "code": "X"})[0])
         finally:
             t.EASY_BASE_RE = old
+        try:
+            # Link tra cứu đúng trang thật; link cũ (http://…, trang chủ) được sửa khi hiển thị
+            lk = t.lookup_info({"msttcgp": "0105987432", "nb": {"MST": "0315326196"}, "ttkhac": {"Fkey": "ABWAOE89S"}})
+            self.assertEqual(lk["url"], "https://0315326196hd.easyinvoice.com.vn/Search/Index")
+            old_link = {"ncc_mst": "0105987432", "url": "http://0315326196hd.easyinvoice.com.vn", "code": "A"}
+            self.assertEqual(t.fix_lookup(old_link)["url"], "https://0315326196hd.easyinvoice.com.vn/Search/Index")
+        finally:
             srv.shutdown()
             srv.server_close()
 

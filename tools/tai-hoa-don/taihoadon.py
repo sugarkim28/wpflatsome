@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.3.0"
+__version__ = "4.3.1"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -718,7 +718,8 @@ def _to_dt(v):
 # Nhà cung cấp giải pháp HĐĐT (MSTTCGP trong XML) → (tên, trang tra cứu hoá đơn gốc).
 PROVIDERS = {
     "0101243150": ("MISA meInvoice", "https://www.meinvoice.vn/tra-cuu/?sc="),  # ?sc=<mã> mở thẳng hoá đơn
-    "0105987432": ("EasyInvoice (SoftDreams)", "http://{nbmst}hd.easyinvoice.com.vn"),  # trang riêng từng người bán
+    # trang riêng từng người bán (đúng địa chỉ trang tra cứu thật: https, /Search/Index)
+    "0105987432": ("EasyInvoice (SoftDreams)", "https://{nbmst}hd.easyinvoice.com.vn/Search/Index"),
     "0100109106": ("Viettel S-Invoice", "https://vinvoice.viettel.vn/utilities/invoice-search"),
     "0100684378": ("VNPT Invoice", ""),
     "0101360697": ("BKAV eHoadon", "https://van.ehoadon.vn/Lookup?InvoiceGUID="),
@@ -993,22 +994,28 @@ def easyinvoice_pdf(tra_cuu, tries=8):
     return easyinvoice_files(tra_cuu, tries, want_xml=False)["pdf"]
 
 
-# Đường dẫn tải XML của nút "Tải tệp XML" (hàm downloadXML trong file JS của trang tra cứu). Chưa xác minh được
-# trên trang thật nên để trống: không tự đoán đường dẫn. Khi có file JS thật thì điền vào đây.
-EASY_XML_PATHS = ()
+
+
+def easy_origin(url):
+    """https://<MST>hd.easyinvoice.com.vn từ link tra cứu (kể cả link cũ dạng http://… không có /Search/Index)."""
+    m = re.match(EASY_BASE_RE, url or "")
+    if not m:
+        return ""
+    return re.sub(r"^http://", "https://", m.group(0)) if ".easyinvoice." in m.group(0) else m.group(0)
 
 
 def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
     """Trả {'pdf': bytes|None, 'xml': bytes|None, 'xml_err': str}. Nút "Tải tệp XML" của trang tra cứu gọi
-    downloadXML('<token>'); chỉ tải XML khi đã biết đường dẫn thật (EASY_XML_PATHS).
+    downloadXML('<token>') (BrowserDetectShare.js của trang thật): POST /Invoice/DownloadXML {token} → {fileGuid,
+    fileName, msg} rồi tải /Invoice/Download?fileGuid=…&fileName=….
     EasyInvoice: mở trang tra cứu của người bán, tự giải captcha, tra bằng mã tra cứu rồi bấm
     "Tải PDF & đính kèm" như trình duyệt: gửi HTML hoá đơn lên /Invoice/DownloadPdfAndFileAttachFromAvailableHtml,
     nhận fileGuid và tải /Invoice/Download (PDF, hoặc ZIP gồm PDF + file đính kèm)."""
     import base64
     import html as H
-    base = (tra_cuu.get("url") or "").rstrip("/")
+    base = easy_origin(tra_cuu.get("url"))
     code = tra_cuu.get("code") or ""
-    if not re.fullmatch(EASY_BASE_RE, base):
+    if not base:
         raise PortalError("Không xác định được trang tra cứu EasyInvoice của người bán")
     jar = http.cookiejar.CookieJar()
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
@@ -1031,10 +1038,10 @@ def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
 
     last = ""
     for _ in range(tries):
-        page = call("/").decode("utf-8", "replace")
+        page = call("/Search/Index").decode("utf-8", "replace")  # trang tra cứu thật
         form = re.search(r'<form[^>]*id="Search"[^>]*>(.*?)</form>', page, re.S | re.I)
-        if not form:  # trang tra cứu chính thức: <MST người bán>hd.easyinvoice.com.vn/Search/Index
-            page = call("/Search/Index").decode("utf-8", "replace")
+        if not form:
+            page = call("/").decode("utf-8", "replace")
             form = re.search(r'<form[^>]*id="Search"[^>]*>(.*?)</form>', page, re.S | re.I)
         fields = {}
         for tag in re.findall(r"<input[^>]*>", form.group(1) if form else page):
@@ -1046,9 +1053,8 @@ def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
         if not cap:
             last = "không đọc được captcha"
             continue
-        # Nút "Tra cứu" của trang (script trong trang): typeSearch == 'fKeySearch' là tra theo mã tra cứu.
-        # Ô này mặc định có thể để trống → điền rõ để máy chủ tra theo mã.
-        fields.update(FKey=code, Capcha=cap, typeSearch=fields.get("typeSearch") or "fKeySearch")
+        # Gửi đúng như trình duyệt: các ô của biểu mẫu giữ nguyên (typeSearch để trống như trang thật).
+        fields.update(FKey=code, Capcha=cap)
         res = call("/Search/Search", fields).decode("utf-8", "replace")
         token = re.search(r"downloadPdfAndFileAttachFromAvailableHtml\('([^']+)'\)", res)
         if not token:
@@ -1071,15 +1077,20 @@ def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
         out = {"pdf": None, "xml": None, "xml_err": ""}
         if want_xml:
             xt = re.search(r"downloadXML\('([^']+)'\)", res)
-            for pth in (EASY_XML_PATHS if xt else ()):
-                got = _pick_file(call(pth + urllib.parse.quote(xt.group(1), safe="")), "xml")
-                if got:
-                    out["xml"] = got
-                    break
-            if not out["xml"]:
-                out["xml_err"] = ("trang tra cứu không có nút Tải tệp XML" if not xt else
-                                  "chưa tự tải được XML gốc EasyInvoice – tải tay bằng nút Tải tệp XML rồi Gắn HĐ gốc có sẵn"
-                                  if not EASY_XML_PATHS else "EasyInvoice không trả file XML")
+            if not xt:
+                out["xml_err"] = "trang tra cứu không có nút Tải tệp XML"
+            else:
+                try:
+                    jx = json.loads(call("/Invoice/DownloadXML", {"token": xt.group(1)}, ajax=True).decode("utf-8", "replace"))
+                except ValueError:
+                    jx = {}
+                if jx.get("msg"):
+                    out["xml_err"] = "EasyInvoice: %s" % jx["msg"]
+                elif jx.get("fileGuid"):
+                    out["xml"] = _pick_file(call("/Invoice/Download?" + urllib.parse.urlencode(
+                        {"fileGuid": jx["fileGuid"], "fileName": jx.get("fileName", "")})), "xml")
+                if not out["xml"] and not out["xml_err"]:
+                    out["xml_err"] = "EasyInvoice không trả file XML"
         if not want_pdf:
             return out
         js = call("/Invoice/DownloadPdfAndFileAttachFromAvailableHtml",
@@ -1298,6 +1309,14 @@ def _new_pdfs(folder, names, since, seen):
         except OSError:
             continue
     return files
+
+
+def fix_lookup(t):
+    """Sửa link tra cứu đã lưu từ bản cũ: EasyInvoice phải là https://<MST>hd.easyinvoice.com.vn/Search/Index."""
+    t = dict(t or {})
+    if t.get("ncc_mst") == "0105987432" and easy_origin(t.get("url")):
+        t["url"] = easy_origin(t["url"]) + "/Search/Index"
+    return t
 
 
 def can_fetch_pdf(tra_cuu):
@@ -3644,7 +3663,7 @@ def query_invoices(out_root, mst, f):
                                                      os.path.exists(os.path.join(base, e["pdf"])) else ""),
             "xml_goc": e.get("xml_goc") if e.get("xml_goc") and os.path.exists(os.path.join(base, e["xml_goc"])) else "",
             "need_goc": needs_original(base, e), "xml_url": browser_xml_url(e.get("tra_cuu")),
-            "tra_cuu": e.get("tra_cuu") or {}, "pdf_url": browser_pdf_url(e.get("tra_cuu")),
+            "tra_cuu": fix_lookup(e.get("tra_cuu")), "pdf_url": browser_pdf_url(e.get("tra_cuu")),
             "can_fetch": can_fetch_pdf(e.get("tra_cuu"))[0], "cqt": _cqt_rel(base, e)})
     rows.sort(key=lambda r: r.pop("_sort"))
     return rows
