@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.3.7"
+__version__ = "4.3.8"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -4796,6 +4796,8 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
       <div class="tpane" id="t-xml"><h3>Đọc và xem hoá đơn XML</h3>
         Chọn file hoá đơn XML: <input type="file" id="xmlFile" accept=".xml,text/xml">
         <button class="sec sm hide" id="xmlPrint" onclick="$('xmlFrame').contentWindow.print()">In / Lưu PDF</button>
+        <a class="lk hide" id="xmlDl" title="Tải file XML (nén .zip để trình duyệt không chặn)">Tải file XML</a>
+        <a class="lk hide" id="xmlCqt" target="_blank" title="Bản thể hiện hoá đơn theo dữ liệu cổng thuế (hoadondientu.gdt.gov.vn)">PDF thuế</a>
         <div class="err" id="xmlErr"></div>
         <iframe id="xmlFrame" class="hide" style="width:100%;height:75vh;border:1px solid var(--line);border-radius:8px;margin-top:10px;background:#fff"></iframe></div>
       <div class="tpane hide" id="t-mst"><h3>Kiểm tra thông tin / tình trạng MST</h3>
@@ -5437,7 +5439,7 @@ function download(name, b64, type) {
   const a = el('a'); a.href = URL.createObjectURL(new Blob([u], {type})); a.download = name; document.body.append(a); a.click(); a.remove();
 }
 $('xmlFile').onchange = async () => {
-  const f = $('xmlFile').files[0]; if (!f) return; $('xmlErr').textContent = '';
+  const f = $('xmlFile').files[0]; if (!f) return; $('xmlErr').textContent = ''; hide('xmlDl'); hide('xmlCqt');
   try { const d = await post('/api/tool/xml-view', {data: await readB64(f)});
         $('xmlFrame').srcdoc = d.html; show('xmlFrame'); show('xmlPrint'); }
   catch (e) { $('xmlErr').textContent = e.message; hide('xmlFrame'); hide('xmlPrint'); }
@@ -5725,18 +5727,18 @@ function fileLink(rel, text) {
   a.target = '_blank';
   if (!/\.xml$/i.test(rel)) return a;
   // XML: bấm để xem ngay trong Tiện ích › Đọc hoá đơn XML; nút ⇩ tải file (nén .zip để trình duyệt không chặn)
-  const url = a.href; a.title = 'Xem hoá đơn XML trong Tiện ích';
-  a.onclick = ev => { ev.preventDefault(); openXml(url, rel.split('/').pop()); };
-  const dl = el('a', 'lk', '⇩'); dl.href = url + '&zip=1'; dl.title = 'Tải file ' + text + ' (.zip)';
-  const w = el('span', 'nw'); w.append(a, dl); return w;
+  const url = a.href; a.title = 'Xem hoá đơn XML trong Tiện ích (có nút tải file XML)';
+  a.onclick = ev => { ev.preventDefault(); openXml(url, rel.split('/').pop(), a.dataset.cqt); };
+  return a;
 }
-async function openXml(url, name) {
+async function openXml(url, name, cqt) {
   tab('TI'); document.querySelector('.tmenu a[data-t=xml]').click();
-  $('xmlErr').textContent = 'Đang mở ' + name + '…'; hide('xmlFrame'); hide('xmlPrint');
+  $('xmlErr').textContent = 'Đang mở ' + name + '…'; hide('xmlFrame'); hide('xmlPrint'); hide('xmlDl'); hide('xmlCqt');
   try { const res = await fetch(url, {credentials: 'same-origin'}); if (!res.ok) throw new Error('Không mở được file (' + res.status + ')');
         const u = new Uint8Array(await res.arrayBuffer()); let bin = ''; for (let i = 0; i < u.length; i += 8192) bin += String.fromCharCode.apply(null, u.subarray(i, i + 8192));
         const d = await post('/api/tool/xml-view', {data: btoa(bin)});
-        $('xmlErr').textContent = name; $('xmlFrame').srcdoc = d.html; show('xmlFrame'); show('xmlPrint'); }
+        $('xmlErr').textContent = ''; $('xmlFrame').srcdoc = d.html; show('xmlFrame'); show('xmlPrint');
+        $('xmlDl').href = url + '&zip=1'; show('xmlDl'); if (cqt) { $('xmlCqt').href = cqt; show('xmlCqt'); } }
   catch (e) { $('xmlErr').textContent = e.message; }
 }
 
@@ -5748,7 +5750,7 @@ const HCOLS = [
   {k: 'ck', t: 'CK.TM', f: 'num', n: 1, sum: 1}, {k: 'phi', t: 'Phí', f: 'num', n: 1, sum: 1},
   {k: 'tt', t: 'Tổng T.Toán', f: 'num', n: 1, sum: 1}, {k: 'tthai', t: 'T.thái HĐ', f: 'pick', cls: 'nw'},
   {k: 'kq', t: 'Kết quả k.tra', f: 'pick', cls: 'nw'}, {k: 'duyet', t: 'Duyệt nội bộ', f: 'pick'}, {k: 'dv', t: 'HĐ DV', f: 'bool'},
-  {k: 'mat_hang', t: 'Mặt hàng', f: 'text', cls: 'mh'}, {k: 'note', t: 'Ghi chú', f: 'text'}, {k: '_ct', t: 'Chi tiết'}];
+  {k: 'mat_hang', t: 'Mặt hàng', f: 'text', cls: 'mh'}, {k: 'note', t: 'Ghi chú', f: 'text'}, {k: '_ct', t: 'Chi tiết'}, {k: '_goc', t: 'HĐ gốc'}];
 let hSort = {k: 'ngay', dir: 1}, hColF = {}, hLastClick = null, hHide = new Set();
 // Cột CK.TM / Phí toàn số 0 (thường gặp) thì ẩn để bảng vừa màn hình; có số khác 0 là hiện lại.
 const visCols = () => HCOLS.filter(c => !hHide.has(c.k));
@@ -5785,9 +5787,9 @@ function buildHead() {
   all.onchange = () => { const v = viewRows(); if (all.checked) v.forEach(r => hSel.add(r.key)); else v.forEach(r => hSel.delete(r.key)); renderInv(); };
   const c0 = el('th'); c0.append(all); r1.append(c0); r2.append(el('th'));
   visCols().forEach(c => {
-    const h = el('th', (c.n ? 'n ' : '') + (c.k !== '_ct' ? 's' : ''), c.t);
+    const h = el('th', (c.n ? 'n ' : '') + (c.k[0] !== '_' ? 's' : ''), c.t);
     if (hSort.k === c.k) h.textContent += hSort.dir > 0 ? ' ▲' : ' ▼';
-    if (c.k !== '_ct') { h.title = 'Bấm để sắp xếp'; h.onclick = () => { hSort = {k: c.k, dir: hSort.k === c.k ? -hSort.dir : 1}; saveGrid(); buildHead(); renderInv(); }; }
+    if (c.k[0] !== '_') { h.title = 'Bấm để sắp xếp'; h.onclick = () => { hSort = {k: c.k, dir: hSort.k === c.k ? -hSort.dir : 1}; saveGrid(); buildHead(); renderInv(); }; }
     r1.append(h);
     const f = el('th'); r2.append(f);
     if (c.f === 'pick' || c.f === 'bool') {
@@ -5837,6 +5839,7 @@ function renderInv() {
       if (c.k === 'note') { const note = el('input', 'note'); note.value = r.note; note.placeholder = 'ghi chú…'; note.disabled = !can('sua');
         note.onchange = () => updInv(r, {note: note.value}); tr.insertCell().append(note); return; }
       if (c.k === '_ct') { renderDetails(tr, r, kind); return; }
+      if (c.k === '_goc') { renderOriginal(tr, r, kind); return; }
       const td = tr.insertCell(); td.className = (c.n ? 'n ' : '') + (c.cls || '');
       const val = c.sum ? fmt(r[c.k]) : (r[c.k] ?? '');
       if (c.cls === 'ten' || c.cls === 'mh') { const d = el('div', 'clamp', val); d.title = val; td.append(d); }  // tối đa 2 dòng
@@ -5857,10 +5860,11 @@ function renderInv() {
   selInfo(view);
 }
 function renderDetails(tr, r, kind) {
+    // Chi tiết: chỉ để xem XML (mở trong Tiện ích, có PDF thuế + tải file) và link tra cứu hoá đơn gốc nếu có
     const ct = tr.insertCell(); ct.className = 'ct';
-    if (r.xml) ct.append(fileLink(r.xml, 'XML')); if (r.html) ct.append(fileLink(r.html, 'HTML')); if (r.pdf) ct.append(fileLink(r.pdf, 'PDF gốc')); if (r.xml_goc) ct.append(fileLink(r.xml_goc, 'XML gốc'));
-    const cq = el('a', 'lk', 'PDF thuế'); cq.target = '_blank'; cq.title = 'Bản thể hiện hoá đơn theo dữ liệu cổng thuế (hoadondientu.gdt.gov.vn)';
-    cq.href = '/cqt?' + new URLSearchParams({k: KEY, mst: $('hMst').value, kind, key: r.key}); ct.append(cq);
+    if (r.xml) { const x = fileLink(r.xml, 'XML'); x.dataset.cqt = '/cqt?' + new URLSearchParams({k: KEY, mst: $('hMst').value, kind, key: r.key}); ct.append(x); }
+    else { const cq = el('a', 'lk', 'PDF thuế'); cq.target = '_blank'; cq.title = 'Bản thể hiện hoá đơn theo dữ liệu cổng thuế';  // chưa có XML
+           cq.href = '/cqt?' + new URLSearchParams({k: KEY, mst: $('hMst').value, kind, key: r.key}); ct.append(cq); }
     const t = r.tra_cuu || {};
     if (t.url || t.code) {
       const a = el('a', 'lk', 'Tra cứu'); a.href = '#';
@@ -5871,6 +5875,12 @@ function renderDetails(tr, r, kind) {
         if (t.url) window.open(t.url, '_blank'); else prompt((t.ncc || '') + ' – mã tra cứu', t.code); };
       ct.append(a);
     }
+}
+function renderOriginal(tr, r, kind) {
+    // HĐ gốc: file người bán phát hành (PDF/XML gốc) + tải tự động / gắn tay
+    const ct = tr.insertCell(); ct.className = 'ct';
+    if (r.pdf) ct.append(fileLink(r.pdf, 'PDF gốc')); if (r.xml_goc) ct.append(fileLink(r.xml_goc, 'XML gốc'));
+    const t = r.tra_cuu || {};
     const onlyXml = r.pdf && !r.xml_goc && r.can_fetch;  // đã có PDF gốc, còn thiếu XML gốc
     if ((r.need_goc && (r.pdf_url || r.can_fetch)) || (onlyXml && r.xml_goc_loi)) {
       const label = onlyXml ? (r.xml_goc_loi ? 'Thử lại XML gốc' : 'Tải XML gốc') : 'Tải HĐ gốc';
