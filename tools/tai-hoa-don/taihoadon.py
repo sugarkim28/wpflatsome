@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.4.2"
+__version__ = "4.4.3"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -730,7 +730,7 @@ PROVIDERS = {
     "0101300842": ("Thái Sơn E-invoice", "https://einvoice.vn/tra-cuu"),
     "0100727825": ("FAST e-Invoice", "https://einvoice.fast.com.vn/"),
     "0309478306": ("TS24 (xuathoadon.vn)", "https://tracuu.xuathoadon.vn/"),  # mã tra cứu = mã của cơ quan thuế
-    # tra bằng MST bên bán + "Số bảo mật" (TTKhac sobaomat) – trang tra cứu thật, chưa tự tải (chưa có đủ mã gọi API)
+    # tra bằng MST bên bán + "Số bảo mật" (TTKhac sobaomat), không captcha – tự tải PDF + XML
     "0106026495": ("M-invoice", "https://tracuuhoadon.minvoice.com.vn/tra-cuu-hoa-don"),
     # trang tra cứu bắt Google reCAPTCHA – chỉ mở trang + chép mã (TTKhac MTCuu)
     "0315638251": ("HTInvoice", "https://laphoadon.htinvoice.vn/TraCuu"),
@@ -775,6 +775,8 @@ def lookup_info(info, nbmst=None):
     url = url.replace("{nbmst}", seller.split("-")[0])
     out = {"ncc": name or (("MST " + mst) if mst else ""), "url": url, "field": field, "code": code,
            "ncc_mst": mst.split("-")[0]}
+    if mst.startswith("0106026495") and seller:
+        out["nbmst"] = seller  # M-invoice tra bằng MST bên bán (đúng như ghi trong XML, có thể có đuôi -xxx) + số bảo mật
     if guid:
         out["guid"] = guid
         if GUID_RE.fullmatch(guid):  # BKAV: trang Lookup?InvoiceGUID= mở thẳng hoá đơn, không captcha
@@ -806,7 +808,7 @@ def _is_xml(data):
 def _pick_file(data, typ):
     """Nội dung tải về → file đúng loại (PDF / XML), kể cả khi nằm trong ZIP. Không đúng loại thì trả None."""
     ok = (lambda d: d[:4] == b"%PDF") if typ == "pdf" else _is_xml
-    if ok(data):
+    if data[:2] != b"PK" and ok(data):  # ZIP lưu không nén có thể chứa "<HDon" → xét ZIP trước
         return data
     if data[:2] == b"PK":
         try:
@@ -1294,10 +1296,44 @@ def ts24_files(t, want_pdf=True, want_xml=True):
     return out
 
 
+# ---- M-invoice (tracuuhoadon.minvoice.com.vn): tra bằng MST bên bán + "Số bảo mật", không captcha ----
+MINVOICE_API = "https://tracuuhoadon.minvoice.com.vn/api"
+
+
+def minvoice_url(masothue, sobaomat, typ):
+    """Đúng như mã trang tra cứu thật (index-CdCEbGmx.js / index-BPrvCfnD.js / index-CHqM4iCq.js):
+    PDF: GET api/Search/SearchInvoice?masothue=<MST bên bán>&sobaomat=<số bảo mật>&type=PDF&inchuyendoi=false
+    XML: GET api/Search/DownloadXml?masothue=<MST bên bán>&sobaomat=<số bảo mật> (trả file .zip chứa XML)."""
+    if typ == "pdf":
+        q = {"masothue": masothue, "sobaomat": sobaomat, "type": "PDF", "inchuyendoi": "false"}
+        return MINVOICE_API + "/Search/SearchInvoice?" + urllib.parse.urlencode(q)
+    return MINVOICE_API + "/Search/DownloadXml?" + urllib.parse.urlencode({"masothue": masothue, "sobaomat": sobaomat})
+
+
+def minvoice_files(t, want_pdf=True, want_xml=True):
+    seller = str(t.get("nbmst") or "").strip()
+    if not seller or not t.get("code"):
+        raise PortalError("Thiếu MST bên bán hoặc số bảo mật của hoá đơn M-invoice – bấm Tra cứu để xem")
+    out = {"pdf": None, "xml": None, "xml_err": "", "pdf_check": True}
+    if want_xml:
+        try:
+            out["xml"] = _pick_file(_http_get(minvoice_url(seller, t["code"], "xml"), 60), "xml")
+            if not out["xml"]:
+                out["xml_err"] = "M-invoice không trả file XML"
+        except PortalError as e:
+            out["xml_err"] = str(e)
+    if want_pdf:
+        out["pdf"] = _pick_file(_http_get(minvoice_url(seller, t["code"], "pdf"), 60), "pdf")
+        if not out["pdf"]:
+            raise PortalError("M-invoice không trả file PDF cho số bảo mật %s" % t["code"])
+    return out
+
+
 # MST nhà cung cấp → hàm tải PDF gốc (nhận thông tin tra cứu). Viettel, VNPT… chưa tự động được.
 PDF_FETCHERS = {"0101243150": lambda t: misa_pdf(t["code"]), "0105987432": easyinvoice_pdf,
                 "0309478306": lambda t: ts24_files(t, want_xml=False)["pdf"],
-                "0101360697": lambda t: bkav_files(t, want_xml=False)["pdf"]}
+                "0101360697": lambda t: bkav_files(t, want_xml=False)["pdf"],
+                "0106026495": lambda t: minvoice_files(t, want_xml=False)["pdf"]}
 
 
 def _misa_both(t, want_pdf=True, want_xml=True):
@@ -1312,7 +1348,7 @@ def _misa_both(t, want_pdf=True, want_xml=True):
 
 # MST nhà cung cấp → hàm tải cả PDF và XML gốc từ trang tra cứu: trả {'pdf', 'xml', 'xml_err'}.
 ORIGINAL_FETCHERS = {"0101243150": _misa_both, "0105987432": easyinvoice_files, "0309478306": ts24_files,
-                     "0101360697": bkav_files}
+                     "0101360697": bkav_files, "0106026495": minvoice_files}
 
 
 # Link tải PDF gốc mà trình duyệt của người dùng mở được (MISA chặn chương trình tự động nhưng không chặn trình duyệt).
@@ -1409,6 +1445,8 @@ def fix_lookup(t, nbmst=None):
     """Sửa link tra cứu đã lưu từ bản cũ: EasyInvoice phải là https://<MST người bán>hd.easyinvoice.com.vn/Search/Index
     (bản cũ có thể thiếu MST → https://hd.easyinvoice.com.vn, trang báo lỗi 404)."""
     t = dict(t or {})
+    if t.get("ncc_mst") == "0106026495" and not t.get("nbmst") and nbmst:
+        t["nbmst"] = str(nbmst).strip()
     if t.get("ncc_mst") == "0105987432":
         origin = easy_origin(t.get("url"))
         if (not origin or re.match(r"https?://hd\.", origin)) and nbmst:
@@ -5983,7 +6021,7 @@ async function bulkUpdate(fields) {
 async function bulkPdf() {
   const sel = hRows.filter(r => hSel.has(r.key)), src = sel.length ? sel : hRows;
   let need = src.filter(r => r.need_goc && (r.pdf_url || r.can_fetch));
-  if (!need.length) { $('hErr').textContent = 'Không có hoá đơn nào cần tải hoá đơn gốc (hiện tự tải được: MISA, EasyInvoice, TS24, BKAV). Nhà cung cấp khác: bấm "Tra cứu" để xem trên trang của nhà cung cấp.'; return; }
+  if (!need.length) { $('hErr').textContent = 'Không có hoá đơn nào cần tải hoá đơn gốc (hiện tự tải được: MISA, EasyInvoice, TS24, BKAV, M-invoice). Nhà cung cấp khác: bấm "Tra cứu" để xem trên trang của nhà cung cấp.'; return; }
   // Phần mềm tự tải (bản web: mọi nhà cung cấp); MISA bản máy: trình duyệt tải về Downloads rồi phần mềm tự gắn.
   const auto = need.filter(r => r.can_fetch && (me.server || !r.pdf_url || !browserFirst(r)));
   if (auto.length) {

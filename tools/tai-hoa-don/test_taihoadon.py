@@ -852,7 +852,51 @@ class Tests(unittest.TestCase):
                          ("M-invoice", "Số bảo mật", "3F53CF54116EB503", "https://tracuuhoadon.minvoice.com.vn/tra-cuu-hoa-don"))
         ht = t.lookup_info({"msttcgp": "0315638251", "ttkhac": {"DDTC": "laphoadon.htinvoice.vn/TraCuu", "MTCuu": "66AC9A65"}})
         self.assertEqual((ht["ncc"], ht["field"], ht["code"]), ("HTInvoice", "Mã tra cứu", "66AC9A65"))
-        self.assertFalse(t.can_fetch_pdf(mi)[0] or t.can_fetch_pdf(ht)[0])  # chưa tự tải – không bịa API
+        self.assertFalse(t.can_fetch_pdf(ht)[0])  # HTInvoice: reCAPTCHA – không tự tải
+        self.assertTrue(t.can_fetch_pdf(mi)[0])
+        mi = t.lookup_info({"msttcgp": "0106026495", "nb": {"MST": "0311656059"}, "ttkhac": {"sobaomat": "3F53CF54116EB503"}})
+        self.assertEqual(mi["nbmst"], "0311656059")
+        self.assertEqual(t.fix_lookup({"ncc_mst": "0106026495", "code": "X"}, "0311656059")["nbmst"], "0311656059")
+
+    def test_minvoice_files(self):
+        """M-invoice: GET api/Search/SearchInvoice (PDF) và api/Search/DownloadXml (ZIP chứa XML) theo masothue + sobaomat."""
+        import unittest.mock as m
+        seen = []
+
+        class Mi(BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_GET(self):
+                u = urllib.parse.urlparse(self.path)
+                q = dict(urllib.parse.parse_qsl(u.query))
+                seen.append((u.path, q))
+                ok = q.get("masothue") == "0311656059" and q.get("sobaomat") == "3F53CF54116EB503"
+                if ok and u.path == "/api/Search/SearchInvoice" and q.get("type") == "PDF" and q.get("inchuyendoi") == "false":
+                    body, ctype = b"%PDF-1.4 minvoice", "application/pdf"
+                elif ok and u.path == "/api/Search/DownloadXml":
+                    buf = io.BytesIO()
+                    with zipfile.ZipFile(buf, "w") as z:
+                        z.writestr("invoice_xml_0311656059_3F53CF54116EB503.xml", '<?xml version="1.0"?><HDon>mi</HDon>')
+                    body, ctype = buf.getvalue(), "application/zip"
+                else:
+                    return self.send_error(400)
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.end_headers()
+                self.wfile.write(body)
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), Mi)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            with m.patch.object(t, "MINVOICE_API", "http://127.0.0.1:%d/api" % srv.server_port):
+                got = t.minvoice_files({"ncc_mst": "0106026495", "code": "3F53CF54116EB503", "nbmst": "0311656059"})
+                with self.assertRaisesRegex(t.PortalError, "MST bên bán"):
+                    t.minvoice_files({"ncc_mst": "0106026495", "code": "3F53CF54116EB503"})
+        finally:
+            srv.shutdown()
+            srv.server_close()
+        self.assertEqual((got["pdf"], got["xml"]), (b"%PDF-1.4 minvoice", b'<?xml version="1.0"?><HDon>mi</HDon>'))
+        self.assertTrue(got["pdf_check"])
 
     def test_browser_download_settings(self):
         base = os.path.join(self.tmp, "LocalAppData")
