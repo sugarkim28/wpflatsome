@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.4.0"
+__version__ = "4.4.1"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -1204,6 +1204,7 @@ def bkav_files(t, want_pdf=True, want_xml=True):
             raise PortalError("Không kết nối được van.ehoadon.vn: %s" % getattr(e, "reason", e))
 
     page = call(url).decode("utf-8", "replace")
+    _save_debug("bkav-tra-cuu.html", page)
     form = re.search(r'<form[^>]*id="formMain"[^>]*>(.*)</form>', page, re.S | re.I)
     if not form or "__VIEWSTATE" not in page:
         raise PortalError("BKAV không mở được trang hoá đơn (InvoiceGUID %s)" % guid)
@@ -1215,29 +1216,44 @@ def bkav_files(t, want_pdf=True, want_xml=True):
             val = re.search(r'value="([^"]*)"', tag)
             fields[H.unescape(name.group(1))] = H.unescape(val.group(1)) if val else ""
 
+    def direct_links(data, typ):
+        """Link tải có sẵn trong trang: nút PDF dạng onclick="DownloadFile('C2/6T/<tên>.pdf',1)" (hàm của
+        InvoiceLookupDetails.js → /DownloadFile?FilePath=<đường dẫn>&BFType=<loại>) và khung xem
+        <object data="/Invoice_View/<đường dẫn>.pdf?v=…">."""
+        links = [H.unescape(m) for m in re.findall(r"(/DownloadFile\?FilePath=[^\"'<>\s]+)", data)]
+        for fp, bf in re.findall(r"DownloadFile\(\s*['\"]([^'\"]+)['\"]\s*,\s*['\"]?([^'\")]*)['\"]?\s*\)", data):
+            links.append("/DownloadFile?FilePath=" + H.unescape(fp) + "&BFType=" + H.unescape(bf))
+        links += [H.unescape(m) for m in re.findall(r"""<object[^>]*\bdata=["']([^"']+)["']""", data, re.I)]
+        other = ".xml" if typ == "pdf" else ".pdf"
+        return [u for u in dict.fromkeys(links) if "." + typ in u.lower() or other not in u.lower()]
+
+    def fetch_links(links, typ):
+        for link in links:
+            got = _pick_file(call(urllib.parse.urljoin(BKAV_BASE + "/", link)), typ)
+            if got:
+                return got
+        return None
+
     def grab(target, typ):
+        got = fetch_links(direct_links(page, typ), typ)  # mẫu trang có sẵn link tải PDF – dùng trước
+        if got:
+            return got
+        if target not in page:
+            return None
         data = call(url, dict(fields, __EVENTTARGET=target, __EVENTARGUMENT=""))
         _save_debug("bkav-%s.html" % typ, data)  # chẩn đoán: trang BKAV trả về sau khi bấm nút tải
         got = _pick_file(data, typ)
         if got:
             return got
-        links = [H.unescape(m.decode()) for m in re.findall(rb"(/DownloadFile\?FilePath=[^\"'<>\s]+)", data)]
-        # trang trả lời gọi hàm JS DownloadFile('<đường dẫn>', '<loại>') – trong InvoiceLookupDetails.js của BKAV:
-        # window.location.href = "/DownloadFile?FilePath=" + filePath + "&BFType=" + BFType
-        for fp, bf in re.findall(rb"DownloadFile\(\s*['\"]([^'\"]+)['\"]\s*,\s*['\"]?([^'\")]*)['\"]?\s*\)", data):
-            links.append("/DownloadFile?FilePath=" + H.unescape(fp.decode()) + "&BFType=" + H.unescape(bf.decode()))
-        for link in dict.fromkeys(links):
-            got = _pick_file(call(urllib.parse.urljoin(BKAV_BASE + "/", link)), typ)
-            if got:
-                return got
-        return None
+        tried = direct_links(page, typ)
+        return fetch_links([u for u in direct_links(data.decode("utf-8", "replace"), typ) if u not in tried], typ)
     out = {"pdf": None, "xml": None, "xml_err": "", "pdf_check": True}
     if want_xml:
         out["xml"] = grab("LinkDownXML", "xml")
         if not out["xml"]:
             out["xml_err"] = "BKAV không trả file XML"
     if want_pdf:
-        out["pdf"] = grab("lbtDownloadAsPdf", "pdf")
+        out["pdf"] = grab("lbtDownloadAsPdf", "pdf")  # không dùng "Hóa đơn chuyển đổi" (bản chuyển đổi, không phải gốc)
         if not out["pdf"]:
             raise PortalError("BKAV không trả file PDF cho hoá đơn %s" % guid)
     return out

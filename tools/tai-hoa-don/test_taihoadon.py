@@ -746,6 +746,7 @@ class Tests(unittest.TestCase):
                 '<input type="hidden" name="__VIEWSTATE" value="VS123">'
                 '<input type="hidden" name="UcHtmlPdfToolbar$txtIsToolbarDisplay" value="True">'
                 '<input id="btnDownload" type="image" src="x.png">'
+                '<a id="LinkDownXML" href="javascript:__doPostBack(\'LinkDownXML\',\'\')">XML</a>'
                 '<a id="LinkDownPDF" onclick="javascript:__doPostBack(\'lbtDownloadAsPdf\',\'\');">PDF</a>'
                 '</form></body></html>' % guid).encode()
 
@@ -795,6 +796,54 @@ class Tests(unittest.TestCase):
         lk = t.lookup_info({"msttcgp": "0101360697", "dlhdon_id": guid, "ttkhac": {"Mã tra cứu": "Q3ROP3MUAH9"}})
         self.assertEqual((lk["guid"], lk["url"]), (guid, "https://van.ehoadon.vn/Lookup?InvoiceGUID=" + guid))
         self.assertTrue(t.can_fetch_pdf(lk)[0])
+
+    def test_bkav_direct_pdf_link(self):
+        """Mẫu trang BKAV mới: nút PDF là onclick="DownloadFile('C2/6T/<tên>.pdf',1)" (có sẵn trong trang, không gửi biểu mẫu)."""
+        import unittest.mock as m
+        guid = "98f94562-73af-4a23-a42d-7577f9efeb88"
+        page = ('<html><body><form method="post" action="/Lookup?InvoiceGUID=%s" id="formMain">'
+                '<input type="hidden" name="__EVENTTARGET" value=""><input type="hidden" name="__VIEWSTATE" value="VS">'
+                '<a id="LinkDownXML" href="javascript:__doPostBack(\'LinkDownXML\',\'\')">XML</a>'
+                '<li><a id="LinkDownPDF" onclick="DownloadFile(\'C2/6T/C26TTV-00000020-X-DPH.pdf\',1);">PDF</a></li>'
+                '<a id="lnkDownloadPDFConversion" href="javascript:__doPostBack(\'lnkDownloadPDFConversion\',\'\')">CĐ</a>'
+                '<span id="spanContent"><object data="/Invoice_View/C2/6T/C26TTV-00000020-X-DPH.pdf?v=1" type="application/pdf">'
+                '</object></span></form></body></html>' % guid).encode()
+        gets = []
+
+        class Bkav(BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def _out(self, body, ctype="text/html"):
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.end_headers()
+                self.wfile.write(body)
+
+            def do_GET(self):
+                gets.append(self.path)
+                if self.path == "/Lookup?InvoiceGUID=" + guid:
+                    return self._out(page)
+                if self.path == "/DownloadFile?FilePath=C2/6T/C26TTV-00000020-X-DPH.pdf&BFType=1":
+                    return self._out(b"%PDF-1.4 goc", "application/pdf")
+                if self.path.startswith("/DownloadFile?FilePath=x.xml"):
+                    return self._out(b'<?xml version="1.0"?><HDon>x</HDon>', "text/xml")
+                self.send_error(404)
+
+            def do_POST(self):
+                form = dict(urllib.parse.parse_qsl(self.rfile.read(int(self.headers["Content-Length"])).decode()))
+                if form.get("__EVENTTARGET") == "LinkDownXML":
+                    return self._out(b"<script>DownloadFile('x.xml', 2);</script>")
+                self.send_error(500)
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), Bkav)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            with m.patch.object(t, "BKAV_BASE", "http://127.0.0.1:%d" % srv.server_port):
+                got = t.bkav_files({"ncc_mst": "0101360697", "guid": guid})
+        finally:
+            srv.shutdown()
+            srv.server_close()
+        self.assertEqual((got["pdf"], got["xml"]), (b"%PDF-1.4 goc", b'<?xml version="1.0"?><HDon>x</HDon>'))
 
     def test_browser_download_settings(self):
         base = os.path.join(self.tmp, "LocalAppData")
