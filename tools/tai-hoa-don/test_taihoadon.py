@@ -845,6 +845,15 @@ class Tests(unittest.TestCase):
             srv.server_close()
         self.assertEqual((got["pdf"], got["xml"]), (b"%PDF-1.4 goc", b'<?xml version="1.0"?><HDon>x</HDon>'))
 
+    def test_lookup_minvoice_htinvoice(self):
+        """M-invoice: mã = TTKhac sobaomat (tra bằng MST bên bán + số bảo mật); HTInvoice: TTKhac MTCuu (trang có reCAPTCHA)."""
+        mi = t.lookup_info({"msttcgp": "0106026495", "ttkhac": {"ten_cty": "X", "sobaomat": "3F53CF54116EB503"}})
+        self.assertEqual((mi["ncc"], mi["field"], mi["code"], mi["url"]),
+                         ("M-invoice", "Số bảo mật", "3F53CF54116EB503", "https://tracuuhoadon.minvoice.com.vn/tra-cuu-hoa-don"))
+        ht = t.lookup_info({"msttcgp": "0315638251", "ttkhac": {"DDTC": "laphoadon.htinvoice.vn/TraCuu", "MTCuu": "66AC9A65"}})
+        self.assertEqual((ht["ncc"], ht["field"], ht["code"]), ("HTInvoice", "Mã tra cứu", "66AC9A65"))
+        self.assertFalse(t.can_fetch_pdf(mi)[0] or t.can_fetch_pdf(ht)[0])  # chưa tự tải – không bịa API
+
     def test_browser_download_settings(self):
         base = os.path.join(self.tmp, "LocalAppData")
         chrome = os.path.join(base, "Google", "Chrome", "User Data")

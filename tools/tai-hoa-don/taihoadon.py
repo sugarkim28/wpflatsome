@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.4.1"
+__version__ = "4.4.2"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -730,10 +730,16 @@ PROVIDERS = {
     "0101300842": ("Thái Sơn E-invoice", "https://einvoice.vn/tra-cuu"),
     "0100727825": ("FAST e-Invoice", "https://einvoice.fast.com.vn/"),
     "0309478306": ("TS24 (xuathoadon.vn)", "https://tracuu.xuathoadon.vn/"),  # mã tra cứu = mã của cơ quan thuế
+    # tra bằng MST bên bán + "Số bảo mật" (TTKhac sobaomat) – trang tra cứu thật, chưa tự tải (chưa có đủ mã gọi API)
+    "0106026495": ("M-invoice", "https://tracuuhoadon.minvoice.com.vn/tra-cuu-hoa-don"),
+    # trang tra cứu bắt Google reCAPTCHA – chỉ mở trang + chép mã (TTKhac MTCuu)
+    "0315638251": ("HTInvoice", "https://laphoadon.htinvoice.vn/TraCuu"),
+    # mã tra cứu chỉ in trên PDF, không có trong XML – chỉ mở trang
+    "0109282176": ("VinInvoice", "https://tracuu.vininvoice.vn/"),
 }
 # Tên trường "mã tra cứu" trong phần thông tin khác (TTKhac) của XML, đã bỏ dấu, chữ thường, bỏ khoảng trắng.
 LOOKUP_FIELDS = ("transactionid", "masobimat", "reservationcode", "matracuu", "fkey", "keysearch", "matc",
-                 "searchkey", "magiaodich")
+                 "searchkey", "magiaodich", "sobaomat", "mtcuu")
 
 
 def _plain(text):
@@ -755,6 +761,7 @@ def lookup_info(info, nbmst=None):
                 break
         if code:
             break
+    field = {"sobaomat": "Số bảo mật", "mtcuu": "Mã tra cứu"}.get(_plain(field), field)
     if mst.startswith("0101360697") and not code:
         field, code = "InvoiceGUID", info.get("dlhdon_id", "")
     guid = info.get("dlhdon_id", "") if mst.startswith("0101360697") else ""
@@ -3725,6 +3732,11 @@ def query_invoices(out_root, mst, f):
         if only_dv and not e.get("dv"):
             continue
         xml = e.get("xml", "") if e.get("xml") and os.path.exists(os.path.join(base, e["xml"])) else ""
+        tc = e.get("tra_cuu") or {}
+        if xml and tc.get("ncc", "").startswith("MST ") and tc.get("ncc_mst") in PROVIDERS:
+            # lưu từ bản chưa biết nhà cung cấp này → đọc lại XML một lần, lưu lại link + mã tra cứu
+            e["tra_cuu"] = lookup_info(parse_invoice_xml(os.path.join(base, xml)), (e.get("inv") or {}).get("nbmst"))
+            _set_entry(out_root, mst, kind, key, tra_cuu=e["tra_cuu"])
         html, pdf = _sibling(base, xml, ".html"), _sibling(base, xml, ".pdf")
         file_f = f.get("file") or ""
         if not pdf and e.get("pdf") and os.path.exists(os.path.join(base, e["pdf"])):
@@ -5919,9 +5931,9 @@ function renderDetails(tr, r, kind) {
     if (t.url || t.code) {
       const a = el('a', 'lk', 'Tra cứu'); a.href = '#';
       a.title = (t.ncc || '') + (t.code ? '\n' + t.field + ': ' + t.code + ' (đã chép, dán vào trang tra cứu)' : '') +
-                (t.ncc && t.ncc.startsWith('Viettel') ? '\nMST bên bán: ' + r.mst : '');
+                (twoBox(t) ? '\nMST bên bán: ' + r.mst : '');
       a.onclick = ev => { ev.preventDefault(); if (t.code && navigator.clipboard) navigator.clipboard.writeText(t.code).catch(() => {});
-        if (t.ncc && t.ncc.startsWith('Viettel')) lookupPanel(t, r);  // Viettel cần 2 ô: MST bên bán + mã số bí mật
+        if (twoBox(t)) lookupPanel(t, r);  // Viettel, M-invoice: trang tra cứu cần 2 ô – MST bên bán + mã
         if (t.url) window.open(t.url, '_blank'); else prompt((t.ncc || '') + ' – mã tra cứu', t.code); };
       ct.append(a);
     }
@@ -5948,10 +5960,11 @@ function renderOriginal(tr, r, kind) {
     }
 }
 // Ô chép nhanh các thông tin cần dán vào trang tra cứu (trang có xác thực "trượt hình" nên phải làm tay).
+const twoBox = t => /^(Viettel|M-invoice)/.test(t.ncc || '');
 function lookupPanel(t, r) {
   const box = $('hErr'); box.innerHTML = '';
-  box.append(el('div', 'ok', (t.ncc || '') + ' – HĐ ' + r.khhdon + '/' + r.shdon +
-    ': dán 2 thông tin dưới đây vào trang tra cứu, kéo thanh trượt để xem / tải hoá đơn.'));
+  box.append(el('div', 'ok', (t.ncc || '') + ' – HĐ ' + r.khhdon + '/' + r.shdon + ': dán 2 thông tin dưới đây vào trang tra cứu' +
+    ((t.ncc || '').startsWith('Viettel') ? ', kéo thanh trượt' : '') + ' để xem / tải hoá đơn.'));
   [['MST bên bán', r.mst], [t.field || 'Mã số bí mật', t.code]].forEach(([k, v]) => {
     if (!v) return;
     const line = el('div', 'mute'); line.append(k + ': ', el('b', '', v), ' ');
