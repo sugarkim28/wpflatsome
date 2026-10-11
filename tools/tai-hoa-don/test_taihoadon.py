@@ -1360,6 +1360,12 @@ class Tests(unittest.TestCase):
                         return self._out('<input id="msg" name="msg" value="Mã xác thực không đúng">'.encode())
                     if form.get("typeSearch") != "":  # trình duyệt gửi đúng giá trị của ô ẩn (để trống)
                         return self._out(b'<html><body><h3>Tra cuu hoa don</h3><input id="msg" name="msg" value=""></body></html>')
+                    if form.get("FKey") == "UYT6B9Z8Q":  # trang mới: nút tải do JavaScript tạo từ showInv(..., token)
+                        inv = H.escape(json.dumps({"str": "<?xml version=\"1.0\"?><html><body>HOA DON</body></html>"}))
+                        return self._out(('<input id="InvData" name="InvData" type="hidden" value="%s" />'
+                                          '<script>var data = JSON.parse($("#InvData").val()); var model = {toolbarType: ""};'
+                                          "showInv(data.str, data.cusType, data.clientNotSign, data.idInvoice, data.pattern, "
+                                          "'UYT6B9Z8Q', false, 1,10, model, 'P9Pvt1zwvbTc12g30jcbM72nE+Gzt7Iq/RgN='); }</script>" % inv).encode())
                     if form.get("FKey") != "HIUOVGNMC":
                         return self._out('<input id="msg" name="msg" value="Không tìm thấy hóa đơn">'.encode())
                     inv = H.escape(json.dumps({"str": "<?xml version=\"1.0\"?><html><body>HOA DON</body></html>"}))
@@ -1368,12 +1374,13 @@ class Tests(unittest.TestCase):
                                       '<button onclick="downloadXML(\'XT/9+\')">Tải tệp XML</button>'
                                       % inv).encode())
                 if self.path == "/Invoice/DownloadXML":   # như downloadXML() trong BrowserDetectShare.js của trang thật
-                    ok = form.get("token") == "XT/9+"
+                    ok = form.get("token") in ("XT/9+", "P9Pvt1zwvbTc12g30jcbM72nE+Gzt7Iq/RgN=")
                     return self._out(json.dumps({"fileGuid": "x1" if ok else "", "fileName": "a.xml",
                                                  "msg": "" if ok else "sai"}).encode(), "application/json")
                 if self.path == "/Invoice/DownloadPdfAndFileAttachFromAvailableHtml":
                     import base64
-                    ok = form.get("token") == "TOK/123+" and base64.b64decode(form["html"]).decode() == \
+                    ok = form.get("token") in ("TOK/123+", "P9Pvt1zwvbTc12g30jcbM72nE+Gzt7Iq/RgN=") and \
+                        base64.b64decode(form["html"]).decode() == \
                         "<html><body>HOA DON</body></html>"
                     return self._out(json.dumps({"fileGuid": "g1" if ok else "", "fileName": "a.pdf",
                                                  "msg": "" if ok else "sai"}).encode(), "application/json")
@@ -1387,6 +1394,8 @@ class Tests(unittest.TestCase):
             self.assertEqual(t.easyinvoice_pdf({"url": url, "code": "HIUOVGNMC"}), b"%PDF-1.4 easy goc")
             self.assertEqual(seen["posts"][0][1]["typeSearch"], "")
             got = t.easyinvoice_files({"url": url + "/Search/Index", "code": "HIUOVGNMC"})
+            self.assertEqual((got["pdf"], got["xml"]), (b"%PDF-1.4 easy goc", b'<?xml version="1.0"?><HDon>easy</HDon>'))
+            got = t.easyinvoice_files({"url": url + "/Search/Index", "code": "UYT6B9Z8Q"})   # kiểu trang mới
             self.assertEqual((got["pdf"], got["xml"]), (b"%PDF-1.4 easy goc", b'<?xml version="1.0"?><HDon>easy</HDon>'))
             with self.assertRaisesRegex(t.PortalError, "Không tìm thấy"):
                 t.easyinvoice_pdf({"url": url, "code": "SAI"})

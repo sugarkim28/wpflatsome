@@ -32,7 +32,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.3.5"
+__version__ = "4.3.6"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -1087,7 +1087,9 @@ def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
         # Gửi đúng như trình duyệt: các ô của biểu mẫu giữ nguyên (typeSearch để trống như trang thật).
         fields.update(FKey=code, Capcha=cap)
         res = call("/Search/Search", fields).decode("utf-8", "replace")
-        token = re.search(r"downloadPdfAndFileAttachFromAvailableHtml\('([^']+)'\)", res)
+        # Nút tải do JavaScript của trang tạo ra từ showInv(..., '<token>') (getToolbarHtml); trang cũ có sẵn nút trong HTML.
+        token = (re.search(r"downloadPdfAndFileAttachFromAvailableHtml\('([^']+)'\)", res)
+                 or re.search(r"showInv\(data\.str[^;]*?'([A-Za-z0-9+/=_-]{20,})'\s*\)", res))
         if not token:
             msg = re.search(r'id="msg"[^>]*value="([^"]*)"', res) or re.search(r'value="([^"]*)"[^>]*id="msg"', res)
             if msg and msg.group(1):
@@ -1115,7 +1117,7 @@ def easyinvoice_files(tra_cuu, tries=8, want_pdf=True, want_xml=True):
         html_doc = re.sub(r"^\s*<\?xml[^>]*\?>", "", html_doc)
         out = {"pdf": None, "xml": None, "xml_err": ""}
         if want_xml:
-            xt = re.search(r"downloadXML\('([^']+)'\)", res)
+            xt = re.search(r"downloadXML\('([^']+)'\)", res) or token  # cùng token với nút PDF
             if not xt:
                 out["xml_err"] = "trang tra cứu không có nút Tải tệp XML"
             else:
