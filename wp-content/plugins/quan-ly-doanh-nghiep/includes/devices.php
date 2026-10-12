@@ -72,6 +72,9 @@ function qldn_pin_map() {
 /**
  * Lưu nhiều lần chấm rồi cập nhật bảng công.
  *
+ * Viết theo lô để nhập được file cả năm của công ty vài trăm người trong thời gian giới hạn của hosting:
+ * 1 câu kiểm tra trùng, chèn 500 dòng / câu, cập nhật bảng công theo từng nhân viên.
+ *
  * @param array  $punches [ [pin, time, state?, verify?] ].
  * @param string $source  adms|file|api.
  * @param string $sn      Số serial máy.
@@ -79,12 +82,13 @@ function qldn_pin_map() {
  */
 function qldn_punches_save( $punches, $source, $sn = '' ) {
 	global $wpdb;
-	$t     = qldn_t( 'punches' );
-	$map   = qldn_pin_map();
-	$stat  = array( 'new' => 0, 'dup' => 0, 'invalid' => 0, 'unknown' => 0, 'locked' => 0 );
-	$touch = array();
-	$now   = qldn_now();
-	$wpdb->suppress_errors( true );
+	$t    = qldn_t( 'punches' );
+	$map  = qldn_pin_map();
+	$stat = array( 'new' => 0, 'dup' => 0, 'invalid' => 0, 'unknown' => 0, 'locked' => 0 );
+	$sn   = substr( sanitize_text_field( $sn ), 0, 64 );
+	$now  = qldn_now();
+
+	$rows = array();
 	foreach ( $punches as $p ) {
 		$pin  = qldn_pin( isset( $p['pin'] ) ? $p['pin'] : '' );
 		$time = qldn_punch_time( isset( $p['time'] ) ? $p['time'] : '' );
@@ -92,75 +96,90 @@ function qldn_punches_save( $punches, $source, $sn = '' ) {
 			++$stat['invalid'];
 			continue;
 		}
-		if ( $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $t WHERE pin = %s AND punch_time = %s", $pin, $time ) ) ) { // phpcs:ignore WordPress.DB.PreparedSQL
+		$key = $pin . '|' . $time;
+		if ( isset( $rows[ $key ] ) ) {
 			++$stat['dup'];
 			continue;
 		}
-		$eid = isset( $map[ $pin ] ) ? $map[ $pin ] : 0;
-		$ok  = $wpdb->insert(
-			$t,
-			array(
-				'pin'         => $pin,
-				'punch_time'  => $time,
-				'employee_id' => $eid,
-				'device_sn'   => substr( sanitize_text_field( $sn ), 0, 64 ),
-				'state'       => isset( $p['state'] ) ? substr( preg_replace( '/\W/', '', (string) $p['state'] ), 0, 4 ) : '',
-				'verify'      => isset( $p['verify'] ) ? substr( preg_replace( '/\W/', '', (string) $p['verify'] ), 0, 4 ) : '',
-				'source'      => $source,
-				'created_at'  => $now,
-			)
+		$rows[ $key ] = array(
+			$pin,
+			$time,
+			isset( $map[ $pin ] ) ? $map[ $pin ] : 0,
+			isset( $p['state'] ) ? substr( preg_replace( '/\W/', '', (string) $p['state'] ), 0, 4 ) : '',
+			isset( $p['verify'] ) ? substr( preg_replace( '/\W/', '', (string) $p['verify'] ), 0, 4 ) : '',
 		);
-		if ( ! $ok ) { // Trùng khoá do 2 lần gửi cùng lúc.
+	}
+	if ( ! $rows ) {
+		return $stat;
+	}
+
+	// Bỏ các lần chấm đã có (máy gửi lại, nhập lại file cũ).
+	$times    = array_column( $rows, 1 );
+	$existing = $wpdb->get_results( $wpdb->prepare( "SELECT pin, punch_time FROM $t WHERE punch_time BETWEEN %s AND %s", min( $times ), max( $times ) ), ARRAY_N ); // phpcs:ignore WordPress.DB.PreparedSQL
+	foreach ( $existing as $e ) {
+		if ( isset( $rows[ $e[0] . '|' . $e[1] ] ) ) {
+			unset( $rows[ $e[0] . '|' . $e[1] ] );
 			++$stat['dup'];
-			continue;
 		}
-		++$stat['new'];
-		if ( $eid ) {
-			$touch[ $eid . '|' . substr( $time, 0, 10 ) ] = true;
-		} else {
-			++$stat['unknown'];
+	}
+	unset( $existing );
+
+	$touch = array();
+	$wpdb->query( 'START TRANSACTION' );
+	$wpdb->suppress_errors( true );
+	foreach ( array_chunk( $rows, 500 ) as $chunk ) {
+		$values = array();
+		foreach ( $chunk as $r ) {
+			$values[] = $wpdb->prepare( '(%s,%s,%d,%s,%s,%s,%s,%s)', $r[0], $r[1], $r[2], $sn, $r[3], $r[4], $source, $now );
+		}
+		$cols = '(pin,punch_time,employee_id,device_sn,state,verify,source,created_at)';
+		$ok   = $wpdb->query( "INSERT INTO $t $cols VALUES " . implode( ',', $values ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+		if ( false === $ok ) {
+			// Một lần chấm vừa được lưu bởi yêu cầu khác: chèn từng dòng, bỏ dòng trùng.
+			foreach ( $values as $i => $v ) {
+				if ( false === $wpdb->query( "INSERT INTO $t $cols VALUES $v" ) ) { // phpcs:ignore WordPress.DB.PreparedSQL
+					unset( $chunk[ $i ] );
+					++$stat['dup'];
+				}
+			}
+		}
+		foreach ( $chunk as $r ) {
+			++$stat['new'];
+			if ( $r[2] ) {
+				$touch[ $r[2] ][ substr( $r[1], 0, 10 ) ] = true;
+			} else {
+				++$stat['unknown'];
+			}
 		}
 	}
 	$wpdb->suppress_errors( false );
-	foreach ( array_keys( $touch ) as $k ) {
-		list( $eid, $date ) = explode( '|', $k );
-		if ( ! qldn_punch_apply( (int) $eid, $date ) ) {
-			++$stat['locked'];
-		}
-	}
+	$wpdb->query( 'COMMIT' );
+
+	$stat['locked'] = qldn_punch_apply_many( $touch );
 	return $stat;
 }
 
 /**
- * Điền giờ vào / ra (lần chấm đầu / cuối) của 1 nhân viên trong 1 ngày vào bảng công.
+ * Giờ vào / ra, ký hiệu, tăng ca của 1 ngày từ các lần chấm.
  *
  * Ký hiệu P, L, K, O đã chấm tay được giữ nguyên; ô trống hoặc X/N được tính lại theo số giờ làm.
  *
- * @param int    $employee_id Nhân viên.
- * @param string $date        Y-m-d.
- * @return bool False nếu tháng đã chốt lương.
+ * @param string      $date  Y-m-d.
+ * @param array       $times Các thời điểm chấm (Y-m-d H:i:s), đã sắp xếp.
+ * @param object|null $row   Dòng bảng công hiện có.
+ * @param array       $o     Cài đặt.
+ * @return array|null Dữ liệu cần ghi, null nếu không đổi gì.
  */
-function qldn_punch_apply( $employee_id, $date ) {
-	global $wpdb;
-	if ( qldn_period_locked( substr( $date, 0, 7 ) ) ) {
-		return false;
-	}
-	$times = $wpdb->get_col( $wpdb->prepare( 'SELECT punch_time FROM ' . qldn_t( 'punches' ) . ' WHERE employee_id = %d AND punch_time BETWEEN %s AND %s ORDER BY punch_time', $employee_id, $date . ' 00:00:00', $date . ' 23:59:59' ) );
-	$t     = qldn_t( 'attendance' );
-	$row   = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t WHERE employee_id = %d AND work_date = %s", $employee_id, $date ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+function qldn_punch_compute( $date, $times, $row, $o ) {
 	if ( ! $times ) {
 		// Lần chấm bị gỡ (đổi mã chấm công): chỉ xoá giờ, giữ ký hiệu chấm tay.
-		if ( $row && $row->check_in ) {
-			$wpdb->update( $t, array( 'check_in' => null, 'check_out' => null ), array( 'id' => $row->id ) );
-		}
-		return true;
+		return ( $row && $row->check_in ) ? array( 'check_in' => null, 'check_out' => null ) : null;
 	}
-	$o     = qldn_opt();
 	$first = strtotime( $times[0] );
 	$last  = strtotime( end( $times ) );
 	// Quẹt lại trong vòng 5 phút coi như cùng 1 lần (chưa có giờ ra).
-	$out   = ( $last - $first ) >= 300 ? $last : 0;
-	$data  = array(
+	$out  = ( $last - $first ) >= 300 ? $last : 0;
+	$data = array(
 		'check_in'  => gmdate( 'H:i:s', $first ),
 		'check_out' => $out ? gmdate( 'H:i:s', $out ) : null,
 	);
@@ -169,16 +188,72 @@ function qldn_punch_apply( $employee_id, $date ) {
 		$data['mark'] = ( $out && ( $out - $first ) / 3600 < (float) $o['work_hours'] / 2 ) ? 'N' : 'X';
 	}
 	if ( $o['auto_ot'] && $out ) {
-		$end   = strtotime( $date . ' ' . $o['shift_end'] . ':00' );
-		$extra = ( $out - $end ) / 60;
+		$extra            = ( $out - strtotime( $date . ' ' . $o['shift_end'] . ':00' ) ) / 60;
 		$data['ot_hours'] = $extra >= max( 1, (int) $o['ot_min'] ) ? floor( $extra / 30 ) / 2 : 0;
 	}
-	if ( $row ) {
-		$wpdb->update( $t, $data, array( 'id' => $row->id ) );
-	} else {
-		$wpdb->insert( $t, array_merge( array( 'employee_id' => $employee_id, 'work_date' => $date ), $data ) );
+	return $data;
+}
+
+/**
+ * Cập nhật bảng công cho nhiều nhân viên / ngày (mỗi nhân viên 2 câu đọc).
+ *
+ * @param array $touch employee_id => [ Y-m-d => true ].
+ * @return int Số ngày bỏ qua vì tháng đã chốt lương.
+ */
+function qldn_punch_apply_many( $touch ) {
+	global $wpdb;
+	$tp     = qldn_t( 'punches' );
+	$ta     = qldn_t( 'attendance' );
+	$o      = qldn_opt();
+	$locked = array();
+	$skip   = 0;
+	$wpdb->query( 'START TRANSACTION' );
+	foreach ( $touch as $eid => $dates ) {
+		$dates = array_keys( $dates );
+		$from  = min( $dates );
+		$to    = max( $dates );
+		$by    = array();
+		foreach ( $wpdb->get_col( $wpdb->prepare( "SELECT punch_time FROM $tp WHERE employee_id = %d AND punch_time BETWEEN %s AND %s ORDER BY punch_time", $eid, $from . ' 00:00:00', $to . ' 23:59:59' ) ) as $pt ) { // phpcs:ignore WordPress.DB.PreparedSQL
+			$by[ substr( $pt, 0, 10 ) ][] = $pt;
+		}
+		$att = array();
+		foreach ( $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $ta WHERE employee_id = %d AND work_date BETWEEN %s AND %s", $eid, $from, $to ) ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL
+			$att[ $r->work_date ] = $r;
+		}
+		foreach ( $dates as $d ) {
+			$period = substr( $d, 0, 7 );
+			if ( ! isset( $locked[ $period ] ) ) {
+				$locked[ $period ] = qldn_period_locked( $period );
+			}
+			if ( $locked[ $period ] ) {
+				++$skip;
+				continue;
+			}
+			$row  = isset( $att[ $d ] ) ? $att[ $d ] : null;
+			$data = qldn_punch_compute( $d, isset( $by[ $d ] ) ? $by[ $d ] : array(), $row, $o );
+			if ( null === $data ) {
+				continue;
+			}
+			if ( $row ) {
+				$wpdb->update( $ta, $data, array( 'id' => $row->id ) );
+			} else {
+				$wpdb->insert( $ta, array_merge( array( 'employee_id' => (int) $eid, 'work_date' => $d ), $data ) );
+			}
+		}
 	}
-	return true;
+	$wpdb->query( 'COMMIT' );
+	return $skip;
+}
+
+/**
+ * Cập nhật bảng công của 1 nhân viên trong 1 ngày.
+ *
+ * @param int    $employee_id Nhân viên.
+ * @param string $date        Y-m-d.
+ * @return bool False nếu tháng đã chốt lương.
+ */
+function qldn_punch_apply( $employee_id, $date ) {
+	return 0 === qldn_punch_apply_many( array( (int) $employee_id => array( $date => true ) ) );
 }
 
 /**
@@ -205,8 +280,8 @@ function qldn_punch_relink( $employee_id, $old_pin, $new_pin ) {
 		$wpdb->update( $t, array( 'employee_id' => $employee_id ), array( 'pin' => $new ) );
 		$dates = array_merge( $dates, $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT DATE(punch_time) FROM $t WHERE employee_id = %d AND pin = %s", $employee_id, $new ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL
 	}
-	foreach ( array_unique( $dates ) as $d ) {
-		qldn_punch_apply( $employee_id, $d );
+	if ( $dates ) {
+		qldn_punch_apply_many( array( (int) $employee_id => array_fill_keys( $dates, true ) ) );
 	}
 }
 
@@ -219,12 +294,12 @@ function qldn_punch_relink( $employee_id, $old_pin, $new_pin ) {
  */
 function qldn_punch_reapply( $from, $to ) {
 	global $wpdb;
-	$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT DISTINCT employee_id, DATE(punch_time) AS d FROM ' . qldn_t( 'punches' ) . ' WHERE employee_id > 0 AND punch_time BETWEEN %s AND %s', $from . ' 00:00:00', $to . ' 23:59:59' ) );
-	$n    = 0;
+	$rows  = $wpdb->get_results( $wpdb->prepare( 'SELECT DISTINCT employee_id, DATE(punch_time) AS d FROM ' . qldn_t( 'punches' ) . ' WHERE employee_id > 0 AND punch_time BETWEEN %s AND %s', $from . ' 00:00:00', $to . ' 23:59:59' ) );
+	$touch = array();
 	foreach ( $rows as $r ) {
-		$n += qldn_punch_apply( (int) $r->employee_id, $r->d ) ? 1 : 0;
+		$touch[ (int) $r->employee_id ][ $r->d ] = true;
 	}
-	return $n;
+	return count( $rows ) - qldn_punch_apply_many( $touch );
 }
 
 /**
@@ -448,6 +523,10 @@ function qldn_handle_punch_import() {
 	qldn_check( 'punch_import', 'qldn_hr' );
 	// phpcs:ignore WordPress.Security.NonceVerification -- đã kiểm tra ở qldn_check.
 	$f = isset( $_FILES['file'] ) ? $_FILES['file'] : null;
+	if ( $f && in_array( $f['error'], array( UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE ), true ) ) {
+		qldn_notice( 'File vượt giới hạn tải lên của hosting (' . esc_html( size_format( wp_max_upload_size() ) ) . '). Chia file theo tháng (mở bằng Notepad / Excel, cắt bớt dòng) hoặc nhờ hosting tăng <code>upload_max_filesize</code>.', 'error' );
+		qldn_go( 'devices', array( 'tab' => 'import' ) );
+	}
 	if ( ! $f || UPLOAD_ERR_OK !== $f['error'] || ! is_uploaded_file( $f['tmp_name'] ) ) {
 		qldn_notice( 'Chưa chọn file hoặc tải lên lỗi.', 'error' );
 		qldn_go( 'devices', array( 'tab' => 'import' ) );
@@ -461,16 +540,87 @@ function qldn_handle_punch_import() {
 		qldn_notice( 'Chỉ nhận file .dat, .txt, .csv. File Excel (.xlsx) hãy mở bằng Excel rồi <em>Lưu dạng → CSV UTF-8</em>.', 'error' );
 		qldn_go( 'devices', array( 'tab' => 'import' ) );
 	}
+	if ( function_exists( 'set_time_limit' ) ) {
+		@set_time_limit( 300 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors -- hosting có thể cấm, không sao.
+	}
 	$rows = qldn_parse_punch_file( (string) file_get_contents( $f['tmp_name'] ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions
 	if ( ! $rows ) {
 		qldn_notice( 'Không đọc được dòng chấm công nào. Mỗi dòng cần có mã chấm công ở cột đầu và ngày giờ (vd <code>5,01/10/2026 07:58</code>).', 'error' );
 		qldn_go( 'devices', array( 'tab' => 'import' ) );
 	}
-	$s = qldn_punches_save( $rows, 'file', qldn_in( 'sn' ) );
-	qldn_notice( 'Đã nhập file ' . esc_html( $f['name'] ) . '. ' . qldn_punch_stat_text( $s ), $s['unknown'] ? 'warning' : 'success' );
-	qldn_go( 'devices', array( 'tab' => 'log' ) );
+	// File lớn (cả năm, cả công ty) nhập thành nhiều bước, mỗi bước dưới thời gian giới hạn của hosting.
+	$dir = trailingslashit( wp_upload_dir()['basedir'] ) . 'qldn-tmp';
+	wp_mkdir_p( $dir );
+	if ( ! file_exists( $dir . '/index.php' ) ) {
+		file_put_contents( $dir . '/index.php', '<?php // Silence.' ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+		file_put_contents( $dir . '/.htaccess', 'Deny from all' ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+	}
+	$tmp = $dir . '/import-' . wp_generate_password( 24, false ) . '.json';
+	file_put_contents( $tmp, wp_json_encode( $rows ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+	set_transient(
+		'qldn_import_' . get_current_user_id(),
+		array(
+			'file'   => $tmp,
+			'name'   => sanitize_file_name( $f['name'] ),
+			'sn'     => qldn_in( 'sn' ),
+			'offset' => 0,
+			'total'  => count( $rows ),
+			'stat'   => array( 'new' => 0, 'dup' => 0, 'invalid' => 0, 'unknown' => 0, 'locked' => 0 ),
+		),
+		DAY_IN_SECONDS
+	);
+	qldn_import_step();
 }
 add_action( 'admin_post_qldn_punch_import', 'qldn_handle_punch_import' );
+
+/**
+ * Nhập tiếp phần còn lại của file (trang tự tải lại cho tới khi xong).
+ */
+function qldn_handle_punch_import_next() {
+	qldn_check( 'punch_import_next', 'qldn_hr' );
+	qldn_import_step();
+}
+add_action( 'admin_post_qldn_punch_import_next', 'qldn_handle_punch_import_next' );
+
+/**
+ * Xử lý 1 bước nhập: các lô 3.000 lần chấm cho tới ~15 giây, còn thì hẹn bước sau.
+ */
+function qldn_import_step() {
+	$key   = 'qldn_import_' . get_current_user_id();
+	$state = get_transient( $key );
+	if ( ! is_array( $state ) || ! file_exists( $state['file'] ) ) {
+		delete_transient( $key );
+		qldn_notice( 'Phiên nhập file đã hết hạn, hãy nhập lại (lần chấm đã lưu không bị trùng).', 'error' );
+		qldn_go( 'devices', array( 'tab' => 'import' ) );
+	}
+	if ( function_exists( 'set_time_limit' ) ) {
+		@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+	}
+	$start = microtime( true );
+	$rows  = json_decode( (string) file_get_contents( $state['file'] ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+	$rows  = is_array( $rows ) ? $rows : array();
+	while ( $state['offset'] < count( $rows ) && microtime( true ) - $start < 15 ) {
+		$s = qldn_punches_save( array_slice( $rows, $state['offset'], 3000 ), 'file', $state['sn'] );
+		foreach ( $s as $k => $v ) {
+			$state['stat'][ $k ] += $v;
+		}
+		$state['offset'] += 3000;
+	}
+	if ( $state['offset'] < count( $rows ) ) {
+		set_transient( $key, $state, DAY_IN_SECONDS );
+		$next = qldn_action_url( 'punch_import_next' );
+		$pct  = (int) floor( $state['offset'] / max( 1, $state['total'] ) * 100 );
+		nocache_headers();
+		echo '<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=' . esc_url( $next ) . '"><title>Đang nhập dữ liệu chấm công</title></head><body style="font-family:sans-serif;max-width:520px;margin:80px auto;text-align:center">';
+		echo '<h2>Đang nhập dữ liệu chấm công… ' . esc_html( $pct ) . '%</h2><p>' . esc_html( number_format( $state['offset'], 0, ',', '.' ) . ' / ' . number_format( $state['total'], 0, ',', '.' ) ) . ' lần chấm. Đừng đóng trang này.</p>';
+		echo '<progress max="100" value="' . esc_attr( $pct ) . '" style="width:100%"></progress><p><a href="' . esc_url( $next ) . '">Tiếp tục</a></p></body></html>';
+		exit;
+	}
+	wp_delete_file( $state['file'] );
+	delete_transient( $key );
+	qldn_notice( 'Đã nhập file ' . esc_html( $state['name'] ) . '. ' . qldn_punch_stat_text( $state['stat'] ), $state['stat']['unknown'] ? 'warning' : 'success' );
+	qldn_go( 'devices', array( 'tab' => 'log' ) );
+}
 
 /* ------------------------------------------------------------------ *
  * 3. API cho script đồng bộ trong mạng LAN
@@ -729,7 +879,7 @@ add_action( 'admin_post_qldn_save_device_ips', 'qldn_handle_save_device_ips' );
  */
 function qldn_devices_tab_import() {
 	qldn_form_open( 'punch_import', array( 'enctype' => 'multipart/form-data' ) );
-	echo '<table class="form-table"><tr><th>File chấm công</th><td><input type="file" name="file" accept=".dat,.txt,.csv,.log" required><p class="description">.dat (USB của máy), .txt, .csv – tối đa 20 MB. Nhập lại file cũ không bị trùng: lần chấm đã có được bỏ qua.</p></td></tr>';
+	echo '<table class="form-table"><tr><th>File chấm công</th><td><input type="file" name="file" accept=".dat,.txt,.csv,.log" required><p class="description">.dat (USB của máy), .txt, .csv – tối đa ' . esc_html( size_format( min( wp_max_upload_size(), 20 * MB_IN_BYTES ) ) ) . ' (giới hạn của hosting; 1 năm của 100 nhân viên khoảng 3 MB). File lớn được nhập thành nhiều bước, trang tự chạy tiếp. Nhập lại file cũ không bị trùng: lần chấm đã có được bỏ qua.</p></td></tr>';
 	echo '<tr><th>Máy (tuỳ chọn)</th><td><input type="text" name="sn" class="regular-text" placeholder="Tên / SN máy để ghi nhận nguồn"></td></tr></table>';
 	submit_button( 'Nhập dữ liệu' );
 	echo '</form>';

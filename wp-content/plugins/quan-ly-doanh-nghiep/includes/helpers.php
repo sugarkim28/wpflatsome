@@ -149,6 +149,26 @@ function qldn_in( $key, $type = 'text', $default = '', $src = null ) {
 }
 
 /**
+ * Bảng nhập liệu lớn (bảng công, bảng lương): trình duyệt gom các ô thành 1 trường JSON "{key}_json"
+ * để không bị PHP cắt bớt khi vượt max_input_vars (mặc định 1000 ô – chỉ ~33 nhân viên × 30 ngày).
+ * Trình duyệt tắt JavaScript thì đọc mảng thường.
+ *
+ * @param string $key Tên mảng (att, pr).
+ * @return array Mảng 2 cấp [id][cột] = giá trị (chưa unslash ở cấp dưới khi đọc từ mảng thường).
+ */
+function qldn_in_packed( $key ) {
+	// phpcs:ignore WordPress.Security.NonceVerification -- nonce kiểm tra ở nơi gọi.
+	if ( isset( $_POST[ $key . '_json' ] ) ) {
+		$data = json_decode( wp_unslash( $_POST[ $key . '_json' ] ), true ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput, WordPress.Security.NonceVerification
+		if ( is_array( $data ) ) {
+			// Giá trị JSON đã không có dấu gạch chéo: thêm lại để nơi gọi wp_unslash() như mảng thường.
+			return wp_slash( $data );
+		}
+	}
+	return qldn_in( $key, 'array', array() );
+}
+
+/**
  * Chuẩn hoá số điện thoại Việt Nam (0xxxxxxxxx). Không hợp lệ thì giữ nguyên chữ số.
  *
  * @param string $phone Số.

@@ -185,7 +185,7 @@ function qldn_handle_payroll() {
 		$manual = null;
 		if ( 'save' === $do ) {
 			$manual = array();
-			foreach ( qldn_in( 'pr', 'array', array() ) as $eid => $v ) {
+			foreach ( qldn_in_packed( 'pr' ) as $eid => $v ) {
 				if ( ! is_array( $v ) ) {
 					continue;
 				}
@@ -341,7 +341,7 @@ function qldn_page_payroll() {
 		return $edit ? '<input type="text" inputmode="numeric" class="qldn-money qldn-cell" name="pr[' . esc_attr( $eid ) . '][' . esc_attr( $name ) . ']" value="' . esc_attr( qldn_money( $v, false ) ) . '">' : esc_html( qldn_money( $v, false ) );
 	};
 	if ( $edit ) {
-		qldn_form_open( 'payroll' );
+		qldn_form_open( 'payroll', array( 'data-pack' => 'pr' ) );
 		echo '<input type="hidden" name="period" value="' . esc_attr( $period ) . '"><input type="hidden" name="do" value="save">';
 	}
 	echo '<div class="qldn-att-wrap"><table class="widefat striped qldn-table qldn-payroll"><thead><tr><th>Nhân viên</th><th class="num">Công</th><th class="num">Phép/lễ</th><th class="num">Giờ TC</th><th class="num">Lương thời gian</th><th class="num">Tăng ca</th><th class="num">Phụ cấp</th><th class="num">Hoa hồng</th><th class="num">Thưởng</th><th class="num">Tổng thu nhập</th><th class="num">Bảo hiểm</th><th class="num">Thuế TNCN</th><th class="num">Tạm ứng</th><th class="num">Khấu trừ</th><th class="num">Thực lĩnh</th><th>Ghi chú</th><th></th></tr></thead><tbody>';

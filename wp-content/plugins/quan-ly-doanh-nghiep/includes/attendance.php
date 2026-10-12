@@ -97,7 +97,7 @@ function qldn_handle_attendance() {
 	$days   = (int) gmdate( 't', strtotime( $period . '-01' ) );
 	$bad    = array();
 	$saved  = 0;
-	foreach ( qldn_in( 'att', 'array', array() ) as $eid => $cells ) {
+	foreach ( qldn_in_packed( 'att' ) as $eid => $cells ) {
 		$eid = (int) $eid;
 		if ( ! $eid || ! is_array( $cells ) ) {
 			continue;
@@ -266,7 +266,7 @@ function qldn_page_attendance() {
 		return;
 	}
 
-	qldn_form_open( 'attendance', array( 'class' => 'qldn-att-form' ) );
+	qldn_form_open( 'attendance', array( 'class' => 'qldn-att-form', 'data-pack' => 'att' ) );
 	echo '<input type="hidden" name="period" value="' . esc_attr( $period ) . '">';
 	echo '<div class="qldn-att-wrap"><table class="widefat qldn-att"><thead><tr><th class="qldn-att-name">Nhân viên</th>';
 	for ( $d = 1; $d <= $days; $d++ ) {

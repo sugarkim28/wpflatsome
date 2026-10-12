@@ -84,6 +84,20 @@ add_action( 'qldn_order_cancelled', function ( $order_id ) {} );
 
 Các hàm nghiệp vụ dùng lại được: `qldn_order_create()`, `qldn_stock_move()`, `qldn_customer_save()`, `qldn_care_add()`, `qldn_payroll_build()`, `qldn_pit()`.
 
+## Quy mô
+
+Đã thử với **100 nhân viên** và **1 năm dữ liệu máy chấm công (86.000 lần chấm)** trên máy chủ giới hạn 30 giây / yêu cầu:
+
+| Việc | Kết quả |
+|---|---|
+| Mở bảng chấm công 100 người × 30 ngày | ~0,7 giây |
+| Lưu bảng chấm công / bảng lương 100 người | ~1,3 giây (trình duyệt gom ô thành 1 trường, không bị giới hạn `max_input_vars` 1000 của PHP) |
+| Tính lương 100 người | ~0,4 giây |
+| Máy chấm công gửi 1 lần chấm | ~5 ms |
+| Nhập file 1 năm (2,7 MB) | ~40 giây, tự chia nhiều bước dưới 15 giây, không bị hết thời gian |
+
+Đề xuất máy chủ cho 100–300 nhân viên: VPS hoặc hosting WordPress 2 GB RAM, PHP 8.1+, MySQL / MariaDB, bật sao lưu hằng ngày, `upload_max_filesize` ≥ 8 MB.
+
 ## Lưu ý
 
 - Huỷ plugin **không xoá dữ liệu**. Sao lưu cơ sở dữ liệu định kỳ (bảng `wp_qldn_*`).

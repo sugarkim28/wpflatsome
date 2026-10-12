@@ -279,6 +279,29 @@
 
 	document.querySelectorAll( '.qldn-lines-form' ).forEach( linesForm );
 
+	// Bảng công / bảng lương nhiều người: gom các ô "att[12][5]" thành 1 trường JSON "att_json" khi gửi,
+	// tránh PHP cắt bớt dữ liệu khi vượt max_input_vars (mặc định 1000 ô).
+	document.querySelectorAll( 'form[data-pack]' ).forEach( function ( form ) {
+		var key = form.getAttribute( 'data-pack' );
+		var re = new RegExp( '^' + key + '\\[([^\\]]+)\\]\\[([^\\]]+)\\]$' );
+		form.addEventListener( 'submit', function () {
+			var data = {};
+			form.querySelectorAll( 'input[name^="' + key + '["]' ).forEach( function ( el ) {
+				var m = el.name.match( re );
+				if ( m ) {
+					data[ m[1] ] = data[ m[1] ] || {};
+					data[ m[1] ][ m[2] ] = el.value;
+					el.removeAttribute( 'name' );
+				}
+			} );
+			var hid = document.createElement( 'input' );
+			hid.type = 'hidden';
+			hid.name = key + '_json';
+			hid.value = JSON.stringify( data );
+			form.appendChild( hid );
+		} );
+	} );
+
 	// Bảng công: điền X cho các ngày trống (trừ Chủ nhật).
 	document.addEventListener( 'click', function ( e ) {
 		if ( ! e.target.classList.contains( 'qldn-fill' ) ) {
