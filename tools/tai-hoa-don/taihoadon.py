@@ -33,7 +33,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.4.4"
+__version__ = "4.4.5"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -1692,6 +1692,16 @@ def _is_bad(inv):
     return _num(inv.get("tthai")) in (4, 6)
 
 
+def _sign_dt(inv):
+    """Ngày ký của người bán (XML), như cột "Ngày ký" của Nibot."""
+    return (inv.get("_xmlinfo") or {}).get("nky") or _to_dt(inv.get("nky"))
+
+
+def _nb_name(name):
+    """Tên hàng như Nibot: bỏ khoảng trắng đầu/cuối, tối đa 250 ký tự."""
+    return str(name or "").strip()[:250].rstrip()
+
+
 def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, changes=None):
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -1827,14 +1837,12 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
         big = bool(cash)
         sr = "%s%s" % (inv.get("khmshdon") or "", inv.get("khhdon") or "")
         so = str(inv.get("shdon") or "")
-        ngay_txt = d.strftime("%d/%m/%Y") if d else ""
         ghichu = [cash] if cash else []
-        note = _status_note(inv)
-        if note:
-            ghichu.append(note)
-        lctg, tkco = ("PKT", "331") if big else ("PC", "1111")
-        dien_giai = ("Chi phí theo hđơn ký hiệu số %s - %s - %s" if big else "Chi trả tiền theo hđơn số %s - %s - %s") % (
-            sr, so, ngay_txt)
+        tthai = _num(inv.get("tthai"))
+        if tthai != 1 and TTHAI_NIBOT.get(tthai):  # như Nibot: không ghi "HĐ có mã từ máy tính tiền"
+            ghichu.append(TTHAI_NIBOT[tthai])
+        tkco = "331" if big else "1111"
+        lctg = dien_giai = ""  # như file Nibot: để trống loại chứng từ và diễn giải
         nbmst, nbten = str(inv.get("nbmst") or ""), inv.get("nbten") or ""
         dchi = inv.get("nbdchi") or info.get("nb_dchi", "")
         guid = str(uuid.uuid5(uuid.NAMESPACE_URL, invoice_key(inv)))
@@ -1850,7 +1858,7 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
             it = dict(it, rate=it.get("rate") or first_rate)  # dòng ghi chú: thuế suất theo dòng hàng (như Nibot)
             out.append(["; ".join(ghichu), lctg, sr, so, info.get("nky") or _to_dt(inv.get("nky")), ngay,
                         _num(so), ngay, dien_giai, inv.get("thtttoan") or info.get("httt", ""), "", "", tkco,
-                        nbmst, "", "", it["name"], it["name"], 0, "", it["unit"], it["qty"], 0, 0, 0, it["price"],
+                        nbmst, "", "", _nb_name(it["name"]), _nb_name(it["name"]), 0, "", it["unit"], it["qty"], 0, 0, 0, it["price"],
                         it["amount"], 0, it.get("discount", 0.0), "V", "1331", it["rate"], 0, it["tax"], 0,
                         it["amount"] + it["tax"], nbmst, nbten, nbten, dchi, nbmst, dchi, "", "TIENHANG", "", guid])
         return out
@@ -1880,6 +1888,7 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
         wsb["A4"].font = Font(bold=True, size=13)
         wsb["A4"].alignment = Alignment(horizontal="center")
         wsb.merge_cells("A4:%s4" % last)
+        wsb["A5"] = "Bangkemuavao.xls"  # như Nibot
         wsb["B6"] = "(Kèm theo tờ khai thuế GTGT theo mẫu số 01/GTGT)"
         wsb.merge_cells("B6:%s6" % last)
         wsb["B7"] = "Kỳ tính thuế: %s" % period
@@ -1897,6 +1906,8 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
             wsb.merge_cells("%s13:%s15" % (col, col))
         wsb.merge_cells("C13:F14")
         header_row(wsb, 16, ["[1]", "[2]", "[3]", "[4]", "[5]", "[6]", "[7]", "[8]", "[9]", "[10]", "[11]", "[12]"], 2)
+        header_row(wsb, 13, ["XML", "PDF", "Ngày ký"], 16)  # cột phụ như Nibot (P, Q, R)
+        header_row(wsb, 16, ["[X]", "[P]", "[Q]"], 16)
         wsb["B17"] = ("1. HH, DV dùng riêng cho SXKD chịu thuế GTGT và sử dụng cho các hoạt động cung cấp HH, DV "
                       "không kê khai, nộp thuế GTGT đủ điều kiện khấu trừ thuế: ")
         wsb["B17"].font = bold
@@ -1906,9 +1917,14 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
             vals = [n, _num(inv.get("khmshdon")), inv.get("khhdon") or "", _num(inv.get("shdon")),
                     datetime(d.year, d.month, d.day) if d else None, inv.get("nbten") or "",
                     str(inv.get("nbmst") or ""), g["names"][0] if g["names"] else "", g["base"],
-                    g["rate"], g["tax"] if with_tax else None, bk_note(inv)]
+                    g["rate"], g["tax"] if with_tax else None, bk_note(inv), None, None, None, None, _sign_dt(inv)]
             for i, v in enumerate(vals, 2):
+                if v is None and i > 13:
+                    continue
                 c = wsb.cell(row=r, column=i, value=v)
+                if i == 18:
+                    c.number_format = "dd/mm/yyyy hh:mm:ss"
+                    continue
                 c.border = box
                 if i == 6:
                     c.number_format = dfmt
@@ -1960,6 +1976,7 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
         wsk["A4"].font = Font(bold=True, size=13)
         wsk["A4"].alignment = Alignment(horizontal="center")
         wsk.merge_cells("A4:K4")
+        wsk["A5"] = "Bangkemuavao.xls"
         wsk["B7"] = "Kỳ tính thuế: %s" % period
         wsk["B7"].alignment = Alignment(horizontal="center")
         wsk.merge_cells("B7:K7")
@@ -1973,12 +1990,16 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
             wsk.merge_cells("%s13:%s15" % (col, col))
         wsk.merge_cells("C13:F14")
         header_row(wsk, 16, ["[1]", "[2]", "[3]", "[2]", "[3]", "[4]", "[5]", "[6]", "[6]", "[7]"], 2)
+        header_row(wsk, 13, ["XML", "PDF", "Ngày ký"], 16)
+        header_row(wsk, 16, ["[X]", "[P]", "[Q]"], 16)
         r = 17
         for n, (inv, g) in enumerate(kct_groups, 1):
             d = invoice_date(inv)
             vals = [n, _num(inv.get("khmshdon")), inv.get("khhdon") or "", _num(inv.get("shdon")),
                     datetime(d.year, d.month, d.day) if d else None, inv.get("nbten") or "",
                     str(inv.get("nbmst") or ""), None, g["base"], bk_note(inv) or None]
+            if _sign_dt(inv):
+                wsk.cell(row=r, column=18, value=_sign_dt(inv)).number_format = "dd/mm/yyyy hh:mm:ss"
             for i, v in enumerate(vals, 2):
                 c = wsk.cell(row=r, column=i, value=v)
                 c.border = box
@@ -2044,7 +2065,7 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
         d = invoice_date(inv)
         vals = [r - 16, str(inv.get("khmshdon") or ""), inv.get("khhdon") or "", str(inv.get("shdon") or ""),
                 datetime(d.year, d.month, d.day) if d else None, inv.get("nbten") or "", str(inv.get("nbmst") or ""),
-                it["name"], it["unit"], it["qty"], it["price"], it["amount"], it["rate"], it["tax"], ""]
+                _nb_name(it["name"]), it["unit"], it["qty"], it["price"], it["amount"], it["rate"], it["tax"], ""]
         for i, v in enumerate(vals, 2):
             c = wsh.cell(row=r, column=i, value=v)
             c.border = box
