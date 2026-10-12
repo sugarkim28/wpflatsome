@@ -939,6 +939,73 @@ class Tests(unittest.TestCase):
         ht = wb["BangKe_HoanThue_OK"]
         self.assertEqual([ht.cell(r, 14).value for r in range(17, 22)].count("KCT"), 2)
 
+    def test_goods(self):
+        """Hàng hoá như Nibot: đồng bộ tên hàng từ hoá đơn, gán Mã TK / Mã hàng, tạo mã tự động, xuất / nhập Excel
+        (mẫu Nibot), mã được đưa vào TKNO / MADMNO của Smart_KTSC."""
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        self.run_job(["0309999999"], kinds=("purchase",), start=date(2026, 10, 1), end=date(2026, 10, 31))
+        m = "0309999999"
+        d = t.goods_sync(self.tmp, m, "2026-10-01", "2026-10-31", ("purchase",))
+        items = t.goods_load(self.tmp, m)
+        names = sorted(x["ten"] for x in items)
+        self.assertEqual(d["added"], len(items))
+        self.assertIn("Giay A4", names)
+        self.assertTrue(all(x["loai"] == "V" for x in items))
+        a4 = [x for x in items if x["ten"] == "Giay A4"][0]
+        self.assertEqual(a4["dvt"], ["Ram"])
+        self.assertEqual(t.goods_sync(self.tmp, m, "2026-10-01", "2026-10-31", ("purchase",))["added"], 0)  # không trùng
+        # bỏ dòng SL = 0 và thành tiền = 0 (dòng ghi chú)
+        t.goods_delete(self.tmp, m, 0)
+        t.goods_sync(self.tmp, m, "2026-10-01", "2026-10-31", ("purchase",), skip_zero=True)
+        self.assertNotIn("Ghi chu giao hang", [x["ten"] for x in t.goods_load(self.tmp, m)])
+        items = t.goods_load(self.tmp, m)
+        a4 = [x for x in items if x["ten"] == "Giay A4"][0]
+        self.assertEqual(t.goods_assign(self.tmp, m, [a4["id"]], "MaTk", "", "152"), 1)
+        self.assertEqual(t.goods_autocode(self.tmp, m, [], 1, "HH", 4), len(items))
+        codes = sorted(x["ma_hang"] for x in t.goods_load(self.tmp, m))
+        self.assertEqual(codes[0], "HH0001")
+        self.assertEqual(t.goods_autocode(self.tmp, m, [], 1, "HH", 4), 0)            # chỉ mặt hàng chưa có mã
+        t.goods_assign(self.tmp, m, [a4["id"]], "MaHang", "", "")
+        t.goods_autocode(self.tmp, m, [a4["id"]], 2)
+        self.assertEqual([x["ma_hang"] for x in t.goods_load(self.tmp, m) if x["id"] == a4["id"]], ["GIAYA4"])
+        t.goods_assign(self.tmp, m, [a4["id"]], "MaHang", "", "")
+        t.goods_autocode(self.tmp, m, [a4["id"]], 3)
+        self.assertEqual([x["ma_hang"] for x in t.goods_load(self.tmp, m) if x["id"] == a4["id"]], ["GA"])
+        with self.assertRaises(ValueError):
+            t.goods_update(self.tmp, m, [{"ten": "Giay A4", "loai": "V"}])          # trùng tên + loại
+        with self.assertRaises(ValueError):
+            t.goods_update(self.tmp, m, [{"ten": "X", "loai": "Z"}])
+        t.goods_update(self.tmp, m, [{"ten": "Hàng thêm tay", "loai": "", "ma_tk": "156", "ma_hang": "TAY01"}])
+        # Kết xuất KTSC: TKNO = Mã TK, MADMNO = Mã hàng
+        from openpyxl import load_workbook
+        x = t.export_invoices(self.tmp, m, "A", {"kind": "purchase", "from": "2026-10-01", "to": "2026-10-31"}, "xlsx")
+        sm = load_workbook(x)["Smart_KTSC_OK"]
+        row = [r for r in sm.iter_rows(min_row=2, values_only=True) if r[16] == "Giay A4"][0]
+        self.assertEqual((row[10], row[14]), ("152", "GA"))
+        # Export / Import Excel mẫu Nibot
+        path = t.goods_export(self.tmp, m)
+        wb = load_workbook(path)
+        ws = wb.active
+        self.assertEqual([c.value for c in ws[1]], ["Mã TK", "Mã hàng", "Tên hàng", "ĐVT", "Loại HĐ", "Ghi chú", "GuidHang"])
+        for r in ws.iter_rows(min_row=2):
+            if r[2].value == "Giay A4":
+                r[1].value = "GIAY-A4"
+        ws.append(["642", "MOI01", "Hàng mới từ Excel", "", "V", "ghi chú", ""])
+        buf = io.BytesIO()
+        wb.save(buf)
+        res = t.goods_import(self.tmp, m, buf.getvalue())
+        self.assertEqual(res["added"], 1)
+        got = {x["ten"]: x for x in t.goods_load(self.tmp, m)}
+        self.assertEqual(got["Giay A4"]["ma_hang"], "GIAY-A4")
+        self.assertEqual((got["Hàng mới từ Excel"]["ma_tk"], got["Hàng mới từ Excel"]["ghi_chu"]), ("642", "ghi chú"))
+        ws.append(["", "", "Hàng mới từ Excel", "", "V", "", ""])               # trùng tên trong file
+        buf = io.BytesIO()
+        wb.save(buf)
+        with self.assertRaisesRegex(ValueError, "trùng tên"):
+            t.goods_import(self.tmp, m, buf.getvalue())
+        t.goods_import(self.tmp, m, buf.getvalue(), drop_dup=True)
+        self.assertEqual(t.goods_delete(self.tmp, m, 1), 0)                      # mọi mặt hàng đều đã có mã
+
     def test_browser_download_settings(self):
         base = os.path.join(self.tmp, "LocalAppData")
         chrome = os.path.join(base, "Google", "Chrome", "User Data")

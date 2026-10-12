@@ -24,6 +24,7 @@ import ssl
 import sys
 import threading
 import time
+import unicodedata
 import uuid
 import urllib.error
 import urllib.parse
@@ -33,7 +34,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.4.5"
+__version__ = "4.5.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -1550,7 +1551,8 @@ def parse_invoice_xml(xml_path):
             nature = text(el, "TChat")
             if nature == "4":  # dòng ghi chú/diễn giải: giữ tên (Nibot liệt kê với số tiền 0), không tính tiền
                 info["items"].append({"name": text(el, "THHDVu"), "unit": "", "qty": 0.0, "price": 0.0, "amount": 0.0,
-                                      "rate": norm_rate(text(el, "TSuat")), "tax": 0.0, "discount": 0.0, "nature": "4"})
+                                      "rate": norm_rate(text(el, "TSuat")), "tax": 0.0, "discount": 0.0, "nature": "4",
+                                      "code": text(el, "MHHDVu")})
                 continue
             amount = _float(text(el, "ThTien"))
             if nature == "3":  # chiết khấu thương mại giảm trừ
@@ -1569,7 +1571,7 @@ def parse_invoice_xml(xml_path):
             info["items"].append({
                 "name": text(el, "THHDVu"), "unit": text(el, "DVTinh"), "qty": _float(text(el, "SLuong")),
                 "price": _float(text(el, "DGia")), "amount": amount, "rate": rate, "tax": tax,
-                "discount": _float(text(el, "STCKhau")), "nature": nature})
+                "discount": _float(text(el, "STCKhau")), "nature": nature, "code": text(el, "MHHDVu")})
         elif tag == "LTSuat":
             info["rates"].append({"rate": norm_rate(text(el, "TSuat")), "base": _float(text(el, "ThTien")),
                                   "tax": _float(text(el, "TThue"))})
@@ -1702,7 +1704,7 @@ def _nb_name(name):
     return str(name or "").strip()[:250].rstrip()
 
 
-def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, changes=None):
+def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, changes=None, goods=None):
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
@@ -1791,13 +1793,14 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
     if not purchase:
         wi = wb.create_sheet("ChiTiet_HangHoa")
         header_row(wi, 1, ITEM_HEAD + ["Tên hàng hoá, dịch vụ", "ĐVT", "Số lượng", "Đơn giá", "Thành tiền",
-                                       "Thuế suất", "Tiền thuế"])
+                                       "Thuế suất", "Tiền thuế", "Mã TK", "Mã hàng"])
         for inv in invoices:
             for it in invoice_lines(inv):
                 if it.get("nature") == "4":
                     continue
+                gm = (goods or {}).get((_goods_key(it["name"]), "R")) or {}
                 wi.append(_inv_head(inv) + [it["name"], it["unit"], it["qty"], it["price"], it["amount"],
-                                            it["rate"], it["tax"]])
+                                            it["rate"], it["tax"], gm.get("ma_tk", ""), gm.get("ma_hang", "")])
         for row in wi.iter_rows(min_row=2):
             for idx in (10, 11, 13):
                 row[idx].number_format = money
@@ -1856,9 +1859,10 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
         out = []
         for it in lines:
             it = dict(it, rate=it.get("rate") or first_rate)  # dòng ghi chú: thuế suất theo dòng hàng (như Nibot)
+            gm = (goods or {}).get((_goods_key(it["name"]), "V")) or {}  # danh mục Hàng hoá: Mã TK → TKNO, Mã hàng → MADMNO
             out.append(["; ".join(ghichu), lctg, sr, so, info.get("nky") or _to_dt(inv.get("nky")), ngay,
-                        _num(so), ngay, dien_giai, inv.get("thtttoan") or info.get("httt", ""), "", "", tkco,
-                        nbmst, "", "", _nb_name(it["name"]), _nb_name(it["name"]), 0, "", it["unit"], it["qty"], 0, 0, 0, it["price"],
+                        _num(so), ngay, dien_giai, inv.get("thtttoan") or info.get("httt", ""), gm.get("ma_tk", ""), "",
+                        tkco, nbmst, gm.get("ma_hang", ""), "", _nb_name(it["name"]), _nb_name(it["name"]), 0, "", it["unit"], it["qty"], 0, 0, 0, it["price"],
                         it["amount"], 0, it.get("discount", 0.0), "V", "1331", it["rate"], 0, it["tax"], 0,
                         it["amount"] + it["tax"], nbmst, nbten, nbten, dchi, nbmst, dchi, "", "TIENHANG", "", guid])
         return out
@@ -3974,6 +3978,282 @@ def query_invoices(out_root, mst, f):
     return rows
 
 
+# ---------------------------------------------------------------------------
+# Hàng hoá (như Nibot): danh mục tên hàng lấy từ hoá đơn mua vào (V) / bán ra (R), gán Mã TK + Mã hàng
+# để kết xuất Smart KTSC (TKNO / MADMNO). Lưu theo từng doanh nghiệp: <thư mục DN>/hang-hoa.json
+# ---------------------------------------------------------------------------
+GOODS_LOAI = ("", "V", "R", "VR")
+GOODS_LOCK = threading.RLock()
+
+
+def goods_file(out_root, mst):
+    return os.path.join(company_dir(out_root, mst), "hang-hoa.json")
+
+
+def _goods_key(name):
+    return re.sub(r"\s+", " ", str(name or "")).strip().casefold()
+
+
+def goods_load(out_root, mst):
+    return _load_json(goods_file(out_root, mst), {"items": []}).get("items", [])
+
+
+def goods_save(out_root, mst, items):
+    os.makedirs(company_dir(out_root, mst), exist_ok=True)
+    _save_json(goods_file(out_root, mst), {"items": items})
+
+
+def _goods_row(ten, loai="", ma_tk="", ma_hang="", ghi_chu="", dvt=None, gid=None):
+    return {"id": gid or str(uuid.uuid4()), "ma_tk": str(ma_tk or "").strip(), "ma_hang": str(ma_hang or "").strip(),
+            "ten": re.sub(r"\s+", " ", str(ten or "")).strip(), "loai": loai, "ghi_chu": str(ghi_chu or "").strip(),
+            "dvt": list(dvt or [])}
+
+
+def _goods_check(row):
+    if not row["ten"]:
+        raise ValueError("Tên hàng bị trống")
+    if len(row["ten"]) > 5000:
+        raise ValueError("Tên hàng quá dài: %s…" % row["ten"][:60])
+    if len(row["ma_hang"]) > 100:
+        raise ValueError("Mã hàng quá 100 ký tự: %s" % row["ma_hang"])
+    if row["loai"] not in GOODS_LOAI:
+        raise ValueError("Loại HĐ của '%s' không hợp lệ – chỉ được để trống, V, R hoặc VR" % row["ten"][:60])
+
+
+def goods_sync(out_root, mst, start, end, kinds=("purchase", "sold"), skip_zero=False, use_xml_code=False):
+    """Đồng bộ hàng hoá: tên hàng trong hoá đơn chưa có trong danh mục thì thêm vào (giữ nguyên mã đã gán).
+    skip_zero: bỏ dòng chiết khấu hoặc (SL = 0 và thành tiền = 0). use_xml_code: gắn luôn mã hàng có trong XML."""
+    with GOODS_LOCK:
+        items = goods_load(out_root, mst)
+        idx = {(_goods_key(x["ten"]), x["loai"]): x for x in items}
+        base = company_dir(out_root, mst)
+        added = 0
+        for kind in kinds:
+            loai = "V" if kind == "purchase" else "R"
+            entries = _load_json(index_file(out_root, mst), {}).get(kind, {})
+            for r in query_invoices(out_root, mst, {"kind": kind, "from": start, "to": end}):
+                e = entries.get(r["key"]) or {}
+                inv = dict(e.get("inv") or {})
+                if r["xml"]:
+                    inv["_xmlinfo"] = parse_invoice_xml(os.path.join(base, r["xml"]))
+                elif e.get("detail"):
+                    inv["_detailinfo"] = _load_json(os.path.join(base, e["detail"]), {})
+                else:
+                    continue
+                for it in invoice_lines(inv):
+                    name = re.sub(r"\s+", " ", it.get("name") or "").strip()
+                    if not name:
+                        continue
+                    if skip_zero and (it.get("nature") == "3" or (not it.get("qty") and not it.get("amount"))):
+                        continue
+                    k = (_goods_key(name), loai)
+                    row = idx.get(k)
+                    if row is None:
+                        row = _goods_row(name, loai)
+                        items.append(row)
+                        idx[k] = row
+                        added += 1
+                    unit = (it.get("unit") or "").strip()
+                    if unit and unit not in row["dvt"]:
+                        row["dvt"].append(unit)
+                    if use_xml_code and not row["ma_hang"] and it.get("code"):
+                        row["ma_hang"] = str(it["code"]).strip()[:100]
+        goods_save(out_root, mst, items)
+        return {"added": added, "total": len(items)}
+
+
+def goods_update(out_root, mst, rows):
+    """Lưu các dòng sửa / thêm mới: [{id?, ma_tk, ma_hang, ten, loai, ghi_chu}]."""
+    with GOODS_LOCK:
+        items = goods_load(out_root, mst)
+        by_id = {x["id"]: x for x in items}
+        n = 0
+        for src in rows or []:
+            cur = by_id.get(src.get("id") or "")
+            row = _goods_row(src.get("ten", cur["ten"] if cur else ""), str(src.get("loai", cur["loai"] if cur else "")
+                                                                            ).strip().upper(),
+                             src.get("ma_tk", cur["ma_tk"] if cur else ""), src.get("ma_hang", cur["ma_hang"] if cur else ""),
+                             src.get("ghi_chu", cur["ghi_chu"] if cur else ""), cur["dvt"] if cur else [],
+                             cur["id"] if cur else None)
+            _goods_check(row)
+            if cur:
+                cur.update(row)
+            else:
+                dup = [x for x in items if _goods_key(x["ten"]) == _goods_key(row["ten"]) and x["loai"] == row["loai"]]
+                if dup:
+                    raise ValueError("Đã có hàng hoá '%s' (loại %s)" % (row["ten"][:60], row["loai"] or "trống"))
+                items.append(row)
+                by_id[row["id"]] = row
+            n += 1
+        goods_save(out_root, mst, items)
+        return n
+
+
+def goods_assign(out_root, mst, ids, col, old, new):
+    """Gán hàng loạt Mã TK / Mã hàng cho các dòng đã chọn; old khác trống thì chỉ thay dòng đang có giá trị đó."""
+    field = {"MaTk": "ma_tk", "MaHang": "ma_hang", "ma_tk": "ma_tk", "ma_hang": "ma_hang"}.get(col)
+    if not field:
+        raise ValueError("Chưa chọn cột cần gán")
+    new, old = str(new or "").strip(), str(old or "").strip()
+    if field == "ma_hang" and len(new) > 100:
+        raise ValueError("Mã hàng quá 100 ký tự")
+    with GOODS_LOCK:
+        items = goods_load(out_root, mst)
+        want, n = set(ids or []), 0
+        for x in items:
+            if x["id"] in want and (not old or x[field] == old or not x[field]):
+                x[field] = new
+                n += 1
+        goods_save(out_root, mst, items)
+        return n
+
+
+def _goods_ascii(text):
+    t = unicodedata.normalize("NFD", str(text or "")).replace("đ", "d").replace("Đ", "D")
+    return "".join(c for c in t if unicodedata.category(c) != "Mn")
+
+
+def goods_autocode(out_root, mst, ids, kind, prefix="HH", digits=6):
+    """Tạo mã hàng tự động cho các mặt hàng chưa có mã (đã chọn, hoặc tất cả):
+    1 = <tiền tố><số thứ tự> (HH000001…); 2 = tên không dấu, không khoảng cách; 3 = chữ cái đầu của các từ."""
+    kind = int(kind)
+    if kind not in (1, 2, 3):
+        raise ValueError("Chưa chọn kiểu tạo mã hàng")
+    digits = max(1, min(int(digits or 6), 15))
+    prefix = str(prefix or "").strip()
+    with GOODS_LOCK:
+        items = goods_load(out_root, mst)
+        used = {x["ma_hang"].upper() for x in items if x["ma_hang"]}
+        want = set(ids or [])
+        targets = [x for x in items if not x["ma_hang"] and (not want or x["id"] in want)]
+        nums = [int(m.group(1)) for c in used for m in [re.fullmatch(re.escape(prefix.upper()) + r"(\d+)", c)] if m]
+        seq = max(nums) if nums else 0
+        for x in targets:
+            if kind == 1:
+                seq += 1
+                code = prefix + str(seq).zfill(digits)
+            else:
+                words = re.findall(r"[A-Za-z0-9]+", _goods_ascii(x["ten"]))
+                code = ("".join(words) if kind == 2 else "".join(w[0] for w in words)).upper()[:90] or "HH"
+                base_code, i = code, 1
+                while code.upper() in used:
+                    i += 1
+                    code = "%s%d" % (base_code, i)
+            used.add(code.upper())
+            x["ma_hang"] = code
+        goods_save(out_root, mst, items)
+        return len(targets)
+
+
+def goods_delete(out_root, mst, mode, ids=None):
+    """mode 0: xoá tất cả; 1: xoá hàng hoá chưa gán mã; 2: xoá các dòng đã chọn."""
+    with GOODS_LOCK:
+        items = goods_load(out_root, mst)
+        want = set(ids or [])
+        keep = [] if int(mode) == 0 else [x for x in items if (x["ma_hang"] or x["ma_tk"])] if int(mode) == 1 else \
+            [x for x in items if x["id"] not in want]
+        goods_save(out_root, mst, keep)
+        return len(items) - len(keep)
+
+
+GOODS_HEAD = ["Mã TK", "Mã hàng", "Tên hàng", "ĐVT", "Loại HĐ", "Ghi chú", "GuidHang"]
+
+
+def goods_export(out_root, mst, items=None):
+    """Xuất Excel đúng mẫu Nibot (Mã TK, Mã hàng, Tên hàng, ĐVT, Loại HĐ, Ghi chú, GuidHang) – sửa rồi Import lại."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+    items = goods_load(out_root, mst) if items is None else items
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet"
+    ws.append(GOODS_HEAD)
+    for c in ws[1]:
+        c.font = Font(bold=True)
+    for x in sorted(items, key=lambda x: x["id"]):
+        ws.append([x["ma_tk"], x["ma_hang"], x["ten"], ", ".join(x.get("dvt") or []), x["loai"], x["ghi_chu"], x["id"]])
+    for col, w in zip("ABCDEFG", (10, 16, 60, 10, 8, 20, 38)):
+        ws.column_dimensions[col].width = w
+    out_dir = os.path.join(company_dir(out_root, mst), "_ket-xuat")
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, "HangHoa_%s_%s.xlsx" % (mst, datetime.now().strftime("%y%m%d%H%M%S")))
+    wb.save(path)
+    return path
+
+
+def goods_import(out_root, mst, data, drop_dup=False):
+    """Import Excel mẫu Nibot. Khớp theo GuidHang, không có thì theo Tên hàng + Loại HĐ; chưa có thì thêm mới.
+    Trả {'added','updated'} hoặc ValueError kèm danh sách dòng lỗi / tên trùng."""
+    from openpyxl import load_workbook
+    try:
+        wb = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
+    except Exception:
+        raise ValueError("File Excel không đúng định dạng XLSX (Office 2007 trở lên)")
+    rows = list(wb.worksheets[0].iter_rows(values_only=True))
+    if not rows:
+        raise ValueError("Không đọc được dữ liệu trong file Excel")
+    head = [str(v or "").strip().lower() for v in rows[0]]
+    col = {}
+    for name in ("Mã TK", "Mã hàng", "Tên hàng", "Loại HĐ", "Ghi chú", "GuidHang"):
+        if name.lower() not in head:
+            raise ValueError("Không tìm thấy cột %s – dùng file Export Excel của trang Hàng hoá làm mẫu" % name)
+        col[name] = head.index(name.lower())
+    get = lambda r, k: ("" if col[k] >= len(r) or r[col[k]] is None else str(r[col[k]]).strip())
+    errs, recs = [], []
+    for i, r in enumerate(rows[1:], 2):
+        if not any(v not in (None, "") for v in r):
+            continue
+        row = _goods_row(get(r, "Tên hàng"), get(r, "Loại HĐ").upper(), get(r, "Mã TK"), get(r, "Mã hàng"),
+                         get(r, "Ghi chú"), gid=get(r, "GuidHang") or None)
+        try:
+            _goods_check(row)
+        except ValueError as e:
+            errs.append("Dòng %d: %s" % (i, e))
+            continue
+        recs.append(row)
+    if errs:
+        raise ValueError("\n".join(errs[:30]))
+    keys = collections.Counter((_goods_key(x["ten"]), x["loai"]) for x in recs)
+    dups = sorted({x["ten"] for x in recs if keys[(_goods_key(x["ten"]), x["loai"])] > 1})
+    if dups and not drop_dup:
+        raise ValueError("Có %d hàng hoá bị trùng tên:\n%s" % (len(dups), "\n".join(dups[:30])))
+    with GOODS_LOCK:
+        items = goods_load(out_root, mst)
+        by_id = {x["id"]: x for x in items}
+        by_key = {(_goods_key(x["ten"]), x["loai"]): x for x in items}
+        added = updated = 0
+        seen = set()
+        for row in recs:
+            k = (_goods_key(row["ten"]), row["loai"])
+            if k in seen:
+                continue  # trùng tên trong file: giữ dòng đầu
+            seen.add(k)
+            cur = by_id.get(row["id"]) or by_key.get(k)
+            if cur:
+                row["id"], row["dvt"] = cur["id"], cur.get("dvt") or []
+                cur.update(row)
+                updated += 1
+            else:
+                items.append(row)
+                added += 1
+            by_key[k] = cur or row
+        goods_save(out_root, mst, items)
+    return {"added": added, "updated": updated}
+
+
+def goods_index(out_root, mst):
+    """Tra mã theo tên hàng cho kết xuất: {(tên chuẩn hoá, 'V'/'R'): {ma_tk, ma_hang}} – dòng loại trống/VR dùng cho cả hai."""
+    out = {}
+    for x in goods_load(out_root, mst):
+        if not (x["ma_tk"] or x["ma_hang"]):
+            continue
+        for loai in (("V", "R") if x["loai"] in ("", "VR") else (x["loai"],)):
+            k = (_goods_key(x["ten"]), loai)
+            if k not in out or x["loai"] == loai:  # dòng đúng loại ưu tiên hơn dòng dùng chung
+                out[k] = {"ma_tk": x["ma_tk"], "ma_hang": x["ma_hang"]}
+    return out
+
+
 def export_invoices(out_root, mst, company_name, f, fmt):
     """Kết xuất các HĐ đang lọc: 'xlsx' (mẫu Nibot) hoặc 'xml' / 'html' / 'pdf' (gói .zip). Trả về đường dẫn."""
     kind = (f.get("kind") or "purchase").replace("_dv", "")
@@ -4004,7 +4284,8 @@ def export_invoices(out_root, mst, company_name, f, fmt):
         start = parse_date(f["from"]) if f.get("from") else min(dates)
         end = parse_date(f["to"]) if f.get("to") else max(dates)
         path = os.path.join(out_dir, "%s_%s_%s.xlsx" % (label, mst, stamp))
-        return write_nibot_workbook(path, kind, invoices, mst, company_name, start, end)
+        return write_nibot_workbook(path, kind, invoices, mst, company_name, start, end,
+                                    goods=goods_index(out_root, mst))
     if fmt == "all":  # tải hết: XML gốc + PDF (gốc của người bán, không có thì PDF thuế) + bảng kê Excel
         path = os.path.join(out_dir, "%s_TAT_CA_%s_%s.zip" % (label, mst, stamp))
         xlsx = export_invoices(out_root, mst, company_name, f, "xlsx")
@@ -4955,6 +5236,7 @@ body.ws main{max-width:none}
 .grid tbody tr.sel td{background:rgba(91,95,224,.14)}.grid tbody tr.sel td:first-child{box-shadow:inset 3px 0 var(--acc)}
 .grid tbody tr.bad td{color:var(--err)}.grid td.nw{white-space:nowrap}
 .grid td.mh,.grid td.ten{white-space:normal;min-width:150px;max-width:300px}
+#gTbl tr.g-grp td{background:#5b2c8f;color:#fff;font-weight:600}#gTbl input.note{width:100%;min-width:90px}
 .grid td.ct{white-space:normal;min-width:130px;max-width:170px;line-height:1.5}.grid td.ct a.lk{margin:0 6px 0 0;display:inline-block}
 .grid thead th{white-space:normal;vertical-align:bottom}
 .clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35}
@@ -5109,6 +5391,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     <input type="hidden" id="hMst">
     <nav class="subtabs" id="wsTabs">
       <a href="#" data-s="hoa-don">Hoá đơn</a><a href="#" data-s="dong-bo" class="q-dongbo">Đồng bộ</a>
+      <a href="#" data-s="hang-hoa">Hàng hoá</a>
       <a href="#" data-s="sao-ke" class="q-saoke">Sao kê ng.hàng</a><a href="#" data-s="tra-cuu-mst">Tra cứu MST</a>
     </nav>
   </div>
@@ -5193,6 +5476,36 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
 </div>
 
   <div class="card hide" id="wsTOOL"></div>
+
+  <div class="card hide" id="wsHH">
+    <div class="filters">
+      <select id="gLoai" title="Loại HĐ"><option value="">--Loại HĐ--</option><option>V</option><option>R</option><option>VR</option></select>
+      <select id="gPL"><option value="">--Tất cả hàng hoá--</option><option value="no">Chưa có mã hàng</option><option value="yes">Đã có mã hàng</option></select>
+      <input id="gQ" type="search" class="grow" autocomplete="off" placeholder="nhập thông tin hàng hoá cần tìm (mã TK, mã hàng, tên hàng, ghi chú)">
+      <label class="nw" title="Hiển thị đơn vị tính của hàng hoá trong hoá đơn đã tải"><input type="checkbox" id="gDvt"> Hiện ĐVT</label>
+      <label class="nw" title="Gom các mặt hàng giống nhau vào 1 nhóm – giúp gán mã tiện hơn"><input type="checkbox" id="gNhom"> Gom nhóm giống nhau</label>
+      <input type="number" id="gSim" value="80" min="30" max="100" style="width:64px" title="Độ tương đồng (%) – mặc định 80">
+    </div>
+    <div class="bar q-sua">
+      <button class="sec" onclick="gSyncBox()">⟳ Đồng bộ hàng hoá</button>
+      <button class="sec" onclick="gAssign('ma_hang')">GÁN MÃ HÀNG</button>
+      <button class="sec" onclick="gAssign('ma_tk')">GÁN MÃ TK</button>
+      <button class="sec" onclick="gAutoBox()">TẠO MÃ HÀNG TỰ ĐỘNG</button>
+      <button class="sec" onclick="gAdd()">+ Thêm hàng hoá</button>
+      <button class="red" onclick="gDelBox()">Xoá hàng hoá</button>
+      <span style="flex:1"></span>
+      <button class="sec" onclick="$('gFile').click()">Import Excel</button><input type="file" id="gFile" accept=".xlsx" class="hide">
+      <button class="sec q-ketxuat" onclick="gExport()">Export Excel</button>
+      <button id="gSave" class="hide" onclick="gSave()">Lưu thay đổi</button>
+    </div>
+    <div id="gBox" class="card hide" style="margin:8px 0;border-color:var(--acc)"></div>
+    <div class="err" id="gErr"></div>
+    <div class="grid"><table id="gTbl"><thead><tr><th><input type="checkbox" id="gAll" title="Chọn tất cả dòng đang lọc"></th><th>Mã TK</th><th>Mã hàng</th>
+      <th>Tên hàng</th><th class="g-dvt hide">ĐVT</th><th>Loại HĐ</th><th>Ghi chú</th></tr></thead><tbody id="gRows"></tbody></table></div>
+    <div class="bar" id="gPager"></div>
+    <div class="hint">Mã TK và Mã hàng gán ở đây được đưa vào cột TKNO / MADMNO của sheet Smart_KTSC khi kết xuất Excel (mẫu Nibot) – khớp theo tên hàng.
+      Loại HĐ: V = mua vào, R = bán ra, để trống / VR = dùng cho cả hai.</div>
+  </div>
 </section>
 <section class="card" id="tabDN">
   <div class="top">
@@ -5350,7 +5663,7 @@ async function api(path, body) {
   return d;
 }
 const post = (p, b) => api(p, b);
-const PERM_NAMES = {dongbo: 'Đồng bộ / tải hoá đơn', hdgoc: 'Tải và gắn hoá đơn gốc', sua: 'Ghi chú, duyệt nội bộ, HĐ dịch vụ',
+const PERM_NAMES = {dongbo: 'Đồng bộ / tải hoá đơn', hdgoc: 'Tải và gắn hoá đơn gốc', sua: 'Ghi chú, duyệt nội bộ, HĐ dịch vụ, hàng hoá',
                     ketxuat: 'Kết xuất Excel / ZIP', saoke: 'Sao kê ngân hàng', dn: 'Thêm / sửa doanh nghiệp, mật khẩu cổng thuế'};
 const can = p => !me || !me.quyen || me.quyen.includes(p);
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
@@ -5929,10 +6242,12 @@ function openCompany(mst, sub) {
 }
 function openSub(sub, force) {
   wsSub = sub; renderWsHead();
-  ['wsHD', 'wsSYNC', 'wsTOOL'].forEach(id => hide(id)); toolsHome();
+  ['wsHD', 'wsSYNC', 'wsTOOL', 'wsHH'].forEach(id => hide(id)); toolsHome();
   if (sub === 'dong-bo') {
     show('wsSYNC'); if (!$('sFrom').value) { $('sYear').value = new Date().getFullYear(); $('sPer').value = 'week'; sPeriod(); }
     poll();
+  } else if (sub === 'hang-hoa') {
+    show('wsHH'); gLoad();
   } else if (sub === 'sao-ke' || sub === 'tra-cuu-mst') {
     const pane = $(sub === 'sao-ke' ? 't-bank' : 't-mst'); $('wsTOOL').append(pane); pane.classList.remove('hide'); show('wsTOOL');
     if (sub === 'tra-cuu-mst' && !$('mstText').value.trim()) $('mstText').value = wsMst;
@@ -6276,6 +6591,166 @@ async function exportInv(fmtx) {
 }
 ['hFile', 'hDuyet', 'hTthai', 'hKq'].forEach(id => $(id).onchange = () => { hPage = 0; loadInv(); });
 ['hKh', 'hSo', 'hQ'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { hPage = 0; loadInv(); } }));
+// ---- Hàng hoá (như Nibot): danh mục tên hàng từ hoá đơn, gán Mã TK / Mã hàng cho kết xuất KTSC ----
+let gItems = [], gSel = new Set(), gDirty = new Map(), gPage = 0, gGroups = null;
+const G_SIZE = 100;
+const gMsg = (t, cls) => { $('gErr').innerHTML = ''; if (t) $('gErr').append(el('div', cls || 'err', t)); };
+async function gLoad() {
+  gMsg('');
+  try { gItems = (await post('/api/goods', {mst: wsMst, action: 'list'})).items; } catch (e) { gMsg(e.message); gItems = []; }
+  gDirty.clear(); gSel.clear(); hide('gSave'); gGroups = null; gRender();
+}
+const gPlain = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+function gBigrams(s) { const t = ' ' + gPlain(s).replace(/\s+/g, ' ').trim() + ' ', m = new Map();
+  for (let i = 0; i < t.length - 1; i++) { const b = t.slice(i, i + 2); m.set(b, (m.get(b) || 0) + 1); } return m; }
+function gSimilar(a, b) {  // hệ số Dice trên cặp ký tự – 100 = giống hệt
+  let inter = 0, na = 0, nb = 0; a.forEach(v => na += v); b.forEach(v => nb += v);
+  a.forEach((v, k) => { inter += Math.min(v, b.get(k) || 0); }); return na + nb ? 200 * inter / (na + nb) : 0;
+}
+function gGroup(rows) {  // gom các tên giống nhau (>= ngưỡng %) vào cùng nhóm
+  const th = Math.max(30, Math.min(100, +$('gSim').value || 80)), reps = [], gid = new Map();
+  rows.forEach(r => { const bg = gBigrams(r.ten);
+    let g = reps.find(x => gSimilar(x.bg, bg) >= th);
+    if (!g) { g = {id: reps.length + 1, bg, n: 0}; reps.push(g); }
+    g.n++; gid.set(r.id, g); });
+  return gid;
+}
+function gView() {
+  const loai = $('gLoai').value, pl = $('gPL').value, q = gPlain($('gQ').value.trim());
+  let v = gItems.filter(r => (!loai || r.loai === loai) && (!pl || (pl === 'yes') === !!r.ma_hang) &&
+    (!q || gPlain([r.ma_tk, r.ma_hang, r.ten, r.ghi_chu].join(' ')).includes(q)));
+  v.sort((a, b) => a.ten.localeCompare(b.ten, 'vi'));
+  gGroups = null;
+  if ($('gNhom').checked) {
+    gGroups = gGroup(v);
+    v = v.filter(r => gGroups.get(r.id).n > 1).sort((a, b) => gGroups.get(a.id).id - gGroups.get(b.id).id);
+  }
+  return v;
+}
+function gEdit(r, k, v) { r[k] = v; const d = gDirty.get(r.id) || {id: r.id}; d[k] = v; gDirty.set(r.id, d); show('gSave'); }
+function gRender() {
+  const view = gView(), tb = $('gRows'), edit = can('sua'), dvt = $('gDvt').checked;
+  document.querySelectorAll('.g-dvt').forEach(x => x.classList.toggle('hide', !dvt));
+  const pages = Math.max(1, Math.ceil(view.length / G_SIZE)); gPage = Math.min(gPage, pages - 1);
+  tb.innerHTML = ''; let lastG = null;
+  view.slice(gPage * G_SIZE, gPage * G_SIZE + G_SIZE).forEach(r => {
+    if (gGroups) { const g = gGroups.get(r.id);
+      if (g !== lastG) { lastG = g; const tr = tb.insertRow(); tr.className = 'g-grp'; const td = tr.insertCell(); td.colSpan = 7;
+        const cb = el('input'); cb.type = 'checkbox'; cb.title = 'Chọn cả nhóm';
+        cb.onchange = () => { view.filter(x => gGroups.get(x.id) === g).forEach(x => cb.checked ? gSel.add(x.id) : gSel.delete(x.id)); gRender(); };
+        cb.checked = view.filter(x => gGroups.get(x.id) === g).every(x => gSel.has(x.id));
+        td.append(cb, ' Nhóm ' + g.id + ' (' + g.n + ' mặt hàng)'); } }
+    const tr = tb.insertRow(); if (gSel.has(r.id)) tr.classList.add('sel');
+    const pick = el('input'); pick.type = 'checkbox'; pick.checked = gSel.has(r.id);
+    pick.onchange = () => { pick.checked ? gSel.add(r.id) : gSel.delete(r.id); tr.classList.toggle('sel', pick.checked); gCount(view); };
+    tr.insertCell().append(pick);
+    const inp = (k, w) => { const c = tr.insertCell(); if (!edit) { c.textContent = r[k]; return; }
+      const i = el('input', 'note'); i.value = r[k] || ''; if (w) i.style.width = w; i.onchange = () => gEdit(r, k, i.value.trim()); c.append(i); };
+    inp('ma_tk', '70px'); inp('ma_hang', '130px');
+    const tn = tr.insertCell(); tn.textContent = r.ten; tn.style.minWidth = '280px';
+    const dv = tr.insertCell(); dv.className = 'g-dvt' + (dvt ? '' : ' hide'); dv.textContent = (r.dvt || []).join(', ');
+    const lc = tr.insertCell();
+    if (edit) { const s = el('select'); ['', 'V', 'R', 'VR'].forEach(o => s.append(new Option(o || '(cả hai)', o))); s.value = r.loai || '';
+      s.onchange = () => gEdit(r, 'loai', s.value); lc.append(s); } else lc.textContent = r.loai;
+    inp('ghi_chu');
+  });
+  const pg = $('gPager'); pg.innerHTML = '';
+  const prev = el('button', 'sm sec', '‹'); prev.disabled = gPage === 0; prev.onclick = () => { gPage--; gRender(); };
+  const next = el('button', 'sm sec', '›'); next.disabled = gPage >= pages - 1; next.onclick = () => { gPage++; gRender(); };
+  pg.append(el('span', 'mute', 'Trang ' + (gPage + 1) + '/' + pages + ' '), prev, next, el('span', 'mute', ' ' + view.length + ' hàng hoá' +
+    (view.length !== gItems.length ? ' (lọc từ ' + gItems.length + ')' : '') + ' · ' + gItems.filter(x => x.ma_hang).length + ' đã có mã hàng'));
+  pg.append(el('span', 'mute', '')); gCount(view);
+  $('gAll').checked = view.length > 0 && view.every(r => gSel.has(r.id));
+  $('gAll').onchange = () => { view.forEach(r => $('gAll').checked ? gSel.add(r.id) : gSel.delete(r.id)); gRender(); };
+}
+function gCount(view) { const s = $('gPager').lastChild; if (s) s.textContent = gSel.size ? '  · đã chọn ' + gSel.size + ' dòng' : ''; }
+['gLoai', 'gPL', 'gDvt', 'gNhom', 'gSim'].forEach(id => $(id).addEventListener('change', () => { gPage = 0; gRender(); }));
+$('gQ').addEventListener('input', () => { gPage = 0; gRender(); });
+async function gSave() {
+  try { const d = await post('/api/goods', {mst: wsMst, action: 'update', rows: [...gDirty.values()]});
+        gMsg('Đã lưu ' + d.n + ' dòng.', 'ok'); gDirty.clear(); hide('gSave'); }
+  catch (e) { gMsg(e.message); }
+}
+function gForm(title, html, onOk, okText) {  // khung nhập ngay trên bảng (thay cho hộp thoại)
+  const b = $('gBox'); b.innerHTML = '<b>' + title + '</b><div style="margin-top:8px">' + html + '</div>';
+  const bar = el('div', 'bar'); const ok = el('button', '', okText || 'Thực hiện'), no = el('button', 'sec', 'Đóng');
+  no.onclick = () => hide('gBox');
+  ok.onclick = async () => { ok.disabled = true; try { await onOk(); hide('gBox'); } catch (e) { gMsg(e.message); } ok.disabled = false; };
+  bar.append(ok, no); b.append(bar); show('gBox');
+}
+const gIds = () => [...gSel];
+function gSyncBox() {
+  const y = new Date().getFullYear();
+  gForm('Đồng bộ hàng hoá', `Thời gian: <input type="date" id="gsFrom" value="${y}-01-01"> → <input type="date" id="gsTo" value="${y}-12-31">
+    &nbsp; <label><input type="checkbox" id="gsVao" checked> Đầu vào</label> <label><input type="checkbox" id="gsRa" checked> Đầu ra</label><br>
+    <label><input type="radio" name="gsTc" checked> Tất cả hàng hoá có trong hoá đơn</label><br>
+    <label><input type="radio" name="gsTc" id="gsSkip"> Không đồng bộ HH là chiết khấu hoặc (SL = 0 và thành tiền = 0)</label><br>
+    <label><input type="checkbox" id="gsCode"> Gắn luôn mã hàng nếu có sẵn trong hoá đơn XML</label>
+    <div class="hint">Tên hàng chưa có trong danh mục thì được thêm vào; mã đã gán giữ nguyên.</div>`, async () => {
+    gMsg('Đang đồng bộ hàng hoá… (lâu nếu nhiều hoá đơn)', 'mute');
+    const d = await post('/api/goods', {mst: wsMst, action: 'sync', from: $('gsFrom').value, to: $('gsTo').value,
+      vao: $('gsVao').checked, ra: $('gsRa').checked, skip_zero: $('gsSkip').checked, xml_code: $('gsCode').checked});
+    await gLoad(); gMsg('Đồng bộ hàng hoá hoàn tất: thêm ' + d.added + ' mặt hàng (tổng ' + d.total + ').', 'ok');
+  }, 'Đồng bộ hàng hoá');
+}
+function gAssign(col) {
+  if (!gSel.size) { gMsg('Chưa chọn dòng cần gán – tích chọn các dòng (hoặc cả nhóm) trước.'); return; }
+  gForm(col === 'ma_tk' ? 'Gán Mã TK hàng loạt' : 'Gán Mã hàng hàng loạt', `
+    Giá trị ban đầu: <input id="gaOld" placeholder="để trống nếu không cần quan tâm giá trị ban đầu" style="width:300px"><br>
+    Giá trị thay thế: <input id="gaNew" style="width:300px"> &nbsp; <b>${gSel.size}</b> dòng đã chọn`, async () => {
+    const d = await post('/api/goods', {mst: wsMst, action: 'assign', ids: gIds(), col, old: $('gaOld').value, new: $('gaNew').value});
+    await gLoad(); gMsg('Đã thay thế ' + d.n + ' dòng.', 'ok');
+  }, 'Thay thế');
+  setTimeout(() => $('gaNew').focus(), 50);
+}
+function gAutoBox() {
+  const n = gSel.size || gItems.filter(x => !x.ma_hang).length;
+  gForm('Tạo mã hàng tự động (cho các mặt hàng chưa có mã)', `
+    <label><input type="radio" name="gaK" value="1" checked> Kiểu 1: dạng HH1, HH2, HH3…</label>
+      &nbsp; Tiền tố <input id="gaPre" value="HH" style="width:80px"> Độ dài chữ số <input id="gaDig" type="number" value="6" min="1" max="15" style="width:60px">
+      <small class="err" id="gaEx"></small><br>
+    <label><input type="radio" name="gaK" value="2"> Kiểu 2: không dấu, không khoảng cách</label><br>
+    <label><input type="radio" name="gaK" value="3"> Kiểu 3: lấy ký tự đầu của các từ</label><br>
+    Số dòng: <b>${n}</b> ${gSel.size ? '(đã chọn)' : '(tất cả chưa có mã)'}`, async () => {
+    const kind = document.querySelector('input[name=gaK]:checked').value;
+    const d = await post('/api/goods', {mst: wsMst, action: 'autocode', ids: gIds(), kind, prefix: $('gaPre').value, digits: +$('gaDig').value});
+    await gLoad(); gMsg('Đã tạo mã cho ' + d.n + ' mặt hàng.', 'ok');
+  }, 'Tạo mã hàng tự động');
+  const ex = () => { $('gaEx').textContent = ' ví dụ: ' + $('gaPre').value + '1'.padStart(Math.min(15, +$('gaDig').value || 1), '0'); };
+  $('gaPre').oninput = $('gaDig').oninput = ex; ex();
+}
+function gDelBox() {
+  gForm('Xoá hàng hoá', `<label><input type="radio" name="gdM" value="0"> Xoá tất cả hàng hoá</label><br>
+    <label><input type="radio" name="gdM" value="1"> Xoá hàng hoá chưa được gán mã</label><br>
+    <label><input type="radio" name="gdM" value="2" checked> Xoá dòng hàng hoá đã được chọn (${gSel.size} dòng)</label>`, async () => {
+    const mode = +document.querySelector('input[name=gdM]:checked').value;
+    if (mode === 2 && !gSel.size) throw new Error('Chưa chọn dòng cần xoá');
+    if (!confirm(['Xoá TẤT CẢ hàng hoá', 'Xoá hàng hoá chưa được gán mã', 'Xoá ' + gSel.size + ' dòng đã chọn'][mode] + '?')) return;
+    const d = await post('/api/goods', {mst: wsMst, action: 'delete', mode, ids: gIds()});
+    await gLoad(); gMsg('Đã xoá ' + d.n + ' mặt hàng.', 'ok');
+  }, 'Xoá hàng hoá');
+}
+function gAdd() {
+  gForm('Thêm hàng hoá', `Mã TK <input id="gnTk" style="width:80px"> Mã hàng <input id="gnMa" style="width:140px">
+    Tên hàng <input id="gnTen" style="width:320px"> Loại HĐ <select id="gnLoai"><option value="">(cả hai)</option><option>V</option><option>R</option></select>`, async () => {
+    await post('/api/goods', {mst: wsMst, action: 'update', rows: [{ma_tk: $('gnTk').value, ma_hang: $('gnMa').value, ten: $('gnTen').value, loai: $('gnLoai').value}]});
+    await gLoad(); gMsg('Đã thêm hàng hoá.', 'ok');
+  }, 'Lưu');
+  setTimeout(() => $('gnTk').focus(), 50);
+}
+async function gExport() {
+  try { const d = await post('/api/goods', {mst: wsMst, action: 'export'}); window.open(d.url, '_blank'); } catch (e) { gMsg(e.message); }
+}
+$('gFile').onchange = async () => {
+  const f = $('gFile').files[0]; $('gFile').value = ''; if (!f) return;
+  const data = await readB64(f), go = async drop => post('/api/goods', {mst: wsMst, action: 'import', data, drop_dup: drop});
+  gMsg('Đang import ' + f.name + '…', 'mute');
+  try { let d;
+    try { d = await go(false); }
+    catch (e) { if (!/trùng tên/.test(e.message) || !confirm(e.message.slice(0, 900) + '\n\nImport và loại bỏ dòng trùng?')) throw e; d = await go(true); }
+    await gLoad(); gMsg('Import xong: thêm ' + d.added + ', cập nhật ' + d.updated + ' mặt hàng.', 'ok');
+  } catch (e) { gMsg(e.message); }
+};
 $('q').oninput = render;
 $('toggleAn').onclick = e => { e.preventDefault(); showHidden = !showHidden; render(); };
 $('all').onchange = e => document.querySelectorAll('.pick').forEach(x => x.checked = e.target.checked);
@@ -7414,6 +7889,45 @@ def make_handler(app, port):
                 out = export_invoices(self.T.root, mst, company.get("ten"), data.get("filters") or {}, data.get("fmt"))
                 rel = os.path.relpath(out, company_dir(self.T.root, mst))
                 return self._send(200, {"url": "/file?" + urllib.parse.urlencode({"k": self._k(), "mst": mst, "p": rel})})
+            if path == "/api/goods":  # trang Hàng hoá
+                mst, act = data.get("mst", ""), data.get("action", "list")
+                company = self.T.store.get(mst)
+                if not company:
+                    raise ValueError("Chọn doanh nghiệp")
+                if not self._can(mst):
+                    raise PermissionError("Không có quyền với doanh nghiệp này")
+                root = self.T.root
+                if act == "list":
+                    return self._send(200, {"items": goods_load(root, mst)})
+                if act == "export":
+                    self._perm("ketxuat")
+                    rel = os.path.relpath(goods_export(root, mst), company_dir(root, mst))
+                    return self._send(200, {"url": "/file?" + urllib.parse.urlencode({"k": self._k(), "mst": mst, "p": rel})})
+                self._perm("sua")
+                if act == "sync":
+                    kinds = [k for k, on in (("purchase", data.get("vao", True)), ("sold", data.get("ra", True))) if on]
+                    if not kinds:
+                        raise ValueError("Chọn ít nhất một loại hoá đơn (đầu vào / đầu ra)")
+                    return self._send(200, goods_sync(root, mst, data.get("from") or "", data.get("to") or "", kinds,
+                                                      bool(data.get("skip_zero")), bool(data.get("xml_code"))))
+                if act == "update":
+                    return self._send(200, {"n": goods_update(root, mst, data.get("rows") or [])})
+                if act == "assign":
+                    return self._send(200, {"n": goods_assign(root, mst, data.get("ids") or [], data.get("col"),
+                                                              data.get("old"), data.get("new"))})
+                if act == "autocode":
+                    return self._send(200, {"n": goods_autocode(root, mst, data.get("ids") or [], data.get("kind") or 0,
+                                                                data.get("prefix", "HH"), data.get("digits") or 6)})
+                if act == "delete":
+                    return self._send(200, {"n": goods_delete(root, mst, data.get("mode", 2), data.get("ids") or [])})
+                if act == "import":
+                    import base64
+                    try:
+                        raw = base64.b64decode(data.get("data") or "", validate=True)
+                    except ValueError:
+                        raise ValueError("Dữ liệu file không hợp lệ")
+                    return self._send(200, goods_import(root, mst, raw, bool(data.get("drop_dup"))))
+                raise ValueError("Thao tác không hợp lệ")
             if path == "/api/stop":
                 app.job_for(self.user).stop()
                 return self._send(200, {"ok": True})

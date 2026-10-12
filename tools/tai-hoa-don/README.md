@@ -177,3 +177,14 @@ python -m unittest test_taihoadon.py
 ```
 
 Kiểm thử chạy với một cổng giả lập: captcha SVG (học rồi tự giải), đăng nhập nhiều DN, sai mật khẩu, phân trang, chia tháng, XML, chi tiết hàng hoá, phát hiện HĐ bị huỷ, giao diện; bản web: đăng nhập, CSRF, phân quyền nhân viên, khoá tài khoản, giới hạn đăng nhập sai, đồng bộ tự động, thông báo.
+
+## Hàng hoá (như Nibot)
+
+Tab **Hàng hoá** trong trang doanh nghiệp: danh mục tên hàng lấy từ hoá đơn mua vào (V) / bán ra (R), lưu ở `<thư mục DN>/hang-hoa.json`.
+
+- **Đồng bộ hàng hoá** theo khoảng ngày, đầu vào / đầu ra; tuỳ chọn bỏ dòng chiết khấu hoặc (SL = 0 và thành tiền = 0), gắn luôn mã hàng có trong XML (thẻ MHHDVu). Tên mới được thêm, mã đã gán giữ nguyên.
+- **Gán Mã TK / Mã hàng** hàng loạt cho các dòng đã chọn (có thể chỉ thay dòng đang có "giá trị ban đầu"), sửa trực tiếp trên bảng rồi *Lưu thay đổi*.
+- **Tạo mã hàng tự động** cho mặt hàng chưa có mã: Kiểu 1 tiền tố + số (HH000001…), Kiểu 2 không dấu không khoảng cách, Kiểu 3 chữ cái đầu các từ.
+- **Gom nhóm giống nhau** theo độ tương đồng (%), chọn cả nhóm để gán một mã.
+- **Thêm / Xoá** (tất cả, chưa gán mã, dòng đã chọn); **Export / Import Excel** đúng mẫu Nibot (Mã TK, Mã hàng, Tên hàng, ĐVT, Loại HĐ, Ghi chú, GuidHang) – khớp theo GuidHang hoặc Tên hàng + Loại HĐ, báo tên trùng.
+- Khi kết xuất Excel (mẫu Nibot): Mã TK → **TKNO**, Mã hàng → **MADMNO** của Smart_KTSC (mua vào); bán ra có thêm cột Mã TK / Mã hàng ở sheet chi tiết.
