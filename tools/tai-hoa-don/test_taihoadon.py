@@ -344,7 +344,9 @@ class Tests(unittest.TestCase):
         self.assertEqual(tq["A66"].value, "Total")             # 61 HĐ ở dòng 5..65
         self.assertEqual(tq["R66"].value, "=SUBTOTAL(109,R5:R65)")
         sm = wb["Smart_KTSC_OK"]
-        self.assertEqual(sm.max_row, 1 + 61 * 2)                # bỏ dòng ghi chú (TChat 4)
+        self.assertEqual(sm.max_row, 1 + 61 * 3)                # như Nibot: có cả dòng ghi chú (TChat 4), tiền 0
+        note = [r for r in sm.iter_rows(min_row=2, values_only=True) if r[16] == "Ghi chu giao hang"][0]
+        self.assertEqual((note[21], note[26], note[33], note[31]), (0, 0, 0, "10"))
         row = {h.value: c.value for h, c in zip(sm[1], sm[2])}
         self.assertEqual((row["MATHANG"], row["DONVI"], row["LUONG"], row["TTVND"], row["TS_GTGT"], row["THUEVND"],
                           row["TKTHUE"], row["MADTPNCO"]), ("Giay A4", "Ram", 2, 100000, "10", 10000, "1331", "0101234567"))
@@ -357,6 +359,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(bk["L140"].value, "=SUM(L18:L139)")
         ht = wb["BangKe_HoanThue_OK"]
         self.assertEqual([ht.cell(17, c).value for c in (9, 10, 11, 12, 13)], ["Giay A4", "Ram", 2, 50000, 100000])
+        self.assertEqual(ht.cell(17 + 61 * 3, 5).value, "TỔNG CỘNG")  # hoàn thuế: từng dòng hàng như Nibot
         # DN B: sai mật khẩu → ghi lỗi, chỉ thử đăng nhập đúng 1 lần, không làm hỏng DN khác
         self.assertIn("mật khẩu", b["loi"])
         self.assertEqual(FakePortal.logins.count("0101234567"), 1)
@@ -897,6 +900,44 @@ class Tests(unittest.TestCase):
             srv.server_close()
         self.assertEqual((got["pdf"], got["xml"]), (b"%PDF-1.4 minvoice", b'<?xml version="1.0"?><HDon>mi</HDon>'))
         self.assertTrue(got["pdf_check"])
+
+    def test_nibot_rules_no_xml_and_cash_note(self):
+        """Như file Nibot thật: HĐ không XML lấy dòng hàng từ dữ liệu chi tiết cổng (KCT / 10%); ghi chú + TK 331/1111
+        theo nhóm cùng ngày cùng người bán; sheet KCT bố cục riêng; kỳ ghi "Quý"."""
+        def inv(nbmst, kh, so, ngay, cthue, thue, detail=None):
+            x = {"nbmst": nbmst, "nbten": "NB " + nbmst, "khmshdon": 1, "khhdon": kh, "shdon": so, "tthai": 1,
+                 "ttxly": 5, "tdlap": ngay + "T00:00:00", "tgtcthue": cthue, "tgtthue": thue, "tgtttbso": cthue + thue}
+            if detail:
+                x["_detailinfo"] = {"hdhhdvu": detail}
+            else:
+                x["thttltsuat"] = [{"tsuat": "8%", "thtien": cthue, "tthue": thue}]
+            return x
+        acb = "0301452948"
+        invs = [inv(acb, "K26TYY", 1, "2026-07-07", 4743090, 0, [{"ten": "LAI VAY", "thtien": 4743090, "ltsuat": "KCT"}]),
+                inv(acb, "K26TYY", 2, "2026-07-07", 4743090, 0, [{"ten": "LAI VAY", "thtien": 4743090, "ltsuat": "KCT"}]),
+                inv(acb, "K26TYY", 3, "2026-07-11", 15545, 1555,
+                    [{"ten": "PHI DICH VU NGAN HANG", "thtien": 15545, "tsuat": 0.1}]),
+                inv("0900768732", "C26TCT", 55, "2026-07-04", 104000000, 8320000),
+                inv("0317148615", "C26TFI", 261, "2026-07-03", 420000, 33600)]
+        path = os.path.join(self.tmp, "x.xlsx")
+        t.write_nibot_workbook(path, "purchase", invs, "0316421646", "A", date(2026, 7, 1), date(2026, 9, 30))
+        from openpyxl import load_workbook
+        wb = load_workbook(path)
+        sm = {r[3]: r for r in wb["Smart_KTSC_OK"].iter_rows(min_row=2, values_only=True)}
+        same_day = "HĐ cùng ngày, cùng ĐTPN và có tổng giá trị >= 5,000,000 đồng"
+        self.assertEqual((sm["1"][0], sm["1"][12], sm["1"][16], sm["1"][31]), (same_day, "331", "LAI VAY", "KCT"))
+        self.assertEqual((sm["3"][0] or "", sm["3"][12], sm["3"][31], sm["3"][33]), ("", "1111", "10", 1555))
+        self.assertEqual((sm["55"][0], sm["55"][12]), ("HĐ có giá trị > 5,000,000 đồng", "331"))
+        bk = wb["BangKe_MuaVao"]
+        self.assertEqual(bk["B7"].value, "Kỳ tính thuế: Quý 3 năm 2026")
+        sos = [bk.cell(r, 5).value for r in range(18, 22)]
+        self.assertIn(3, sos)                                # phí ngân hàng 10% (không XML) vào bảng kê chính
+        kct = wb["BangKe_MuaVao_KCT_HDBH"]
+        self.assertEqual([kct.cell(17, c).value for c in (5, 10, 11)], [1, 4743090, same_day])
+        self.assertEqual(kct["B19"].value, "Tổng")
+        self.assertEqual(kct["J21"].value, '=SUMIF(C17:C18,"<>2",J17:J18)')
+        ht = wb["BangKe_HoanThue_OK"]
+        self.assertEqual([ht.cell(r, 14).value for r in range(17, 22)].count("KCT"), 2)
 
     def test_browser_download_settings(self):
         base = os.path.join(self.tmp, "LocalAppData")

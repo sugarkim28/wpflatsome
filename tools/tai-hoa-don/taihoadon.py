@@ -12,6 +12,7 @@ Chỉ dùng thư viện chuẩn Python 3.8+. openpyxl là tuỳ chọn (pip inst
 
 import argparse
 import calendar
+import collections
 import http.cookiejar
 import csv
 import io
@@ -32,7 +33,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.4.3"
+__version__ = "4.4.4"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -1547,13 +1548,20 @@ def parse_invoice_xml(xml_path):
             info["nky"] = _to_dt(el.text)
         elif tag == "HHDVu":
             nature = text(el, "TChat")
-            if nature == "4":  # dòng ghi chú/diễn giải
+            if nature == "4":  # dòng ghi chú/diễn giải: giữ tên (Nibot liệt kê với số tiền 0), không tính tiền
+                info["items"].append({"name": text(el, "THHDVu"), "unit": "", "qty": 0.0, "price": 0.0, "amount": 0.0,
+                                      "rate": norm_rate(text(el, "TSuat")), "tax": 0.0, "discount": 0.0, "nature": "4"})
                 continue
             amount = _float(text(el, "ThTien"))
             if nature == "3":  # chiết khấu thương mại giảm trừ
                 amount = -abs(amount)
             rate = norm_rate(text(el, "TSuat"))
             tax_text = text(el, "TThue")
+            if not tax_text:  # nhiều nhà cung cấp ghi tiền thuế từng dòng trong TTKhac của dòng hàng
+                for tt in el.iter():
+                    if _local(tt.tag) == "TTin" and _plain(text(tt, "TTruong")) in ("tthue", "tienthuegtgt", "thuegtgt"):
+                        tax_text = text(tt, "DLieu")
+                        break
             if tax_text:
                 tax = _float(tax_text)
             else:
@@ -1588,11 +1596,55 @@ def parse_invoice_xml(xml_path):
     return info
 
 
+def _detail_rate(it):
+    """Thuế suất một dòng hàng trong dữ liệu chi tiết của cổng: ltsuat ('8%', 'KCT') hoặc tsuat (0.08 / 8)."""
+    lt = _dget(it, "ltsuat")
+    if lt not in ("", None):
+        return norm_rate(lt)
+    ts = _dget(it, "tsuat")
+    if isinstance(ts, (int, float)) and not isinstance(ts, bool):
+        return "%g" % (ts * 100 if 0 < ts < 1 else ts)
+    return norm_rate(ts)
+
+
+def _round_half_up(v):
+    return float(int(v + 0.5)) if v >= 0 else -float(int(-v + 0.5))
+
+
+def detail_lines(inv):
+    """Dòng hàng từ dữ liệu "Xem hoá đơn" (JSON) của cổng – cho HĐ không có XML (phí ngân hàng, bảo hiểm…),
+    giống Nibot: tên hàng, ĐVT, số lượng, đơn giá, thành tiền, thuế suất (KCT / 8 / 10)."""
+    d = inv.get("_detailinfo") or {}
+    out = []
+    for it in d.get("hdhhdvu") or []:
+        nature = str(_dget(it, "tchat") or "")
+        amount = _float(_dget(it, "thtien"))
+        if nature == "3":
+            amount = -abs(amount)
+        rate = _detail_rate(it)
+        tax = _dget(it, "tthue")
+        tax = _float(tax) if tax not in ("", None) else (
+            _round_half_up(amount * float(rate) / 100) if rate in VAT_RATES else 0.0)
+        if nature == "4":
+            amount = tax = 0.0
+        out.append({"name": str(_dget(it, "ten", "thhdvu") or ""), "unit": str(_dget(it, "dvtinh") or ""),
+                    "qty": _float(_dget(it, "sluong")), "price": _float(_dget(it, "dgia")), "amount": amount,
+                    "rate": rate, "tax": tax, "discount": _float(_dget(it, "stckhau")), "nature": nature})
+    real = [x for x in out if x["nature"] != "4"]
+    if len(real) == 1 and inv.get("tgtthue") is not None and real[0]["rate"] in VAT_RATES:
+        real[0]["tax"] = _float(inv.get("tgtthue"))  # một dòng: tiền thuế đúng bằng tổng thuế của hoá đơn
+    return out
+
+
 def invoice_lines(inv):
-    """Danh sách dòng hàng của một hoá đơn; không có XML thì dựng từ tổng tiền của cổng."""
+    """Danh sách dòng hàng của một hoá đơn: XML; không có XML thì dữ liệu chi tiết của cổng; không có nữa thì
+    dựng từ tổng tiền. Dòng ghi chú (nature '4') có tiền = 0."""
     info = inv.get("_xmlinfo") or {}
     if info.get("items"):
         return info["items"]
+    lines = detail_lines(inv)
+    if lines:
+        return lines
     rates = [{"rate": norm_rate(r.get("tsuat")), "base": _float(r.get("thtien")), "tax": _float(r.get("tthue"))}
              for r in (inv.get("thttltsuat") or []) if isinstance(r, dict)]
     if not rates:
@@ -1605,6 +1657,8 @@ def rate_groups(inv):
     """Gom dòng hàng theo thuế suất (đúng cách lập bảng kê): [{rate, names, base, tax, items}]."""
     groups = {}
     for it in invoice_lines(inv):
+        if it.get("nature") == "4":
+            continue
         g = groups.setdefault(it["rate"], {"rate": it["rate"], "names": [], "base": 0.0, "tax": 0.0, "items": []})
         if it["name"]:
             g["names"].append(it["name"])
@@ -1651,9 +1705,13 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
     money = "#,##0"
     dfmt = "dd/mm/yyyy"
     purchase = kind == "purchase"
-    period = ("Tháng %d năm %d" % (start.month, start.year)
-              if start.day == 1 and end == date(start.year, start.month, calendar.monthrange(start.year, start.month)[1])
-              else "Từ ngày %s đến ngày %s" % (start.strftime("%d/%m/%Y"), end.strftime("%d/%m/%Y")))
+    month_end = lambda y, m: date(y, m, calendar.monthrange(y, m)[1])
+    if start.day == 1 and end == month_end(start.year, start.month):
+        period = "Tháng %d năm %d" % (start.month, start.year)
+    elif start.day == 1 and start.month % 3 == 1 and end == month_end(start.year, start.month + 2):
+        period = "Quý %d năm %d" % ((start.month + 2) // 3, start.year)  # như Nibot: "Quý 3 năm 2026"
+    else:
+        period = "Từ ngày %s đến ngày %s" % (start.strftime("%d/%m/%Y"), end.strftime("%d/%m/%Y"))
     today = date.today()
     sign_date = "..............., ngày %02d tháng %02d năm %d" % (today.day, today.month, today.year)
 
@@ -1726,6 +1784,8 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
                                        "Thuế suất", "Tiền thuế"])
         for inv in invoices:
             for it in invoice_lines(inv):
+                if it.get("nature") == "4":
+                    continue
                 wi.append(_inv_head(inv) + [it["name"], it["unit"], it["qty"], it["price"], it["amount"],
                                             it["rate"], it["tax"]])
         for row in wi.iter_rows(min_row=2):
@@ -1738,19 +1798,37 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
     good = [i for i in invoices if not _is_bad(i)]
     bad = [i for i in invoices if _is_bad(i)]
 
+    # Ghi chú + TK có như Nibot: nhiều HĐ cùng ngày, cùng người bán, tổng >= 5 triệu → "cùng ngày…" (TK 331, kể cả
+    # khi từng HĐ đã > 5 triệu); còn lại HĐ > 5 triệu → "HĐ có giá trị > 5,000,000 đồng" (TK 331); khác → 1111.
+    day_key = lambda i: (invoice_date(i), str(i.get("nbmst") or ""))
+    day_sum, day_cnt = collections.defaultdict(float), collections.Counter()
+    for i in good:
+        day_sum[day_key(i)] += _float(i.get("tgtttbso"))
+        day_cnt[day_key(i)] += 1
+
+    def cash_note(inv):
+        k = day_key(inv)
+        if day_cnt[k] >= 2 and day_sum[k] >= 5000000:
+            return "HĐ cùng ngày, cùng ĐTPN và có tổng giá trị >= 5,000,000 đồng"
+        if _float(inv.get("tgtttbso")) > 5000000:
+            return "HĐ có giá trị > 5,000,000 đồng"
+        return ""
+
+    def bk_note(inv):  # cột Ghi chú của bảng kê: như Nibot (không ghi "HĐ có mã từ máy tính tiền")
+        tthai = _num(inv.get("tthai"))
+        return " - ".join(x for x in (cash_note(inv), TTHAI_NIBOT.get(tthai, "") if tthai != 1 else "") if x)
+
     # 2. Smart_KTSC_OK / CAN_XEM_XET (mẫu import phần mềm kế toán Smart Pro) ------
     def smart_rows(inv, bad_inv):
         info = inv.get("_xmlinfo") or {}
         d = invoice_date(inv)
         ngay = datetime(d.year, d.month, d.day) if d else None
-        total = _float(inv.get("tgtttbso"))
-        big = total > 5000000
+        cash = cash_note(inv)
+        big = bool(cash)
         sr = "%s%s" % (inv.get("khmshdon") or "", inv.get("khhdon") or "")
         so = str(inv.get("shdon") or "")
         ngay_txt = d.strftime("%d/%m/%Y") if d else ""
-        ghichu = []
-        if big:
-            ghichu.append("HĐ có giá trị > 5,000,000 đồng")
+        ghichu = [cash] if cash else []
         note = _status_note(inv)
         if note:
             ghichu.append(note)
@@ -1766,8 +1844,10 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
             lines = [{"name": label, "unit": "", "qty": 0.0, "price": 0.0, "amount": 0.0,
                       "rate": (lines[0]["rate"] if lines else ""), "tax": 0.0, "discount": 0.0}]
             ghichu, dien_giai, lctg = [label], "", ""
+        first_rate = next((x["rate"] for x in lines if x.get("rate")), "")
         out = []
         for it in lines:
+            it = dict(it, rate=it.get("rate") or first_rate)  # dòng ghi chú: thuế suất theo dòng hàng (như Nibot)
             out.append(["; ".join(ghichu), lctg, sr, so, info.get("nky") or _to_dt(inv.get("nky")), ngay,
                         _num(so), ngay, dien_giai, inv.get("thtttoan") or info.get("httt", ""), "", "", tkco,
                         nbmst, "", "", it["name"], it["name"], 0, "", it["unit"], it["qty"], 0, 0, 0, it["price"],
@@ -1826,7 +1906,7 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
             vals = [n, _num(inv.get("khmshdon")), inv.get("khhdon") or "", _num(inv.get("shdon")),
                     datetime(d.year, d.month, d.day) if d else None, inv.get("nbten") or "",
                     str(inv.get("nbmst") or ""), g["names"][0] if g["names"] else "", g["base"],
-                    g["rate"], g["tax"] if with_tax else None, _status_note(inv)]
+                    g["rate"], g["tax"] if with_tax else None, bk_note(inv)]
             for i, v in enumerate(vals, 2):
                 c = wsb.cell(row=r, column=i, value=v)
                 c.border = box
@@ -1874,9 +1954,62 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
             else:
                 kct_groups.append((inv, g))
     bang_ke("BangKe_MuaVao", "BẢNG KÊ HOÁ ĐƠN, CHỨNG TỪ HÀNG HOÁ, DỊCH VỤ MUA VÀO", vat_groups, True)
-    if kct_groups:
-        bang_ke("BangKe_MuaVao_KCT_HDBH", "BẢNG KÊ HOÁ ĐƠN, CHỨNG TỪ HÀNG HOÁ, DỊCH VỤ MUA VÀO KHÔNG CHỊU THUẾ, "
-                "HÓA ĐƠN BÁN HÀNG", kct_groups, False)
+    if kct_groups:  # bố cục như Nibot: không chia mục 1/2/3, tách tổng không chịu thuế / HĐ bán hàng (mẫu 2)
+        wsk = wb.create_sheet("BangKe_MuaVao_KCT_HDBH")
+        wsk["A4"] = "BẢNG KÊ HOÁ ĐƠN, CHỨNG TỪ HÀNG HOÁ, DỊCH VỤ MUA VÀO KHÔNG CHỊU THUẾ, HÓA ĐƠN BÁN HÀNG"
+        wsk["A4"].font = Font(bold=True, size=13)
+        wsk["A4"].alignment = Alignment(horizontal="center")
+        wsk.merge_cells("A4:K4")
+        wsk["B7"] = "Kỳ tính thuế: %s" % period
+        wsk["B7"].alignment = Alignment(horizontal="center")
+        wsk.merge_cells("B7:K7")
+        wsk["B9"] = "Người nộp thuế: %s" % (company_name or "")
+        wsk["B10"] = "Mã số thuế: %s" % mst
+        wsk["B12"] = "Đơn vị tiền: đồng Việt Nam"
+        header_row(wsk, 13, ["STT", "", "", "", "", "Tên người bán", "Mã số thuế người bán", "Mặt hàng",
+                             "Doanh số hàng hoá, dịch vụ mua vào", "Ghi chú"], 2)
+        header_row(wsk, 15, ["KH mẫu HĐ", "Ký hiệu hoá đơn", "Số hoá đơn", "Ngày, tháng, năm lập hóa đơn"], 3)
+        for col in "BGHIJK":
+            wsk.merge_cells("%s13:%s15" % (col, col))
+        wsk.merge_cells("C13:F14")
+        header_row(wsk, 16, ["[1]", "[2]", "[3]", "[2]", "[3]", "[4]", "[5]", "[6]", "[6]", "[7]"], 2)
+        r = 17
+        for n, (inv, g) in enumerate(kct_groups, 1):
+            d = invoice_date(inv)
+            vals = [n, _num(inv.get("khmshdon")), inv.get("khhdon") or "", _num(inv.get("shdon")),
+                    datetime(d.year, d.month, d.day) if d else None, inv.get("nbten") or "",
+                    str(inv.get("nbmst") or ""), None, g["base"], bk_note(inv) or None]
+            for i, v in enumerate(vals, 2):
+                c = wsk.cell(row=r, column=i, value=v)
+                c.border = box
+                if i == 6:
+                    c.number_format = dfmt
+                elif i == 10:
+                    c.number_format = money
+            r += 1
+        last = r - 1
+        wsk.cell(row=r, column=2, value="Tổng").font = bold
+        for row, label, formula in ((r, None, "=SUM(J17:J%d)" % last),
+                                    (r + 2, "Tổng giá trị HHDV mua vào không chịu thuế GTGT (**):",
+                                     '=SUMIF(C17:C%d,"<>2",J17:J%d)' % (last, last)),
+                                    (r + 3, "Tổng giá trị Hóa đơn Bán hàng (ký hiệu mẫu số 2) (**):",
+                                     '=SUMIF(C17:C%d,"=2",J17:J%d)' % (last, last))):
+            if label:
+                wsk.cell(row=row, column=2, value=label)
+            c = wsk.cell(row=row, column=10, value=formula)
+            c.font, c.number_format = bold, money
+        wsk.cell(row=r + 4, column=2, value="*Ghi chú: Số liệu trên bảng kê này dùng để tập hợp thêm vào giá trị hàng "
+                                            "hoá, dịch vụ mua vào (chỉ tiêu 23) trên tờ khai 01GTKT kết hợp với bảng kê "
+                                            "mua vào 01-2/GTGT").font = Font(italic=True)
+        r += 6
+        for i, t in enumerate([sign_date, "NGƯỜI NỘP THUẾ hoặc", "ĐẠI DIỆN HỢP PHÁP CỦA NGƯỜI NỘP THUẾ",
+                               " Ký tên, đóng dấu (ghi rõ họ tên và chức vụ)"]):
+            c = wsk.cell(row=r + i, column=9, value=t)
+            c.alignment = Alignment(horizontal="center")
+            c.font = Font(bold=0 < i < 3, italic=i in (0, 3))
+            wsk.merge_cells("I%d:K%d" % (r + i, r + i))
+        wsk.freeze_panes = "B17"
+        widths(wsk, [2, 6, 6, 10, 10, 11, 36, 14, 30, 16, 40])
 
     # 4. Bảng kê hoàn thuế (kèm Giấy đề nghị hoàn trả) ---------------------------
     wsh = wb.create_sheet("BangKe_HoanThue_OK")
@@ -1902,14 +2035,16 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
     wsh.merge_cells("C13:F14")
     header_row(wsh, 16, ["[%d]" % i for i in range(1, 16)], 2)
     r = 17
-    for inv, g in vat_groups:
+    ht_lines = []  # như Nibot: liệt kê từng dòng hàng của mọi hoá đơn (kể cả KCT, dòng ghi chú tiền 0)
+    for inv in good:
+        lines = invoice_lines(inv)
+        first_rate = next((x["rate"] for x in lines if x.get("rate")), "")
+        ht_lines += [(inv, dict(it, rate=it.get("rate") or first_rate)) for it in lines]
+    for inv, it in ht_lines:
         d = invoice_date(inv)
-        single = len(g["items"]) == 1 and g["items"][0]["name"]
-        it = g["items"][0]
         vals = [r - 16, str(inv.get("khmshdon") or ""), inv.get("khhdon") or "", str(inv.get("shdon") or ""),
                 datetime(d.year, d.month, d.day) if d else None, inv.get("nbten") or "", str(inv.get("nbmst") or ""),
-                "| ".join(g["names"]), it["unit"] if single else None, it["qty"] if single else 0,
-                it["price"] if single else 0, g["base"], g["rate"], g["tax"], _status_note(inv)]
+                it["name"], it["unit"], it["qty"], it["price"], it["amount"], it["rate"], it["tax"], ""]
         for i, v in enumerate(vals, 2):
             c = wsh.cell(row=r, column=i, value=v)
             c.border = box
@@ -1919,6 +2054,8 @@ def write_nibot_workbook(path, kind, invoices, mst, company_name, start, end, ch
                 c.number_format = money
         r += 1
     wsh.cell(row=r, column=5, value="TỔNG CỘNG").font = bold
+    for col in "KLN":
+        wsh["%s%d" % (col, r)] = "\\"
     if r > 17:
         for col in "MO":
             c = wsh["%s%d" % (col, r)]
@@ -2829,7 +2966,7 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
                                               if it.get("ten"))[:500]
         if inv.get("_xmlinfo") is not None:
             entry["xml"] = os.path.relpath(os.path.join(folder, inv["_xml"]), base)
-            names = [it["name"] for it in inv["_xmlinfo"]["items"] if it["name"]]
+            names = [it["name"] for it in inv["_xmlinfo"]["items"] if it["name"] and it.get("nature") != "4"]
             entry["mat_hang"] = "; ".join(names)[:500]
             entry["tra_cuu"] = lookup_info(inv["_xmlinfo"], inv.get("nbmst"))
         known[key] = entry
@@ -3839,6 +3976,8 @@ def export_invoices(out_root, mst, company_name, f, fmt):
             if r["xml"]:
                 inv["_xml"] = r["xml"]
                 inv["_xmlinfo"] = parse_invoice_xml(os.path.join(base, r["xml"]))
+            elif e.get("detail"):  # không có XML: dòng hàng lấy từ dữ liệu chi tiết của cổng (như Nibot)
+                inv["_detailinfo"] = _load_json(os.path.join(base, e["detail"]), {})
             invoices.append(inv)
         dates = [invoice_date(i) for i in invoices if invoice_date(i)]
         start = parse_date(f["from"]) if f.get("from") else min(dates)
