@@ -1,0 +1,108 @@
+/* Quản lý doanh nghiệp – giao diện quản trị */
+.qldn .num { text-align: right; white-space: nowrap; }
+.qldn h1 small { color: #646970; font-weight: 400; font-size: 14px; }
+.qldn-req { color: #d63638; }
+.qldn-filter { margin: 12px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.qldn-inline { display: inline; }
+.qldn-table td, .qldn-table th { vertical-align: middle; }
+.qldn-actions { white-space: nowrap; }
+.qldn-count { color: #646970; }
+.qldn-narrow { max-width: 760px; }
+.qldn-neg { color: #b32d2e; }
+.qldn-pos { color: #008a20; }
+
+/* Huy hiệu */
+.qldn-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; line-height: 18px; background: #f0f0f1; color: #50575e; white-space: nowrap; }
+.qldn-badge-green { background: #edfaef; color: #00701a; }
+.qldn-badge-red { background: #fcf0f1; color: #b32d2e; }
+.qldn-badge-orange { background: #fcf9e8; color: #996800; }
+.qldn-badge-blue { background: #f0f6fc; color: #135e96; }
+
+/* Thẻ số liệu */
+.qldn-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin: 16px 0; }
+.qldn-card { display: block; background: #fff; border: 1px solid #dcdcde; border-radius: 8px; padding: 14px 16px; text-decoration: none; color: inherit; }
+a.qldn-card:hover { border-color: #2271b1; }
+.qldn-card span { display: block; color: #646970; font-size: 13px; }
+.qldn-card strong { display: block; font-size: 20px; margin: 4px 0 2px; color: #1d2327; }
+.qldn-card em { font-style: normal; color: #646970; font-size: 12px; }
+.qldn-card-warn { border-left: 4px solid #dba617; }
+
+/* Hai cột */
+.qldn-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; }
+.qldn-col > h2:first-child { margin-top: 1em; }
+.qldn-info th { width: 130px; color: #646970; font-weight: 400; }
+
+/* Biểu đồ cột */
+.qldn-chart { display: flex; align-items: flex-end; gap: 3px; height: 180px; background: #fff; border: 1px solid #dcdcde; border-radius: 8px; padding: 12px 12px 24px; overflow-x: auto; }
+.qldn-bar { flex: 1 0 14px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; position: relative; }
+.qldn-bar span { display: block; background: #2271b1; border-radius: 3px 3px 0 0; min-height: 1px; }
+.qldn-bar:hover span { background: #135e96; }
+.qldn-bar small { position: absolute; bottom: -18px; left: 0; right: 0; text-align: center; font-size: 10px; color: #646970; }
+
+/* Tìm hàng / khách */
+.qldn-picker { position: relative; max-width: 640px; margin-bottom: 10px; }
+.qldn-results { display: none; position: absolute; z-index: 100; left: 0; right: 0; top: 100%; background: #fff; border: 1px solid #c3c4c7; border-radius: 0 0 6px 6px; box-shadow: 0 6px 16px rgba(0,0,0,.12); max-height: 320px; overflow-y: auto; }
+.qldn-results.open { display: block; }
+.qldn-result, .qldn-empty { padding: 7px 10px; cursor: pointer; border-bottom: 1px solid #f0f0f1; }
+.qldn-empty { color: #646970; cursor: default; }
+.qldn-result small { color: #646970; }
+.qldn-result span { float: right; color: #2271b1; }
+.qldn-result.active, .qldn-result:hover { background: #f0f6fc; }
+
+/* Dòng hàng */
+.qldn-lines { margin-bottom: 12px; }
+.qldn-lines input.qldn-money { width: 120px; text-align: right; }
+.qldn-lines input.qldn-q { width: 70px; text-align: right; }
+.qldn-lines tr.qldn-over td { background: #fcf0f1; }
+.qldn-lines .qldn-del { color: #b32d2e; font-size: 16px; text-decoration: none; }
+.qldn-lines tbody:empty::after { content: "Chưa có hàng – tìm ở ô phía trên."; display: table-cell; padding: 12px; color: #646970; }
+
+/* Bán hàng */
+.qldn-pos-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+.qldn-pos-side { background: #fff; border: 1px solid #dcdcde; border-radius: 8px; padding: 0 16px 8px; position: sticky; top: 46px; }
+.qldn-pos-side input.widefat { margin-bottom: 6px; }
+.qldn-pay { width: 100%; border-collapse: collapse; }
+.qldn-pay th { text-align: left; font-weight: 400; padding: 6px 0; }
+.qldn-pay td { padding: 4px 0; }
+.qldn-pay input { width: 140px; text-align: right; }
+.qldn-total-row th, .qldn-total-row td { font-size: 18px; font-weight: 700; color: #2271b1; }
+.qldn-customer-chosen { padding: 8px 10px; background: #f0f6fc; border-radius: 6px; margin-bottom: 6px; }
+.qldn-pos .button-hero { width: 100%; text-align: center; }
+
+/* Chăm sóc */
+.qldn-care-form { background: #fff; border: 1px solid #dcdcde; border-radius: 8px; padding: 4px 14px; }
+.qldn-timeline { margin: 0; }
+.qldn-timeline li { background: #fff; border-left: 3px solid #2271b1; padding: 8px 12px; margin-bottom: 8px; }
+.qldn-tl-head { color: #646970; margin-bottom: 4px; }
+.qldn-tl-next { margin-top: 4px; color: #996800; }
+.qldn-todo li { font-size: 14px; }
+
+/* Chấm công */
+.qldn-legend span { margin-right: 10px; white-space: nowrap; }
+.qldn-att-wrap { overflow-x: auto; max-width: 100%; }
+.qldn-att { border-collapse: collapse; }
+.qldn-att th, .qldn-att td { padding: 3px 2px; text-align: center; border: 1px solid #f0f0f1; }
+.qldn-att .qldn-att-name { text-align: left; min-width: 150px; position: sticky; left: 0; background: #fff; z-index: 1; padding: 4px 8px; }
+.qldn-att td input { width: 38px; padding: 0 2px; text-align: center; font-size: 12px; min-height: 26px; }
+.qldn-att .qldn-sun { background: #fcf0f1; }
+.qldn-att input[title]:not([title=""]) { border-color: #2271b1; }
+.qldn-fill { font-size: 11px; text-decoration: none; }
+.qldn-checkin { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; background: #fff; border: 1px solid #dcdcde; border-left: 4px solid #2271b1; border-radius: 8px; padding: 12px 16px; margin: 16px 0; }
+
+/* Bảng lương */
+.qldn-payroll th, .qldn-payroll td { white-space: nowrap; }
+.qldn-cell { width: 110px; text-align: right; }
+.qldn-cell-s { width: 56px; }
+.qldn-payroll td:nth-last-child(2) .qldn-cell { width: 140px; text-align: left; }
+
+@media (max-width: 960px) {
+	.qldn-pos-grid { grid-template-columns: 1fr; }
+	.qldn-pos-side { position: static; }
+	.qldn-lines input.qldn-money { width: 90px; }
+}
+@media (max-width: 600px) {
+	.qldn-pos-main, .qldn-lines-form { overflow-x: auto; }
+	.qldn-lines th, .qldn-lines td { padding: 6px 4px; }
+	.qldn-lines input.qldn-money { width: 76px; }
+	.qldn-lines input.qldn-q { width: 44px; }
+}
