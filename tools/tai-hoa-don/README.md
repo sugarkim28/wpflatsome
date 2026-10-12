@@ -188,3 +188,9 @@ Tab **Hàng hoá** trong trang doanh nghiệp: danh mục tên hàng lấy từ 
 - **Gom nhóm giống nhau** theo độ tương đồng (%), chọn cả nhóm để gán một mã.
 - **Thêm / Xoá** (tất cả, chưa gán mã, dòng đã chọn); **Export / Import Excel** đúng mẫu Nibot (Mã TK, Mã hàng, Tên hàng, ĐVT, Loại HĐ, Ghi chú, GuidHang) – khớp theo GuidHang hoặc Tên hàng + Loại HĐ, báo tên trùng.
 - Khi kết xuất Excel (mẫu Nibot): Mã TK → **TKNO**, Mã hàng → **MADMNO** của Smart_KTSC (mua vào); bán ra có thêm cột Mã TK / Mã hàng ở sheet chi tiết.
+
+## ĐT P.nhân và Quy đổi ĐVT (như Nibot)
+
+- **ĐT P.nhân** (`doi-tuong.json`): người bán (V) / người mua (R) đồng bộ từ hoá đơn; Mã ĐTPN (Smart Pro), Mã TK TM/CK, Mã TK CP/DT, Duyệt nội bộ, HĐ DV, Loại HHDV SXKD (1/2/3). Tạo mã tự động 3 kiểu (MST hoặc tên khách lẻ; 5 ký tự cuối MST; tên không dấu) + tiền tố / hậu tố; thay thế hàng loạt; Import / Export Excel (cột như mẫu Nibot); *Đánh dấu lại hoá đơn hàng loạt* (HĐ dịch vụ / duyệt nội bộ theo ĐTPN). Khi kết xuất: Mã ĐTPN → MADTPNCO / MAKH, Mã TK TM/CK → TKCO, Mã TK CP/DT → TKNO (khi mặt hàng chưa có Mã TK), SXKD 2/3 → mục 2/3 của bảng kê.
+- **Quy đổi ĐVT** (`quy-doi.json`): mặt hàng + ĐVT gốc (hoá đơn) → ĐVT đích + số lượng quy đổi; Import / Export Excel (Mã hàng, Tên hàng, ĐVT Gốc (hóa đơn), ĐVT Đích (Quy Đổi), Số lượng quy đổi). Khi kết xuất Smart_KTSC: DONVI = ĐVT đích, LUONG = SL × hệ số, đơn giá = đơn giá ÷ hệ số.
+

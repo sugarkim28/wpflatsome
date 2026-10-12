@@ -1006,6 +1006,58 @@ class Tests(unittest.TestCase):
         t.goods_import(self.tmp, m, buf.getvalue(), drop_dup=True)
         self.assertEqual(t.goods_delete(self.tmp, m, 1), 0)                      # mọi mặt hàng đều đã có mã
 
+    def test_partners_and_units(self):
+        """ĐT P.nhân + Quy đổi ĐVT như Nibot: đồng bộ, tạo mã, thay thế, import / export, đánh dấu lại HĐ; áp vào
+        Smart_KTSC (MADTPNCO, TKCO, TKNO, DONVI / LUONG / đơn giá) và mục 1/2/3 của bảng kê."""
+        self.app.store.import_text("0309999999\tA\tpw1\n")
+        self.run_job(["0309999999"], kinds=("purchase",), start=date(2026, 10, 1), end=date(2026, 10, 31))
+        m, f = "0309999999", {"kind": "purchase", "from": "2026-10-01", "to": "2026-10-31"}
+        d = t.partner_sync(self.tmp, m, "2026-10-01", "2026-10-31", ("purchase",))
+        items = t.partner_load(self.tmp, m)
+        self.assertEqual((d["added"], [x["mst"] for x in items]), (1, ["0101234567"]))
+        self.assertEqual(t.partner_sync(self.tmp, m, "2026-10-01", "2026-10-31", ("purchase",))["added"], 0)
+        t.partner_autocode(self.tmp, m, [], 2, "331")
+        self.assertEqual(t.partner_load(self.tmp, m)[0]["ma_kh"], "33134567")       # 5 ký tự cuối MST + tiền tố
+        pid = t.partner_load(self.tmp, m)[0]["id"]
+        t.partner_assign(self.tmp, m, [pid], "MaKh", "", "NCC01")
+        t.partner_update(self.tmp, m, [{"id": pid, "tk_tt": "3311", "tk_cpdt": "642", "sxkd": "2", "hd_dv": True,
+                                        "duyet": "Đã duyệt"}])
+        with self.assertRaises(ValueError):
+            t.partner_update(self.tmp, m, [{"id": pid, "sxkd": "5"}])
+        # Đánh dấu lại hoá đơn theo ĐTPN
+        n_inv = len(t.query_invoices(self.tmp, m, f))
+        self.assertEqual(t.partner_remark(self.tmp, m, 2026, "dv"), n_inv)
+        self.assertEqual(t.partner_remark(self.tmp, m, 2026, "duyet"), n_inv)
+        rows = t.query_invoices(self.tmp, m, f)
+        self.assertTrue(all(r["dv"] and r["duyet"] == "Đã duyệt" for r in rows))
+        # Quy đổi ĐVT: 1 Ram = 500 Tờ
+        t.unit_update(self.tmp, m, [{"ma_hang": "", "ten": "Giay A4", "dvt": "Ram", "dvt_qd": "Tờ", "sl": 500}])
+        with self.assertRaises(ValueError):
+            t.unit_update(self.tmp, m, [{"ten": "Giay A4", "dvt": "ram", "dvt_qd": "Xấp", "sl": 2}])   # trùng ĐVT gốc
+        with self.assertRaises(ValueError):
+            t.unit_update(self.tmp, m, [{"ten": "But bi", "dvt": "Cay", "dvt_qd": "Hop", "sl": 0}])
+        from openpyxl import load_workbook
+        wb = load_workbook(t.export_invoices(self.tmp, m, "A", f, "xlsx"))
+        sm = [r for r in wb["Smart_KTSC_OK"].iter_rows(min_row=2, values_only=True)]
+        a4 = [r for r in sm if r[16] == "Giay A4"][0]
+        self.assertEqual((a4[10], a4[12], a4[13], a4[36], a4[40]), ("642", "3311", "NCC01", "NCC01", "0101234567"))
+        self.assertEqual((a4[20], a4[21], a4[25], a4[26]), ("Tờ", 1000, 100, 100000))     # 2 Ram → 1000 Tờ, giá ÷ 500
+        bk = wb["BangKe_MuaVao"]
+        self.assertEqual(bk["B18"].value, "Tổng")                                   # mục 1 trống
+        self.assertTrue(str(bk["B19"].value).startswith("2. HH, DV dùng chung"))  # HĐ của NCC này ở mục 2
+        self.assertEqual(bk.cell(20, 8).value, "0101234567")
+        # Export / Import
+        for exp, imp, load in ((t.partner_export, t.partner_import, t.partner_load), (t.unit_export, t.unit_import, t.unit_load)):
+            path = exp(self.tmp, m)
+            raw = open(path, "rb").read()
+            before = load(self.tmp, m)
+            res = imp(self.tmp, m, raw)
+            self.assertEqual((res["added"], res["updated"]), (0, len(before)))
+            self.assertEqual([{k: v for k, v in x.items() if k != "id"} for x in load(self.tmp, m)],
+                             [{k: v for k, v in x.items() if k != "id"} for x in before])
+        self.assertEqual(t.unit_delete(self.tmp, m, []), 1)
+        self.assertEqual(t.partner_delete(self.tmp, m, 1), 0)
+
     def test_browser_download_settings(self):
         base = os.path.join(self.tmp, "LocalAppData")
         chrome = os.path.join(base, "Google", "Chrome", "User Data")
