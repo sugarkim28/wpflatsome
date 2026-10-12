@@ -180,11 +180,13 @@ function qldn_install_tables() {
 		bank_account varchar(100) NOT NULL DEFAULT '',
 		start_date date NULL,
 		user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		device_pin varchar(20) NOT NULL DEFAULT '',
 		status varchar(20) NOT NULL DEFAULT 'active',
 		note text NULL,
 		created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 		PRIMARY KEY  (id),
 		KEY user_id (user_id),
+		KEY device_pin (device_pin),
 		KEY status (status)
 	) $c;";
 
@@ -231,6 +233,23 @@ function qldn_install_tables() {
 		UNIQUE KEY period_emp (period,employee_id)
 	) $c;";
 
+	// Dữ liệu thô từ máy chấm công (mỗi lần quẹt vân tay / thẻ / khuôn mặt là 1 dòng).
+	$sql[] = "CREATE TABLE {$p}punches (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		pin varchar(20) NOT NULL DEFAULT '',
+		punch_time datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+		employee_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		device_sn varchar(64) NOT NULL DEFAULT '',
+		state varchar(4) NOT NULL DEFAULT '',
+		verify varchar(4) NOT NULL DEFAULT '',
+		source varchar(10) NOT NULL DEFAULT '',
+		created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+		PRIMARY KEY  (id),
+		UNIQUE KEY pin_time (pin,punch_time),
+		KEY employee_time (employee_id,punch_time),
+		KEY punch_time (punch_time)
+	) $c;";
+
 	foreach ( $sql as $q ) {
 		dbDelta( $q );
 	}
@@ -259,6 +278,7 @@ function qldn_activate() {
 	qldn_install_tables();
 	qldn_install_roles();
 	update_option( 'qldn_db_version', QLDN_DB_VERSION );
+	update_option( 'qldn_flush_rewrite', 1 ); // Đường dẫn /iclock/ cho máy chấm công.
 }
 
 /**

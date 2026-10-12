@@ -35,6 +35,12 @@ function qldn_default_settings() {
 		'standard_days'       => 26,
 		'work_hours'          => 8,
 		'ot_rate'             => 150,
+		'shift_start'         => '08:00',
+		'shift_end'           => '17:00',
+		'late_grace'          => 5,
+		'auto_ot'             => 0,
+		'ot_min'              => 30,
+		'device_ips'          => '',
 		'insurance_rate'      => 10.5,
 		'base_wage'           => 2340000,
 		'insurance_cap'       => 20,
@@ -104,14 +110,25 @@ function qldn_tax_brackets() {
 function qldn_save_settings() {
 	qldn_check( 'save_settings', 'qldn_settings' );
 	$d   = qldn_default_settings();
+	$cur = qldn_opt();
 	$new = array();
 	foreach ( $d as $k => $def ) {
+		// Trường không có trên form (vd IP máy chấm công lưu ở trang khác) giữ nguyên.
+		if ( ! isset( $_POST[ $k ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			$new[ $k ] = $cur[ $k ];
+			continue;
+		}
 		if ( in_array( $k, array( 'customer_groups', 'customer_sources', 'tax_brackets', 'company_address', 'invoice_footer' ), true ) ) {
 			$new[ $k ] = qldn_in( $k, 'textarea', $def );
 		} elseif ( in_array( $k, array( 'point_value', 'vip_threshold', 'base_wage', 'personal_deduction', 'dependent_deduction' ), true ) ) {
 			$new[ $k ] = max( 0, qldn_in( $k, 'money', $def ) );
-		} elseif ( in_array( $k, array( 'insurance_rate', 'standard_days', 'work_hours', 'ot_rate', 'insurance_cap', 'inactive_days' ), true ) ) {
+		} elseif ( in_array( $k, array( 'insurance_rate', 'standard_days', 'work_hours', 'ot_rate', 'insurance_cap', 'inactive_days', 'late_grace', 'ot_min' ), true ) ) {
 			$new[ $k ] = max( 0, qldn_in( $k, 'qty', $def ) );
+		} elseif ( in_array( $k, array( 'shift_start', 'shift_end' ), true ) ) {
+			$v         = qldn_in( $k, 'text', $def );
+			$new[ $k ] = preg_match( '/^([01]?\d|2[0-3]):[0-5]\d$/', $v ) ? substr( '0' . $v, -5 ) : $def;
+		} elseif ( 'auto_ot' === $k ) {
+			$new[ $k ] = qldn_in( $k, 'int', 0 ) ? 1 : 0;
 		} elseif ( 'allow_negative' === $k ) {
 			$new[ $k ] = qldn_in( $k, 'int', 0 ) ? 1 : 0;
 		} else {
@@ -159,6 +176,11 @@ function qldn_page_settings() {
 	echo '<h2>Chấm công & tính lương</h2><table class="form-table">';
 	qldn_field( 'Ngày công chuẩn / tháng', 'standard_days', $o['standard_days'], array( 'type' => 'number', 'class' => 'small-text', 'attrs' => array( 'step' => '0.5' ) ) );
 	qldn_field( 'Số giờ / ngày công', 'work_hours', $o['work_hours'], array( 'type' => 'number', 'class' => 'small-text', 'attrs' => array( 'step' => '0.5' ) ) );
+	qldn_field( 'Giờ vào ca', 'shift_start', $o['shift_start'], array( 'type' => 'time', 'class' => '', 'help' => 'Dùng tính đi muộn từ dữ liệu máy chấm công.' ) );
+	qldn_field( 'Giờ tan ca', 'shift_end', $o['shift_end'], array( 'type' => 'time', 'class' => '' ) );
+	qldn_field( 'Cho phép muộn / về sớm', 'late_grace', $o['late_grace'], array( 'type' => 'number', 'class' => 'small-text', 'help' => 'phút – trong khoảng này không tính đi muộn / về sớm.' ) );
+	qldn_field( 'Tự tính tăng ca từ máy chấm công', 'auto_ot', $o['auto_ot'], array( 'type' => 'select', 'options' => array( 0 => 'Không – nhập tăng ca bằng tay', 1 => 'Có – giờ ra sau giờ tan ca' ) ) );
+	qldn_field( 'Tăng ca tối thiểu', 'ot_min', $o['ot_min'], array( 'type' => 'number', 'class' => 'small-text', 'help' => 'phút. Ra muộn hơn giờ tan ca từ mức này mới tính, làm tròn xuống từng 30 phút.' ) );
 	qldn_field( 'Hệ số làm thêm giờ', 'ot_rate', $o['ot_rate'], array( 'type' => 'number', 'class' => 'small-text', 'help' => '% lương giờ (ngày thường tối thiểu 150%, ngày nghỉ tuần 200%, lễ tết 300% – Điều 98 Bộ luật Lao động 2019).' ) );
 	qldn_field( 'Tỷ lệ bảo hiểm người lao động đóng', 'insurance_rate', $o['insurance_rate'], array( 'type' => 'text', 'class' => 'small-text', 'help' => '% (BHXH 8% + BHYT 1,5% + BHTN 1% = 10,5%).' ) );
 	qldn_field( 'Lương cơ sở', 'base_wage', $o['base_wage'], array( 'type' => 'money', 'help' => 'Dùng tính mức trần lương đóng bảo hiểm. Cập nhật khi Nhà nước điều chỉnh.' ) );

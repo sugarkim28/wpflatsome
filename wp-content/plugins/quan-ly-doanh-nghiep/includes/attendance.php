@@ -251,7 +251,7 @@ function qldn_page_attendance() {
 	qldn_print_notices();
 	echo '<form method="get" class="qldn-filter"><input type="hidden" name="page" value="qldn-attendance">Tháng <input type="month" name="period" value="' . esc_attr( $period ) . '"> <button class="button">Xem</button> ';
 	echo '<a class="button" href="' . esc_url( qldn_url( 'attendance', array( 'period' => gmdate( 'Y-m', strtotime( '-1 month', $ts ) ) ) ) ) . '">‹ Tháng trước</a> <a class="button" href="' . esc_url( qldn_url( 'attendance', array( 'period' => gmdate( 'Y-m', strtotime( '+1 month', $ts ) ) ) ) ) . '">Tháng sau ›</a> ';
-	echo '<a class="button button-primary" href="' . esc_url( qldn_url( 'payroll', array( 'period' => $period ) ) ) . '">Bảng lương tháng này</a></form>';
+	echo '<a class="button" href="' . esc_url( qldn_url( 'devices', array( 'tab' => 'log' ) ) ) . '">Dữ liệu máy chấm công</a> <a class="button button-primary" href="' . esc_url( qldn_url( 'payroll', array( 'period' => $period ) ) ) . '">Bảng lương tháng này</a></form>';
 
 	echo '<p class="qldn-legend">';
 	foreach ( qldn_marks() as $k => $m ) {

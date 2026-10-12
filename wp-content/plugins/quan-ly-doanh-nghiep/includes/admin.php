@@ -23,6 +23,7 @@ function qldn_pages() {
 		'stock'      => array( 'Nhập / xuất kho', 'qldn_stock', 'qldn_page_stock' ),
 		'employees'  => array( 'Nhân viên', 'qldn_hr', 'qldn_page_employees' ),
 		'attendance' => array( 'Chấm công', 'qldn_hr', 'qldn_page_attendance' ),
+		'devices'    => array( 'Máy chấm công', 'qldn_hr', 'qldn_page_devices' ),
 		'payroll'    => array( 'Tính lương', 'qldn_hr', 'qldn_page_payroll' ),
 		'reports'    => array( 'Báo cáo', 'qldn_reports', 'qldn_page_reports' ),
 		'settings'   => array( 'Cài đặt', 'qldn_settings', 'qldn_page_settings' ),

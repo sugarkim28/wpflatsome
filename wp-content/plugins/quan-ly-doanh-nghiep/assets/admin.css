@@ -106,3 +106,8 @@ a.qldn-card:hover { border-color: #2271b1; }
 	.qldn-lines input.qldn-money { width: 76px; }
 	.qldn-lines input.qldn-q { width: 44px; }
 }
+
+/* Máy chấm công */
+.qldn-steps li { margin-bottom: 8px; }
+.qldn-pre { background: #fff; border: 1px solid #dcdcde; padding: 10px 12px; overflow-x: auto; }
+.qldn-copy { user-select: all; }

@@ -48,6 +48,7 @@ function qldn_employee_save( $d, $id = 0 ) {
 		'bank_account'     => isset( $d['bank_account'] ) ? sanitize_text_field( $d['bank_account'] ) : '',
 		'start_date'       => ! empty( $d['start_date'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $d['start_date'] ) ? $d['start_date'] : null,
 		'user_id'          => isset( $d['user_id'] ) ? (int) $d['user_id'] : 0,
+		'device_pin'       => isset( $d['device_pin'] ) ? qldn_pin( $d['device_pin'] ) : '',
 		'status'           => ( isset( $d['status'] ) && 'inactive' === $d['status'] ) ? 'inactive' : 'active',
 		'note'             => isset( $d['note'] ) ? sanitize_textarea_field( $d['note'] ) : '',
 	);
@@ -60,14 +61,24 @@ function qldn_employee_save( $d, $id = 0 ) {
 			return new WP_Error( 'qldn_user', 'Tài khoản này đã liên kết với nhân viên ' . $dup . '.' );
 		}
 	}
-	if ( $id ) {
-		$wpdb->update( $t, $row, array( 'id' => $id ) );
-		return $id;
+	if ( '' !== $row['device_pin'] ) {
+		$dup = $wpdb->get_var( $wpdb->prepare( "SELECT name FROM $t WHERE device_pin = %s AND id <> %d", $row['device_pin'], $id ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+		if ( $dup ) {
+			return new WP_Error( 'qldn_pin', 'Mã chấm công ' . $row['device_pin'] . ' đã gán cho ' . $dup . '.' );
+		}
 	}
-	$row['created_at'] = qldn_now();
-	$wpdb->insert( $t, $row );
-	$id = (int) $wpdb->insert_id;
-	$wpdb->update( $t, array( 'code' => qldn_code( 'NV', $id, 4 ) ), array( 'id' => $id ) );
+	$old_pin = '';
+	if ( $id ) {
+		$old_pin = (string) $wpdb->get_var( $wpdb->prepare( "SELECT device_pin FROM $t WHERE id = %d", $id ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+		$wpdb->update( $t, $row, array( 'id' => $id ) );
+	} else {
+		$row['created_at'] = qldn_now();
+		$wpdb->insert( $t, $row );
+		$id = (int) $wpdb->insert_id;
+		$wpdb->update( $t, array( 'code' => qldn_code( 'NV', $id, 4 ) ), array( 'id' => $id ) );
+	}
+	// Lần chấm đã nhận từ máy trước khi nhập mã được gán lại cho nhân viên.
+	qldn_punch_relink( $id, $old_pin, $row['device_pin'] );
 	return $id;
 }
 
@@ -95,6 +106,7 @@ function qldn_handle_employee() {
 			'bank_account'     => qldn_in( 'bank_account' ),
 			'start_date'       => qldn_in( 'start_date', 'date' ),
 			'user_id'          => qldn_in( 'user_id', 'int', 0 ),
+			'device_pin'       => qldn_in( 'device_pin' ),
 			'status'           => qldn_in( 'status', 'key' ),
 			'note'             => qldn_in( 'note', 'textarea' ),
 		),
@@ -145,13 +157,13 @@ function qldn_page_employees() {
 	echo '<div class="wrap qldn"><h1 class="wp-heading-inline">Nhân viên</h1> <a class="page-title-action" href="' . esc_url( qldn_url( 'employees', array( 'edit' => 'new' ) ) ) . '">Thêm nhân viên</a> <a class="page-title-action" href="' . esc_url( qldn_action_url( 'export_employees' ) ) . '">Xuất Excel (CSV)</a><hr class="wp-header-end">';
 	qldn_print_notices();
 	qldn_search_box( 'employees', $s, '<select name="status">' . qldn_options_html( array( 'active' => 'Đang làm', 'inactive' => 'Đã nghỉ' ), $status ) . '</select> ', 'Tên / SĐT / bộ phận' );
-	echo '<table class="widefat striped qldn-table"><thead><tr><th>Mã</th><th>Họ tên</th><th>Bộ phận</th><th>Chức vụ</th><th>Điện thoại</th><th class="num">Lương</th><th class="num">Phụ cấp</th><th class="num">Hoa hồng</th><th>Tài khoản</th></tr></thead><tbody>';
+	echo '<table class="widefat striped qldn-table"><thead><tr><th>Mã</th><th>Họ tên</th><th>Bộ phận</th><th>Chức vụ</th><th>Điện thoại</th><th>Mã CC</th><th class="num">Lương</th><th class="num">Phụ cấp</th><th class="num">Hoa hồng</th><th>Tài khoản</th></tr></thead><tbody>';
 	if ( ! $rows ) {
-		echo '<tr><td colspan="9">Chưa có nhân viên.</td></tr>';
+		echo '<tr><td colspan="10">Chưa có nhân viên.</td></tr>';
 	}
 	foreach ( $rows as $r ) {
 		$u = $r->user_id ? get_userdata( $r->user_id ) : null;
-		echo '<tr><td>' . esc_html( $r->code ) . '</td><td><a href="' . esc_url( qldn_url( 'employees', array( 'edit' => $r->id ) ) ) . '"><strong>' . esc_html( $r->name ) . '</strong></a></td><td>' . esc_html( $r->department ) . '</td><td>' . esc_html( $r->position ) . '</td><td>' . qldn_phone_link( $r->phone ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
+		echo '<tr><td>' . esc_html( $r->code ) . '</td><td><a href="' . esc_url( qldn_url( 'employees', array( 'edit' => $r->id ) ) ) . '"><strong>' . esc_html( $r->name ) . '</strong></a></td><td>' . esc_html( $r->department ) . '</td><td>' . esc_html( $r->position ) . '</td><td>' . qldn_phone_link( $r->phone ) . '</td><td>' . esc_html( $r->device_pin ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<td class="num">' . esc_html( qldn_money( $r->base_salary, false ) . ( $types[ $r->salary_type ] ?? '' ) ) . '</td><td class="num">' . esc_html( qldn_money( $r->allowance, false ) ) . '</td><td class="num">' . esc_html( (float) $r->commission_rate ) . '%</td><td>' . esc_html( $u ? $u->user_login : '' ) . '</td></tr>';
 	}
 	echo '</tbody></table><p class="qldn-count">' . esc_html( count( $rows ) ) . ' nhân viên</p></div>';
@@ -181,6 +193,7 @@ function qldn_employee_form( $e ) {
 	qldn_field( 'Số CCCD', 'id_number', $e ? $e->id_number : '' );
 	qldn_field( 'Mã số thuế cá nhân', 'tax_code', $e ? $e->tax_code : '' );
 	qldn_field( 'Tài khoản ngân hàng', 'bank_account', $e ? $e->bank_account : '', array( 'help' => 'Số tài khoản – ngân hàng (dùng khi chuyển lương).' ) );
+	qldn_field( 'Mã chấm công', 'device_pin', $e ? $e->device_pin : '', array( 'class' => 'small-text', 'help' => 'Số ID (User ID / Mã NV) của người này trên máy chấm công vân tay, thẻ, khuôn mặt.' ) );
 	qldn_field( 'Tài khoản đăng nhập', 'user_id', $e ? $e->user_id : 0, array( 'type' => 'select', 'options' => $users, 'help' => 'Liên kết để nhân viên tự chấm công vào/ra ca ở trang Tổng quan và tự điền tên khi bán hàng.' ) );
 	qldn_field( 'Trạng thái', 'status', $e ? $e->status : 'active', array( 'type' => 'select', 'options' => array( 'active' => 'Đang làm', 'inactive' => 'Đã nghỉ việc' ) ) );
 	echo '</table><h2>Lương</h2><table class="form-table">';
