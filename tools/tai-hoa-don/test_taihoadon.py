@@ -1124,6 +1124,16 @@ class Tests(unittest.TestCase):
             self.assertEqual(p["v"], "kh1")
             with self.assertRaises(PermissionError):
                 srv.lic.session(srv.lic.sign(dict(p, v="goc")) + "x", lc2.d["device_id"], t.__version__)
+            # trang tải exe trên máy chủ (công khai) + link bản mới trên máy con là link đầy đủ tới máy chủ
+            self.assertIn("Chưa có file", urllib.request.urlopen(url + "/tai-ve").read().decode())
+            os.makedirs(os.path.dirname(t.exe_path(srv)), exist_ok=True)
+            with open(t.exe_path(srv), "wb") as f:
+                f.write(b"MZ" + b"0" * 2000)
+            t._save_json(t.exe_path(srv) + ".json", {"version": "99.1"})
+            self.assertIn(b"99.1", urllib.request.urlopen(url + "/tai-ve").read())
+            self.assertEqual(urllib.request.urlopen(url + "/tai-ve/TaiHoaDon.exe").read()[:2], b"MZ")
+            lc2.status()
+            self.assertEqual(lc2.state()["update"], {"version": "99.1", "url": url + "/tai-ve/TaiHoaDon.exe"})
             # sao lưu
             bk = t.backup_data(self.tmp, os.path.join(tempfile.mkdtemp(), "SaoLuu"))
             self.assertGreater(bk["files"], 60)

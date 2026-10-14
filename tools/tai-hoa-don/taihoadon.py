@@ -34,7 +34,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.7.0"
+__version__ = "4.7.1"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -2490,6 +2490,33 @@ def version_tuple(v):
     return tuple(int(x) for x in re.findall(r"\d+", str(v or "0"))[:4]) or (0,)
 
 
+EXE_NAME = "TaiHoaDon.exe"
+
+
+def exe_path(app):
+    """File exe phát cho khách: chủ hệ thống tải lên trong Quản trị (hoặc chép thẳng vào thư mục này)."""
+    return os.path.join(app.cfg, "ban-cai", EXE_NAME)
+
+
+def exe_info(app):
+    p = exe_path(app)
+    if not os.path.isfile(p):
+        return None
+    st = os.stat(p)
+    return {"size": st.st_size, "time": datetime.fromtimestamp(st.st_mtime).strftime("%d/%m/%Y %H:%M"),
+            "version": _load_json(p + ".json", {}).get("version", "")}
+
+
+DOWNLOAD_PAGE = """<!doctype html><html lang=vi><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
+<title>Tải phần mềm Tải hoá đơn</title><style>body{font-family:system-ui,Segoe UI,Arial;max-width:640px;margin:40px auto;padding:0 16px;
+color:#1d2433}a.b{display:inline-block;background:#2f3fa0;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:600}
+li{margin:6px 0}.m{color:#667}</style></head><body><h2>Phần mềm Tải hoá đơn – bản cài trên máy (Windows)</h2>%s
+<ol><li>Tải file <b>TaiHoaDon.exe</b>, đặt vào một thư mục riêng (vd <code>D:\\TaiHoaDon</code>) – hoá đơn sẽ lưu ở thư mục
+<code>HoaDon</code> cạnh file.</li><li>Bấm đúp để chạy. Windows có thể cảnh báo "Windows protected your PC" → <i>More info</i> → <i>Run anyway</i>.</li>
+<li>Đăng nhập bằng <b>tài khoản nhà cung cấp đã cấp</b> (máy chủ: <code>%s</code>).</li></ol>
+<p class=m>Hoá đơn và mật khẩu cổng thuế chỉ lưu trên máy của bạn.</p></body></html>"""
+
+
 class Licenses:
     """Phía máy chủ: đăng nhập máy con, kiểm tra phiên, trừ hạn mức theo mã băm hoá đơn."""
 
@@ -2564,8 +2591,9 @@ class Licenses:
 
     def latest(self):
         s = self.app.system()
-        return {"version": s.get("phien_ban_moi") or __version__,
-                "url": s.get("link_tai") or "https://github.com/sugarkim28/wpflatsome/releases/latest"}
+        info = exe_info(self.app) or {}
+        return {"version": s.get("phien_ban_moi") or info.get("version") or __version__,
+                "url": s.get("link_tai") or "/tai-ve/" + EXE_NAME}  # đường dẫn tương đối: máy con ghép với địa chỉ máy chủ
 
     def info(self, vid, u):
         q = self.app.quota(vid).info()
@@ -2765,6 +2793,8 @@ class LicenseClient:
     def state(self):
         i = self.info()
         latest = (i.get("latest") or {})
+        if latest.get("url", "").startswith("/"):
+            latest = dict(latest, url=self.d.get("server", "").rstrip("/") + latest["url"])
         return {"logged": self.logged, "server": self.d.get("server"), "username": self.d.get("username", ""),
                 "device_id": self.d["device_id"], "info": i, "checked": self.d.get("checked", ""),
                 "error": self.last_error,
@@ -6136,9 +6166,14 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     <div class="chk" style="align-items:center"><label><input type="checkbox" id="syMtt"> Tạm bỏ qua đồng bộ HĐ máy tính tiền (khi trang thuế treo phần này)</label>
       <button class="sm" onclick="saveSys()">Lưu thông báo</button><span class="ok" id="syMsg"></span></div>
     <div class="chk" style="align-items:center;flex-wrap:wrap" title="Bản cài trên máy khách tự kiểm tra khi kết nối máy chủ">
-      <label>Bản exe mới nhất <input type="text" id="syVer" placeholder="vd 4.7.0 (trống = theo máy chủ)" style="width:150px"></label>
-      <label>Link tải <input type="text" id="syLink" placeholder="https://…/TaiHoaDon.exe" style="width:320px"></label>
+      <label>Bản exe mới nhất <input type="text" id="syVer" placeholder="trống = theo file exe tải lên" style="width:150px"></label>
+      <label>Link tải <input type="text" id="syLink" placeholder="trống = trang /tai-ve của máy chủ này" style="width:320px"></label>
       <label>Phiên bản tối thiểu (cũ hơn thì không tải được HĐ mới) <input type="text" id="syMin" style="width:90px"></label></div>
+    <div class="chk" style="align-items:center;flex-wrap:wrap">
+      <span>File cài cho khách: <a href="/tai-ve" target="_blank">/tai-ve</a> <span class="mute" id="syExe"></span></span>
+      <label>Phiên bản <input type="text" id="syExeVer" placeholder="vd 4.7.1" style="width:80px"></label>
+      <button class="sm sec" onclick="$('syExeFile').click()">Tải lên TaiHoaDon.exe</button><input type="file" id="syExeFile" accept=".exe" class="hide">
+      <span class="ok" id="syExeMsg"></span></div>
     <h3 style="margin:24px 0 6px">Gửi email</h3>
     <div class="hint">Máy chủ gửi mail (SMTP) dùng cho: quên mật khẩu, báo khi đổi mật khẩu, mời người dùng mới tự đặt mật khẩu.
       Gmail: máy chủ smtp.gmail.com, cổng 587 STARTTLS, tên đăng nhập là địa chỉ Gmail, mật khẩu là <b>mật khẩu ứng dụng</b> (App Password, cần bật xác minh 2 bước).</div>
@@ -6734,7 +6769,7 @@ let users = [], allCos = [], editingUser = null, uPicked = new Set();
 async function loadUsers() {
   $('uErr').textContent = '';
   try { const d = await post('/api/users', {}); users = d.users; allCos = d.companies; } catch (e) { $('uErr').textContent = e.message; return; }
-  if (me.owner) { loadVps(); loadMail(); loadSys(); }
+  if (me.owner) { loadVps(); loadMail(); loadSys(); loadExe(); }
   if (me.server && me.role === 'admin') renderDevs('myDevs');
   renderGoi();
   const tb = $('uRows'); tb.innerHTML = '';
@@ -6803,6 +6838,16 @@ async function loadSys() {
     $('syAnn').value = y.thong_bao || ''; $('syHint').value = y.goi_y || ''; $('syMtt').checked = !!y.bo_qua_mtt;
     $('syVer').value = y.phien_ban_moi || ''; $('syLink').value = y.link_tai || ''; $('syMin').value = y.phien_ban_toi_thieu || ''; } catch (e) {}
 }
+async function loadExe() {
+  try { const d = await post('/api/sys/exe', {info_only: true}); const x = d.exe;
+    $('syExe').textContent = x ? '– đang có bản ' + (x.version || '?') + ', ' + (x.size / 1048576).toFixed(1) + ' MB, ' + x.time : '– chưa có file'; } catch (e) {}
+}
+$('syExeFile').onchange = async () => {
+  const f = $('syExeFile').files[0]; $('syExeFile').value = ''; if (!f) return;
+  $('syExeMsg').textContent = 'Đang tải lên ' + f.name + '…';
+  try { await post('/api/sys/exe', {data: await readB64(f), version: $('syExeVer').value.trim()}); $('syExeMsg').textContent = 'Đã cập nhật.'; loadExe(); }
+  catch (e) { $('syExeMsg').textContent = e.message; }
+};
 async function saveSys() {
   try { await post('/api/sys/save', {thong_bao: $('syAnn').value, goi_y: $('syHint').value, bo_qua_mtt: $('syMtt').checked,
                                       phien_ban_moi: $('syVer').value, link_tai: $('syLink').value, phien_ban_toi_thieu: $('syMin').value});
@@ -8482,9 +8527,26 @@ def make_handler(app, port):
                 return {}
 
         def do_GET(self):
+            path = self.path.split("?")[0]
+            if app.server and path in ("/tai-ve", "/tai-ve/", "/tai-ve/" + EXE_NAME):  # trang tải bản exe (công khai)
+                if app.allowed_hosts and not self._host_ok():
+                    return self._send(403, {"error": "Host không hợp lệ"})
+                self._extra = []
+                info = exe_info(app)
+                if path.endswith(".exe"):
+                    if not info:
+                        return self._send(404, {"error": "Chưa có file cài đặt – liên hệ nhà cung cấp"})
+                    with open(exe_path(app), "rb") as f:
+                        body = f.read()
+                    self._extra = [("Content-Disposition", 'attachment; filename="%s"' % EXE_NAME)]
+                    return self._send(200, body, "application/octet-stream")
+                site = ("https" if (self._https() or app.trust_proxy) else "http") + "://" + self._public_host()
+                btn = ('<p><a class=b href="/tai-ve/%s">Tải TaiHoaDon.exe%s</a> <span class=m>%.1f MB · cập nhật %s</span></p>'
+                       % (EXE_NAME, (" " + info["version"]) if info.get("version") else "", info["size"] / 1048576, info["time"])
+                       if info else "<p><b>Chưa có file cài đặt – liên hệ nhà cung cấp.</b></p>")
+                return self._send(200, (DOWNLOAD_PAGE % (btn, site)).encode("utf-8"), "text/html; charset=utf-8")
             if not self._guard():
                 return
-            path = self.path.split("?")[0]
             if path == "/chan-doan.zip":  # chủ hệ thống: tải các trang lỗi của nhà cung cấp để gửi người hỗ trợ
                 if not self.user or not (self.user.get("owner") or not app.server):
                     return self._send(403, {"error": "Không có quyền"})
@@ -8670,7 +8732,7 @@ def make_handler(app, port):
                     raise ValueError("Bản chạy trên máy không có email")
                 app.users.upsert(self.user["username"], email=str(data.get("email") or ""))
                 return self._send(200, {"ok": True})
-            if path.startswith("/api/vp/") or path.startswith("/api/mail/") or path == "/api/sys/save":
+            if path.startswith("/api/vp/") or path.startswith("/api/mail/") or path in ("/api/sys/save", "/api/sys/exe"):
                 return self._vp_post(path, data)
             self._admin()
             if path == "/api/devices":  # quản trị văn phòng: máy đã cài bản trên máy và đăng nhập
@@ -8734,6 +8796,25 @@ def make_handler(app, port):
                                     phien_ban_toi_thieu=data.get("phien_ban_toi_thieu"))
                 self._audit("cập nhật thông báo hệ thống")
                 return self._send(200, d)
+            if path == "/api/sys/exe":  # chủ hệ thống tải lên file TaiHoaDon.exe để khách tải ở /tai-ve
+                if data.get("info_only"):
+                    return self._send(200, {"exe": exe_info(app)})
+                import base64
+                try:
+                    raw = base64.b64decode(data.get("data") or "", validate=True)
+                except ValueError:
+                    raise ValueError("Dữ liệu file không hợp lệ")
+                if raw[:2] != b"MZ" or len(raw) < 1000000:
+                    raise ValueError("Không phải file TaiHoaDon.exe (Windows)")
+                os.makedirs(os.path.dirname(exe_path(app)), exist_ok=True)
+                tmp = exe_path(app) + ".tmp"
+                with open(tmp, "wb") as f:
+                    f.write(raw)
+                os.replace(tmp, exe_path(app))
+                ver = str(data.get("version") or "").strip()[:20]
+                _save_json(exe_path(app) + ".json", {"version": ver})
+                self._audit("tải lên TaiHoaDon.exe %s" % ver)
+                return self._send(200, {"exe": exe_info(app)})
             if path == "/api/vp/devices":  # máy đã kích hoạt bản cài của một văn phòng
                 return self._send(200, {"items": app.lic.devices(str(data.get("id") or ""))})
             if path == "/api/vp/device-remove":
@@ -8921,7 +9002,7 @@ def make_handler(app, port):
                     return self._send(400, {"error": str(e), "state": lc.state() if lc else None})
             if path in ("/api/login", "/api/logout", "/api/me/password", "/api/users", "/api/user/save",
                         "/api/user/delete", "/api/vp/list", "/api/vp/save", "/api/forgot", "/api/reset", "/api/me/email",
-                        "/api/mail/get", "/api/mail/save", "/api/mail/test", "/api/sys/save", "/api/vp/devices",
+                        "/api/mail/get", "/api/mail/save", "/api/mail/test", "/api/sys/save", "/api/vp/devices", "/api/sys/exe",
                         "/api/vp/device-remove", "/api/devices", "/api/device/remove"):
                 return self._auth_post(path, data)
             if path == "/api/company/save":
