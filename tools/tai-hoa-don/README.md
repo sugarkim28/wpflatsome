@@ -194,3 +194,25 @@ Tab **Hàng hoá** trong trang doanh nghiệp: danh mục tên hàng lấy từ 
 - **ĐT P.nhân** (`doi-tuong.json`): người bán (V) / người mua (R) đồng bộ từ hoá đơn; Mã ĐTPN (Smart Pro), Mã TK TM/CK, Mã TK CP/DT, Duyệt nội bộ, HĐ DV, Loại HHDV SXKD (1/2/3). Tạo mã tự động 3 kiểu (MST hoặc tên khách lẻ; 5 ký tự cuối MST; tên không dấu) + tiền tố / hậu tố; thay thế hàng loạt; Import / Export Excel (cột như mẫu Nibot); *Đánh dấu lại hoá đơn hàng loạt* (HĐ dịch vụ / duyệt nội bộ theo ĐTPN). Khi kết xuất: Mã ĐTPN → MADTPNCO / MAKH, Mã TK TM/CK → TKCO, Mã TK CP/DT → TKNO (khi mặt hàng chưa có Mã TK), SXKD 2/3 → mục 2/3 của bảng kê.
 - **Quy đổi ĐVT** (`quy-doi.json`): mặt hàng + ĐVT gốc (hoá đơn) → ĐVT đích + số lượng quy đổi; Import / Export Excel (Mã hàng, Tên hàng, ĐVT Gốc (hóa đơn), ĐVT Đích (Quy Đổi), Số lượng quy đổi). Khi kết xuất Smart_KTSC: DONVI = ĐVT đích, LUONG = SL × hệ số, đơn giá = đơn giá ÷ hệ số.
 
+## Bản cài trên máy khách (exe) – tài khoản do máy chủ cấp, dữ liệu ở lại trên máy khách
+
+Từ 4.7.0, `TaiHoaDon.exe` (chạy trên máy, không `--server`) phải **đăng nhập bản quyền** bằng tài khoản do máy chủ cấp
+(mặc định `https://taihoadon.tinhoc119.com`, đổi bằng `--license-server` hoặc biến `TAIHOADON_LICENSE_SERVER`).
+
+- Máy con **tự** đăng nhập hoadondientu, giải captcha, tải XML / PDF / HĐ gốc **về ổ cứng của máy con**. Mật khẩu cổng
+  thuế mã hoá trên máy (Windows DPAPI). Máy chủ **không** nhận hoá đơn hay mật khẩu cổng thuế.
+- Trước khi tải hoá đơn **mới**, máy con gửi **mã băm SHA-256** của khoá hoá đơn (`MST|loại|khoá`) lên `/api/lic/take`;
+  máy chủ trừ hạn mức gói của văn phòng – mỗi hoá đơn chỉ tính 1 lần (lưu ở `<văn phòng>/_cau-hinh/hd-da-tinh.txt`),
+  kể cả tải lại trên máy khác hoặc sau khi xoá dữ liệu. Hết hạn mức: chỉ cập nhật trạng thái hoá đơn đã có.
+- Không có mạng: vẫn mở, xem, kết xuất dữ liệu đã tải; chỉ tải hoá đơn mới mới cần kết nối máy chủ.
+- Chủ hệ thống (Quản trị › Văn phòng): **Số máy được cài** (mặc định 2, 0 = không giới hạn), **Hết hạn gói**, danh sách máy
+  đã kích hoạt + **Gỡ máy**; quản trị văn phòng cũng xem / gỡ máy của mình. Thông báo hệ thống: **Bản exe mới nhất**,
+  **Link tải**, **Phiên bản tối thiểu** (cũ hơn thì không tải được hoá đơn mới).
+- Mã phiên máy con ký HMAC (khoá `_cau-hinh/ban-quyen.key` trên máy chủ), hạn 30 ngày, gắn với mã máy; gỡ máy / khoá
+  tài khoản / khoá văn phòng có hiệu lực ngay ở lần gọi kế tiếp.
+- Nút **Bản quyền** ở đầu trang (bản máy): đăng nhập / đăng xuất (nhường chỗ cho máy khác), xem hạn mức, **Sao lưu dữ
+  liệu** thành file ZIP vào thư mục chọn (nên chọn thư mục Google Drive / OneDrive trên máy).
+
+API máy chủ cho máy con: `POST /api/lic/login`, `/api/lic/status`, `/api/lic/take`, `/api/lic/goc`, `/api/lic/logout`
+(JSON, không cookie; lỗi trả `{error, lic: true}` khi phải đăng nhập lại).
+

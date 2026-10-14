@@ -14,7 +14,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
-from datetime import date
+from datetime import date, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import taihoadon as t
@@ -262,9 +262,11 @@ class Tests(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp)
 
-    def run_job(self, msts, kinds=("purchase", "sold"), test=False, start=date(2026, 9, 1), end=date(2026, 10, 31)):
+    def run_job(self, msts, kinds=("purchase", "sold"), test=False, start=date(2026, 9, 1), end=date(2026, 10, 31),
+                quota=None):
         job = t.Job()
         job.running = True
+        job.quota = quota
         helper = AutoAnswer(job)
         helper.start()
         t.run_batch(job, self.app.store, self.app.solver, msts, list(kinds), start, end, True, True,
@@ -1057,6 +1059,80 @@ class Tests(unittest.TestCase):
                              [{k: v for k, v in x.items() if k != "id"} for x in before])
         self.assertEqual(t.unit_delete(self.tmp, m, []), 1)
         self.assertEqual(t.partner_delete(self.tmp, m, 1), 0)
+
+    def test_desktop_license(self):
+        """Bản cài máy: đăng nhập máy chủ cấp phép, giới hạn số máy, hạn mức theo mã băm (mỗi hoá đơn tính 1 lần kể cả
+        khi xoá dữ liệu tải lại), gỡ máy, hết hạn gói, phiên bản tối thiểu. Hoá đơn chỉ nằm trên máy con."""
+        srv_root = tempfile.mkdtemp()
+        srv = t.App(srv_root, server=True)
+        srv.tenants.upsert("kh1", create=True, ten="Khách 1", han_muc_hd=50, max_may=1)
+        srv.users.upsert("kh1-admin", ten="A", role="admin", password="matkhau123", create=True, vp="kh1")
+        httpd = ThreadingHTTPServer(("127.0.0.1", 0), t.make_handler(srv, 0))
+        httpd.RequestHandlerClass = t.make_handler(srv, httpd.server_port)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        url = "http://127.0.0.1:%d" % httpd.server_port
+        try:
+            lc = t.LicenseClient(os.path.join(self.tmp, "_cau-hinh"), url)
+            with self.assertRaisesRegex(t.LicenseError, "Sai tên đăng nhập"):
+                lc.login(None, "kh1-admin", "sai-mat-khau")
+            info = lc.login(None, "kh1-admin", "matkhau123")
+            self.assertEqual((info["vp"], info["goi"]["han_muc_hd"]), ("kh1", 50))
+            self.assertNotIn("matkhau123", open(lc.path, encoding="utf-8").read())
+            lc2 = t.LicenseClient(os.path.join(tempfile.mkdtemp(), "_cau-hinh"), url)
+            with self.assertRaisesRegex(t.LicenseError, "đủ 1 máy"):
+                lc2.login(None, "kh1-admin", "matkhau123")
+            # Đồng bộ trên máy con: 61 hoá đơn mới, gói 50 → tải 50
+            self.app.store.import_text("0309999999\tA\tpw1\n")
+            q = t.RemoteQuota(lc)
+            job, _ = self.run_job(["0309999999"], kinds=("purchase",), quota=q)
+            self.assertTrue(job.quota_out)
+            n_local = len(t._load_json(t.index_file(self.tmp, "0309999999"), {}).get("purchase", {}))
+            self.assertEqual(n_local, 50)
+            self.assertEqual(srv.quota("kh1").info()["da_dung_hd"], 50)
+            self.assertFalse(os.path.exists(os.path.join(srv_root, "_vp", "kh1", "0309999999")))  # máy chủ không có HĐ
+            # nâng gói → đồng bộ lại lấy nốt 11; xoá dữ liệu trên máy rồi tải lại: không trừ thêm
+            srv.tenants.upsert("kh1", han_muc_hd=100)
+            self.run_job(["0309999999"], kinds=("purchase",), quota=q)
+            self.assertEqual(srv.quota("kh1").info()["da_dung_hd"], 61)
+            os.remove(t.index_file(self.tmp, "0309999999"))
+            self.run_job(["0309999999"], kinds=("purchase",), quota=q)
+            self.assertEqual(srv.quota("kh1").info()["da_dung_hd"], 61)
+            self.assertEqual(len(t._load_json(t.index_file(self.tmp, "0309999999"), {}).get("purchase", {})), 61)
+            # mất mạng tới máy chủ: không tải hoá đơn mới, không treo
+            off = t.LicenseClient(os.path.join(tempfile.mkdtemp(), "_cau-hinh"), "http://127.0.0.1:1")
+            off.d["token"] = t.protect("x.y")
+            with self.assertRaises(t.LicenseError) as cm:
+                off.status()
+            self.assertTrue(cm.exception.offline)
+            # phiên bản tối thiểu, hết hạn gói, gỡ máy
+            srv.save_system(phien_ban_toi_thieu="99.0")
+            with self.assertRaisesRegex(t.LicenseError, "đã cũ"):
+                lc.status()
+            srv.save_system(phien_ban_toi_thieu="")
+            srv.tenants.upsert("kh1", het_han=(date.today() - timedelta(days=1)).isoformat())
+            with self.assertRaisesRegex(t.LicenseError, "hết hạn"):
+                lc.status()
+            srv.tenants.upsert("kh1", het_han="")
+            self.assertTrue(lc.status()["vp_ten"])
+            srv.lic.remove_device("kh1", lc.d["device_id"])
+            with self.assertRaisesRegex(t.LicenseError, "gỡ"):
+                lc.status()
+            self.assertFalse(lc.logged)                       # phải đăng nhập lại
+            lc2.login(None, "kh1-admin", "matkhau123")        # đã có chỗ trống cho máy khác
+            # chặn mã băm sai định dạng / mã phiên giả
+            p = srv.lic.unsign(t.unprotect(lc2.d["token"]))
+            self.assertEqual(p["v"], "kh1")
+            with self.assertRaises(PermissionError):
+                srv.lic.session(srv.lic.sign(dict(p, v="goc")) + "x", lc2.d["device_id"], t.__version__)
+            # sao lưu
+            bk = t.backup_data(self.tmp, os.path.join(tempfile.mkdtemp(), "SaoLuu"))
+            self.assertGreater(bk["files"], 60)
+            with self.assertRaises(ValueError):
+                t.backup_data(self.tmp, os.path.join(self.tmp, "trong"))
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+            shutil.rmtree(srv_root, ignore_errors=True)
 
     def test_browser_download_settings(self):
         base = os.path.join(self.tmp, "LocalAppData")

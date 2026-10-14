@@ -34,7 +34,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.6.0"
+__version__ = "4.7.0"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
@@ -2369,9 +2369,14 @@ class TenantStore:
                 t["ten"] = str(fields["ten"]).strip()[:150]
             if fields.get("ghichu") is not None:
                 t["ghichu"] = str(fields["ghichu"]).strip()[:300]
-            for k in ("max_dn", "max_jobs", "han_muc_hd", "han_muc_goc"):
+            for k in ("max_dn", "max_jobs", "han_muc_hd", "han_muc_goc", "max_may"):
                 if fields.get(k) is not None:
                     t[k] = max(0, int(fields[k] or 0))
+            if fields.get("het_han") is not None:  # ngày hết hạn gói (yyyy-mm-dd, trống = không hạn)
+                h = str(fields["het_han"]).strip()
+                if h and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", h):
+                    raise ValueError("Ngày hết hạn không hợp lệ")
+                t["het_han"] = h
             if fields.get("tai_goc") is not None:
                 t["tai_goc"] = bool(fields["tai_goc"])
             if fields.get("active") is not None:
@@ -2456,6 +2461,394 @@ class Quota:
                                                    used.get(kind, 0)])
             used[kind] = 0
             _save_json(self.path, used)
+
+
+# ---------------------------------------------------------------------------
+# Bản cài trên máy khách (exe) – cấp phép từ máy chủ. Máy con tự tải hoá đơn về ổ cứng của nó; máy chủ chỉ giữ
+# tài khoản, gói / hạn mức, danh sách máy đã kích hoạt và MÃ BĂM của hoá đơn đã tính (không lưu nội dung hoá đơn,
+# không nhận mật khẩu cổng thuế).
+# ---------------------------------------------------------------------------
+LIC_TOKEN_DAYS = 30
+DEFAULT_MAX_MAY = 2
+
+
+def _b64u(b):
+    import base64
+    return base64.urlsafe_b64encode(b).rstrip(b"=").decode()
+
+
+def _b64u_dec(s):
+    import base64
+    return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
+
+
+class LicenseBlocked(PermissionError):
+    """Văn phòng bị khoá / hết hạn gói / phiên bản quá cũ: chặn tải nhưng KHÔNG bắt máy con đăng nhập lại."""
+
+
+def version_tuple(v):
+    return tuple(int(x) for x in re.findall(r"\d+", str(v or "0"))[:4]) or (0,)
+
+
+class Licenses:
+    """Phía máy chủ: đăng nhập máy con, kiểm tra phiên, trừ hạn mức theo mã băm hoá đơn."""
+
+    def __init__(self, app):
+        self.app = app
+        kp = os.path.join(app.cfg, "ban-quyen.key")
+        if not os.path.exists(kp):
+            os.makedirs(app.cfg, exist_ok=True)
+            with open(kp, "wb") as f:
+                f.write(secrets.token_bytes(32))
+        with open(kp, "rb") as f:
+            self.key = f.read()
+        self.lock = threading.RLock()
+        self._counted = {}  # văn phòng → tập mã băm hoá đơn đã tính
+
+    # ---- mã phiên (token) ký HMAC ----
+    def sign(self, payload):
+        import hmac
+        body = _b64u(json.dumps(payload, separators=(",", ":")).encode())
+        return body + "." + _b64u(hmac.new(self.key, body.encode(), "sha256").digest())
+
+    def unsign(self, token):
+        import hmac
+        try:
+            body, sig = str(token or "").split(".", 1)
+            good = _b64u(hmac.new(self.key, body.encode(), "sha256").digest())
+            if not hmac.compare_digest(sig, good):
+                return None
+            return json.loads(_b64u_dec(body))
+        except (ValueError, TypeError):
+            return None
+
+    # ---- máy đã kích hoạt (theo văn phòng) ----
+    def _dev_path(self, vid):
+        return os.path.join(self.app.t(vid).cfg, "may-con.json")
+
+    def devices(self, vid):
+        return _load_json(self._dev_path(vid), {})
+
+    def remove_device(self, vid, device_id):
+        with self.lock:
+            d = self.devices(vid)
+            if d.pop(device_id, None) is None:
+                raise ValueError("Không tìm thấy máy")
+            _save_json(self._dev_path(vid), d)
+
+    def _register(self, vid, device_id, name, user, version, ip):
+        with self.lock:
+            d = self.devices(vid)
+            limit = self.app.vp_info(vid).get("max_may", DEFAULT_MAX_MAY)
+            if device_id not in d and limit and len(d) >= limit:
+                raise PermissionError("Văn phòng đã kích hoạt đủ %d máy. Nhờ quản trị gỡ máy cũ (Quản trị › Máy cài phần "
+                                      "mềm) hoặc liên hệ nhà cung cấp để tăng số máy." % limit)
+            now = datetime.now().strftime("%d/%m/%Y %H:%M")
+            cur = d.get(device_id) or {"dang_ky": now}
+            cur.update(ten=str(name or "")[:80], user=user, lan_cuoi=now, phien_ban=str(version or "")[:20], ip=ip)
+            d[device_id] = cur
+            _save_json(self._dev_path(vid), d)
+
+    # ---- kiểm tra ----
+    def _check_vp(self, vid, version):
+        info = self.app.vp_info(vid)
+        if not info.get("active", False):
+            raise LicenseBlocked("Văn phòng của tài khoản này đang bị khoá – liên hệ nhà cung cấp phần mềm")
+        if info.get("het_han") and info["het_han"] < date.today().isoformat():
+            raise LicenseBlocked("Gói đã hết hạn ngày %s – liên hệ nhà cung cấp để gia hạn"
+                                  % datetime.strptime(info["het_han"], "%Y-%m-%d").strftime("%d/%m/%Y"))
+        need = self.app.system().get("phien_ban_toi_thieu") or ""
+        if need and version_tuple(version) < version_tuple(need):
+            raise LicenseBlocked("Phiên bản %s đã cũ – cài bản %s trở lên để tiếp tục tải hoá đơn (%s)"
+                                  % (version or "?", need, self.latest()["url"]))
+
+    def latest(self):
+        s = self.app.system()
+        return {"version": s.get("phien_ban_moi") or __version__,
+                "url": s.get("link_tai") or "https://github.com/sugarkim28/wpflatsome/releases/latest"}
+
+    def info(self, vid, u):
+        q = self.app.quota(vid).info()
+        vp = self.app.vp_info(vid)
+        return {"user": u["username"], "ten": u.get("ten", ""), "vp": vid, "vp_ten": vp.get("ten", ""),
+                "het_han": vp.get("het_han", ""), "goi": q, "latest": self.latest(),
+                "thong_bao": self.app.system().get("thong_bao", "")}
+
+    def login(self, username, password, device_id, device_name, version, ip):
+        if not re.fullmatch(r"[A-Za-z0-9-]{8,64}", str(device_id or "")):
+            raise ValueError("Mã máy không hợp lệ")
+        u = self.app.users.authenticate(username, password)
+        if not u:
+            raise LookupError("Sai tên đăng nhập hoặc mật khẩu")
+        vid = user_vp(u)
+        self._check_vp(vid, version)
+        self._register(vid, device_id, device_name, u["username"], version, ip)
+        exp = int(time.time()) + LIC_TOKEN_DAYS * 86400
+        token = self.sign({"u": u["username"], "d": device_id, "v": vid, "exp": exp})
+        return {"token": token, "info": self.info(vid, u)}
+
+    def session(self, token, device_id, version, ip=""):
+        """Kiểm tra mã phiên của máy con → (user, văn phòng). Gia hạn lần dùng cuối của máy."""
+        p = self.unsign(token)
+        if not p or p.get("d") != device_id:
+            raise PermissionError("Phiên bản quyền không hợp lệ – đăng nhập lại")
+        if p.get("exp", 0) < time.time():
+            raise PermissionError("Phiên bản quyền đã hết hạn – đăng nhập lại")
+        u = self.app.users.get(p.get("u"))
+        if not u or not u.get("active", True) or user_vp(u) != p.get("v"):
+            raise PermissionError("Tài khoản đã bị khoá hoặc xoá – liên hệ quản trị")
+        vid = p["v"]
+        if device_id not in self.devices(vid):
+            raise PermissionError("Máy này đã bị gỡ khỏi danh sách máy được dùng – đăng nhập lại để kích hoạt")
+        self._check_vp(vid, version)
+        with self.lock:
+            d = self.devices(vid)
+            if device_id in d:
+                d[device_id].update(lan_cuoi=datetime.now().strftime("%d/%m/%Y %H:%M"), phien_ban=str(version or "")[:20],
+                                    ip=ip or d[device_id].get("ip", ""))
+                _save_json(self._dev_path(vid), d)
+        return u, vid
+
+    # ---- hạn mức theo mã băm hoá đơn: mỗi hoá đơn chỉ tính 1 lần cho văn phòng, dù tải trên máy nào ----
+    def _counted_path(self, vid):
+        return os.path.join(self.app.t(vid).cfg, "hd-da-tinh.txt")
+
+    def _counted_set(self, vid):
+        if vid not in self._counted:
+            try:
+                with open(self._counted_path(vid), encoding="ascii") as f:
+                    self._counted[vid] = {x.strip() for x in f if x.strip()}
+            except OSError:
+                self._counted[vid] = set()
+        return self._counted[vid]
+
+    def take(self, vid, hashes):
+        """Xin tải các hoá đơn (mã băm). Trả về danh sách mã được phép: hoá đơn đã tính trước đây luôn được phép
+        (không trừ lại); hoá đơn mới trừ hạn mức, hết hạn mức thì không được phép."""
+        hashes = [h for h in dict.fromkeys(hashes or []) if re.fullmatch(r"[0-9a-f]{64}", str(h))][:20000]
+        with self.lock:
+            seen = self._counted_set(vid)
+            fresh = [h for h in hashes if h not in seen]
+            got = self.app.quota(vid).take_hd(len(fresh)) if fresh else 0
+            ok_new = fresh[:got]
+            if ok_new:
+                with open(self._counted_path(vid), "a", encoding="ascii") as f:
+                    f.write("".join(h + "\n" for h in ok_new))
+                seen.update(ok_new)
+            allowed = [h for h in hashes if h in seen]
+        return {"allowed": allowed, "moi": len(ok_new), "tu_choi": len(fresh) - len(ok_new),
+                "goi": self.app.quota(vid).info()}
+
+
+class LicenseError(Exception):
+    def __init__(self, msg, relogin=False, offline=False):
+        super().__init__(msg)
+        self.relogin, self.offline = relogin, offline
+
+
+DEFAULT_LICENSE_SERVER = os.environ.get("TAIHOADON_LICENSE_SERVER") or "https://taihoadon.tinhoc119.com"
+
+
+class LicenseClient:
+    """Bản cài trên máy khách: đăng nhập tài khoản do máy chủ cấp, xin tải hoá đơn mới (trừ hạn mức theo mã băm).
+    Hoá đơn và mật khẩu cổng thuế ở lại trên máy này – chỉ gửi mã băm (SHA-256) của khoá hoá đơn lên máy chủ.
+    Lưu ở _cau-hinh/ban-quyen.json (mã phiên được mã hoá bằng Windows DPAPI)."""
+
+    def __init__(self, cfg_dir, server=None):
+        self.path = os.path.join(cfg_dir, "ban-quyen.json")
+        self.lock = threading.Lock()
+        self.d = _load_json(self.path, {})
+        if not self.d.get("device_id"):
+            self.d["device_id"] = str(uuid.uuid4())
+        self.d.setdefault("server", server or DEFAULT_LICENSE_SERVER)
+        self.last_error = ""
+        self._save()
+
+    def _save(self):
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        _save_json(self.path, self.d)
+
+    @property
+    def logged(self):
+        return bool(self.d.get("token"))
+
+    def _token(self):
+        try:
+            return unprotect(self.d["token"]) if self.d.get("token") else ""
+        except Exception:
+            return ""
+
+    def _call(self, path, body, timeout=40):
+        import platform
+        body = dict(body, device_id=self.d["device_id"], version=__version__)
+        req = urllib.request.Request(self.d["server"].rstrip("/") + path, data=json.dumps(body).encode(),
+                                     headers={"Content-Type": "application/json", "User-Agent": "TaiHoaDon/" + __version__
+                                              + " (" + platform.system() + ")"})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.loads(r.read().decode("utf-8") or "{}")
+        except urllib.error.HTTPError as e:
+            try:
+                d = json.loads(e.read().decode("utf-8") or "{}")
+            except ValueError:
+                d = {}
+            raise LicenseError(d.get("error") or "Máy chủ bản quyền báo lỗi HTTP %d" % e.code, relogin=bool(d.get("lic")))
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
+            raise LicenseError("Không kết nối được máy chủ bản quyền %s (%s) – cần mạng Internet để tải hoá đơn mới; "
+                               "xem / kết xuất dữ liệu đã tải vẫn dùng bình thường." % (self.d["server"], getattr(e, "reason", e)),
+                               offline=True)
+
+    def _authed(self, path, body=None):
+        if not self.logged:
+            raise LicenseError("Chưa đăng nhập bản quyền – bấm \"Bản quyền\" ở đầu trang để đăng nhập tài khoản nhà cung cấp "
+                               "đã cấp.", relogin=True)
+        try:
+            r = self._call(path, dict(body or {}, token=self._token()))
+            self.last_error = ""
+            return r
+        except LicenseError as e:
+            self.last_error = str(e)
+            if e.relogin:
+                with self.lock:
+                    self.d.pop("token", None)
+                    self._save()
+            raise
+
+    def login(self, server, username, password):
+        import platform
+        if server:
+            server = server.strip().rstrip("/")
+            if not re.match(r"https?://[^\s/]+", server):
+                raise LicenseError("Địa chỉ máy chủ không hợp lệ (vd: https://taihoadon.tinhoc119.com)")
+            self.d["server"] = server
+        r = self._call("/api/lic/login", {"username": username, "password": password,
+                                          "device_name": platform.node() or "Máy tính"})
+        with self.lock:
+            self.d.update(token=protect(r["token"]), username=r["info"]["user"], info=r["info"],
+                          checked=datetime.now().strftime("%d/%m/%Y %H:%M"))
+            self._save()
+        self.last_error = ""
+        return r["info"]
+
+    def logout(self):
+        try:
+            if self.logged:
+                self._call("/api/lic/logout", {"token": self._token()}, timeout=15)
+        except LicenseError:
+            pass
+        with self.lock:
+            for k in ("token", "info"):
+                self.d.pop(k, None)
+            self._save()
+
+    def status(self):
+        r = self._authed("/api/lic/status")
+        with self.lock:
+            self.d.update(info=r["info"], checked=datetime.now().strftime("%d/%m/%Y %H:%M"))
+            self._save()
+        return r["info"]
+
+    def take(self, hashes):
+        r = self._authed("/api/lic/take", {"keys": list(hashes)})
+        with self.lock:
+            if self.d.get("info") and r.get("goi"):
+                self.d["info"]["goi"] = r["goi"]
+                self._save()
+        return r
+
+    def goc(self, refund=False):
+        return self._authed("/api/lic/goc", {"refund": bool(refund)})
+
+    def info(self):
+        return self.d.get("info") or {}
+
+    def state(self):
+        i = self.info()
+        latest = (i.get("latest") or {})
+        return {"logged": self.logged, "server": self.d.get("server"), "username": self.d.get("username", ""),
+                "device_id": self.d["device_id"], "info": i, "checked": self.d.get("checked", ""),
+                "error": self.last_error,
+                "update": latest if latest.get("version") and version_tuple(latest["version"]) > version_tuple(__version__)
+                else None}
+
+
+def invoice_hash(mst, kind, key):
+    """Mã băm gửi máy chủ để tính hạn mức – không đọc ngược ra được hoá đơn nào."""
+    import hashlib
+    return hashlib.sha256(("%s|%s|%s" % (str(mst).strip(), kind, key)).encode("utf-8")).hexdigest()
+
+
+class RemoteQuota:
+    """Hạn mức của bản cài máy: hỏi máy chủ cấp phép (cùng giao diện với Quota của bản web)."""
+
+    def __init__(self, lic):
+        self.lic = lic
+
+    def take_keys(self, mst, kind, keys):
+        """Xin tải các hoá đơn mới (khoá) → tập khoá được phép. Hoá đơn đã tính trước đây (kể cả trên máy khác,
+        hoặc tải lại sau khi xoá dữ liệu) không bị trừ lần nữa."""
+        hm = {invoice_hash(mst, kind, k): k for k in keys}
+        r = self.lic.take(list(hm))
+        return {hm[h] for h in r.get("allowed", []) if h in hm}
+
+    def info(self):
+        return self.lic.info().get("goi") or {}
+
+    def goc_error(self):
+        i = self.info()
+        if i and not i.get("tai_goc", True):
+            return "Gói của văn phòng không gồm tự tải hoá đơn gốc"
+        if i.get("han_muc_goc") and i.get("da_dung_goc", 0) >= i["han_muc_goc"]:
+            return "Đã dùng hết hạn mức %d hoá đơn gốc của gói" % i["han_muc_goc"]
+        return ""
+
+    def take_goc(self):
+        try:
+            return bool(self.lic.goc().get("ok"))
+        except LicenseError:
+            return False
+
+    def refund_goc(self):
+        try:
+            self.lic.goc(refund=True)
+        except LicenseError:
+            pass
+
+
+def _quiet(fn):
+    try:
+        fn()
+    except Exception:
+        pass
+
+
+def default_backup_dir():
+    home = os.path.expanduser("~")
+    docs = os.path.join(home, "Documents")
+    return os.path.join(docs if os.path.isdir(docs) else home, "TaiHoaDon-SaoLuu")
+
+
+def backup_data(out_root, dest_dir):
+    """Sao lưu toàn bộ dữ liệu (hoá đơn, cấu hình, danh mục) thành 1 file ZIP trong thư mục đích – nên chọn thư mục
+    Google Drive / OneDrive trên máy để có bản sao ngoài máy. Bỏ qua file kết xuất tạm và chẩn đoán."""
+    dest_dir = os.path.abspath(os.path.expanduser(dest_dir or ""))
+    root = os.path.abspath(out_root)
+    if not dest_dir or dest_dir == root or dest_dir.startswith(root + os.sep):
+        raise ValueError("Chọn thư mục sao lưu nằm ngoài thư mục dữ liệu của phần mềm")
+    os.makedirs(dest_dir, exist_ok=True)
+    path = os.path.join(dest_dir, "TaiHoaDon_SaoLuu_%s.zip" % datetime.now().strftime("%Y%m%d_%H%M"))
+    skip = {"_ket-xuat", "chan-doan", "__pycache__"}
+    n = 0
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        for d, dirs, files in os.walk(root):
+            dirs[:] = [x for x in dirs if x not in skip]
+            for f in files:
+                full = os.path.join(d, f)
+                if os.path.abspath(full) == path or f.endswith(".lock"):
+                    continue
+                z.write(full, os.path.relpath(full, root))
+                n += 1
+    return {"path": path, "files": n, "size": os.path.getsize(path)}
 
 
 class UserStore:
@@ -2893,12 +3286,24 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
     if quota:  # gói theo số hoá đơn: chỉ hoá đơn mới (chưa có trong kho) tính vào hạn mức
         fresh = sorted((i for i in invoices if invoice_key(i) not in known),
                        key=lambda i: (invoice_date(i) or date.max, _num(i.get("shdon"))))
-        got = quota.take_hd(len(fresh)) if fresh else 0
+        lic_err = None
+        if hasattr(quota, "take_keys"):  # bản cài máy: máy chủ cấp phép quyết định (theo mã băm hoá đơn)
+            try:
+                ok = quota.take_keys(mst, kind, [invoice_key(i) for i in fresh]) if fresh else set()
+            except LicenseError as e:
+                ok, lic_err = set(), e
+            fresh = [i for i in fresh if invoice_key(i) in ok] + [i for i in fresh if invoice_key(i) not in ok]
+            got = len(ok)
+        else:
+            got = quota.take_hd(len(fresh)) if fresh else 0
         if got < len(fresh):
             drop = {invoice_key(i) for i in fresh[got:]}
             invoices = [i for i in invoices if invoice_key(i) not in drop]
-            job.say("%s: HẾT HẠN MỨC hoá đơn của gói – bỏ qua %d hoá đơn mới (đã tải %d). Liên hệ nhà cung cấp "
-                    "để nâng gói rồi đồng bộ lại." % (mst, len(drop), got))
+            if lic_err:
+                job.say("%s: %s Chỉ cập nhật trạng thái hoá đơn đã có, chưa tải %d hoá đơn mới." % (mst, lic_err, len(drop)))
+            else:
+                job.say("%s: HẾT HẠN MỨC hoá đơn của gói – bỏ qua %d hoá đơn mới (đã tải %d). Liên hệ nhà cung cấp "
+                        "để nâng gói rồi đồng bộ lại." % (mst, len(drop), got))
             job.quota_out = True
     loai = "Mua vào" if kind == "purchase" else "Bán ra"
     with job.lock:
@@ -5618,6 +6023,7 @@ nav a.on{opacity:1;background:rgba(255,255,255,.15)}
 .advice h4{color:#5503ca;margin:0 0 6px}.badge{display:inline-block;padding:2px 8px;border-radius:5px;color:#fff;font-size:12px;background:#6c757d}
 .badge.run{background:#f0a500}.badge.ok{background:#1e8449}.badge.bad{background:#c0392b}.steps{line-height:1.9;margin:10px 0}
 .staff .adm,.local .srv{display:none!important}
+.lic-link{color:#fff;margin:0 10px;font-size:13px;cursor:pointer}.lic-link.warn{background:#c62828;padding:2px 8px;border-radius:10px}
 .no-dongbo .q-dongbo,.no-hdgoc .q-hdgoc,.no-sua .q-sua,.no-ketxuat .q-ketxuat,.no-saoke .q-saoke,.no-dn .q-dn,
 body:not(.owner) .own{display:none!important}
 .sysbar{max-width:1400px;margin:10px auto 0;padding:0 16px;display:flex;flex-direction:column;gap:6px}
@@ -5693,9 +6099,10 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
 <a href="#" id="navHD" onclick="openCompany(wsMst || (companies.find(c => !c.an) || {}).mst);return false">Hoá đơn</a>
 <a href="#" id="navTI" onclick="tab('TI');return false">Tiện ích</a>
 <a href="#" id="navND" class="adm srv" onclick="tab('ND');return false">Quản trị</a></nav><span style="flex:1"></span><small id="capStat"></small>
+<a href="#" id="licLink" class="hide lic-link" onclick="openLic();return false" title="Tài khoản bản quyền, hạn mức, sao lưu dữ liệu">Bản quyền</a>
 <span class="me srv"><button class="bell" id="bell" title="Thông báo" onclick="toggleNotes()">&#128276;<i id="bellN" class="hide"></i></button>
 <span id="meName"></span><span class="vpname hide" id="vpName"></span> · <a onclick="openPw()">Đổi mật khẩu</a> · <a onclick="logout()">Đăng xuất</a></span></header>
-<div class="sysbar srv hide" id="sysBar">
+<div class="sysbar hide" id="sysBar">
   <div class="sb-ann hide" id="sbAnn"></div><div class="sb-hint hide" id="sbHint"></div>
   <div class="sb-portal hide" id="sbPortal"></div><div class="sb-goi hide" id="sbGoi"></div>
 </div>
@@ -5703,6 +6110,8 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
 <main>
 <section class="card hide" id="tabND">
   <div class="hint srv" id="goiInfo"></div>
+  <div class="srv adm"><b>Máy cài phần mềm</b> <span class="mute">(bản cài trên máy: tải hoá đơn về máy của văn phòng, dùng tài khoản trong danh sách dưới đây để đăng nhập)</span>
+    <div id="myDevs"></div></div>
   <div class="top"><b>Người dùng</b><button onclick="openUser()">+ Thêm người dùng</button></div>
   <div class="hint">Quản trị xem và làm việc với tất cả doanh nghiệp, quản lý người dùng. Nhân viên chỉ thấy các doanh nghiệp được giao.</div>
   <div class="tbl"><table><thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Vai trò</th><th class="n">Số DN được giao</th><th>Quyền</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr></thead>
@@ -5716,7 +6125,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     <div class="bar" style="margin:6px 0"><button onclick="openVp()">+ Thêm văn phòng</button></div>
     <div class="tbl"><table><thead><tr><th>Mã</th><th>Tên văn phòng</th><th>Quản trị</th><th class="n">Số DN</th><th class="n">Giới hạn DN</th>
       <th class="n">HĐ đã tải / gói</th><th class="n">HĐ gốc đã tải / gói</th>
-      <th class="n">Người dùng</th><th class="n">Lượt chạy cùng lúc</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr></thead><tbody id="vpRows"></tbody></table></div>
+      <th class="n">Người dùng</th><th class="n">Lượt chạy cùng lúc</th><th class="n">Máy cài / tối đa</th><th>Hết hạn</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr></thead><tbody id="vpRows"></tbody></table></div>
     <div class="err" id="vpErr"></div>
     <div class="bar" style="margin:10px 0"><a class="sec" href="/chan-doan.zip" style="text-decoration:none">
       <button type="button" class="sm sec">Tải file chẩn đoán (trang lỗi của nhà cung cấp – gửi người hỗ trợ)</button></a></div>
@@ -5726,6 +6135,10 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     <label>Gợi ý đồng bộ (vd: Trang thuế thường chậm giờ hành chính, khoảng 17h–22h ổn định hơn)</label><textarea id="syHint" rows="2" class="full"></textarea>
     <div class="chk" style="align-items:center"><label><input type="checkbox" id="syMtt"> Tạm bỏ qua đồng bộ HĐ máy tính tiền (khi trang thuế treo phần này)</label>
       <button class="sm" onclick="saveSys()">Lưu thông báo</button><span class="ok" id="syMsg"></span></div>
+    <div class="chk" style="align-items:center;flex-wrap:wrap" title="Bản cài trên máy khách tự kiểm tra khi kết nối máy chủ">
+      <label>Bản exe mới nhất <input type="text" id="syVer" placeholder="vd 4.7.0 (trống = theo máy chủ)" style="width:150px"></label>
+      <label>Link tải <input type="text" id="syLink" placeholder="https://…/TaiHoaDon.exe" style="width:320px"></label>
+      <label>Phiên bản tối thiểu (cũ hơn thì không tải được HĐ mới) <input type="text" id="syMin" style="width:90px"></label></div>
     <h3 style="margin:24px 0 6px">Gửi email</h3>
     <div class="hint">Máy chủ gửi mail (SMTP) dùng cho: quên mật khẩu, báo khi đổi mật khẩu, mời người dùng mới tự đặt mật khẩu.
       Gmail: máy chủ smtp.gmail.com, cổng 587 STARTTLS, tên đăng nhập là địa chỉ Gmail, mật khẩu là <b>mật khẩu ứng dụng</b> (App Password, cần bật xác minh 2 bước).</div>
@@ -6053,6 +6466,27 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
     <button class="red" id="uDel" onclick="delUser()">Xoá</button><button class="sec" onclick="hide('mUser')">Đóng</button></div>
 </div></div>
 
+<div class="modal hide" id="mLic"><div class="card">
+  <b>Bản quyền phần mềm</b>
+  <div class="hint">Phần mềm cài trên máy này tự tải hoá đơn về ổ cứng của máy; máy chủ chỉ cấp tài khoản và tính hạn mức
+    (chỉ nhận mã băm của hoá đơn, không nhận nội dung hoá đơn hay mật khẩu cổng thuế). Không có mạng vẫn xem / kết xuất dữ liệu đã tải được.</div>
+  <div id="licInfo" style="margin:8px 0"></div>
+  <div id="licForm">
+    <label>Máy chủ</label><input type="text" class="full" id="licServer" autocomplete="off">
+    <label>Tên đăng nhập (nhà cung cấp cấp)</label><input type="text" class="full" id="licUser" autocomplete="username">
+    <label>Mật khẩu</label><input type="password" class="full" id="licPw" autocomplete="current-password">
+    <div class="bar"><button onclick="licLogin()">Đăng nhập / kích hoạt máy này</button></div>
+  </div>
+  <div class="err" id="licErr"></div>
+  <h4 style="margin:14px 0 4px">Sao lưu dữ liệu</h4>
+  <div class="hint">Dữ liệu hoá đơn nằm trên máy này – nên sao lưu định kỳ. Chọn thư mục Google Drive / OneDrive trên máy để có bản sao ngoài máy.</div>
+  <div style="display:flex;gap:6px"><input type="text" id="licBkDir" class="grow" placeholder="(trống = Documents\TaiHoaDon-SaoLuu)">
+    <button class="sec" onclick="licBackup()">Sao lưu ngay</button></div>
+  <div class="ok" id="licBkMsg"></div>
+  <div class="bar"><span style="flex:1"></span><button class="red hide" id="licOut" onclick="licLogout()">Đăng xuất bản quyền</button>
+    <button class="sec hide" id="licChk" onclick="licRefresh()">Kiểm tra lại</button><button class="sec" onclick="hide('mLic')">Đóng</button></div>
+</div></div>
+
 <div class="modal hide" id="mVp"><div class="card">
   <b id="vpTitle">Văn phòng</b>
   <label>Mã văn phòng (không đổi được, vd: ketoan-abc)</label><input type="text" class="full" id="vpId" autocomplete="off">
@@ -6065,6 +6499,10 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
   <div class="chk" style="align-items:center"><label><input type="checkbox" id="vpGoc" checked> Gói gồm tự tải hoá đơn gốc (PDF/XML của người bán)</label>
     <label>Hạn mức HĐ gốc riêng <input type="number" id="vpHdGoc" min="0" style="width:110px"></label>
     <span class="mute" id="vpGocUsed"></span><label class="hide" id="vpGocResetL"><input type="checkbox" id="vpGocReset"> Đặt lại về 0</label></div>
+  <label>Bản cài trên máy khách (exe)</label>
+  <div class="chk" style="align-items:center"><label>Số máy được cài (0 = không giới hạn) <input type="number" id="vpMay" min="0" style="width:80px"></label>
+    <label>Hết hạn gói <input type="date" id="vpHetHan"></label><span class="mute">(trống = không hạn)</span></div>
+  <div id="vpDevBox" class="hide"><div class="mute">Máy đã kích hoạt:</div><div id="vpDevs"></div></div>
   <label>Ghi chú (gói, liên hệ…)</label><input type="text" class="full" id="vpNote">
   <div id="vpNew"><label>Tài khoản quản trị đầu tiên của văn phòng</label>
     <div style="display:flex;gap:6px;flex-wrap:wrap"><input type="text" id="vpAdm" placeholder="tên đăng nhập" autocomplete="off" style="flex:1">
@@ -6177,7 +6615,10 @@ async function refresh() {
   document.body.classList.toggle('owner', !!me.owner);
   Object.keys(PERM_NAMES).forEach(p => document.body.classList.toggle('no-' + p, !(me.quyen || []).includes(p)));
   $('meName').textContent = me.ten ? (me.ten + ' (' + me.username + ')') : me.username;
-  renderSys(s.sys);
+  renderSys(s.sys || (me.lic ? {thong_bao: (me.lic.info || {}).thong_bao || ''} : null));
+  if (me.lic) { show('licLink'); $('licLink').classList.toggle('warn', !me.lic.logged);
+    $('licLink').textContent = me.lic.logged ? 'Bản quyền: ' + (me.lic.info.vp_ten || me.lic.username) : '⚠ Chưa đăng nhập bản quyền';
+    if (!me.lic.logged && !licAsked) { licAsked = true; openLic(); } }
   if (me.goi && !me.goi.tai_goc) ['sPdf', 'bPdf'].forEach(id => { $(id).checked = false; $(id).disabled = true; $(id).parentNode.title = 'Gói của văn phòng không gồm tự tải hoá đơn gốc'; });
   $('vpName').textContent = me.server && me.vp_ten ? me.vp_ten : ''; $('vpName').classList.toggle('hide', !(me.server && me.vp_ten));
   $('bellN').textContent = s.unread; $('bellN').classList.toggle('hide', !s.unread);
@@ -6294,6 +6735,7 @@ async function loadUsers() {
   $('uErr').textContent = '';
   try { const d = await post('/api/users', {}); users = d.users; allCos = d.companies; } catch (e) { $('uErr').textContent = e.message; return; }
   if (me.owner) { loadVps(); loadMail(); loadSys(); }
+  if (me.server && me.role === 'admin') renderDevs('myDevs');
   renderGoi();
   const tb = $('uRows'); tb.innerHTML = '';
   users.forEach(u => { const tr = tb.insertRow();
@@ -6358,10 +6800,12 @@ async function sendUserLink() {
 let vps = [], editingVp = null;
 async function loadSys() {
   try { const s = await api('/api/state'); const y = s.sys || {};
-    $('syAnn').value = y.thong_bao || ''; $('syHint').value = y.goi_y || ''; $('syMtt').checked = !!y.bo_qua_mtt; } catch (e) {}
+    $('syAnn').value = y.thong_bao || ''; $('syHint').value = y.goi_y || ''; $('syMtt').checked = !!y.bo_qua_mtt;
+    $('syVer').value = y.phien_ban_moi || ''; $('syLink').value = y.link_tai || ''; $('syMin').value = y.phien_ban_toi_thieu || ''; } catch (e) {}
 }
 async function saveSys() {
-  try { await post('/api/sys/save', {thong_bao: $('syAnn').value, goi_y: $('syHint').value, bo_qua_mtt: $('syMtt').checked});
+  try { await post('/api/sys/save', {thong_bao: $('syAnn').value, goi_y: $('syHint').value, bo_qua_mtt: $('syMtt').checked,
+                                      phien_ban_moi: $('syVer').value, link_tai: $('syLink').value, phien_ban_toi_thieu: $('syMin').value});
         $('syMsg').textContent = 'Đã lưu.'; refresh(); } catch (e) { $('syMsg').textContent = e.message; }
 }
 async function loadMail() {
@@ -6383,7 +6827,14 @@ async function testMail() {
 }
 // Thanh thông báo: thông báo của chủ hệ thống, tình trạng trang thuế, số hoá đơn đã dùng / còn lại của gói.
 function renderSys(sys) {
-  if (!me.server || !sys) { hide('sysBar'); return; }
+  if ((!me.server && !me.lic) || !sys) { hide('sysBar'); return; }
+  if (me.lic) {  // bản cài máy: cảnh báo bản quyền + bản mới
+    const L = me.lic, w = [];
+    if (!L.logged) w.push('⚠ Chưa đăng nhập bản quyền – chưa tải được hoá đơn mới. Bấm "Bản quyền" ở đầu trang.');
+    else if (L.error) w.push('⚠ ' + L.error);
+    if (L.update) w.push('⬆ Có phiên bản mới ' + L.update.version + ' – tải về: ' + L.update.url);
+    sys = Object.assign({}, sys, {goi_y: w.join('\n')});
+  }
   const set = (id, txt, cls) => { const e = $(id); e.textContent = txt || ''; e.className = id === 'sbAnn' ? 'sb-ann' : id === 'sbHint' ? 'sb-hint'
     : id === 'sbPortal' ? 'sb-portal ' + (cls || '') : 'sb-goi ' + (cls || ''); e.classList.toggle('hide', !txt); };
   set('sbAnn', sys.thong_bao ? '⚠ ' + sys.thong_bao + (sys.bo_qua_mtt ? '\n⚠ Tạm thời bỏ qua đồng bộ hoá đơn từ máy tính tiền – đối chiếu kỹ số lượng hoá đơn trước khi làm sổ sách.' : '')
@@ -6418,7 +6869,8 @@ async function loadVps() {
     [v.id, v.ten, v.quan_tri || '', v.so_dn, v.max_dn || 'không giới hạn',
      fmt(v.da_dung_hd || 0) + ' / ' + (v.han_muc_hd ? fmt(v.han_muc_hd) : '∞'),
      v.tai_goc === false ? 'không gồm' : fmt(v.da_dung_goc || 0) + ' / ' + (v.han_muc_goc ? fmt(v.han_muc_goc) : '∞'),
-     v.so_nd, v.max_jobs || 'theo máy chủ'].forEach((x, i) => {
+     v.so_nd, v.max_jobs || 'theo máy chủ', (v.so_may || 0) + ' / ' + (v.max_may === 0 ? '∞' : (v.max_may ?? 2)),
+     v.het_han ? v.het_han.split('-').reverse().join('/') : ''].forEach((x, i) => {
       const c = tr.insertCell(); c.textContent = x; if (i >= 3) c.className = 'n';
       if ((i === 5 && v.han_muc_hd && v.da_dung_hd >= v.han_muc_hd) || (i === 6 && v.han_muc_goc && v.da_dung_goc >= v.han_muc_goc)) c.classList.add('err'); });
     const st = tr.insertCell(); st.textContent = v.active ? 'Hoạt động' : 'Đã khoá'; st.className = v.active ? 'ok' : 'err';
@@ -6436,13 +6888,66 @@ function openVp(v) {
   $('vpHdUsed').textContent = v ? 'đã dùng ' + fmt(v.da_dung_hd || 0) : ''; $('vpGocUsed').textContent = v ? 'đã dùng ' + fmt(v.da_dung_goc || 0) : '';
   ['vpHdReset', 'vpGocReset'].forEach(id => $(id).checked = false);
   $('vpHdResetL').classList.toggle('hide', !v); $('vpGocResetL').classList.toggle('hide', !v);
+  $('vpMay').value = v ? (v.max_may ?? 2) : 2; $('vpHetHan').value = v ? (v.het_han || '') : '';
+  $('vpDevBox').classList.toggle('hide', !v); if (v) renderDevs('vpDevs', v.id);
   show('mVp');
+}
+// Máy đã cài bản exe và đăng nhập (vid: văn phòng – chủ hệ thống; trống: văn phòng của mình)
+async function renderDevs(boxId, vid) {
+  const box = $(boxId); box.innerHTML = '';
+  try {
+    const d = vid ? await post('/api/vp/devices', {id: vid}) : await post('/api/devices', {});
+    const items = Object.entries(d.items || {});
+    if (!items.length) { box.append(el('div', 'mute', 'Chưa có máy nào cài bản trên máy.')); return; }
+    const t = el('table'); const h = t.insertRow(); ['Tên máy', 'Người đăng nhập', 'Kích hoạt', 'Dùng gần nhất', 'Phiên bản', 'IP', ''].forEach(x => h.append(el('th', '', x)));
+    items.forEach(([id, m]) => { const r = t.insertRow(); [m.ten, m.user, m.dang_ky, m.lan_cuoi, m.phien_ban, m.ip].forEach(x => r.insertCell().textContent = x || '');
+      const b = el('button', 'sm red', 'Gỡ máy'); b.onclick = async () => { if (!confirm('Gỡ máy ' + (m.ten || id) + '? Máy đó phải đăng nhập lại (và chiếm 1 chỗ) mới tải được hoá đơn.')) return;
+        try { await post(vid ? '/api/vp/device-remove' : '/api/device/remove', vid ? {id: vid, device: id} : {device: id}); renderDevs(boxId, vid); } catch (e) { alert(e.message); } };
+      r.insertCell().append(b); });
+    const w = el('div', 'tbl'); w.append(t); box.append(w);
+    if (!vid && d.max) box.append(el('div', 'mute', 'Gói cho phép tối đa ' + d.max + ' máy.'));
+  } catch (e) { box.append(el('div', 'err', e.message)); }
+}
+// ---- Bản cài máy: bản quyền + sao lưu ----
+let licAsked = false;
+function openLic() {
+  const L = me.lic || {}; $('licErr').textContent = ''; $('licBkMsg').textContent = '';
+  $('licServer').value = L.server || ''; $('licUser').value = L.username || ''; $('licPw').value = '';
+  const box = $('licInfo'); box.innerHTML = '';
+  if (L.logged) { const i = L.info || {}, g = i.goi || {};
+    const line = (k, v) => { const d = el('div'); d.append(k + ': ', el('b', '', v)); box.append(d); };
+    line('Tài khoản', (i.ten ? i.ten + ' – ' : '') + (i.user || L.username)); line('Văn phòng', i.vp_ten || i.vp || '');
+    line('Hoá đơn đã tải', fmt(g.da_dung_hd || 0) + (g.han_muc_hd ? ' / ' + fmt(g.han_muc_hd) + ' (còn ' + fmt(Math.max(0, g.han_muc_hd - (g.da_dung_hd || 0))) + ')' : ' (không giới hạn)'));
+    line('Hoá đơn gốc', g.tai_goc === false ? 'gói không gồm' : fmt(g.da_dung_goc || 0) + (g.han_muc_goc ? ' / ' + fmt(g.han_muc_goc) : ''));
+    if (i.het_han) line('Hết hạn gói', i.het_han.split('-').reverse().join('/'));
+    line('Kiểm tra lần cuối', L.checked || '');
+    if (L.update) { const a = el('a', '', 'Tải phiên bản mới ' + L.update.version); a.href = L.update.url; a.target = '_blank'; box.append(a); }
+    if (L.error) box.append(el('div', 'err', L.error));
+  }
+  $('licForm').classList.toggle('hide', !!L.logged); $('licOut').classList.toggle('hide', !L.logged); $('licChk').classList.toggle('hide', !L.logged);
+  show('mLic'); if (!L.logged) setTimeout(() => $(L.username ? 'licPw' : 'licUser').focus(), 50);
+}
+async function licCall(path, body) {
+  $('licErr').textContent = '';
+  try { me.lic = await post(path, body || {}); await refresh(); openLic(); }
+  catch (e) { $('licErr').textContent = e.message; }
+}
+const licLogin = () => licCall('/api/banquyen/login', {server: $('licServer').value, username: $('licUser').value, password: $('licPw').value});
+const licRefresh = () => licCall('/api/banquyen/status');
+$('licPw').addEventListener('keydown', e => { if (e.key === 'Enter') licLogin(); });
+function licLogout() { if (confirm('Đăng xuất bản quyền trên máy này? Máy được gỡ khỏi danh sách, nhường chỗ cho máy khác; dữ liệu đã tải vẫn còn trên máy.')) licCall('/api/banquyen/logout'); }
+async function licBackup() {
+  $('licBkMsg').textContent = 'Đang sao lưu…';
+  try { const d = await post('/api/banquyen/backup', {dir: $('licBkDir').value.trim()});
+        $('licBkMsg').textContent = 'Đã sao lưu ' + fmt(d.files) + ' file (' + (d.size / 1048576).toFixed(1) + ' MB) vào ' + d.path; }
+  catch (e) { $('licBkMsg').textContent = ''; $('licErr').textContent = e.message; }
 }
 async function saveVp() {
   const body = {id: $('vpId').value.trim(), ten: $('vpTen').value, max_dn: +$('vpMaxDn').value || 0, max_jobs: +$('vpMaxJobs').value || 0,
                 ghichu: $('vpNote').value, active: $('vpActive').checked, create: !editingVp,
                 han_muc_hd: +$('vpHd').value || 0, han_muc_goc: +$('vpHdGoc').value || 0, tai_goc: $('vpGoc').checked,
-                dat_lai_hd: $('vpHdReset').checked, dat_lai_goc: $('vpGocReset').checked};
+                dat_lai_hd: $('vpHdReset').checked, dat_lai_goc: $('vpGocReset').checked,
+                max_may: +$('vpMay').value || 0, het_han: $('vpHetHan').value};
   if (!editingVp) Object.assign(body, {admin: $('vpAdm').value.trim(), admin_ten: $('vpAdmTen').value, admin_pw: $('vpAdmPw').value,
                                        admin_email: $('vpAdmEmail').value.trim()});
   if (editingVp && editingVp.active && !body.active && !confirm('Khoá văn phòng ' + editingVp.ten + '? Mọi người dùng của văn phòng sẽ bị đăng xuất.')) return;
@@ -7452,6 +7957,15 @@ class App:
         self.allowed_hosts = set()  # bản web: tên miền được phép (rỗng = không kiểm tra)
         self.trust_proxy = False    # chạy sau Caddy/Nginx: tin X-Forwarded-For / X-Forwarded-Proto
         self.max_jobs = 4           # số lượt đồng bộ chạy cùng lúc trên máy chủ
+        self._lic = None            # bản web: cấp phép cho bản cài trên máy khách (tạo khi cần)
+        self.lic_client = None      # bản cài máy: kết nối bản quyền tới máy chủ (LicenseClient)
+
+    @property
+    def lic(self):
+        with self.lock:
+            if self._lic is None:
+                self._lic = Licenses(self)
+            return self._lic
 
     # ---- văn phòng ----
     def t(self, vid=DEFAULT_VP):
@@ -7483,6 +7997,9 @@ class App:
             for k in ("thong_bao", "goi_y"):
                 if f.get(k) is not None:
                     d[k] = str(f[k]).strip()[:2000]
+            for k in ("phien_ban_moi", "link_tai", "phien_ban_toi_thieu"):  # bản cài trên máy khách
+                if f.get(k) is not None:
+                    d[k] = str(f[k]).strip()[:300]
             if f.get("bo_qua_mtt") is not None:
                 d["bo_qua_mtt"] = bool(f["bo_qua_mtt"])
             _save_json(os.path.join(self.cfg, "he-thong.json"), d)
@@ -7658,6 +8175,13 @@ class App:
 
     # ---- chạy đồng bộ ----
     def start_job(self, user, msts, kinds, start, end, mtt=True, xml=True, test=False, pdf=False, unattended=False):
+        lic_quota = None
+        if self.lic_client is not None and not test:  # bản cài máy: phải còn hiệu lực trên máy chủ cấp phép
+            try:
+                self.lic_client.status()
+            except LicenseError as e:
+                raise ValueError(str(e))
+            lic_quota = RemoteQuota(self.lic_client)
         job = Job()
         job.running = True
         job.want_pdf = pdf
@@ -7666,6 +8190,8 @@ class App:
         job.vp = user_vp(user)
         if self.server:
             job.quota = self.quota(job.vp)
+        elif lic_quota:
+            job.quota = lic_quota
         with self.lock:
             self.jobs[user["username"]] = job
         t = threading.Thread(target=self._run_job, daemon=True,
@@ -7874,6 +8400,8 @@ def make_handler(app, port):
                 self.user, self.csrf = LOCAL_USER, app.key
                 self.T = app.t(DEFAULT_VP)
             path = self.path.split("?")[0]
+            if path.startswith("/api/lic/") and app.server:
+                return True
             if path.startswith("/api/") and path not in ("/api/login", "/api/forgot", "/api/reset"):
                 if not self.user:
                     self._send(401, {"error": "Phiên đăng nhập đã hết – tải lại trang để đăng nhập lại", "login": True})
@@ -7980,7 +8508,9 @@ def make_handler(app, port):
                                                "server": app.server, "quyen": UserStore.perms(u),
                                                "owner": bool(app.server and u.get("owner") and user_vp(u) == DEFAULT_VP),
                                                "vp": self.T.id, "vp_ten": app.vp_info(self.T.id).get("ten", ""),
-                                               "goi": app.quota(self.T.id).info() if app.server else None,
+                                               "goi": app.quota(self.T.id).info() if app.server else
+                                               ((app.lic_client.info().get("goi") or None) if app.lic_client else None),
+                                               "lic": app.lic_client.state() if app.lic_client and not app.server else None,
                                                "email": u.get("email", "")},
                                         "sys": dict(app.system(), portal=PORTAL_HEALTH.status(), mtt=MTT_HEALTH.status())
                                         if app.server else None,
@@ -8143,6 +8673,13 @@ def make_handler(app, port):
             if path.startswith("/api/vp/") or path.startswith("/api/mail/") or path == "/api/sys/save":
                 return self._vp_post(path, data)
             self._admin()
+            if path == "/api/devices":  # quản trị văn phòng: máy đã cài bản trên máy và đăng nhập
+                return self._send(200, {"items": app.lic.devices(self.T.id) if app.server else {},
+                                        "max": app.vp_info(self.T.id).get("max_may", DEFAULT_MAX_MAY)})
+            if path == "/api/device/remove":
+                app.lic.remove_device(self.T.id, str(data.get("device") or ""))
+                self._audit("gỡ máy cài phần mềm %s" % data.get("device"))
+                return self._send(200, {"ok": True})
             if path == "/api/users":
                 return self._send(200, {"users": app.users.public(self.T.id), "perms": PERMS,
                                         "companies": [{"mst": c["mst"], "ten": c["ten"]} for c in self.T.store.public()]})
@@ -8192,9 +8729,17 @@ def make_handler(app, port):
             """Chủ hệ thống: quản lý các văn phòng (khách hàng dùng phần mềm). Không xem được hoá đơn của văn phòng khác."""
             self._owner()
             if path == "/api/sys/save":
-                d = app.save_system(thong_bao=data.get("thong_bao"), goi_y=data.get("goi_y"), bo_qua_mtt=data.get("bo_qua_mtt"))
+                d = app.save_system(thong_bao=data.get("thong_bao"), goi_y=data.get("goi_y"), bo_qua_mtt=data.get("bo_qua_mtt"),
+                                    phien_ban_moi=data.get("phien_ban_moi"), link_tai=data.get("link_tai"),
+                                    phien_ban_toi_thieu=data.get("phien_ban_toi_thieu"))
                 self._audit("cập nhật thông báo hệ thống")
                 return self._send(200, d)
+            if path == "/api/vp/devices":  # máy đã kích hoạt bản cài của một văn phòng
+                return self._send(200, {"items": app.lic.devices(str(data.get("id") or ""))})
+            if path == "/api/vp/device-remove":
+                app.lic.remove_device(str(data.get("id") or ""), str(data.get("device") or ""))
+                self._audit("gỡ máy %s của văn phòng %s" % (data.get("device"), data.get("id")))
+                return self._send(200, {"ok": True})
             if path == "/api/mail/get":
                 return self._send(200, app.mail_settings())
             if path == "/api/mail/save":
@@ -8215,6 +8760,7 @@ def make_handler(app, port):
                     rows.append(dict(t, so_dn=len(T.store.public()), so_nd=len(us), **{
                                          k: v for k, v in app.quota(t["id"]).info().items() if k.startswith("da_dung")},
                                      quan_tri=", ".join(u["username"] for u in us if u["role"] == "admin"),
+                                     so_may=len(app.lic.devices(t["id"])),
                                      dang_chay=app.running_jobs(t["id"])))
                 return self._send(200, {"items": rows})
             if path == "/api/vp/save":
@@ -8237,7 +8783,8 @@ def make_handler(app, port):
                 t = app.tenants.upsert(vid, create=create, ten=data.get("ten"), ghichu=data.get("ghichu"),
                                        max_dn=data.get("max_dn"), max_jobs=data.get("max_jobs"), active=data.get("active"),
                                        han_muc_hd=data.get("han_muc_hd"), tai_goc=data.get("tai_goc"),
-                                       han_muc_goc=data.get("han_muc_goc"))
+                                       han_muc_goc=data.get("han_muc_goc"), max_may=data.get("max_may"),
+                                       het_han=data.get("het_han"))
                 for k in ("hd", "goc"):  # gia hạn gói: đặt lại số đã dùng
                     if data.get("dat_lai_" + k):
                         app.quota(t["id"]).reset(k)
@@ -8316,10 +8863,66 @@ def make_handler(app, port):
                 return self._send(200, {"name": "%s_tach.zip" % safe_name(base), "data": base64.b64encode(out).decode()})
             self._send(404, {"error": "Không tìm thấy"})
 
+        def _lic_post(self, path, data):
+            """API cấp phép cho bản cài trên máy khách. Lỗi trả về {error, lic: true} để máy con biết phải đăng nhập lại."""
+            ver, dev, ip = str(data.get("version") or ""), str(data.get("device_id") or ""), self._ip()
+            try:
+                if path == "/api/lic/login":
+                    name = str(data.get("username") or "").strip().lower()[:60]
+                    if app.too_many_fails("ip:" + ip, "u:" + name):
+                        return self._send(429, {"error": "Đăng nhập sai quá nhiều lần – thử lại sau 15 phút"})
+                    try:
+                        r = app.lic.login(name, str(data.get("password") or ""), dev, data.get("device_name"), ver, ip)
+                    except LookupError as e:
+                        app.add_fail("ip:" + ip, "u:" + name)
+                        app.audit(name or "?", "máy con đăng nhập sai từ " + ip)
+                        return self._send(401, {"error": str(e), "lic": True})
+                    app.audit(name, "kích hoạt / đăng nhập máy %s (%s) từ %s" % (str(data.get("device_name") or "")[:40], dev[:8], ip))
+                    return self._send(200, r)
+                u, vid = app.lic.session(data.get("token"), dev, ver, ip)
+                if path == "/api/lic/status":
+                    return self._send(200, {"info": app.lic.info(vid, u)})
+                if path == "/api/lic/take":  # xin tải hoá đơn mới (mã băm) – trừ hạn mức, mỗi hoá đơn tính 1 lần
+                    return self._send(200, app.lic.take(vid, data.get("keys") or []))
+                if path == "/api/lic/goc":  # hoá đơn gốc: xin / hoàn lại 1 lượt
+                    q = app.quota(vid)
+                    if data.get("refund"):
+                        q.refund_goc()
+                        return self._send(200, {"ok": True})
+                    err = q.goc_error()
+                    return self._send(200, {"ok": not err and q.take_goc(), "error": err})
+                if path == "/api/lic/logout":
+                    app.lic.remove_device(vid, dev)
+                    return self._send(200, {"ok": True})
+                return self._send(404, {"error": "Không tìm thấy"})
+            except LicenseBlocked as e:
+                return self._send(403, {"error": str(e)})
+            except PermissionError as e:
+                return self._send(403, {"error": str(e), "lic": True})
+
         def _post(self, path, data):
+            if path.startswith("/api/lic/") and app.server:
+                return self._lic_post(path, data)
+            if path.startswith("/api/banquyen/") and not app.server:  # bản cài máy: bản quyền + sao lưu
+                lc = app.lic_client
+                try:
+                    if path == "/api/banquyen/backup":
+                        return self._send(200, backup_data(app.out_root, data.get("dir") or default_backup_dir()))
+                    if lc is None:
+                        raise ValueError("Bản này không dùng bản quyền máy chủ")
+                    if path == "/api/banquyen/login":
+                        lc.login(data.get("server"), str(data.get("username") or "").strip(), str(data.get("password") or ""))
+                    elif path == "/api/banquyen/logout":
+                        lc.logout()
+                    elif path == "/api/banquyen/status":
+                        lc.status()
+                    return self._send(200, lc.state())
+                except LicenseError as e:
+                    return self._send(400, {"error": str(e), "state": lc.state() if lc else None})
             if path in ("/api/login", "/api/logout", "/api/me/password", "/api/users", "/api/user/save",
                         "/api/user/delete", "/api/vp/list", "/api/vp/save", "/api/forgot", "/api/reset", "/api/me/email",
-                        "/api/mail/get", "/api/mail/save", "/api/mail/test", "/api/sys/save"):
+                        "/api/mail/get", "/api/mail/save", "/api/mail/test", "/api/sys/save", "/api/vp/devices",
+                        "/api/vp/device-remove", "/api/devices", "/api/device/remove"):
                 return self._auth_post(path, data)
             if path == "/api/company/save":
                 existing = self.T.store.get(str(data.get("mst", "")).strip())
@@ -8456,7 +9059,7 @@ def make_handler(app, port):
                         except ValueError:
                             files.append((f.get("name"), b""))
                     return self._send(200, {"results": import_pdfs(self.T.root, mst, files)})
-                quota = app.quota(self.T.id) if app.server else None
+                quota = app.quota(self.T.id) if app.server else (RemoteQuota(app.lic_client) if app.lic_client else None)
                 if path in ("/api/invoice/fetch-pdf", "/api/invoice/fetch-pdf-bulk") and quota and quota.goc_error():
                     raise ValueError(quota.goc_error())
                 if path == "/api/invoice/fetch-pdf":
@@ -8664,6 +9267,8 @@ def main(argv=None):
     ap.add_argument("--no-browser", action="store_true", help="không tự mở trình duyệt")
     ap.add_argument("--insecure", action="store_true", help="bỏ kiểm tra chứng chỉ SSL (chỉ dùng khi máy báo lỗi SSL)")
     ap.add_argument("--downloads", help="thư mục trình duyệt lưu file tải về (mặc định: Downloads của Windows)")
+    ap.add_argument("--license-server", default=os.environ.get("TAIHOADON_LICENSE_SERVER") or "",
+                    help="bản cài máy: địa chỉ máy chủ cấp tài khoản / hạn mức (mặc định %s)" % DEFAULT_LICENSE_SERVER)
     web = ap.add_argument_group("bản web (máy chủ, nhiều người dùng)")
     web.add_argument("--server", action="store_true", default=os.environ.get("TAIHOADON_SERVER") == "1",
                      help="chạy bản web: đăng nhập, phân quyền nhân viên theo doanh nghiệp")
@@ -8699,6 +9304,10 @@ def main(argv=None):
         print("Đã đặt mật khẩu quản trị cho %s" % args.set_password.lower())
         return 0
 
+    if not app.server and not args.set_password:  # bản cài trên máy khách: tài khoản + hạn mức do máy chủ cấp
+        app.lic_client = LicenseClient(cfg, args.license_server or None)
+        if app.lic_client.logged:  # cập nhật hạn mức / thông báo / bản mới khi mở phần mềm (không chờ, lỗi mạng thì bỏ qua)
+            threading.Thread(target=lambda: _quiet(app.lic_client.status), daemon=True).start()
     if args.downloads:
         app.downloads = os.path.abspath(args.downloads)
     host = "127.0.0.1"
