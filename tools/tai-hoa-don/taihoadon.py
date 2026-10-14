@@ -34,11 +34,12 @@ import zipfile
 from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-__version__ = "4.7.1"
+__version__ = "4.7.2"
 
 BASE_URL = os.environ.get("HDDT_BASE_URL", "https://hoadondientu.gdt.gov.vn/api")
 PAGE_SIZE = 50
 XML_WORKERS = 4  # số file XML tải cùng lúc
+ORIGINAL_WORKERS = 4  # số hoá đơn gốc tải cùng lúc từ trang nhà cung cấp
 MST_STATUS = {"00": "Đang hoạt động"}  # mã khác: hiện nguyên mã
 NO_XML_MSG = "khongtontaihosogoc"  # cổng báo HĐ không có XML gốc (HĐ không mã), dạng đã bỏ dấu
 # Cổng có tường lửa nhận dạng hành vi: đăng nhập chỉ mang header tối giản như trình duyệt gọi qua proxy
@@ -181,7 +182,7 @@ def _is_busy(e):
 class PortalHealth:
     """Theo dõi tình trạng cổng hoadondientu.gdt.gov.vn từ các lần gọi gần đây của mọi người dùng trên máy chủ:
     tỷ lệ lỗi quá tải / không kết nối và thời gian trả lời → cảnh báo "trang thuế chậm / quá tải"."""
-    WINDOW = 600  # xét 10 phút gần nhất
+    WINDOW = 300  # xét 5 phút gần nhất
 
     def __init__(self):
         self.lock = threading.Lock()
@@ -197,8 +198,8 @@ class PortalHealth:
         now = time.time()
         with self.lock:
             ev = [e for e in self.events if now - e[0] < self.WINDOW]
-        if len(ev) < 5:
-            return {"level": "", "text": ""}
+        if len(ev) < 5 or all(e[1] and e[2] < 15 for e in ev[-5:]):
+            return {"level": "", "text": ""}  # 5 lần gọi mới nhất đều nhanh, thành công → cổng đã ổn lại, không báo nữa
         bad = sum(1 for e in ev if not e[1])
         slow = sorted(e[2] for e in ev if e[1])
         med = slow[len(slow) // 2] if slow else 0
@@ -219,8 +220,8 @@ PORTAL_HEALTH = PortalHealth()
 
 class MttHealth:
     """Phần tra hoá đơn máy tính tiền (/sco-query) của cổng hay treo riêng trong khi phần còn lại vẫn chạy.
-    Một lượt tra MTT bị treo → tự bỏ qua MTT cho mọi lượt đồng bộ trong 30 phút rồi thử lại."""
-    PAUSE = 1800
+    Một lượt tra MTT bị treo → tự bỏ qua MTT cho các lượt đồng bộ trong 5 phút rồi thử lại."""
+    PAUSE = 300
 
     def __init__(self):
         self.down_at = 0.0
@@ -429,58 +430,72 @@ class HoaDonClient:
         """kind: 'purchase' (mua vào) hoặc 'sold' (bán ra). Trả về list dict hoá đơn."""
         if kind not in ("purchase", "sold"):
             raise ValueError("kind phải là 'purchase' hoặc 'sold'")
-        results, seen = [], set()
         self.mtt_skipped = False
         self.gaps = []
         if include_mtt and MTT_HEALTH.is_down():
             include_mtt = False
             self.mtt_skipped = True
             if progress:
-                progress("Bỏ qua HĐ máy tính tiền: phần này của trang thuế đang treo (vừa thử không được) – sẽ tự thử lại sau")
-        for prefix, ttxly, label in self._sources(kind, include_mtt):
-            mtt = prefix == "/sco-query"
-            months = month_ranges(start, end)
-            for a, b in months:
-                if progress:
-                    progress("Tra %s %s → %s (%s)%s" % (
-                        "mua vào" if kind == "purchase" else "bán ra",
-                        a.strftime("%d/%m/%Y"), b.strftime("%d/%m/%Y"), label,
-                        " – trang thuế không trả lời trong %d giây sẽ bỏ qua phần này" % MTT_TIMEOUT if mtt else ""))
-                try:
-                    found = self._fetch_range(prefix, kind, a, b, ttxly, progress, mtt=mtt)
-                except PortalError as e:
-                    if not _is_busy(e):
-                        raise
-                    if not mtt:  # phần có mã / không mã lỗi: ghi các khoảng còn lại là thiếu, tra tiếp phần khác
-                        self.gaps.append("%s %s – %s" % (label, a.strftime("%d/%m/%Y"), end.strftime("%d/%m/%Y")))
-                        if progress:
-                            progress("CẢNH BÁO: trang thuế không trả lời khi tra %s từ %s – bỏ qua phần này tới %s (%s)" % (
-                                label, a.strftime("%d/%m/%Y"), end.strftime("%d/%m/%Y"), e))
-                        break
-                    # Phần MTT treo: không làm hỏng cả lượt – giữ các HĐ có mã / không mã đã tra được.
-                    MTT_HEALTH.mark_down()
-                    self.mtt_skipped = True
-                    if progress:
-                        progress("CẢNH BÁO: phần HĐ máy tính tiền của trang thuế không trả lời (treo) – tạm bỏ qua, "
-                                 "các hoá đơn khác vẫn đồng bộ. Đồng bộ lại sau để lấy HĐ máy tính tiền.")
-                    break
-                if mtt:
-                    MTT_HEALTH.mark_up()
-                self.gaps = ["%s %s" % (label, g) if g[:1].isdigit() else g for g in self.gaps]
-                for inv in found:
-                    key = (inv.get("nbmst"), inv.get("khmshdon"), inv.get("khhdon"), inv.get("shdon"))
-                    if key in seen:
-                        continue
-                    seen.add(key)
-                    inv["_prefix"] = prefix
-                    inv["_nguon"] = label
-                    inv["_kind"] = kind
-                    results.append(inv)
-                time.sleep(self.delay)
+                progress("Bỏ qua HĐ máy tính tiền: phần này của trang thuế vừa treo – sẽ tự thử lại sau vài phút")
+        sources = self._sources(kind, include_mtt)
+        # Các nguồn (có mã/không mã, máy tính tiền, từng trạng thái) tra SONG SONG cho nhanh; mỗi nguồn vẫn tra lần lượt
+        # từng tháng. Kết quả ghép theo đúng thứ tự nguồn như trước nên việc lọc trùng không đổi.
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=max(1, len(sources))) as pool:
+            parts = list(pool.map(lambda src: self._list_source(kind, start, end, src, progress), sources))
+        results, seen = [], set()
+        for (prefix, ttxly, label), (found, gaps) in zip(sources, parts):
+            self.gaps.extend(gaps)
+            for inv in found:
+                key = (inv.get("nbmst"), inv.get("khmshdon"), inv.get("khhdon"), inv.get("shdon"))
+                if key in seen:
+                    continue
+                seen.add(key)
+                inv["_prefix"] = prefix
+                inv["_nguon"] = label
+                inv["_kind"] = kind
+                results.append(inv)
         results.sort(key=lambda i: (str(i.get("tdlap") or ""), str(i.get("khhdon") or ""), _num(i.get("shdon"))))
         return results
 
-    def _fetch_range(self, prefix, kind, a, b, ttxly, progress=None, mtt=False, _split=False):
+    def _list_source(self, kind, start, end, src, progress=None):
+        """Tra một nguồn qua các tháng → (danh sách HĐ, các khoảng ngày bị thiếu)."""
+        prefix, ttxly, label = src
+        mtt = prefix == "/sco-query"
+        out, gaps = [], []
+        for a, b in month_ranges(start, end):
+            if progress:
+                progress("Tra %s %s → %s (%s)%s" % (
+                    "mua vào" if kind == "purchase" else "bán ra",
+                    a.strftime("%d/%m/%Y"), b.strftime("%d/%m/%Y"), label,
+                    " – trang thuế không trả lời trong %d giây sẽ bỏ qua phần này" % MTT_TIMEOUT if mtt else ""))
+            sub = []
+            try:
+                found = self._fetch_range(prefix, kind, a, b, ttxly, progress, mtt=mtt, gaps=sub)
+            except PortalError as e:
+                if not _is_busy(e):
+                    raise
+                if not mtt:  # phần có mã / không mã lỗi: ghi các khoảng còn lại là thiếu, tra tiếp phần khác
+                    gaps.append("%s %s – %s" % (label, a.strftime("%d/%m/%Y"), end.strftime("%d/%m/%Y")))
+                    if progress:
+                        progress("CẢNH BÁO: trang thuế không trả lời khi tra %s từ %s – bỏ qua phần này tới %s (%s)" % (
+                            label, a.strftime("%d/%m/%Y"), end.strftime("%d/%m/%Y"), e))
+                    break
+                # Phần MTT treo: không làm hỏng cả lượt – giữ các HĐ có mã / không mã đã tra được.
+                MTT_HEALTH.mark_down()
+                self.mtt_skipped = True
+                if progress:
+                    progress("CẢNH BÁO: phần HĐ máy tính tiền của trang thuế không trả lời (treo) – tạm bỏ qua, "
+                             "các hoá đơn khác vẫn đồng bộ. Đồng bộ lại sau để lấy HĐ máy tính tiền.")
+                break
+            if mtt:
+                MTT_HEALTH.mark_up()
+            gaps.extend("%s %s" % (label, g) for g in sub)
+            out.extend(found)
+            time.sleep(self.delay)
+        return out, gaps
+
+    def _fetch_range(self, prefix, kind, a, b, ttxly, progress=None, mtt=False, _split=False, gaps=None):
         """Tra một khoảng ngày (có lật trang). Cổng quá tải (timeout) thì chia nhỏ theo tuần rồi tra lại.
         mtt=True (máy tính tiền): chờ ngắn, thử lại 1 lần, không chia nhỏ – phần này treo thì bỏ qua cho nhanh."""
         try:
@@ -512,15 +527,16 @@ class HoaDonClient:
             while cur <= b:
                 stop = min(cur + timedelta(days=6), b)
                 try:
-                    out.extend(self._fetch_range(prefix, kind, cur, stop, ttxly, progress, _split=True))
+                    out.extend(self._fetch_range(prefix, kind, cur, stop, ttxly, progress, _split=True, gaps=gaps))
                 except PortalError as e2:
                     if not _is_busy(e2):
                         raise
                     failed += 1
-                    self.gaps.append("%s – %s" % (cur.strftime("%d/%m/%Y"), stop.strftime("%d/%m/%Y")))
+                    gaps = self.gaps if gaps is None else gaps
+                    gaps.append("%s – %s" % (cur.strftime("%d/%m/%Y"), stop.strftime("%d/%m/%Y")))
                     if failed >= 1:  # cổng vẫn không trả lời → bỏ phần còn lại của khoảng này, không chờ thêm
                         if stop < b:
-                            self.gaps.append("%s – %s" % ((stop + timedelta(days=1)).strftime("%d/%m/%Y"),
+                            gaps.append("%s – %s" % ((stop + timedelta(days=1)).strftime("%d/%m/%Y"),
                                                           b.strftime("%d/%m/%Y")))
                         break
                 cur = stop + timedelta(days=1)
@@ -2802,6 +2818,48 @@ class LicenseClient:
                 else None}
 
 
+def self_update(url, server="", exe=None, download=None, launch=None):
+    """Bản .exe: tải bản mới về cạnh TaiHoaDon.exe, kiểm tra đúng file chương trình Windows, rồi chạy một tệp .bat nhỏ
+    chờ phần mềm tắt → thay file → mở lại. Trả về {'ok', 'size', 'bat'}; phần mềm tự tắt ngay sau đó."""
+    exe = exe or (sys.executable if getattr(sys, "frozen", False) else None)
+    if not exe:
+        raise ValueError("Chỉ tự cập nhật được ở bản cài TaiHoaDon.exe")
+    url = str(url or "").strip()
+    srv = str(server or "").rstrip("/")
+    if not (url.startswith("https://") or (srv and url.startswith(srv + "/"))):
+        raise ValueError("Đường dẫn bản mới không hợp lệ: %s" % url)
+    with _BUSY_LOCK:
+        if _BUSY:
+            raise ValueError("Đang đồng bộ hoá đơn – chờ xong rồi hãy cập nhật")
+    if download is None:
+        def download(u):
+            req = urllib.request.Request(u, headers={"User-Agent": "TaiHoaDon/" + __version__})
+            with urllib.request.urlopen(req, timeout=600) as r:
+                return r.read()
+    data = download(url)
+    if not data or data[:2] != b"MZ" or len(data) < 1000000:
+        raise ValueError("File tải về không phải bản cài TaiHoaDon.exe (có thể đường dẫn sai) – không cập nhật")
+    folder = os.path.dirname(os.path.abspath(exe))
+    new = os.path.join(folder, "TaiHoaDon.moi.exe")
+    with open(new, "wb") as f:
+        f.write(data)
+    bat = os.path.join(folder, "cap-nhat-taihoadon.bat")
+    args = " ".join('"%s"' % a for a in sys.argv[1:] if '"' not in a)
+    with open(bat, "w", encoding="ascii", errors="replace") as f:  # cmd đọc .bat theo bảng mã ANSI → chỉ dùng ký tự ASCII
+        f.write("@echo off\r\nset n=0\r\n:cho\r\ntimeout /t 2 /nobreak >nul\r\n"
+                "move /y \"%s\" \"%s\" >nul 2>&1\r\nif not errorlevel 1 goto chay\r\nset /a n+=1\r\n"
+                "if %%n%% lss 30 goto cho\r\n:chay\r\nstart \"\" \"%s\" %s\r\ndel \"%%~f0\"\r\n"
+                % (new, os.path.abspath(exe), os.path.abspath(exe), args))
+    if launch is None:
+        def launch(b):
+            import subprocess
+            subprocess.Popen(["cmd", "/c", b], cwd=folder, close_fds=True,
+                             creationflags=0x08000000 | 0x00000008)  # CREATE_NO_WINDOW | DETACHED_PROCESS
+            threading.Timer(1.5, lambda: os._exit(0)).start()  # trả lời trình duyệt xong mới tắt
+    launch(bat)
+    return {"ok": True, "size": len(data), "bat": bat}
+
+
 def invoice_hash(mst, kind, key):
     """Mã băm gửi máy chủ để tính hạn mức – không đọc ngược ra được hoá đơn nào."""
     import hashlib
@@ -3456,37 +3514,53 @@ def sync_kind(job, client, company, kind, start, end, include_mtt, want_xml, out
             with job.lock:
                 job.total += len(todo)
         fails = {}  # nhà cung cấp → số lần lỗi liên tiếp
-        for k in todo:
+        flock = threading.Lock()
+
+        def one(k):
             if job.cancel:
-                raise Cancelled()
+                return
             prov = can_fetch_pdf(known[k].get("tra_cuu"))[1]
-            if fails.get(prov, 0) >= 3:  # nhà cung cấp đang chặn / lỗi → không thử tiếp trong lượt này
-                by_key[k]["ketqua"] += " (HĐ gốc: bỏ qua)"
+            label = k.split("|", 2)[-1].replace("|", "/")
+            with flock:
+                skip = fails.get(prov, 0) >= 3  # nhà cung cấp đang chặn / lỗi → không thử tiếp trong lượt này
+            if skip:
+                note = " (HĐ gốc: bỏ qua)"
             elif quota and not quota.take_goc():
-                by_key[k]["ketqua"] += " (HĐ gốc: hết hạn mức)"
-                if not getattr(job, "goc_out", False):
+                note = " (HĐ gốc: hết hạn mức)"
+                with flock:
+                    first = not getattr(job, "goc_out", False)
                     job.goc_out = True
+                if first:
                     job.say("%s: %s – không tự tải thêm hoá đơn gốc" % (mst, quota.goc_error() or "Hết hạn mức HĐ gốc"))
             else:
                 try:
                     got = fetch_original(out_root, mst, kind, k)
-                    by_key[k]["ketqua"] += " + PDF gốc" + (" + XML gốc" if got["xml"] else "")
+                    note = " + PDF gốc" + (" + XML gốc" if got["xml"] else "")
                     if got["xml_err"]:
-                        job.say("%s: chưa lấy được XML gốc %s: %s" % (mst, k.split("|", 2)[-1].replace("|", "/"),
-                                                                     got["xml_err"]))
-                    fails[prov] = 0
+                        job.say("%s: chưa lấy được XML gốc %s: %s" % (mst, label, got["xml_err"]))
+                    with flock:
+                        fails[prov] = 0
                 except Exception as e:  # lỗi một hoá đơn không được làm dừng cả lượt đồng bộ
                     if quota:
                         quota.refund_goc()  # tải lỗi không tính vào hạn mức
-                    fails[prov] = fails.get(prov, 0) + 1
-                    by_key[k]["ketqua"] += " (HĐ gốc: lỗi)"
-                    job.say("%s: không tải được PDF gốc %s: %s" % (mst, k.split("|", 2)[-1].replace("|", "/"), e))
-                    if fails[prov] == 3:
-                        job.say("%s: %s lỗi 3 lần liên tiếp – bỏ qua PDF gốc của nhà cung cấp này trong lượt này "
+                    with flock:
+                        fails[prov] = n = fails.get(prov, 0) + 1
+                    note = " (HĐ gốc: lỗi)"
+                    job.say("%s: không tải được hoá đơn gốc %s: %s" % (mst, label, e))
+                    if n == 3:
+                        job.say("%s: %s lỗi 3 lần liên tiếp – bỏ qua hoá đơn gốc của nhà cung cấp này trong lượt này "
                                 "(tải sau bằng nút Tải HĐ gốc hàng loạt)" % (mst, (known[k].get("tra_cuu") or {}).get("ncc") or prov))
-                time.sleep(0.3)
             with job.lock:
+                by_key[k]["ketqua"] += note
                 job.done += 1
+
+        # Tải song song vài hoá đơn một lúc (mỗi hoá đơn ở trang của nhà cung cấp riêng, không phải cổng thuế).
+        if todo:
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=ORIGINAL_WORKERS) as pool:
+                list(pool.map(one, todo))
+        if job.cancel:
+            raise Cancelled()
     with job.lock:
         job.rows.extend(rows)
 
@@ -6134,6 +6208,7 @@ font-style:normal;font-size:11px;border-radius:9px;padding:0 5px;min-width:16px;
 <span id="meName"></span><span class="vpname hide" id="vpName"></span> · <a onclick="openPw()">Đổi mật khẩu</a> · <a onclick="logout()">Đăng xuất</a></span></header>
 <div class="sysbar hide" id="sysBar">
   <div class="sb-ann hide" id="sbAnn"></div><div class="sb-hint hide" id="sbHint"></div>
+  <div class="hide" id="sbUpd" style="margin:4px 0"><button class="sm" onclick="doUpdate()">⬆ Cập nhật ngay</button></div>
   <div class="sb-portal hide" id="sbPortal"></div><div class="sb-goi hide" id="sbGoi"></div>
 </div>
 <div class="card hide" id="notes"><div class="top"><b>Thông báo</b><button class="sm sec" onclick="toggleNotes()">Đóng</button></div><div id="notesList"></div></div>
@@ -6645,7 +6720,7 @@ function render() {
   });
 }
 async function refresh() {
-  const s = await api('/api/state'); companies = s.companies; me = s.me;
+  const s = await api('/api/state'); companies = s.companies; me = s.me; window.APPV = s.version;
   document.body.classList.toggle('staff', me.role !== 'admin'); document.body.classList.toggle('local', !me.server);
   document.body.classList.toggle('owner', !!me.owner);
   Object.keys(PERM_NAMES).forEach(p => document.body.classList.toggle('no-' + p, !(me.quyen || []).includes(p)));
@@ -6877,9 +6952,10 @@ function renderSys(sys) {
     const L = me.lic, w = [];
     if (!L.logged) w.push('⚠ Chưa đăng nhập bản quyền – chưa tải được hoá đơn mới. Bấm "Bản quyền" ở đầu trang.');
     else if (L.error) w.push('⚠ ' + L.error);
-    if (L.update) w.push('⬆ Có phiên bản mới ' + L.update.version + ' – tải về: ' + L.update.url);
+    if (L.update) w.push('⬆ Có phiên bản mới ' + L.update.version + ' (đang dùng ' + (window.APPV || '') + ') – bấm nút "Cập nhật ngay" bên dưới.');
     sys = Object.assign({}, sys, {goi_y: w.join('\n')});
   }
+  $('sbUpd').classList.toggle('hide', !(me.lic && me.lic.update));
   const set = (id, txt, cls) => { const e = $(id); e.textContent = txt || ''; e.className = id === 'sbAnn' ? 'sb-ann' : id === 'sbHint' ? 'sb-hint'
     : id === 'sbPortal' ? 'sb-portal ' + (cls || '') : 'sb-goi ' + (cls || ''); e.classList.toggle('hide', !txt); };
   set('sbAnn', sys.thong_bao ? '⚠ ' + sys.thong_bao + (sys.bo_qua_mtt ? '\n⚠ Tạm thời bỏ qua đồng bộ hoá đơn từ máy tính tiền – đối chiếu kỹ số lượng hoá đơn trước khi làm sổ sách.' : '')
@@ -6966,11 +7042,22 @@ function openLic() {
     line('Hoá đơn gốc', g.tai_goc === false ? 'gói không gồm' : fmt(g.da_dung_goc || 0) + (g.han_muc_goc ? ' / ' + fmt(g.han_muc_goc) : ''));
     if (i.het_han) line('Hết hạn gói', i.het_han.split('-').reverse().join('/'));
     line('Kiểm tra lần cuối', L.checked || '');
-    if (L.update) { const a = el('a', '', 'Tải phiên bản mới ' + L.update.version); a.href = L.update.url; a.target = '_blank'; box.append(a); }
+    if (L.update) { const b = el('button', 'sm', '⬆ Cập nhật lên ' + L.update.version); b.onclick = doUpdate; box.append(b);
+      const a = el('a', '', ' hoặc tải file về tự cài'); a.href = L.update.url; a.target = '_blank'; box.append(a); }
     if (L.error) box.append(el('div', 'err', L.error));
   }
   $('licForm').classList.toggle('hide', !!L.logged); $('licOut').classList.toggle('hide', !L.logged); $('licChk').classList.toggle('hide', !L.logged);
   show('mLic'); if (!L.logged) setTimeout(() => $(L.username ? 'licPw' : 'licUser').focus(), 50);
+}
+async function doUpdate() {
+  const u = (me.lic || {}).update; if (!u) return;
+  if (!confirm('Tải và cài phiên bản ' + u.version + '? Phần mềm sẽ tự tắt rồi mở lại sau khoảng 10–30 giây (dữ liệu giữ nguyên).')) return;
+  const box = $('sbUpd'); box.textContent = 'Đang tải phiên bản ' + u.version + '… (vài phút tuỳ mạng, đừng tắt phần mềm)';
+  try { await post('/api/banquyen/update', {});
+    box.textContent = 'Đã tải xong – phần mềm đang khởi động lại. Nếu trang không tự mở, chạy lại TaiHoaDon.exe.';
+    setTimeout(() => location.reload(), 20000); }
+  catch (e) { box.innerHTML = '<button class="sm" onclick="doUpdate()">⬆ Cập nhật ngay</button>';
+    alert('Không cập nhật được: ' + e.message + '\nCó thể tải file về tự cài: ' + u.url); }
 }
 async function licCall(path, body) {
   $('licErr').textContent = '';
@@ -8991,6 +9078,12 @@ def make_handler(app, port):
                         return self._send(200, backup_data(app.out_root, data.get("dir") or default_backup_dir()))
                     if lc is None:
                         raise ValueError("Bản này không dùng bản quyền máy chủ")
+                    if path == "/api/banquyen/update":
+                        st = lc.state()
+                        if not st.get("update"):
+                            raise ValueError("Đang dùng phiên bản mới nhất (%s)" % __version__)
+                        r = self_update(st["update"]["url"], st.get("server"))
+                        return self._send(200, dict(r, version=st["update"]["version"]))
                     if path == "/api/banquyen/login":
                         lc.login(data.get("server"), str(data.get("username") or "").strip(), str(data.get("password") or ""))
                     elif path == "/api/banquyen/logout":
@@ -8998,7 +9091,7 @@ def make_handler(app, port):
                     elif path == "/api/banquyen/status":
                         lc.status()
                     return self._send(200, lc.state())
-                except LicenseError as e:
+                except (LicenseError, ValueError, OSError) as e:
                     return self._send(400, {"error": str(e), "state": lc.state() if lc else None})
             if path in ("/api/login", "/api/logout", "/api/me/password", "/api/users", "/api/user/save",
                         "/api/user/delete", "/api/vp/list", "/api/vp/save", "/api/forgot", "/api/reset", "/api/me/email",

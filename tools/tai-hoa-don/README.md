@@ -212,6 +212,9 @@ Từ 4.7.0, `TaiHoaDon.exe` (chạy trên máy, không `--server`) phải **đă
   tài khoản / khoá văn phòng có hiệu lực ngay ở lần gọi kế tiếp.
 - Nút **Bản quyền** ở đầu trang (bản máy): đăng nhập / đăng xuất (nhường chỗ cho máy khác), xem hạn mức, **Sao lưu dữ
   liệu** thành file ZIP vào thư mục chọn (nên chọn thư mục Google Drive / OneDrive trên máy).
+- **Cập nhật ngay** (từ 4.7.2): khi máy chủ báo có bản mới, thanh thông báo và hộp Bản quyền có nút *Cập nhật ngay* –
+  phần mềm tải `TaiHoaDon.exe` mới (kiểm tra đúng file chương trình Windows), tự tắt, thay file rồi mở lại; dữ liệu giữ
+  nguyên. Không cập nhật khi đang đồng bộ. Lỗi thì vẫn có link tải file về tự cài.
 
 API máy chủ cho máy con: `POST /api/lic/login`, `/api/lic/status`, `/api/lic/take`, `/api/lic/goc`, `/api/lic/logout`
 (JSON, không cookie; lỗi trả `{error, lic: true}` khi phải đăng nhập lại).

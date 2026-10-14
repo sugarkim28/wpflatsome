@@ -1981,9 +1981,10 @@ class Tests(unittest.TestCase):
             t.run_batch(job, self.app.store, self.app.solver, ["0309999999"], ["purchase"], date(2026, 9, 1),
                         date(2026, 10, 31), True, True, self.tmp, False, self.app.client_factory)
         helper.join(1)
-        self.assertEqual(len(calls), 3, "lỗi 3 lần liên tiếp thì không thử tiếp các hoá đơn MISA còn lại")
+        # tải song song: ngoài 3 lần lỗi chỉ thêm vài hoá đơn đang tải dở cùng lúc, không thử hết 61 hoá đơn
+        self.assertLessEqual(len(calls), 3 + t.ORIGINAL_WORKERS - 1, "lỗi 3 lần liên tiếp thì không thử tiếp các hoá đơn MISA còn lại")
         log = "\n".join(job.log)
-        self.assertIn("bỏ qua PDF gốc của nhà cung cấp này", log)
+        self.assertIn("bỏ qua hoá đơn gốc của nhà cung cấp này", log)
         self.assertTrue(any("HĐ gốc: bỏ qua" in r["ketqua"] for r in job.rows))
         with mock.patch.object(t, "find_browser", return_value=None):
             zp = t.export_invoices(self.tmp, "0309999999", "A", {"kind": "purchase"}, "all")
@@ -2020,6 +2021,50 @@ class Tests(unittest.TestCase):
         self.assertTrue(r["xml_goc"])
         names = zipfile.ZipFile(t.export_invoices(self.tmp, "0309999999", "A", {"kind": "purchase", "keys": [r["key"]]}, "pdf")).namelist()
         self.assertEqual(names, ["XML_goc/" + os.path.basename(r["xml_goc"])])  # PDF gốc.ZIP gồm cả XML gốc
+
+    def test_self_update(self):
+        d = tempfile.mkdtemp()
+        exe = os.path.join(d, "TaiHoaDon.exe")
+        with open(exe, "wb") as f:
+            f.write(b"MZold")
+        ran = []
+        with self.assertRaises(ValueError):  # không phải bản .exe
+            t.self_update("https://x/TaiHoaDon.exe")
+        with self.assertRaises(ValueError):  # đường dẫn lạ
+            t.self_update("http://evil/TaiHoaDon.exe", "https://taihoadon.tinhoc119.com", exe=exe)
+        with self.assertRaises(ValueError):  # tải về không phải file chương trình
+            t.self_update("https://s/TaiHoaDon.exe", exe=exe, download=lambda u: b"<html>", launch=ran.append)
+        self.assertEqual(ran, [])
+        new = b"MZ" + b"\0" * 2000000
+        r = t.self_update("http://127.0.0.1:1/tai-ve/TaiHoaDon.exe", "http://127.0.0.1:1", exe=exe,
+                            download=lambda u: new, launch=ran.append)
+        self.assertEqual(ran, [r["bat"]])
+        with open(os.path.join(d, "TaiHoaDon.moi.exe"), "rb") as f:
+            self.assertEqual(f.read(), new)
+        bat = open(r["bat"], encoding="ascii").read()
+        self.assertIn('move /y "%s" "%s"' % (os.path.join(d, "TaiHoaDon.moi.exe"), exe), bat)
+        self.assertIn('start "" "%s"' % exe, bat)
+        with open(exe, "rb") as f:
+            self.assertEqual(f.read(), b"MZold")  # file đang chạy chỉ được .bat thay sau khi phần mềm tắt
+
+    def test_list_sources_parallel_keep_order(self):
+        c = t.HoaDonClient(delay=0)
+        seen = []
+
+        def fake(prefix, kind, a, b, ttxly, progress=None, mtt=False, _split=False, gaps=None):
+            time.sleep(0.2)
+            seen.append(ttxly)
+            if ttxly == 6:
+                gaps.append("01/01/2026 – 07/01/2026")
+            return [{"nbmst": "1", "khmshdon": 1, "khhdon": "C26TAA", "shdon": ttxly, "tdlap": "2026-01-02"},
+                    {"nbmst": "1", "khmshdon": 1, "khhdon": "C26TAA", "shdon": 99, "tdlap": "2026-01-01"}]
+        c._fetch_range = fake
+        t0 = time.time()
+        out = c.list_invoices("purchase", date(2026, 1, 1), date(2026, 1, 31), include_mtt=False)
+        self.assertLess(time.time() - t0, 0.38)  # 2 nguồn chạy cùng lúc
+        self.assertEqual([i["shdon"] for i in out], [99, 5, 6])
+        self.assertEqual([i["_nguon"] for i in out if i["shdon"] == 99], ["Có mã / không mã"])
+        self.assertEqual(c.gaps, ["Có mã / không mã 01/01/2026 – 07/01/2026"])
 
 
 if __name__ == "__main__":
