@@ -14,9 +14,9 @@ defined( 'ABSPATH' ) || exit;
  */
 function hv_option_fields() {
 	return array(
-		'hero_title'    => array( 'Tiêu đề banner (bọc chữ nổi bật trong *…*)', 'text', 'Phá đảo kiến thức, *vui hết nấc!*' ),
-		'hero_lead'     => array( 'Mô tả dưới tiêu đề', 'textarea', '5 hòn đảo là 5 lớp học. Mỗi bài là một màn chơi: nghe Cú Bông kể chuyện, khám phá kiến thức, ôn bí kíp rồi đánh trùm để giành sao, lên cấp. Bám sát sách Kết nối tri thức với cuộc sống.' ),
-		'hero_bubble'   => array( 'Lời chào của bạn Cú Bông', 'text', 'Chào em! Mình là Cú Bông. Cùng phá đảo nhé! 🦉' ),
+		'hero_title'    => array( 'Tiêu đề banner (bọc chữ nổi bật trong *…*)', 'text', 'Học vui, *hiểu sâu, nhớ lâu!*' ),
+		'hero_lead'     => array( 'Mô tả dưới tiêu đề', 'textarea', 'Hơn 80 bài học lớp 1–5 bám sát sách Kết nối tri thức với cuộc sống: giải thích dễ hiểu, ví dụ gần gũi, bí kíp ghi nhớ, “Em có biết?” và câu hỏi luyện tập có lời giải thích. Học xong, bé chơi một chút để nhớ lâu hơn.' ),
+		'hero_bubble'   => array( 'Lời chào của bạn Cú Bông', 'text', 'Chào em! Mình là Cú Bông. Hôm nay mình học gì nhỉ? 🦉' ),
 		'color_primary' => array( 'Màu chủ đạo', 'color', '#7c4dff' ),
 		'color_accent'  => array( 'Màu nhấn (nút vàng, viền)', 'color', '#ffc83d' ),
 		'contact'       => array( 'Ghi chú liên hệ thêm (hiện ở trang Góc phụ huynh)', 'text', '' ),

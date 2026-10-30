@@ -233,7 +233,8 @@ function hv_lesson_fields() {
 		'nhiem_vu' => array( 'Nhiệm vụ ngoài đời – việc nhỏ em làm cùng gia đình', 'text', 'Đặt tính và cộng tuổi của bố với tuổi của mẹ.' ),
 		'muc_tieu' => array( 'Em sẽ học được – mỗi dòng 1 ý', 'textarea', "Đặt tính thẳng cột\nThực hiện phép cộng có nhớ" ),
 		'ghi_nho'  => array( 'Ghi nhớ – mỗi dòng 1 ý', 'textarea', 'Cộng hàng đơn vị được từ 10 trở lên thì nhớ 1 sang hàng chục.' ),
-		'cau_hoi'  => array( 'Câu hỏi luyện tập – mỗi dòng: Câu hỏi | Đáp án đúng | Đáp án sai | Đáp án sai (thứ tự đáp án tự xáo trộn khi hiển thị)', 'textarea', '47 + 35 = ? | 82 | 72 | 712' ),
+		'em_co_biet' => array( 'Em có biết? – điều thú vị mở rộng kiến thức (được đọc to)', 'textarea', 'Số 0 do người Ấn Độ cổ phát minh ra…' ),
+		'cau_hoi'  => array( 'Câu hỏi luyện tập – mỗi dòng: Câu hỏi | Đáp án đúng | Đáp án sai | Đáp án sai => Lời giải thích (thứ tự đáp án tự xáo trộn; phần sau => hiện ra sau khi bé trả lời)', 'textarea', '47 + 35 = ? | 82 | 72 | 712 => 7 + 5 = 12, viết 2 nhớ 1; 4 + 3 = 7, thêm 1 là 8. Vậy 82.' ),
 		'tro_choi' => array( 'Trò chơi luyện thêm', 'game', '' ),
 		'video'    => array( 'Video bài giảng YouTube (tuỳ chọn)', 'url', 'https://www.youtube.com/watch?v=…' ),
 		'bo_sach'  => array( 'Dùng được với bộ sách', 'books', '' ),
@@ -279,6 +280,17 @@ function hv_lines( $text ) {
 function hv_quiz_data( $id = null ) {
 	$out = array();
 	foreach ( hv_lines( hv_lesson_meta( 'cau_hoi', $id ) ) as $line ) {
+		// Phần sau "=>" là lời giải thích hiện ra sau khi bé trả lời.
+		$why  = '';
+		$cut  = strpos( $line, '=>' );
+		$cut2 = strpos( $line, '=&gt;' );
+		if ( false !== $cut2 && ( false === $cut || $cut2 < $cut ) ) {
+			$why  = substr( $line, $cut2 + 5 );
+			$line = substr( $line, 0, $cut2 );
+		} elseif ( false !== $cut ) {
+			$why  = substr( $line, $cut + 2 );
+			$line = substr( $line, 0, $cut );
+		}
 		$p = array_values( array_filter( array_map( 'trim', explode( '|', $line ) ), 'strlen' ) );
 		if ( count( $p ) >= 3 ) {
 			$p     = array_map(
@@ -287,7 +299,11 @@ function hv_quiz_data( $id = null ) {
 				},
 				$p
 			);
-			$out[] = array( 'q' => $p[0], 'a' => $p[1], 'w' => array_slice( $p, 2, 3 ) );
+			$item = array( 'q' => $p[0], 'a' => $p[1], 'w' => array_slice( $p, 2, 3 ) );
+			if ( trim( $why ) ) {
+				$item['e'] = html_entity_decode( wp_strip_all_tags( trim( $why ) ), ENT_QUOTES, 'UTF-8' );
+			}
+			$out[] = $item;
 		}
 	}
 	return $out;
@@ -443,6 +459,7 @@ function hv_curriculum() {
 				'game'    => isset( $p[6] ) ? $p[6] : '',
 				'excerpt' => '',
 				'hook'    => '',
+				'fact'    => '',
 				'mission' => '',
 				'goals'   => array(),
 				'content' => '',
@@ -460,6 +477,8 @@ function hv_curriculum() {
 			$cur['excerpt'] = $rest;
 		} elseif ( '~ ' === $tag ) {
 			$cur['hook'] = $rest;
+		} elseif ( '@ ' === $tag ) {
+			$cur['fact'] = $rest;
 		} elseif ( '! ' === $tag ) {
 			$cur['mission'] = $rest;
 		} elseif ( '+ ' === $tag ) {

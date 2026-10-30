@@ -79,12 +79,12 @@ function hv_sc_hero() {
 	<section class="hv-hero">
 		<div class="hv-wrap hv-hero-in">
 			<div class="hv-hero-copy">
-				<span class="hv-kicker">🏝️ Hành trình phá đảo tri thức</span>
+				<span class="hv-kicker">📚 Bám sát sách Kết nối tri thức · Lớp 1 – Lớp 5</span>
 				<h1><?php echo wp_kses( $title, array( 'em' => array() ) ); ?></h1>
 				<p class="hv-hero-lead"><?php echo esc_html( hv_opt( 'hero_lead' ) ); ?></p>
 				<div class="hv-hero-btns">
-					<a class="hv-btn hv-btn-big" href="#ban-do">Bắt đầu phá đảo <span aria-hidden="true">›</span></a>
-					<a class="hv-play-link" href="<?php echo esc_url( hv_games_url() ); ?>"><span aria-hidden="true">▶</span> Vào khu trò chơi</a>
+					<a class="hv-btn hv-btn-big" href="#ban-do">Bắt đầu học <span aria-hidden="true">›</span></a>
+					<a class="hv-play-link" href="<?php echo esc_url( hv_page_url( 'so-tay-kien-thuc' ) ? hv_page_url( 'so-tay-kien-thuc' ) : get_post_type_archive_link( 'bai_hoc' ) ); ?>"><span aria-hidden="true">📒</span> Sổ tay kiến thức</a>
 				</div>
 			</div>
 			<div class="hv-hero-art">
@@ -102,9 +102,9 @@ function hv_sc_hero() {
 	<div class="hv-wrap hv-hero-panel">
 		<div class="hv-panel-player"><?php echo hv_hud_html( 'is-card' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML tĩnh. ?><?php echo hv_sc_name_form(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML tĩnh. ?></div>
 		<ul class="hv-panel-stats">
-			<li><?php echo hv_icon3d( 'island', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>5 hòn đảo</b><span>5 lớp học, từ lớp 1 đến lớp 5</span></li>
-			<li><?php echo hv_icon3d( 'book', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b><?php echo (int) $count; ?> màn chơi</b><span>Bám sách Kết nối tri thức</span></li>
-			<li><?php echo hv_icon3d( 'game', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>16 trò chơi</b><span>Câu hỏi mới mỗi lượt chơi</span></li>
+			<li><?php echo hv_icon3d( 'book', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b><?php echo (int) $count; ?> bài học</b><span>9 môn, lớp 1 đến lớp 5</span></li>
+			<li><?php echo hv_icon3d( 'bulb', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>Có lời giải thích</b><span>Sai ở đâu, hiểu ngay vì sao</span></li>
+			<li><?php echo hv_icon3d( 'speech', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>Đọc to bài học</b><span>Bé lớp 1 tự học được</span></li>
 			<li><?php echo hv_icon3d( 'heart', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>Miễn phí</b><span>Không quảng cáo, không đăng ký</span></li>
 		</ul>
 	</div>
@@ -238,11 +238,11 @@ add_shortcode( 'hv_lessons', 'hv_sc_lessons' );
  */
 function hv_sc_parent_steps() {
 	$steps = array(
-		array( 'speech', 'Mở màn', 'Cú Bông kể một tình huống gần gũi, khơi gợi tò mò, được đọc to bằng giọng tiếng Việt.' ),
-		array( 'search', 'Khám phá', 'Kiến thức chia thành từng thẻ ngắn, có ví dụ, bảng, mẹo nhớ nhanh – học từng chút một.' ),
-		array( 'scroll', 'Bí kíp', 'Tóm tắt điều cần ghi nhớ, giúp con ôn lại trước khi “đánh trùm”.' ),
-		array( 'swords', 'Đánh trùm', 'Câu hỏi luyện tập: đúng nhiều được 3 sao, XP, lên cấp. Cuối mỗi môn có trùm cuối với 3 tim.' ),
-		array( 'house', 'Nhiệm vụ ngoài đời', 'Một việc nhỏ con làm cùng gia đình để dùng ngay điều vừa học.' ),
+		array( 'speech', 'Mở bài', 'Cú Bông kể một tình huống gần gũi để bé tò mò, muốn tìm hiểu.' ),
+		array( 'search', 'Khám phá kiến thức', 'Giải thích từng ý ngắn gọn, có ví dụ, bảng, mẹo nhớ – đọc to cho bé nghe.' ),
+		array( 'sparkles', 'Em có biết?', 'Một điều thú vị mở rộng hiểu biết, gắn kiến thức với cuộc sống.' ),
+		array( 'scroll', 'Ghi nhớ', 'Tóm tắt điều quan trọng nhất – được gom vào Sổ tay kiến thức để ôn tập.' ),
+		array( 'bulb', 'Luyện tập có giải thích', 'Mỗi câu hỏi đều có lời giải thích: sai ở đâu, hiểu ngay vì sao.' ),
 	);
 	$html  = '<ol class="hv-steps">';
 	foreach ( $steps as $i => $s ) {
@@ -394,3 +394,110 @@ function hv_render_helper() {
 		. '<button type="button" class="hv-helper-btn" aria-label="Hỏi Cú Bông" data-hv-helper-toggle><img src="' . esc_url( HV_URI . '/assets/img/3d/owl.webp' ) . '" width="64" height="64" alt=""></button></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- đã escape.
 }
 add_action( 'wp_footer', 'hv_render_helper' );
+
+/**
+ * Bài học của 1 lớp, xếp theo thứ tự môn rồi thứ tự bài.
+ *
+ * @param int $grade Lớp.
+ * @return WP_Post[]
+ */
+function hv_grade_lessons( $grade ) {
+	$g = hv_grades();
+	if ( ! isset( $g[ $grade ] ) ) {
+		return array();
+	}
+	$posts = get_posts(
+		array(
+			'post_type'      => 'bai_hoc',
+			'posts_per_page' => 200,
+			'no_found_rows'  => true,
+			'orderby'        => array( 'menu_order' => 'ASC', 'title' => 'ASC' ),
+			'tax_query'      => array( array( 'taxonomy' => 'lop', 'field' => 'slug', 'terms' => $g[ $grade ][1] ) ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+		)
+	);
+	$out = array();
+	foreach ( hv_group_lessons( $posts, 'subject' ) as $list ) {
+		$out = array_merge( $out, $list );
+	}
+	return $out;
+}
+
+/**
+ * [hv_lesson_tabs so="8"] – bài học theo lớp (tab Lớp 1 – Lớp 5).
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function hv_sc_lesson_tabs( $atts ) {
+	$a    = shortcode_atts( array( 'so' => 8 ), $atts );
+	$html = '<div class="hv-lesson-tabs" data-hv-tabs><div class="hv-tabbar" role="tablist">';
+	foreach ( hv_grades() as $n => $g ) {
+		$html .= '<button type="button" role="tab" id="hv-lt-t' . (int) $n . '" aria-controls="hv-lt-p' . (int) $n . '" aria-selected="' . ( 1 === $n ? 'true' : 'false' ) . '"' . ( 1 === $n ? '' : ' tabindex="-1"' ) . '>' . esc_html( $g[0] ) . '</button>';
+	}
+	$html .= '</div>';
+	foreach ( hv_grades() as $n => $g ) {
+		$list  = hv_grade_lessons( $n );
+		$html .= '<div class="hv-lt-panel" role="tabpanel" id="hv-lt-p' . (int) $n . '" aria-labelledby="hv-lt-t' . (int) $n . '"' . ( 1 === $n ? '' : ' hidden' ) . '><div class="hv-lesson-grid">';
+		foreach ( array_slice( $list, 0, (int) $a['so'] ) as $p ) {
+			$html .= hv_lesson_card( $p, false );
+		}
+		$html .= '</div><p class="hv-center"><a class="hv-btn hv-btn-white" href="' . esc_url( hv_grade_link( $n ) ) . '">Xem cả ' . count( $list ) . ' bài của ' . esc_html( $g[0] ) . ' ›</a></p></div>';
+	}
+	return $html . '</div>';
+}
+add_shortcode( 'hv_lesson_tabs', 'hv_sc_lesson_tabs' );
+
+/**
+ * [hv_button text="" link="" style=""] – nút đơn giản, căn giữa.
+ *
+ * @param array $atts Thuộc tính.
+ * @return string
+ */
+function hv_sc_button( $atts ) {
+	$a    = shortcode_atts( array( 'text' => 'Xem thêm', 'link' => '', 'page' => '', 'style' => '' ), $atts );
+	$link = $a['page'] ? hv_page_url( $a['page'] ) : $a['link'];
+	if ( 'games' === $a['page'] ) {
+		$link = hv_games_url();
+	}
+	return $link ? '<p class="hv-center"><a class="hv-btn ' . esc_attr( $a['style'] ? 'hv-btn-' . $a['style'] : '' ) . '" href="' . esc_url( $link ) . '">' . esc_html( $a['text'] ) . '</a></p>' : '';
+}
+add_shortcode( 'hv_button', 'hv_sc_button' );
+
+/**
+ * [hv_handbook] – Sổ tay kiến thức: phần "Ghi nhớ" của mọi bài, theo lớp và môn; in được.
+ *
+ * @return string
+ */
+function hv_sc_handbook() {
+	$html = '<div class="hv-handbook" data-hv-tabs><div class="hv-hb-top"><div class="hv-tabbar" role="tablist">';
+	foreach ( hv_grades() as $n => $g ) {
+		$html .= '<button type="button" role="tab" id="hv-hb-t' . (int) $n . '" aria-controls="hv-hb-p' . (int) $n . '" aria-selected="' . ( 1 === $n ? 'true' : 'false' ) . '"' . ( 1 === $n ? '' : ' tabindex="-1"' ) . '>' . esc_html( $g[0] ) . '</button>';
+	}
+	$html .= '</div><button type="button" class="hv-btn hv-btn-white" data-hv-print>🖨️ In sổ tay lớp này</button></div>';
+	foreach ( hv_grades() as $n => $g ) {
+		$html .= '<div class="hv-hb-panel" role="tabpanel" id="hv-hb-p' . (int) $n . '" aria-labelledby="hv-hb-t' . (int) $n . '"' . ( 1 === $n ? '' : ' hidden' ) . '><h2 class="hv-hb-title">Sổ tay kiến thức ' . esc_html( $g[0] ) . '</h2>';
+		$posts = hv_grade_lessons( $n );
+		if ( ! $posts ) {
+			$html .= '<p class="hv-empty">Chưa có bài học.</p>';
+		}
+		foreach ( hv_group_lessons( $posts, 'subject' ) as $slug => $list ) {
+			list( $sname, $sicon, $scolor, $s3d ) = hv_subject_info( get_term_by( 'slug', $slug, 'mon_hoc' ) );
+			$html .= '<section class="hv-hb-subject" style="--c:' . esc_attr( $scolor ) . '"><h3>' . hv_icon3d( $s3d, 36 ) . esc_html( $sname ) . '</h3><div class="hv-hb-grid">';
+			foreach ( $list as $p ) {
+				$notes = hv_lines( hv_lesson_meta( 'ghi_nho', $p->ID ) );
+				if ( ! $notes ) {
+					continue;
+				}
+				$html .= '<article class="hv-hb-card"><h4><a href="' . esc_url( get_permalink( $p ) ) . '">' . esc_html( get_the_title( $p ) ) . '</a></h4><ul>';
+				foreach ( $notes as $line ) {
+					$html .= '<li>' . wp_kses_post( $line ) . '</li>';
+				}
+				$html .= '</ul></article>';
+			}
+			$html .= '</div></section>';
+		}
+		$html .= '</div>';
+	}
+	return $html . '</div>';
+}
+add_shortcode( 'hv_handbook', 'hv_sc_handbook' );

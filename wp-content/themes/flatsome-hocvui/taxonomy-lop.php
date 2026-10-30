@@ -67,8 +67,9 @@ get_template_part(
 					<li class="hv-node" data-hv-node="<?php echo esc_attr( $hv_p->post_name ); ?>">
 						<a href="<?php echo esc_url( get_permalink( $hv_p ) ); ?>">
 							<span class="hv-node-btn" aria-hidden="true"><?php echo esc_html( $hv_ic ? $hv_ic : $hv_icon ); ?></span>
-							<span class="hv-node-label"><small>Màn <?php echo (int) $hv_i + 1; ?></small><?php echo esc_html( get_the_title( $hv_p ) ); ?></span>
+							<span class="hv-node-label"><small>Bài <?php echo (int) $hv_i + 1; ?></small><?php echo esc_html( get_the_title( $hv_p ) ); ?><em><?php echo esc_html( wp_trim_words( get_the_excerpt( $hv_p ), 16 ) ); ?></em></span>
 							<span class="hv-node-stars" aria-hidden="true"></span>
+							<span class="hv-node-go" aria-hidden="true"></span>
 						</a>
 					</li>
 				<?php endforeach; ?>
@@ -76,8 +77,9 @@ get_template_part(
 					<li class="hv-node hv-node-boss" data-hv-node="<?php echo esc_attr( $hv_boss_id ); ?>">
 						<a href="#trum-<?php echo esc_attr( $hv_slug ); ?>" data-hv-boss-link>
 							<span class="hv-node-btn" aria-hidden="true"><?php echo hv_icon3d( $hv_boss[2], 64 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hàm tự escape. ?></span>
-							<span class="hv-node-label"><small>Trùm cuối</small><?php echo esc_html( $hv_boss[0] ); ?></span>
+							<span class="hv-node-label"><small>Ôn tập cuối chủ đề</small><?php echo esc_html( 'Đánh trùm ' . $hv_boss[0] ); ?><em>10 câu hỏi trộn từ tất cả các bài – kiểm tra em đã nắm chắc kiến thức chưa.</em></span>
 							<span class="hv-node-stars" aria-hidden="true"></span>
+							<span class="hv-node-go" aria-hidden="true"></span>
 						</a>
 					</li>
 				<?php endif; ?>

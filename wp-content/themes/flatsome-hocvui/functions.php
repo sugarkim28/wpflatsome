@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HV_VERSION', '0.5.0' );
+define( 'HV_VERSION', '0.6.0' );
 define( 'HV_DIR', get_stylesheet_directory() );
 define( 'HV_URI', get_stylesheet_directory_uri() );
 
@@ -146,3 +146,14 @@ function hv_preload_hero() {
 	}
 }
 add_action( 'wp_head', 'hv_preload_hero', 3 );
+
+/**
+ * Nhắc bật đường dẫn đẹp: dạng ?page_id=… / ?lop=lop-1 không tốt cho Google và khó chia sẻ.
+ */
+function hv_permalink_notice() {
+	if ( get_option( 'permalink_structure' ) || ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	echo '<div class="notice notice-warning"><p><strong>Học Vui:</strong> website đang dùng đường dẫn dạng <code>?page_id=69</code>, <code>?lop=lop-1</code> – không tốt cho Google và khó nhớ. Vào <a href="' . esc_url( admin_url( 'options-permalink.php' ) ) . '">Cài đặt → Đường dẫn tĩnh</a>, chọn <strong>Tên bài viết</strong> rồi Lưu để có đường dẫn đẹp như <code>/chuong-trinh/lop-1/</code>, <code>/bai-hoc/cac-so-tu-0-den-10/</code>. Máy chủ nginx cần có quy tắc <code>try_files $uri $uri/ /index.php?$args;</code>.</p></div>';
+}
+add_action( 'admin_notices', 'hv_permalink_notice' );

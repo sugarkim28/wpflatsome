@@ -115,6 +115,16 @@ while ( have_posts() ) :
 				</section>
 			<?php endif; ?>
 
+			<?php $hv_fact = hv_lesson_meta( 'em_co_biet' ); ?>
+			<?php if ( $hv_fact ) : ?>
+				<section class="hv-step" data-title="Em có biết?">
+					<div class="hv-card-xl hv-fact" data-read>
+						<?php echo hv_icon3d( 'sparkles', 64 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+						<div><h2>Em có biết?</h2><p><?php echo esc_html( $hv_fact ); ?></p></div>
+					</div>
+				</section>
+			<?php endif; ?>
+
 			<?php if ( $hv_notes ) : ?>
 				<section class="hv-step" data-title="Bí kíp ghi nhớ">
 					<div class="hv-card-xl hv-remember" data-read>

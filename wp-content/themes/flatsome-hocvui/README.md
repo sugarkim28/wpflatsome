@@ -2,6 +2,17 @@
 
 Theme con của **Flatsome**: bài học theo Chương trình GDPT 2018, bám bộ sách dùng chung toàn quốc từ năm học 2026–2027 (**Kết nối tri thức với cuộc sống**, **Tiếng Anh Global Success** – QĐ 3588/QĐ-BGDĐT), kèm luyện tập và trò chơi học tập.
 
+## Bản 0.6: kiến thức là chính, trò chơi là phụ
+
+- Mỗi câu hỏi luyện tập có **lời giải thích "Vì sao?"** (viết sau dấu `=>` trong ô Câu hỏi). Trả lời xong, bé đọc/nghe giải thích rồi bấm "Câu tiếp theo".
+- Bước mới **"Em có biết?"** trong mỗi bài: một điều thú vị gắn với bài học (ô *Em có biết?* trong trang sửa bài).
+- Trang **Sổ tay kiến thức** (`[hv_handbook]`): gom toàn bộ phần Ghi nhớ theo lớp và môn, có nút in.
+- Trang chủ đặt bài học lên trước: `[hv_lesson_tabs so="8"]` (tab Lớp 1–5), "Một bài học có gì?", trò chơi chỉ là phần thưởng ở cuối.
+- Trang đảo hiển thị bài học dạng thẻ có mô tả ngắn, nút "Học bài", bài ôn tập cuối chủ đề.
+- Sửa: HUD và nút Cú Bông che nội dung trên điện thoại, thẻ bài trên đảo bị chồng lên nhau, thêm bản in gọn.
+- Nhắc bật **đường dẫn tĩnh "Tên bài viết"** trong trang quản trị nếu site đang dùng `?p=`.
+- Shortcode mới: `[hv_lesson_tabs]`, `[hv_handbook]`, `[hv_button text="" link="" page="games" style="white"]`.
+
 ## Bản 0.5: trò chơi hấp dẫn hơn, môn Làm quen máy tính, sửa giao diện trên site thật
 - **Cảm giác game cho mọi trò**: đếm ngược 3-2-1, điểm + combo 🔥 (đúng liên tiếp điểm nhân lên), chữ "+điểm" bay lên, Cú Bông nhảy mừng/động viên trong khung chơi, khung phát sáng khi combo, kỷ lục riêng từng trò và từng lớp.
 - **5 trò mới** (tổng 16): Đua xe tính nhẩm (đua với xe Cú Bông), Đập chuột chũi (45 giây, số chẵn/lẻ, lớn hơn, kết quả phép tính), Hái táo – tập dùng chuột (nháy, nháy đúp, kéo thả), Tập gõ phím (chữ rơi, bàn phím ảo, chỉ ngón tay), Ghép bộ phận máy tính (kéo thả hoặc chạm).

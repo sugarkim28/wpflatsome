@@ -175,6 +175,7 @@ function hv_demo_lessons_build() {
 				'_hv_chu_de'   => $l['topic'],
 				'_hv_icon'     => $l['icon'],
 				'_hv_mo_man'   => $l['hook'],
+				'_hv_em_co_biet' => $l['fact'],
 				'_hv_nhiem_vu' => $l['mission'],
 				'_hv_muc_tieu' => implode( "\n", $l['goals'] ),
 				'_hv_ghi_nho'  => implode( "\n", $l['notes'] ),
@@ -241,11 +242,12 @@ function hv_demo_pages_build() {
 			'post_name'    => 'trang-chu',
 			'post_title'   => 'Trang chủ',
 			'post_content' => hv_demo_block( '[hv_hero]' )
-				. hv_demo_block( '[hv_section title="Bản đồ phá đảo" sub="Mỗi lớp là một hòn đảo. Chọn đảo của em, vượt qua từng màn và hạ gục trùm cuối của mỗi môn!" class="hv-sea"][hv_world][/hv_section]' )
-				. hv_demo_block( '[hv_section title="Trò chơi được yêu thích nhất" sub="Câu hỏi tự sinh mới mỗi lượt, đúng kiến thức từng lớp. Kiếm sao, XP và mở nhãn dán!"][hv_games player="0"][/hv_section]' )
-				. hv_demo_block( '[hv_section title="Lộ trình một màn chơi" sub="Mỗi bài học là một màn chơi ngắn 10–15 phút, đi từ dễ đến khó."][hv_parent_steps][/hv_section]' )
+				. hv_demo_block( '[hv_section title="Chọn lớp của em" sub="Mỗi lớp là một hòn đảo kiến thức. Học lần lượt từng bài theo đúng thứ tự trong sách, cuối mỗi môn có bài ôn tập tổng hợp." class="hv-sea"][hv_world][/hv_section]' )
+				. hv_demo_block( '[hv_section title="Bài học theo lớp" sub="Bài học sắp xếp theo đúng chủ đề của sách Kết nối tri thức với cuộc sống."][hv_lesson_tabs so="8"][/hv_section]' )
+				. hv_demo_block( '[hv_section title="Các môn học" sub="8 môn theo Chương trình giáo dục phổ thông 2018 và môn ngoại khoá Làm quen máy tính."][hv_subjects][/hv_section]' )
+				. hv_demo_block( '[hv_section title="Một bài học có gì?" sub="Mỗi bài 10–15 phút, đi từ dễ đến khó, giúp bé hiểu bài chứ không học vẹt."][hv_parent_steps][/hv_section]' )
+				. hv_demo_block( '[hv_section title="Học xong, chơi một chút!" sub="Trò chơi giúp bé luyện tập lại kiến thức vừa học – câu hỏi mới mỗi lượt, đúng chương trình từng lớp."][hv_games player="0" show="tinh-nham,cau-ca,hai-tao,leo-nui"][hv_button text="Xem tất cả 16 trò chơi ›" page="games" style="white"][/hv_section]' )
 				. hv_demo_block( '[hv_section title="Vì sao chọn Học Vui?"][hv_why][/hv_section]' )
-				. hv_demo_block( '[hv_section title="Các môn học" sub="Theo Chương trình giáo dục phổ thông 2018 cấp Tiểu học."][hv_subjects][/hv_section]' )
 				. hv_demo_block( '[hv_section][hv_band][/hv_section]' ),
 		),
 		$blank
@@ -289,6 +291,7 @@ function hv_demo_pages_build() {
 	$heads = array(
 		'gioi-thieu'          => array( 'Giới thiệu', 'Học Vui là sân chơi học tập miễn phí cho học sinh tiểu học, do Tin Học 119 phát triển.', 'owl', '#7c4dff' ),
 		'lien-he'             => array( 'Liên hệ', 'Bố mẹ, thầy cô có góp ý hay cần hỗ trợ? Cú Bông luôn sẵn sàng lắng nghe!', 'speech', '#2ea3f2' ),
+		'so-tay-kien-thuc'    => array( 'Sổ tay kiến thức', 'Tất cả phần Ghi nhớ của các bài học, theo lớp và môn – xem nhanh, ôn tập, in ra giấy.', 'scroll', '#ff9f1c' ),
 		'cau-hoi-thuong-gap'  => array( 'Câu hỏi thường gặp', 'Những điều bố mẹ và thầy cô hay hỏi về Học Vui.', 'bulb', '#ff9f1c' ),
 		'chinh-sach-bao-mat'  => array( 'Chính sách bảo mật', 'Học Vui tôn trọng và bảo vệ quyền riêng tư của trẻ em.', 'heart', '#2ec27e' ),
 		'dieu-khoan-su-dung'  => array( 'Điều khoản sử dụng', 'Quy định khi sử dụng nội dung và trò chơi trên Học Vui.', 'scroll', '#5d6a8a' ),
@@ -349,6 +352,7 @@ function hv_demo_pages_build() {
 			$add( array( 'menu-item-title' => $s[0], 'menu-item-object' => 'mon_hoc', 'menu-item-object-id' => $t->term_id, 'menu-item-type' => 'taxonomy' ), $mon, $s[4], 'Lớp ' . min( $s[3] ) . ( min( $s[3] ) === max( $s[3] ) ? '' : '–' . max( $s[3] ) ) );
 		}
 	}
+	$add( $page( 'Sổ tay', $info['so-tay-kien-thuc'] ), 0, 'scroll' );
 	$add( $page( 'Góc của em', $kid ), 0, 'trophy' );
 	$ph = $add( $page( 'Phụ huynh', $parent ), 0, 'heart' );
 	$add( $page( 'Góc phụ huynh', $parent ), $ph, 'heart', 'Chương trình học, cách đồng hành cùng con' );
@@ -429,6 +433,8 @@ function hv_demo_info_content( $slug ) {
 			return do_shortcode( '[hv_contact]' ) . '<div class="hv-box hv-content" style="margin-top:24px"><h2>Góp ý cho Học Vui</h2><p>Bố mẹ, thầy cô phát hiện câu hỏi chưa chính xác, muốn đề xuất bài học hay trò chơi mới? Hãy nhắn qua Zalo hoặc gọi hotline – Cú Bông cảm ơn rất nhiều!</p></div>';
 		case 'cau-hoi-thuong-gap':
 			return do_shortcode( '[hv_faq]' );
+		case 'so-tay-kien-thuc':
+			return '[hv_handbook]';
 		case 'chinh-sach-bao-mat':
 			return '<div class="hv-box hv-content"><h2>1. Thông tin chúng tôi thu thập</h2><p>Học Vui không yêu cầu đăng ký tài khoản và không thu thập họ tên, ngày sinh, địa chỉ hay hình ảnh của trẻ. Tên bé tự nhập, số sao, cấp độ, nhãn dán chỉ được lưu trong bộ nhớ trình duyệt (localStorage) trên chính thiết bị đang dùng và không gửi về máy chủ.</p>'
 				. '<h2>2. Cookie và thống kê</h2><p>Website có thể dùng cookie kỹ thuật cần thiết để vận hành. Nếu bật công cụ thống kê truy cập, dữ liệu được tổng hợp ẩn danh, không dùng để quảng cáo nhắm vào trẻ em.</p>'

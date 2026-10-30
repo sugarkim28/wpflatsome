@@ -762,7 +762,7 @@
 			var data = [];
 			try { data = JSON.parse(this.root.getAttribute('data-quiz') || '[]'); } catch (e) { data = []; }
 			var limit = parseInt(this.root.getAttribute('data-limit'), 10) || data.length;
-			this.deck = shuffle(data).slice(0, limit).map(function (r) { return { q: r.q, say: r.q, tag: r.t || '', o: { choices: shuffle([r.a].concat(r.w || [])), a: r.a } }; });
+			this.deck = shuffle(data).slice(0, limit).map(function (r) { return { q: r.q, say: r.q, tag: r.t || '', why: r.e || '', o: { choices: shuffle([r.a].concat(r.w || [])), a: r.a } }; });
 		} else if (this.def.deck) {
 			this.deck = this.def.deck(this.grade).slice(0, this.def.total);
 		} else {
@@ -840,14 +840,25 @@
 			if (this.hearts !== null) { this.hearts--; }
 		}
 		fb.className = 'hv-feedback ' + (ok ? 'ok' : 'no');
-		if (q.word && ok) { speak(q.word); } else if (soundOn() && 'speechSynthesis' in window) { speak(ok ? fb.textContent.replace(/[^\p{L}\p{N}\s,!.]/gu, '') : 'Đáp án là ' + q.o.a); }
 		this.marks[this.i] = ok;
-		setTimeout(function () {
+		var go = function () {
 			self.locked = false;
 			self.i++;
 			if (self.hearts === 0) { self.finish(self.right, self.deck.length, 'Ôi, hết tim mất rồi! Em ôn lại phần Bí kíp rồi đánh lại trùm nhé – chắc chắn sẽ thắng!'); return; }
 			if (self.i < self.deck.length) { self.ask(); } else { self.finish(self.right, self.deck.length); }
-		}, ok ? 1000 : 2400);
+		};
+		if (q.why) {
+			// Có lời giải thích: hiện "Vì sao?" và chờ bé bấm Tiếp tục để kịp đọc, hiểu.
+			var box = el('div', 'hv-why-box', '<b>' + (ico('bulb', 28) || '💡') + ' Vì sao?</b><p>' + esc(q.why) + '</p><button type="button" class="hv-btn hv-next-q">' + (this.i + 1 < this.deck.length ? 'Câu tiếp theo ›' : 'Xem kết quả ›') + '</button>');
+			fb.parentNode.insertBefore(box, fb.nextSibling);
+			speak((ok ? 'Đúng rồi. ' : 'Đáp án là ' + q.o.a + '. ') + q.why);
+			var nb = box.querySelector('.hv-next-q');
+			nb.addEventListener('click', function () { if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); } go(); });
+			setTimeout(function () { try { nb.focus({ preventScroll: true }); } catch (e) { nb.focus(); } }, 50);
+			return;
+		}
+		if (q.word && ok) { speak(q.word); } else if (soundOn() && 'speechSynthesis' in window) { speak(ok ? fb.textContent.replace(/[^\p{L}\p{N}\s,!.]/gu, '') : 'Đáp án là ' + q.o.a); }
+		setTimeout(go, ok ? 1000 : 2400);
 	};
 	Player.prototype.finish = function (right, total, extra) {
 		var self = this;
@@ -1935,6 +1946,7 @@
 				speak(msg);
 			}
 		}
+		if (e.target.closest && e.target.closest('[data-hv-print]')) { window.print(); }
 		if (e.target.closest && e.target.closest('[data-hv-helper-say]')) { speak(document.querySelector('[data-hv-helper-text]').textContent); }
 	});
 
