@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HV_VERSION', '0.3.0' );
+define( 'HV_VERSION', '0.4.0' );
 define( 'HV_DIR', get_stylesheet_directory() );
 define( 'HV_URI', get_stylesheet_directory_uri() );
 
@@ -15,6 +15,7 @@ require_once HV_DIR . '/inc/options.php';
 require_once HV_DIR . '/inc/content.php';
 require_once HV_DIR . '/inc/games.php';
 require_once HV_DIR . '/inc/home.php';
+require_once HV_DIR . '/inc/layout.php';
 require_once HV_DIR . '/inc/seo.php';
 require_once HV_DIR . '/inc/demo.php';
 
@@ -68,23 +69,44 @@ function hv_body_class( $classes ) {
 add_filter( 'body_class', 'hv_body_class' );
 
 /**
- * Logo mặc định Học Vui khi chưa tải logo ở Tuỳ biến → Header → Logo.
+ * Ảnh logo theo kiểu chọn ở Tuỳ biến → Học Vui → Logo trên header.
+ *
+ * @param string $style cobrand | hocvui | tinhoc119 | white.
+ * @return string URL.
+ */
+function hv_logo_url( $style = '' ) {
+	$style = $style ? $style : hv_opt( 'logo_style' );
+	$files = array(
+		'cobrand'   => 'hocvui-ngang-tinhoc119.png',
+		'hocvui'    => 'hocvui-ngang.png',
+		'tinhoc119' => 'tinhoc119-ngang.webp',
+		'white'     => 'hocvui-ngang-trang.png',
+	);
+	return HV_URI . '/assets/img/brand/' . ( isset( $files[ $style ] ) ? $files[ $style ] : $files['cobrand'] );
+}
+
+/**
+ * Logo mặc định khi chưa tải logo ở Tuỳ biến → Header → Logo.
  *
  * @param mixed $logo Logo đã lưu.
  * @return mixed
  */
 function hv_default_logo( $logo ) {
-	return $logo ? $logo : HV_URI . '/assets/img/logo.svg';
+	return $logo ? $logo : hv_logo_url();
 }
 add_filter( 'theme_mod_site_logo', 'hv_default_logo' );
 
 /**
- * Favicon mặc định.
+ * Favicon, biểu tượng iPhone/Android mặc định (khi chưa đặt Biểu tượng trang web trong WordPress).
  */
 function hv_default_favicon() {
 	if ( ! has_site_icon() ) {
-		echo '<link rel="icon" type="image/svg+xml" href="' . esc_url( HV_URI . '/assets/img/icon.svg' ) . "\">\n";
+		$img = HV_URI . '/assets/img/brand/';
+		echo '<link rel="icon" type="image/png" sizes="64x64" href="' . esc_url( $img . 'favicon-64.png' ) . "\">\n";
+		echo '<link rel="icon" type="image/png" sizes="192x192" href="' . esc_url( $img . 'hocvui-icon-192.png' ) . "\">\n";
+		echo '<link rel="apple-touch-icon" href="' . esc_url( $img . 'hocvui-icon-192.png' ) . "\">\n";
 	}
+	echo '<meta name="theme-color" content="#2ea3f2">' . "\n";
 }
 add_action( 'wp_head', 'hv_default_favicon', 2 );
 

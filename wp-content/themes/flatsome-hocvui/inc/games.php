@@ -21,6 +21,10 @@ function hv_games() {
 		'ghep-chu'    => array( 'Ghép chữ – Đánh vần', '🔤', 'Nhìn hình chọn âm đầu (lớp 1), chọn vần (lớp 2), chọn từ viết đúng chính tả (lớp 3).', array( 1, 2, 3 ), '#40c057', 'Tiếng Việt', 'letters' ),
 		'sap-xep-cau' => array( 'Sắp xếp câu', '🧩', 'Chạm vào các từ theo đúng thứ tự để tạo thành câu hoàn chỉnh.', array( 1, 2, 3, 4, 5 ), '#12b886', 'Tiếng Việt', 'puzzle' ),
 		'lat-the'     => array( 'Lật thẻ tiếng Anh', '🃏', 'Lật thẻ tìm cặp hình – từ tiếng Anh, nghe phát âm chuẩn. Chủ đề thay đổi theo lớp.', array( 1, 2, 3, 4, 5 ), '#339af0', 'Tiếng Anh', 'joker' ),
+		'bong-bay'    => array( 'Bắn bóng bay', '🎈', 'Bóng bay mang đáp án trôi lên trời – chạm đúng quả trước khi bóng bay mất! Phép tính theo đúng lớp.', array( 1, 2, 3, 4, 5 ), '#ff5d73', 'Toán', 'balloon' ),
+		'cau-ca'      => array( 'Câu cá – Nghe và chọn', '🎣', 'Cú Bông đọc to, bé câu đúng con cá: lớp 1–2 luyện đọc tiếng Việt, lớp 3–5 luyện nghe tiếng Anh.', array( 1, 2, 3, 4, 5 ), '#2ea3f2', 'Tiếng Việt · Tiếng Anh', 'fishing' ),
+		'dung-sai'    => array( 'Đúng hay Sai 60 giây', '✅', 'Phản xạ siêu nhanh: phép tính và kiến thức khoa học – xã hội, bấm Đúng hay Sai trong 60 giây.', array( 1, 2, 3, 4, 5 ), '#58b847', 'Toán · Khoa học · Xã hội', 'check' ),
+		'leo-nui'     => array( 'Leo núi tri thức', '🏔️', '10 nấc câu hỏi khó dần lên đỉnh núi, có 2 quyền trợ giúp: bỏ bớt đáp án sai và hỏi Cú Bông.', array( 1, 2, 3, 4, 5 ), '#7c4dff', 'Tổng hợp', 'mountain' ),
 		'do-vui'      => array( 'Đố vui khoa học – xã hội', '🔬', 'Câu đố Tự nhiên và Xã hội, Khoa học, Lịch sử và Địa lí, Đạo đức theo từng lớp.', array( 1, 2, 3, 4, 5 ), '#9775fa', 'TN&XH · Khoa học · LS&ĐL', 'bulb' ),
 	);
 }

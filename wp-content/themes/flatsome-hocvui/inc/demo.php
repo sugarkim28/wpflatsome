@@ -254,7 +254,7 @@ function hv_demo_pages_build() {
 			'post_type'    => 'page',
 			'post_name'    => 'tro-choi',
 			'post_title'   => 'Trò chơi',
-			'post_content' => hv_demo_block( '[hv_pagehead title="Khu trò chơi" lead="7 trò chơi Toán, Tiếng Việt, Tiếng Anh, Khoa học – chọn lớp ngay trong trò chơi. Mỗi lượt được sao và XP!" icon="🕹️" color="#ff5d73"]' )
+			'post_content' => hv_demo_block( '[hv_pagehead title="Khu trò chơi" lead="11 trò chơi Toán, Tiếng Việt, Tiếng Anh, Khoa học – chọn lớp ngay trong trò chơi. Mỗi lượt được sao và XP!" icon="🕹️" color="#ff5d73"]' )
 				. hv_demo_block( '[hv_section][hv_games][/hv_section]' ),
 		),
 		$blank
@@ -283,7 +283,29 @@ function hv_demo_pages_build() {
 	update_option( 'show_on_front', 'page' );
 	update_option( 'page_on_front', $home );
 
-	// Menu chính.
+	// Trang thông tin chuẩn web (giới thiệu, liên hệ, hỏi đáp, chính sách).
+	$info  = array();
+	$heads = array(
+		'gioi-thieu'          => array( 'Giới thiệu', 'Học Vui là sân chơi học tập miễn phí cho học sinh tiểu học, do Tin Học 119 phát triển.', 'owl', '#7c4dff' ),
+		'lien-he'             => array( 'Liên hệ', 'Bố mẹ, thầy cô có góp ý hay cần hỗ trợ? Cú Bông luôn sẵn sàng lắng nghe!', 'speech', '#2ea3f2' ),
+		'cau-hoi-thuong-gap'  => array( 'Câu hỏi thường gặp', 'Những điều bố mẹ và thầy cô hay hỏi về Học Vui.', 'bulb', '#ff9f1c' ),
+		'chinh-sach-bao-mat'  => array( 'Chính sách bảo mật', 'Học Vui tôn trọng và bảo vệ quyền riêng tư của trẻ em.', 'heart', '#2ec27e' ),
+		'dieu-khoan-su-dung'  => array( 'Điều khoản sử dụng', 'Quy định khi sử dụng nội dung và trò chơi trên Học Vui.', 'scroll', '#5d6a8a' ),
+	);
+	foreach ( $heads as $slug => $h ) {
+		$info[ $slug ] = hv_demo_post(
+			array(
+				'post_type'    => 'page',
+				'post_name'    => $slug,
+				'post_title'   => $h[0],
+				'post_content' => hv_demo_block( '[hv_pagehead title="' . $h[0] . '" lead="' . $h[1] . '" color="' . $h[3] . '"]' )
+					. "<!-- wp:html -->\n<section class=\"hv-section\"><div class=\"hv-wrap\">" . hv_demo_info_content( $slug ) . "</div></section>\n<!-- /wp:html -->\n",
+			),
+			$blank
+		);
+	}
+
+	// Menu chính: biểu tượng 3D (class hv-i-…), mô tả hiện trong menu xổ, nút "Chơi ngay" nổi bật.
 	$menu_name = 'Menu Học Vui';
 	$menu      = wp_get_nav_menu_object( $menu_name );
 	$menu_id   = $menu ? $menu->term_id : wp_create_nav_menu( $menu_name );
@@ -293,32 +315,124 @@ function hv_demo_pages_build() {
 	foreach ( (array) wp_get_nav_menu_items( $menu_id ) as $item ) {
 		wp_delete_post( $item->ID, true );
 	}
-	$add = function ( $args, $parent = 0 ) use ( $menu_id ) {
-		return wp_update_nav_menu_item( $menu_id, 0, array_merge( array( 'menu-item-status' => 'publish', 'menu-item-parent-id' => $parent ), $args ) );
+	$add = function ( $args, $parent = 0, $icon = '', $desc = '', $extra = '' ) use ( $menu_id ) {
+		return wp_update_nav_menu_item(
+			$menu_id,
+			0,
+			array_merge(
+				array(
+					'menu-item-status'      => 'publish',
+					'menu-item-parent-id'   => $parent,
+					'menu-item-classes'     => trim( ( $icon ? 'hv-i-' . $icon : '' ) . ' ' . $extra ),
+					'menu-item-description' => $desc,
+				),
+				$args
+			)
+		);
 	};
-	$add( array( 'menu-item-title' => 'Trang chủ', 'menu-item-object' => 'page', 'menu-item-object-id' => $home, 'menu-item-type' => 'post_type' ) );
-	$lop = $add( array( 'menu-item-title' => 'Lớp học', 'menu-item-url' => get_post_type_archive_link( 'bai_hoc' ), 'menu-item-type' => 'custom' ) );
-	foreach ( hv_grades() as $g ) {
+	$page = function ( $title, $id ) {
+		return array( 'menu-item-title' => $title, 'menu-item-object' => 'page', 'menu-item-object-id' => $id, 'menu-item-type' => 'post_type' );
+	};
+	$add( $page( 'Trang chủ', $home ), 0, 'house' );
+	$by  = hv_lessons_by_grade();
+	$lop = $add( array( 'menu-item-title' => 'Lớp học', 'menu-item-url' => home_url( '/#ban-do' ), 'menu-item-type' => 'custom' ), 0, 'island', '', 'hv-mega' );
+	foreach ( hv_grades() as $n => $g ) {
 		$t = get_term_by( 'slug', $g[1], 'lop' );
 		if ( $t ) {
-			$add( array( 'menu-item-title' => $g[2] . ' ' . $g[0], 'menu-item-object' => 'lop', 'menu-item-object-id' => $t->term_id, 'menu-item-type' => 'taxonomy' ), $lop );
+			$add( array( 'menu-item-title' => $g[0] . ' · ' . $g[5], 'menu-item-object' => 'lop', 'menu-item-object-id' => $t->term_id, 'menu-item-type' => 'taxonomy' ), $lop, $g[7], ( isset( $by[ $n ] ) ? count( $by[ $n ] ) . ' màn · ' : '' ) . $g[4] );
 		}
 	}
-	$mon = $add( array( 'menu-item-title' => 'Môn học', 'menu-item-url' => get_post_type_archive_link( 'bai_hoc' ), 'menu-item-type' => 'custom' ) );
+	$mon = $add( array( 'menu-item-title' => 'Môn học', 'menu-item-url' => get_post_type_archive_link( 'bai_hoc' ), 'menu-item-type' => 'custom' ), 0, 'book', '', 'hv-mega' );
 	foreach ( hv_subjects() as $slug => $s ) {
 		$t = get_term_by( 'slug', $slug, 'mon_hoc' );
 		if ( $t ) {
-			$add( array( 'menu-item-title' => $s[1] . ' ' . $s[0], 'menu-item-object' => 'mon_hoc', 'menu-item-object-id' => $t->term_id, 'menu-item-type' => 'taxonomy' ), $mon );
+			$add( array( 'menu-item-title' => $s[0], 'menu-item-object' => 'mon_hoc', 'menu-item-object-id' => $t->term_id, 'menu-item-type' => 'taxonomy' ), $mon, $s[4], 'Lớp ' . min( $s[3] ) . ( min( $s[3] ) === max( $s[3] ) ? '' : '–' . max( $s[3] ) ) );
 		}
 	}
-	$add( array( 'menu-item-title' => '🎮 Trò chơi', 'menu-item-object' => 'page', 'menu-item-object-id' => $games, 'menu-item-type' => 'post_type' ) );
-	$add( array( 'menu-item-title' => '⭐ Góc của em', 'menu-item-object' => 'page', 'menu-item-object-id' => $kid, 'menu-item-type' => 'post_type' ) );
-	$add( array( 'menu-item-title' => 'Phụ huynh', 'menu-item-object' => 'page', 'menu-item-object-id' => $parent, 'menu-item-type' => 'post_type' ) );
+	$add( $page( 'Góc của em', $kid ), 0, 'trophy' );
+	$ph = $add( $page( 'Phụ huynh', $parent ), 0, 'heart' );
+	$add( $page( 'Góc phụ huynh', $parent ), $ph, 'heart', 'Chương trình học, cách đồng hành cùng con' );
+	$add( $page( 'Câu hỏi thường gặp', $info['cau-hoi-thuong-gap'] ), $ph, 'bulb', 'Giải đáp nhanh cho bố mẹ, thầy cô' );
+	$add( $page( 'Giới thiệu', $info['gioi-thieu'] ), $ph, 'owl', 'Học Vui và Tin Học 119' );
+	$add( $page( 'Liên hệ', $info['lien-he'] ), $ph, 'speech', 'Hotline, Zalo, góp ý' );
+	$add( $page( 'Chơi ngay', $games ), 0, 'game', '', 'hv-menu-cta' );
 	$locations                   = get_theme_mod( 'nav_menu_locations', array() );
 	$locations['primary']        = $menu_id;
 	$locations['primary_mobile'] = $menu_id;
 	set_theme_mod( 'nav_menu_locations', $locations );
 
-	// Footer Flatsome.
-	set_theme_mod( 'footer_left_text', '© ' . gmdate( 'Y' ) . ' ' . get_bloginfo( 'name' ) . ' – Học mà chơi, chơi mà học. Nội dung bám Chương trình GDPT 2018, bộ sách Kết nối tri thức với cuộc sống.' );
+	// Header Flatsome: logo trái, menu phải, dính khi cuộn; điện thoại: nút menu + logo.
+	set_theme_mod( 'header_elements_left', array() );
+	set_theme_mod( 'header_elements_right', array( 'nav' ) );
+	set_theme_mod( 'header_mobile_elements_left', array( 'menu-icon' ) );
+	set_theme_mod( 'header_mobile_elements_right', array() );
+	set_theme_mod( 'mobile_sidebar', array( 'nav' ) );
+	set_theme_mod( 'header_height', 88 );
+	set_theme_mod( 'header_height_mobile', 64 );
+	set_theme_mod( 'logo_width', 260 );
+	set_theme_mod( 'logo_max_width_mobile', 170 );
+	set_theme_mod( 'header_bg', '#ffffff' );
+	set_theme_mod( 'header_color', 'light' );
+	set_theme_mod( 'header_sticky', 1 );
+	set_theme_mod( 'topbar_show', 0 );
+	set_theme_mod( 'nav_uppercase', 0 );
+	set_theme_mod( 'type_nav_color', '#1d2b53' );
+	set_theme_mod( 'type_nav_color_hover', '#3f952f' );
+	set_theme_mod( 'color_primary', '#2ea3f2' );
+	set_theme_mod( 'color_secondary', '#58b847' );
+	set_theme_mod( 'back_to_top', 1 );
+
+	// Chân trang = UX Block "Chân trang Học Vui" (sửa được bằng UX Builder), dải bản quyền của Flatsome để trống.
+	$existing = get_page_by_path( 'chan-trang-hoc-vui', OBJECT, 'blocks' );
+	$block    = post_type_exists( 'blocks' ) ? wp_insert_post(
+		array(
+			'ID'           => $existing ? $existing->ID : 0,
+			'post_type'    => 'blocks',
+			'post_status'  => 'publish',
+			'post_name'    => 'chan-trang-hoc-vui',
+			'post_title'   => 'Chân trang Học Vui',
+			'post_content' => '[hv_footer]',
+		)
+	) : 0;
+	if ( $block && ! is_wp_error( $block ) ) {
+		set_theme_mod( 'footer_block', 'chan-trang-hoc-vui' );
+		set_theme_mod( 'footer_left_text', '' );
+		set_theme_mod( 'footer_right_text', '' );
+	} else {
+		set_theme_mod( 'footer_left_text', '© ' . gmdate( 'Y' ) . ' ' . get_bloginfo( 'name' ) . ' · ' . hv_opt( 'org_name' ) );
+	}
+}
+
+/**
+ * Nội dung các trang thông tin (giới thiệu, liên hệ, hỏi đáp, chính sách).
+ *
+ * @param string $slug Trang.
+ * @return string
+ */
+function hv_demo_info_content( $slug ) {
+	$org = esc_html( hv_opt( 'org_name' ) );
+	switch ( $slug ) {
+		case 'gioi-thieu':
+			return '<div class="hv-box hv-content"><img class="alignright" src="' . esc_url( HV_URI . '/assets/img/brand/hocvui-huy-hieu.png' ) . '" width="220" height="220" alt="Huy hiệu Học Vui">'
+				. '<h2>Học Vui là gì?</h2><p>Học Vui là sân chơi học tập trực tuyến miễn phí cho học sinh lớp 1 đến lớp 5. Mỗi lớp là một hòn đảo, mỗi bài học là một màn chơi ngắn: nghe bạn Cú Bông kể chuyện, khám phá kiến thức từng chút một, ôn bí kíp rồi đánh trùm để giành sao. Bé còn có 11 trò chơi học tập tự sinh câu hỏi mới mỗi lượt.</p>'
+				. '<h2>Bám sát chương trình mới</h2><p>Bài học sắp xếp theo Chương trình giáo dục phổ thông 2018 và chủ đề của bộ sách <strong>Kết nối tri thức với cuộc sống</strong>, Tiếng Anh <strong>Global Success</strong> – bộ sách dùng chung toàn quốc từ năm học 2026–2027. Nội dung do đội ngũ tự biên soạn để ôn tập, không sao chép và không thay thế sách giáo khoa.</p>'
+				. '<h2>Đơn vị phát triển</h2><p><img src="' . esc_url( HV_URI . '/assets/img/brand/tinhoc119-ngang.webp' ) . '" width="360" height="97" alt="' . $org . '" loading="lazy"></p><p>Học Vui do <strong>' . $org . '</strong> xây dựng và vận hành với tinh thần <em>' . esc_html( hv_opt( 'org_slogan' ) ) . '</em>.</p></div>';
+		case 'lien-he':
+			return do_shortcode( '[hv_contact]' ) . '<div class="hv-box hv-content" style="margin-top:24px"><h2>Góp ý cho Học Vui</h2><p>Bố mẹ, thầy cô phát hiện câu hỏi chưa chính xác, muốn đề xuất bài học hay trò chơi mới? Hãy nhắn qua Zalo hoặc gọi hotline – Cú Bông cảm ơn rất nhiều!</p></div>';
+		case 'cau-hoi-thuong-gap':
+			return do_shortcode( '[hv_faq]' );
+		case 'chinh-sach-bao-mat':
+			return '<div class="hv-box hv-content"><h2>1. Thông tin chúng tôi thu thập</h2><p>Học Vui không yêu cầu đăng ký tài khoản và không thu thập họ tên, ngày sinh, địa chỉ hay hình ảnh của trẻ. Tên bé tự nhập, số sao, cấp độ, nhãn dán chỉ được lưu trong bộ nhớ trình duyệt (localStorage) trên chính thiết bị đang dùng và không gửi về máy chủ.</p>'
+				. '<h2>2. Cookie và thống kê</h2><p>Website có thể dùng cookie kỹ thuật cần thiết để vận hành. Nếu bật công cụ thống kê truy cập, dữ liệu được tổng hợp ẩn danh, không dùng để quảng cáo nhắm vào trẻ em.</p>'
+				. '<h2>3. Quảng cáo</h2><p>Học Vui không hiển thị quảng cáo và không có liên kết mua hàng trong trò chơi.</p>'
+				. '<h2>4. Giọng đọc</h2><p>Tính năng đọc to dùng bộ chuyển văn bản thành giọng nói có sẵn của trình duyệt/thiết bị; nội dung đọc không được ghi âm hay lưu lại.</p>'
+				. '<h2>5. Xoá dữ liệu</h2><p>Bố mẹ có thể xoá toàn bộ tiến độ của bé ở trang Góc của em (nút “Bắt đầu lại từ đầu”) hoặc xoá dữ liệu trình duyệt.</p>'
+				. '<h2>6. Liên hệ</h2><p>Mọi thắc mắc về quyền riêng tư, vui lòng liên hệ ' . $org . ' qua hotline ' . esc_html( hv_opt( 'hotline' ) ) . '.</p></div>';
+		case 'dieu-khoan-su-dung':
+			return '<div class="hv-box hv-content"><h2>1. Mục đích</h2><p>Học Vui cung cấp bài ôn tập và trò chơi học tập miễn phí nhằm hỗ trợ học sinh tiểu học, không thay thế sách giáo khoa và bài giảng của thầy cô.</p>'
+				. '<h2>2. Bản quyền nội dung</h2><p>Bài học, câu hỏi, hình minh hoạ linh vật Cú Bông thuộc ' . $org . '. Nhà trường, thầy cô được dùng miễn phí cho mục đích giảng dạy phi thương mại, vui lòng ghi nguồn Học Vui. Biểu tượng 3D sử dụng bộ Microsoft Fluent Emoji (giấy phép MIT).</p>'
+				. '<h2>3. Trách nhiệm của người dùng</h2><p>Bố mẹ, thầy cô hướng dẫn trẻ sử dụng thiết bị an toàn, hợp lý về thời gian.</p>'
+				. '<h2>4. Thay đổi</h2><p>Nội dung và điều khoản có thể được cập nhật để phù hợp chương trình, sách giáo khoa mới.</p></div>';
+	}
+	return '';
 }

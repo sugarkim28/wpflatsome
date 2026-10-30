@@ -599,6 +599,10 @@
 		},
 		'sap-xep-cau': { title: 'Sắp xếp câu', icon: '🧩', grades: [1, 2, 3, 4, 5], total: 5, custom: 'order' },
 		'lat-the': { title: 'Lật thẻ tiếng Anh', icon: '🃏', grades: [1, 2, 3, 4, 5], custom: 'memory' },
+		'bong-bay': { title: 'Bắn bóng bay', icon: '🎈', grades: [1, 2, 3, 4, 5], custom: 'balloon', hint: 'Chạm quả bóng mang đáp án đúng trước khi bóng bay mất' },
+		'cau-ca': { title: 'Câu cá – Nghe và chọn', icon: '🎣', grades: [1, 2, 3, 4, 5], custom: 'fishing', hint: 'Nghe Cú Bông đọc rồi câu đúng con cá' },
+		'dung-sai': { title: 'Đúng hay Sai 60 giây', icon: '✅', grades: [1, 2, 3, 4, 5], custom: 'truefalse', hint: 'Trả lời Đúng hay Sai thật nhanh trong 60 giây' },
+		'leo-nui': { title: 'Leo núi tri thức', icon: '🏔️', grades: [1, 2, 3, 4, 5], custom: 'climb', hint: 'Trả lời đúng để leo 10 nấc lên đỉnh – có 2 quyền trợ giúp' },
 		'quiz': { title: 'Luyện tập', icon: '✏️', grades: [], total: 0, fromData: true }
 	};
 
@@ -655,9 +659,10 @@
 	Player.prototype.say = function (msg) { this.live.textContent = msg; };
 	Player.prototype.intro = function () {
 		var self = this;
+		if (this.stopTimer) { this.stopTimer(); this.stopTimer = null; }
 		var name = store.get('name', '');
 		var b = this.body;
-		var sub = this.def.fromData ? 'Trả lời các câu hỏi để ôn lại bài nhé!' : (this.def.grades.length ? 'Lớp ' + this.grade + ' · ' : '') + (this.def.custom === 'memory' ? 'Lật 2 thẻ giống nhau để ghép đôi' : this.def.custom === 'order' ? 'Chạm vào các từ theo đúng thứ tự' : 'Chọn đáp án đúng');
+		var sub = this.def.fromData ? 'Trả lời các câu hỏi để ôn lại bài nhé!' : (this.def.grades.length ? 'Lớp ' + this.grade + ' · ' : '') + (this.def.hint ? this.def.hint : this.def.custom === 'memory' ? 'Lật 2 thẻ giống nhau để ghép đôi' : this.def.custom === 'order' ? 'Chạm vào các từ theo đúng thứ tự' : 'Chọn đáp án đúng');
 		b.innerHTML = '<div class="hv-intro"><div class="hv-mascot" aria-hidden="true"></div>' +
 			'<h3>' + (name ? 'Chào ' + esc(name) + '!' : 'Chào bạn nhỏ!') + '</h3><p>' + esc(sub) + '</p>' +
 			'<button type="button" class="hv-btn hv-btn-big">Bắt đầu chơi ▶</button></div>';
@@ -666,6 +671,11 @@
 	Player.prototype.start = function () {
 		if (this.def.custom === 'memory') { return this.memory(); }
 		if (this.def.custom === 'order') { return this.order(); }
+		if (this.stopTimer) { this.stopTimer(); this.stopTimer = null; }
+		if (this.def.custom === 'balloon') { return this.balloon(); }
+		if (this.def.custom === 'fishing') { return this.fishing(); }
+		if (this.def.custom === 'truefalse') { return this.truefalse(); }
+		if (this.def.custom === 'climb') { return this.climb(); }
 		this.state = {};
 		this.marks = [];
 		this.maxHearts = parseInt(this.root.getAttribute('data-hearts'), 10) || 0;
@@ -859,6 +869,272 @@
 				}
 			});
 		});
+	};
+
+	/* ---------- Bắn bóng bay: bóng mang đáp án trôi lên, chạm đúng quả trước khi bay mất ---------- */
+	Player.prototype.balloon = function () {
+		var self = this;
+		var total = 10;
+		var dur = [0, 11, 10, 9.5, 9, 8.5][this.grade] || 9.5;
+		var colors = ['#ff5d73', '#2ea3f2', '#58b847', '#ffb81c', '#9775fa'];
+		var deck = [];
+		var seen = {};
+		var guard = 0;
+		while (deck.length < total && guard++ < 200) {
+			var q0 = mathQ(this.grade);
+			if (!seen[q0.q]) { seen[q0.q] = 1; deck.push(q0); }
+		}
+		this.deck = deck;
+		this.i = 0;
+		this.right = 0;
+		this.marks = [];
+		this.t0 = Date.now();
+		var next = function () {
+			if (self.i >= deck.length) { return self.finish(self.right, deck.length); }
+			var q = deck[self.i];
+			var done = false;
+			var n = q.o.choices.length;
+			var h = self.progress() + '<div class="hv-q"><div class="hv-q-text' + (q.big ? ' is-big' : '') + '">' + esc(q.q) +
+				' <button type="button" class="hv-icon-btn hv-read" aria-label="Đọc to câu hỏi">🔈</button></div>' + (q.note ? '<div class="hv-note">' + esc(q.note) + '</div>' : '') +
+				'<div class="hv-sky-arena" role="group" aria-label="Các quả bóng đáp án">';
+			shuffle(q.o.choices.map(function (c, k) { return k; })).forEach(function (k, pos) {
+				var x = n > 1 ? 4 + pos * (72 / (n - 1)) : 40;
+				h += '<button type="button" class="hv-balloon" data-k="' + k + '" style="--x:' + x.toFixed(1) + '%;--d:' + (dur + Math.random() * 1.6).toFixed(2) + 's;--bc:' + colors[pos % colors.length] + ';animation-delay:' + (pos * 0.3).toFixed(2) + 's"><span>' + fracHtml(q.o.choices[k], q.frac) + '</span></button>';
+			});
+			h += '</div><div class="hv-feedback" aria-live="polite"></div></div>';
+			self.body.innerHTML = h;
+			var arena = self.body.querySelector('.hv-sky-arena');
+			var fb = self.body.querySelector('.hv-feedback');
+			self.body.querySelector('.hv-read').addEventListener('click', function () { speak(q.say || q.q); });
+			if (autoRead(self.grade)) { speak(q.say || q.q); }
+			var end = function (ok, msg) {
+				if (done) { return; }
+				done = true;
+				self.marks[self.i] = ok;
+				if (ok) { self.right++; sfx.good(); } else { sfx.bad(); }
+				fb.className = 'hv-feedback ' + (ok ? 'ok' : 'no');
+				fb.innerHTML = msg;
+				arena.querySelectorAll('.hv-balloon').forEach(function (b) {
+					b.disabled = true;
+					b.style.animationPlayState = 'paused';
+					if (q.o.choices[+b.getAttribute('data-k')] === q.o.a && !ok) { b.classList.add('is-answer'); }
+				});
+				setTimeout(function () { self.i++; next(); }, ok ? 900 : 2200);
+			};
+			arena.querySelectorAll('.hv-balloon').forEach(function (b) {
+				var val = q.o.choices[+b.getAttribute('data-k')];
+				b.addEventListener('click', function () {
+					if (done) { return; }
+					if (val === q.o.a) {
+						b.classList.add('is-pop');
+						end(true, esc(pick(['Bùm! Chính xác!', 'Trúng rồi! Giỏi quá!', 'Bắn trúng phóc!'])) + ' 🎈');
+					} else {
+						b.classList.add('is-wrong');
+						end(false, 'Chưa đúng rồi. Quả bóng đúng là <b>' + esc(q.o.a) + '</b>');
+					}
+				});
+				if (val === q.o.a) {
+					b.addEventListener('animationend', function (e) {
+						if (e.animationName === 'hv-rise') { end(false, 'Ôi, bóng bay mất rồi! Đáp án là <b>' + esc(q.o.a) + '</b>'); }
+					});
+				}
+			});
+		};
+		next();
+	};
+
+	/* ---------- Câu cá: nghe Cú Bông đọc rồi câu đúng con cá ---------- */
+	Player.prototype.fishing = function () {
+		var self = this;
+		var total = 8;
+		var english = this.grade >= 3;
+		var hasVoice = soundOn() && 'speechSynthesis' in window && langVoices(english ? 'en' : 'vi').length > 0;
+		var deck = [];
+		if (english) {
+			var pool = [];
+			(EN_TOPICS[this.grade] || EN_TOPICS[3]).forEach(function (t) { pool = pool.concat(EN[t]); });
+			shuffle(pool).slice(0, total).forEach(function (w) {
+				var others = shuffle(pool.filter(function (o) { return o[1] !== w[1] && o[0] !== w[0]; })).slice(0, 2);
+				deck.push({ say: w[1], lang: 'en', show: hasVoice ? '' : w[1], ans: w[0], items: shuffle([w[0]].concat(others.map(function (o) { return o[0]; }))), pic: true, word: w[1] });
+			});
+		} else {
+			shuffle(WORDS).slice(0, total).forEach(function (w) {
+				var near = shuffle(WORDS.filter(function (o) { return o[1] !== w[1] && (o[3] === w[3] || o[2] === w[2]); }));
+				var far = shuffle(WORDS.filter(function (o) { return o[1] !== w[1]; }));
+				var opts = [w[1]];
+				near.concat(far).forEach(function (o) { if (opts.length < 3 && opts.indexOf(o[1]) < 0) { opts.push(o[1]); } });
+				deck.push({ say: w[1], lang: 'vi', show: w[0], ans: w[1], items: shuffle(opts), pic: false, word: w[1] });
+			});
+		}
+		this.deck = deck;
+		this.i = 0;
+		this.right = 0;
+		this.marks = [];
+		this.t0 = Date.now();
+		var next = function () {
+			if (self.i >= deck.length) { return self.finish(self.right, deck.length); }
+			var q = deck[self.i];
+			var done = false;
+			var h = self.progress() + '<div class="hv-q"><div class="hv-q-text">' + (english ? 'Nghe và câu con cá mang hình đúng' : 'Câu con cá mang chữ đúng với hình') +
+				' <button type="button" class="hv-icon-btn hv-read" aria-label="Nghe lại">🔈</button></div>' +
+				(q.show ? '<div class="hv-fish-prompt">' + (english ? '<b>' + esc(q.show) + '</b>' : '<span class="hv-pic" aria-hidden="true">' + esc(q.show) + '</span>') + '</div>' : '<div class="hv-fish-prompt"><button type="button" class="hv-btn hv-btn-accent hv-replay">🔈 Nghe lại</button></div>') +
+				'<div class="hv-pond" role="group" aria-label="Các con cá">';
+			q.items.forEach(function (it, k) {
+				h += '<button type="button" class="hv-fish' + (k % 2 ? ' rev' : '') + '" style="--y:' + (14 + k * 30) + '%;--d:' + (7 + Math.random() * 3).toFixed(2) + 's;animation-delay:-' + (Math.random() * 5).toFixed(2) + 's" data-v="' + esc(it) + '">' +
+					(CFG.img ? '<img src="' + esc(CFG.img + (k % 2 ? 'fish2' : 'fish') + '.webp') + '" width="72" height="72" alt="">' : '🐟') + '<span class="' + (q.pic ? 'is-pic' : '') + '">' + esc(it) + '</span></button>';
+			});
+			h += '</div><div class="hv-feedback" aria-live="polite"></div></div>';
+			self.body.innerHTML = h;
+			var fb = self.body.querySelector('.hv-feedback');
+			var say = function () { speak(english ? q.say : 'Câu chữ: ' + q.say, q.lang); };
+			self.body.querySelectorAll('.hv-read, .hv-replay').forEach(function (b) { b.addEventListener('click', say); });
+			say();
+			self.body.querySelectorAll('.hv-fish').forEach(function (b) {
+				b.addEventListener('click', function () {
+					if (done) { return; }
+					done = true;
+					var ok = b.getAttribute('data-v') === q.ans;
+					self.marks[self.i] = ok;
+					self.body.querySelectorAll('.hv-fish').forEach(function (f) { f.disabled = true; f.style.animationPlayState = 'paused'; if (f.getAttribute('data-v') === q.ans) { f.classList.add('is-caught'); } });
+					if (ok) { self.right++; sfx.good(); fb.className = 'hv-feedback ok'; fb.innerHTML = 'Câu trúng rồi! 🎣 <b>' + esc(q.word) + '</b>'; } else { b.classList.add('is-wrong'); sfx.bad(); fb.className = 'hv-feedback no'; fb.innerHTML = 'Con cá đúng mang <b>' + esc(q.ans) + '</b>' + (english ? ' – <i>' + esc(q.word) + '</i>' : ''); }
+					speak(q.word, q.lang);
+					setTimeout(function () { self.i++; next(); }, ok ? 1200 : 2400);
+				});
+			});
+		};
+		next();
+	};
+
+	/* ---------- Đúng hay Sai: 60 giây trả lời nhanh ---------- */
+	function tfStatement(g) {
+		var truth = Math.random() < 0.5;
+		if (Math.random() < 0.5) {
+			var q = mathQ(g);
+			var guard = 0;
+			while ((!q.big || q.frac) && guard++ < 20) { q = mathQ(g); }
+			var wrong = q.o.choices.filter(function (c) { return c !== q.o.a; });
+			var shown = truth || !wrong.length ? q.o.a : pick(wrong);
+			return { text: q.q.replace('= ?', '= ' + shown), truth: shown === q.o.a, math: true, ans: q.o.a };
+		}
+		var r = pick(QUIZ[g] || QUIZ[1]);
+		var opts = r.slice(1, r.length - 1);
+		var shownA = truth ? r[1] : pick(opts.slice(1));
+		return { text: r[0].replace(/[:?]\s*$/, '') + ': ' + shownA, truth: shownA === r[1], ans: r[1] };
+	}
+	Player.prototype.truefalse = function () {
+		var self = this;
+		var limit = 60;
+		var left = limit;
+		var total = 0;
+		this.right = 0;
+		this.marks = [];
+		this.t0 = Date.now();
+		var cur = tfStatement(this.grade);
+		var busy = false;
+		this.body.innerHTML = '<div class="hv-tf"><div class="hv-timer"><i></i><b>60 giây</b></div><div class="hv-tf-score">Đúng <b>0</b> / 0</div><div class="hv-tf-card" aria-live="polite"></div>' +
+			'<div class="hv-tf-btns"><button type="button" class="hv-tf-btn yes">' + (ico('check', 40) || '✔') + ' Đúng</button><button type="button" class="hv-tf-btn no">' + (ico('cross', 40) || '✘') + ' Sai</button></div><div class="hv-feedback"></div></div>';
+		var card = this.body.querySelector('.hv-tf-card');
+		var bar = this.body.querySelector('.hv-timer i');
+		var tlabel = this.body.querySelector('.hv-timer b');
+		var score = this.body.querySelector('.hv-tf-score');
+		var fb = this.body.querySelector('.hv-feedback');
+		var show = function () { card.textContent = cur.text; card.className = 'hv-tf-card'; if (autoRead(self.grade)) { speak(cur.text); } };
+		show();
+		var timer = setInterval(function () {
+			left--;
+			bar.style.width = (left / limit * 100) + '%';
+			tlabel.textContent = left + ' giây';
+			if (left <= 0) {
+				clearInterval(timer);
+				self.finish(self.right, Math.max(total, 10), 'Em trả lời đúng ' + self.right + '/' + total + ' câu trong 60 giây');
+			}
+		}, 1000);
+		this.stopTimer = function () { clearInterval(timer); };
+		var answer = function (say) {
+			if (busy || left <= 0) { return; }
+			busy = true;
+			total++;
+			var ok = say === cur.truth;
+			if (ok) { self.right++; sfx.good(); } else { sfx.bad(); }
+			card.className = 'hv-tf-card ' + (ok ? 'ok' : 'no');
+			fb.className = 'hv-feedback ' + (ok ? 'ok' : 'no');
+			fb.innerHTML = ok ? 'Chính xác!' : (cur.truth ? 'Câu này đúng đấy!' : 'Câu này sai. Đáp án đúng: <b>' + esc(cur.ans) + '</b>');
+			score.innerHTML = 'Đúng <b>' + self.right + '</b> / ' + total;
+			setTimeout(function () { busy = false; fb.innerHTML = ''; cur = tfStatement(self.grade); if (left > 0) { show(); } }, ok ? 500 : 1400);
+		};
+		this.body.querySelector('.hv-tf-btn.yes').addEventListener('click', function () { answer(true); });
+		this.body.querySelector('.hv-tf-btn.no').addEventListener('click', function () { answer(false); });
+	};
+
+	/* ---------- Leo núi tri thức: 10 nấc khó dần, 2 quyền trợ giúp ---------- */
+	Player.prototype.climb = function () {
+		var self = this;
+		var g = this.grade;
+		var facts = shuffle(QUIZ[g] || QUIZ[1]).slice(0, 4).map(function (r) {
+			return { q: r[0], say: r[0], tag: r[r.length - 1], o: { choices: shuffle(r.slice(1, r.length - 1)), a: r[1] } };
+		});
+		var deck = [mathQ(Math.max(1, g - 1)), mathQ(Math.max(1, g - 1)), facts[0], mathQ(g), facts[1], mathQ(g), facts[2], mathQ(g), facts[3] || mathQ(g), mathQ(Math.min(5, g + 1))];
+		var level = 0;
+		var help = { half: true, owl: true };
+		this.deck = deck;
+		this.t0 = Date.now();
+		this.marks = [];
+		var draw = function () {
+			var q = deck[level];
+			var h = '<div class="hv-climb"><ol class="hv-ladder" aria-label="Nấc núi">';
+			for (var k = deck.length - 1; k >= 0; k--) {
+				h += '<li class="' + (k < level ? 'ok' : k === level ? 'cur' : '') + '">' + (k === deck.length - 1 ? (ico('flag', 22) || '🚩') + ' Đỉnh' : 'Nấc ' + (k + 1)) + '</li>';
+			}
+			h += '</ol><div class="hv-q">' + (q.tag ? '<span class="hv-tag">' + esc(q.tag) + '</span>' : '') +
+				'<div class="hv-q-text' + (q.big ? ' is-big' : '') + '">' + esc(q.q) + ' <button type="button" class="hv-icon-btn hv-read" aria-label="Đọc to câu hỏi">🔈</button></div>' +
+				(q.visual ? '<div class="hv-visual">' + q.visual + '</div>' : '') +
+				'<div class="hv-lifelines"><button type="button" class="hv-chip" data-help="half"' + (help.half ? '' : ' disabled') + '>½ Bỏ bớt đáp án sai</button><button type="button" class="hv-chip" data-help="owl"' + (help.owl ? '' : ' disabled') + '>🦉 Hỏi Cú Bông</button></div>' +
+				'<div class="hv-choices n' + q.o.choices.length + '">';
+			q.o.choices.forEach(function (c) { h += '<button type="button" class="hv-choice' + (q.frac ? ' is-frac' : '') + '">' + fracHtml(c, q.frac) + '</button>'; });
+			h += '</div><div class="hv-feedback" aria-live="polite"></div></div></div>';
+			self.body.innerHTML = h;
+			var fb = self.body.querySelector('.hv-feedback');
+			var buttons = self.body.querySelectorAll('.hv-choice');
+			self.body.querySelector('.hv-read').addEventListener('click', function () { speak(q.say || q.q); });
+			if (autoRead(g)) { speak(q.say || q.q); }
+			self.body.querySelectorAll('[data-help]').forEach(function (hb) {
+				hb.addEventListener('click', function () {
+					var kind = hb.getAttribute('data-help');
+					if (!help[kind]) { return; }
+					help[kind] = false;
+					hb.disabled = true;
+					if (kind === 'half') {
+						var wrongBtns = shuffle(Array.prototype.filter.call(buttons, function (b, idx) { return q.o.choices[idx] !== q.o.a; }));
+						wrongBtns.slice(0, Math.max(1, wrongBtns.length - 1)).forEach(function (b) { b.disabled = true; b.classList.add('is-gone'); });
+					} else {
+						var msg = 'Cú Bông nghĩ đáp án là: ' + q.o.a;
+						fb.className = 'hv-feedback ok';
+						fb.textContent = '🦉 ' + msg;
+						speak(msg);
+					}
+				});
+			});
+			buttons.forEach(function (btn, idx) {
+				btn.addEventListener('click', function () {
+					buttons.forEach(function (b, k) { b.disabled = true; if (q.o.choices[k] === q.o.a) { b.classList.add('is-right'); } });
+					if (q.o.choices[idx] === q.o.a) {
+						sfx.good();
+						level++;
+						self.marks.push(true);
+						fb.className = 'hv-feedback ok';
+						fb.textContent = level === deck.length ? 'Lên tới đỉnh rồi!' : 'Leo lên nấc ' + (level + 1) + '!';
+						setTimeout(function () { if (level >= deck.length) { self.finish(deck.length, deck.length, 'Em đã chinh phục đỉnh núi tri thức! 🏔️'); } else { draw(); } }, 1000);
+					} else {
+						btn.classList.add('is-wrong');
+						sfx.bad();
+						fb.className = 'hv-feedback no';
+						fb.innerHTML = 'Đáp án đúng là <b>' + esc(q.o.a) + '</b>. Em đã leo được ' + level + '/' + deck.length + ' nấc!';
+						setTimeout(function () { self.finish(level, deck.length, 'Em leo được ' + level + '/' + deck.length + ' nấc núi'); }, 2400);
+					}
+				});
+			});
+		};
+		draw();
 	};
 
 	/* Sắp xếp câu */

@@ -2,6 +2,14 @@
 
 Theme con của **Flatsome**: bài học theo Chương trình GDPT 2018, bám bộ sách dùng chung toàn quốc từ năm học 2026–2027 (**Kết nối tri thức với cuộc sống**, **Tiếng Anh Global Success** – QĐ 3588/QĐ-BGDĐT), kèm luyện tập và trò chơi học tập.
 
+## Bản 0.4: logo, menu, chân trang, bài giảng theo sách 2026–2027, 4 trò chơi mới
+- **Bộ logo** (`assets/img/brand/`, bản gốc ở `docs/brand/hoc-vui/`): logo ngang Học Vui × Tin Học 119 (header), logo chỉ Học Vui, logo trắng (chân trang), logo dọc, huy hiệu tròn, icon app 512/192, favicon, ảnh chia sẻ Facebook/Zalo 1200×630. Đổi kiểu logo header ở *Tuỳ biến → Học Vui → Logo trên header*; tải logo riêng ở *Tuỳ biến → Header → Logo* thì logo riêng được ưu tiên.
+- **Menu vui nhộn**: mỗi mục có biểu tượng 3D (class CSS `hv-i-ten`, ví dụ `hv-i-island`), menu xổ dạng lưới 2 cột có dòng mô tả (ô *Mô tả* của mục menu), nút xanh **Chơi ngay** (class `hv-menu-cta`).
+- **Chân trang chuẩn web** `[hv_footer]` (UX Block *Chân trang Học Vui*): logo, giới thiệu, đơn vị phát triển Tin Học 119, mạng xã hội, cột Học theo lớp / Môn học / Khám phá / Liên hệ (hotline, Zalo, email, địa chỉ, giờ hỗ trợ), dải bản quyền + Chính sách bảo mật, Điều khoản sử dụng, Liên hệ, Sơ đồ trang. Trang mẫu: Giới thiệu, Liên hệ, Câu hỏi thường gặp (có dữ liệu FAQPage), Chính sách bảo mật, Điều khoản sử dụng.
+- **SEO thương hiệu**: thẻ chia sẻ Open Graph, dữ liệu `EducationalOrganization` + `WebSite` (ô tìm kiếm) trên trang chủ.
+- **Bài giảng**: 74 bài; tên chủ đề theo sách Kết nối tri thức (Toán 1: Chủ đề 1–9, Toán 5: Chủ đề 2, 5, 7, 8…), Tiếng Anh theo Unit của Global Success (3: Unit 1, 11; 4: Unit 12, 16; 5: Unit 5). Thêm bài: Khối lập phương – khối hộp chữ nhật, Các số đến 100, Độ dài và đo độ dài, Cộng trừ không nhớ phạm vi 100, Vần an–ăn–ân, Số chẵn số lẻ, Tìm hai số khi biết tổng và hiệu, Không khí – gió – bão, Mạch điện đơn giản, Địa đạo Củ Chi, Jobs.
+- **4 trò chơi mới**: Bắn bóng bay, Câu cá – Nghe và chọn, Đúng hay Sai 60 giây, Leo núi tri thức (2 quyền trợ giúp).
+
 ## Giao diện trời xanh – đảo bay (bản 0.3)
 Phong cách tham khảo các nền tảng học tập trẻ em như VioEdu (không dùng hình ảnh, logo hay nội dung của họ): nền trời xanh mây trắng, thẻ trắng bóng đổ mềm, thẻ pastel, nút xanh lá bo tròn, chữ xanh navy, lộ trình cột vòm, tab *Vì sao chọn Học Vui* (Học sinh / Phụ huynh / Giáo viên), chân trang xanh lá đồi cỏ, Cú Bông trợ giúp nổi góc phải.
 Biểu tượng 3D: **Microsoft Fluent Emoji** (giấy phép MIT, `assets/img/3d/LICENSE-fluentui-emoji.txt`), 48 ảnh WebP ~400 KB.
@@ -17,7 +25,7 @@ Biểu tượng 3D: **Microsoft Fluent Emoji** (giấy phép MIT, `assets/img/3d
 |---|---|
 | Bài học (`/bai-hoc/`) | Phân theo **Lớp** (`/chuong-trinh/lop-1/`) và **Môn** (`/mon/toan/`). Mỗi bài: mục tiêu, nội dung, ví dụ, ghi nhớ, câu hỏi luyện tập, trò chơi gợi ý, video YouTube (tuỳ chọn) |
 | 63 bài mẫu | `inc/curriculum.txt` – Toán, Tiếng Việt, Tiếng Anh, TN&XH, Khoa học, LS&ĐL, Đạo đức, Tin học; nội dung tự biên soạn, không chép SGK |
-| 7 trò chơi | Tính nhẩm siêu tốc · Đếm hình · Xem đồng hồ · Ghép chữ – chính tả · Sắp xếp câu · Lật thẻ tiếng Anh (có phát âm) · Đố vui khoa học – xã hội. Câu hỏi tự sinh theo đúng kiến thức từng lớp |
+| 11 trò chơi | Tính nhẩm siêu tốc · Bắn bóng bay · Đếm hình · Xem đồng hồ · Ghép chữ – chính tả · Câu cá (nghe và chọn) · Sắp xếp câu · Lật thẻ tiếng Anh · Đúng hay Sai 60 giây · Leo núi tri thức · Đố vui khoa học – xã hội. Câu hỏi tự sinh theo đúng kiến thức từng lớp |
 | Phần thưởng | Sao (1–3/lượt, +1 khi siêu tốc), 20 nhãn dán, tên bé – lưu trên trình duyệt, không thu thập dữ liệu trẻ |
 | Thân thiện trẻ nhỏ | Đọc to câu hỏi (lớp 1 tự đọc), âm thanh bật/tắt, nút to, pháo giấy, chạy tốt trên điện thoại |
 | SEO | Mô tả trang, JSON-LD `LearningResource` + `Quiz` (tự nhường cho Rank Math/Yoast) |

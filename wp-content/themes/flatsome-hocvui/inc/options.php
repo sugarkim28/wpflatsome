@@ -19,7 +19,18 @@ function hv_option_fields() {
 		'hero_bubble'   => array( 'Lời chào của bạn Cú Bông', 'text', 'Chào em! Mình là Cú Bông. Cùng phá đảo nhé! 🦉' ),
 		'color_primary' => array( 'Màu chủ đạo', 'color', '#7c4dff' ),
 		'color_accent'  => array( 'Màu nhấn (nút vàng, viền)', 'color', '#ffc83d' ),
-		'contact'       => array( 'Liên hệ cho phụ huynh (email/Zalo, hiện ở trang Góc phụ huynh)', 'text', '' ),
+		'contact'       => array( 'Ghi chú liên hệ thêm (hiện ở trang Góc phụ huynh)', 'text', '' ),
+		'logo_style'    => array( 'Logo trên header', 'select', 'cobrand', array( 'cobrand' => 'Học Vui × Tin Học 119', 'hocvui' => 'Chỉ Học Vui', 'tinhoc119' => 'Chỉ Tin Học 119' ) ),
+		'org_name'      => array( 'Đơn vị phát triển', 'text', 'Tin Học 119' ),
+		'org_slogan'    => array( 'Khẩu hiệu đơn vị', 'text', 'Uy tín tạo niềm tin' ),
+		'hotline'       => array( 'Hotline', 'text', '0914 108 322' ),
+		'zalo'          => array( 'Số Zalo', 'text', '0914 108 322' ),
+		'email'         => array( 'Email', 'text', '' ),
+		'address'       => array( 'Địa chỉ', 'text', '' ),
+		'hours'         => array( 'Giờ hỗ trợ', 'text', '8:00 – 21:00, thứ 2 – chủ nhật' ),
+		'facebook'      => array( 'Link Facebook', 'url', '' ),
+		'youtube'       => array( 'Link YouTube', 'url', '' ),
+		'tiktok'        => array( 'Link TikTok', 'url', '' ),
 	);
 }
 
@@ -33,7 +44,17 @@ function hv_opt( $key ) {
 	$f = hv_option_fields();
 	$d = isset( $f[ $key ] ) ? $f[ $key ][2] : '';
 	$v = get_theme_mod( 'hv_' . $key, $d );
-	return '' === $v && 'contact' !== $key ? $d : (string) $v;
+	return '' === $v ? $d : (string) $v;
+}
+
+/**
+ * Số điện thoại dạng tel: (chỉ chữ số, đầu +).
+ *
+ * @param string $phone Số hiển thị.
+ * @return string
+ */
+function hv_tel( $phone ) {
+	return preg_replace( '/[^0-9+]/', '', (string) $phone );
 }
 
 /**
@@ -48,11 +69,13 @@ function hv_customize( $wpc ) {
 			'hv_' . $key,
 			array(
 				'default'           => $f[2],
-				'sanitize_callback' => 'color' === $f[1] ? 'sanitize_hex_color' : ( 'textarea' === $f[1] ? 'sanitize_textarea_field' : 'sanitize_text_field' ),
+				'sanitize_callback' => 'color' === $f[1] ? 'sanitize_hex_color' : ( 'textarea' === $f[1] ? 'sanitize_textarea_field' : ( 'url' === $f[1] ? 'esc_url_raw' : 'sanitize_text_field' ) ),
 			)
 		);
 		if ( 'color' === $f[1] ) {
 			$wpc->add_control( new WP_Customize_Color_Control( $wpc, 'hv_' . $key, array( 'label' => $f[0], 'section' => 'hv_main' ) ) );
+		} elseif ( 'select' === $f[1] ) {
+			$wpc->add_control( 'hv_' . $key, array( 'label' => $f[0], 'section' => 'hv_main', 'type' => 'select', 'choices' => $f[3] ) );
 		} else {
 			$wpc->add_control( 'hv_' . $key, array( 'label' => $f[0], 'section' => 'hv_main', 'type' => $f[1] ) );
 		}
