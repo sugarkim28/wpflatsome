@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Cú Bông">
+  <ellipse cx="100" cy="186" rx="56" ry="8" fill="#000" opacity=".08"/>
+  <path d="M52 62 L60 22 L84 48 Z" fill="#7b4fd6"/>
+  <path d="M148 62 L140 22 L116 48 Z" fill="#7b4fd6"/>
+  <ellipse cx="100" cy="112" rx="62" ry="70" fill="#9b6bff"/>
+  <ellipse cx="100" cy="132" rx="40" ry="44" fill="#ffe5b4"/>
+  <path d="M84 120q6 5 12 0M104 120q6 5 12 0M80 136q6 5 12 0M100 136q6 5 12 0M118 136q6 5 12 0M88 152q6 5 12 0M108 152q6 5 12 0" stroke="#f5c27a" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M40 104 Q22 134 44 160 Q52 132 56 112 Z" fill="#7b4fd6"/>
+  <path d="M160 104 Q178 134 156 160 Q148 132 144 112 Z" fill="#7b4fd6"/>
+  <circle cx="74" cy="80" r="26" fill="#fff"/>
+  <circle cx="126" cy="80" r="26" fill="#fff"/>
+  <circle cx="78" cy="82" r="13" fill="#2b2240"/>
+  <circle cx="122" cy="82" r="13" fill="#2b2240"/>
+  <circle cx="83" cy="77" r="4.5" fill="#fff"/>
+  <circle cx="127" cy="77" r="4.5" fill="#fff"/>
+  <circle cx="56" cy="104" r="7" fill="#ff8fb1" opacity=".7"/>
+  <circle cx="144" cy="104" r="7" fill="#ff8fb1" opacity=".7"/>
+  <path d="M92 98 L108 98 L100 112 Z" fill="#ffb400"/>
+  <path d="M78 180 l-6 6M84 180v8M90 180l6 6M110 180l-6 6M116 180v8M122 180l6 6" stroke="#ffb400" stroke-width="5" stroke-linecap="round"/>
+  <path d="M70 34 L100 22 L130 34 L100 46 Z" fill="#2b2240"/>
+  <path d="M84 40v10q16 8 32 0V40" fill="#2b2240"/>
+  <path d="M130 34v16" stroke="#ffb400" stroke-width="3"/>
+  <circle cx="130" cy="52" r="4" fill="#ffb400"/>
+</svg>
