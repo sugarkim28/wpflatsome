@@ -2,6 +2,12 @@
 
 Theme con của **Flatsome**: bài học theo Chương trình GDPT 2018, bám bộ sách dùng chung toàn quốc từ năm học 2026–2027 (**Kết nối tri thức với cuộc sống**, **Tiếng Anh Global Success** – QĐ 3588/QĐ-BGDĐT), kèm luyện tập và trò chơi học tập.
 
+## Phong cách "phá đảo" (bản 0.2)
+- **5 hòn đảo = 5 lớp**: Đảo Hạt Mầm, San Hô, Rừng Xanh, Núi Lửa, Ngôi Sao – bản đồ có tiến độ từng đảo.
+- **Mỗi bài = 1 màn chơi** theo từng bước: Mở màn (Cú Bông kể tình huống) → Khám phá (từng thẻ ngắn) → Bí kíp ghi nhớ → Nhiệm vụ ngoài đời → Đánh trùm màn → Màn thưởng.
+- **Trùm cuối mỗi môn** (10 câu trộn từ mọi màn, 3 tim), cấp độ – XP, chuỗi ngày học 🔥, nhiệm vụ hôm nay, huy hiệu, chọn nhân vật.
+- **Giọng đọc tiếng Việt ấm**: tự chọn giọng nữ tự nhiên tốt nhất trên máy (HoaiMy – Edge, Google Tiếng Việt – Chrome, Linh – iPhone/iPad), đọc chậm rãi; nút ⚙️ để đổi giọng, tốc độ, bật tự đọc. Lớp 1–2 tự đọc to mặc định.
+
 ## Có gì
 | Thành phần | Mô tả |
 |---|---|

@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HV_VERSION', '0.1.0' );
+define( 'HV_VERSION', '0.2.0' );
 define( 'HV_DIR', get_stylesheet_directory() );
 define( 'HV_URI', get_stylesheet_directory_uri() );
 
@@ -23,7 +23,7 @@ require_once HV_DIR . '/inc/demo.php';
  */
 function hv_enqueue_assets() {
 	// Baloo 2 (tiêu đề tròn, vui) + Nunito (chữ thường dễ đọc) – cả hai có bộ ký tự tiếng Việt.
-	wp_enqueue_style( 'hv-fonts', 'https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;600;800&display=swap', array(), null );
+	wp_enqueue_style( 'hv-fonts', 'https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;700;800&display=swap', array(), null );
 	wp_enqueue_style( 'hv-main', HV_URI . '/assets/css/hocvui.css', array( 'flatsome-main' ), HV_VERSION . '.' . filemtime( HV_DIR . '/assets/css/hocvui.css' ) );
 	wp_add_inline_style(
 		'hv-main',
@@ -35,7 +35,7 @@ function hv_enqueue_assets() {
 		)
 	);
 	wp_enqueue_script( 'hv-main', HV_URI . '/assets/js/hocvui.js', array(), HV_VERSION . '.' . filemtime( HV_DIR . '/assets/js/hocvui.js' ), array( 'in_footer' => true, 'strategy' => 'defer' ) );
-	wp_add_inline_script( 'hv-main', 'window.hvConfig=' . wp_json_encode( array( 'gamesUrl' => hv_games_url() ) ) . ';', 'before' );
+	wp_add_inline_script( 'hv-main', 'window.hvConfig=' . wp_json_encode( array( 'gamesUrl' => hv_games_url(), 'profileUrl' => get_page_by_path( 'goc-cua-em' ) ? get_permalink( get_page_by_path( 'goc-cua-em' ) ) : '' ) ) . ';', 'before' );
 }
 add_action( 'wp_enqueue_scripts', 'hv_enqueue_assets', 120 );
 

@@ -1,7 +1,8 @@
 <?php
 /**
- * Các khối trang chủ (shortcode, đặt được trong UX Builder):
- * [hv_hero] [hv_grades] [hv_subjects lop=""] [hv_lessons lop="" mon="" so="6"] [hv_parent_steps] [hv_band]
+ * Các khối giao diện "phá đảo" (shortcode, đặt được trong UX Builder):
+ * [hv_hero] [hv_world] [hv_quests] [hv_subjects lop=""] [hv_lessons lop="" mon="" so="6"]
+ * [hv_parent_steps] [hv_band] [hv_section]…[/hv_section] [hv_pagehead] [hv_profile]
  *
  * @package Flatsome_Hocvui
  */
@@ -9,7 +10,59 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * [hv_hero] – banner đầu trang: lời chào, nút, ô nhập tên, số sao.
+ * Hình hòn đảo (SVG) của 1 lớp.
+ *
+ * @param int $grade Lớp.
+ * @return string
+ */
+function hv_island_svg( $grade ) {
+	$g    = hv_grades();
+	$g    = isset( $g[ $grade ] ) ? $g[ $grade ] : $g[1];
+	$land = $g[6];
+	return '<svg class="hv-isl-svg" viewBox="0 0 200 150" aria-hidden="true">'
+		. '<ellipse cx="100" cy="122" rx="94" ry="20" fill="#fff" opacity=".35"/>'
+		. '<path d="M14 110 C16 92 52 84 100 84 C150 84 186 92 186 110 C186 126 150 134 100 134 C50 134 14 126 14 110 Z" fill="#ffe1a1" stroke="#1d1442" stroke-width="4"/>'
+		. '<path d="M34 108 C30 76 64 46 102 46 C142 46 172 76 166 108 C150 116 54 116 34 108 Z" fill="' . esc_attr( $land ) . '" stroke="#1d1442" stroke-width="4"/>'
+		. '<path d="M52 92 q10 -6 20 0 M120 98 q10 -6 20 0" stroke="#1d1442" stroke-width="3" fill="none" stroke-linecap="round" opacity=".35"/>'
+		. '<path d="M150 70 V20" stroke="#1d1442" stroke-width="4" stroke-linecap="round"/>'
+		. '<path d="M150 20 L184 30 L150 40 Z" fill="' . esc_attr( $g[3] ) . '" stroke="#1d1442" stroke-width="3" stroke-linejoin="round"/>'
+		. '<text x="163" y="35" font-size="13" font-weight="800" fill="#fff" text-anchor="middle" font-family="Baloo 2,Arial">' . (int) $grade . '</text>'
+		. '<text x="98" y="92" font-size="46" text-anchor="middle">' . esc_html( $g[2] ) . '</text>'
+		. '</svg>';
+}
+
+/**
+ * Slug các bài học theo lớp (để tính tiến độ phá đảo).
+ *
+ * @return array lớp => [slug…]
+ */
+function hv_lessons_by_grade() {
+	static $out = null;
+	if ( null !== $out ) {
+		return $out;
+	}
+	$out = array();
+	foreach ( get_posts( array( 'post_type' => 'bai_hoc', 'posts_per_page' => 500, 'no_found_rows' => true ) ) as $p ) {
+		list( $grade ) = hv_lesson_terms( $p->ID );
+		if ( $grade ) {
+			$out[ $grade ][] = $p->post_name;
+		}
+	}
+	return $out;
+}
+
+/**
+ * Thanh nhân vật (cấp độ, XP, sao, chuỗi ngày) – JS điền dữ liệu lưu trên máy.
+ *
+ * @param string $extra Class thêm.
+ * @return string
+ */
+function hv_hud_html( $extra = '' ) {
+	return '<div class="hv-hud ' . esc_attr( $extra ) . '" data-hv-hud><span class="hv-hud-ava">🦉<b>1</b></span><div class="hv-hud-who"><strong>Bạn nhỏ</strong><span>Cấp 1 · Tân binh</span><div class="hv-xpbar"><i style="width:0"></i><em>0 XP</em></div></div></div>';
+}
+
+/**
+ * [hv_hero] – màn hình chào kiểu trò chơi: tiêu đề, nút bắt đầu, thẻ nhân vật.
  *
  * @return string
  */
@@ -19,21 +72,31 @@ function hv_sc_hero() {
 	ob_start();
 	?>
 	<section class="hv-hero">
+		<div class="hv-hero-sea" aria-hidden="true"></div>
 		<div class="hv-wrap hv-hero-in">
-			<div>
+			<div class="hv-hero-copy">
+				<span class="hv-kicker">🏝️ Hành trình phá đảo tri thức</span>
 				<h1><?php echo wp_kses( $title, array( 'em' => array() ) ); ?></h1>
 				<p class="hv-hero-lead"><?php echo esc_html( hv_opt( 'hero_lead' ) ); ?></p>
 				<div class="hv-hero-btns">
-					<a class="hv-btn hv-btn-big" href="#chon-lop">📚 Chọn lớp học</a>
-					<a class="hv-btn hv-btn-big hv-btn-accent" href="<?php echo esc_url( hv_games_url() ); ?>">🎮 Vào chơi</a>
+					<a class="hv-btn hv-btn-accent hv-btn-big" href="#ban-do">▶ Bắt đầu phá đảo</a>
+					<a class="hv-btn hv-btn-big hv-btn-dark" href="<?php echo esc_url( hv_games_url() ); ?>">🎮 Khu trò chơi</a>
 				</div>
-				<?php echo hv_sc_name_form(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML tĩnh. ?>
-				<div class="hv-mystars">⭐ Em đang có <b data-hv-stars>0</b> sao</div>
+				<ul class="hv-hero-facts">
+					<li><b>5</b> hòn đảo</li>
+					<li><b><?php echo (int) array_sum( array_map( 'count', hv_lessons_by_grade() ) ); ?></b> màn chơi</li>
+					<li><b>7</b> trò chơi</li>
+				</ul>
 			</div>
-			<div class="hv-hero-art">
-				<div class="hv-bubble"><?php echo esc_html( hv_opt( 'hero_bubble' ) ); ?></div>
-				<img src="<?php echo esc_url( HV_URI . '/assets/img/mascot.svg' ); ?>" width="320" height="320" alt="Bạn Cú Bông – linh vật Học Vui" fetchpriority="high">
-				<div class="hv-floaters" aria-hidden="true"><span style="left:4%;bottom:12%">✏️</span><span style="right:6%;top:30%;animation-delay:.8s">⭐</span><span style="right:16%;bottom:4%;animation-delay:1.4s">🔢</span></div>
+			<div class="hv-hero-side">
+				<div class="hv-player-card">
+					<div class="hv-pc-top">
+						<div class="hv-owl" aria-hidden="true"></div>
+						<div class="hv-bubble"><?php echo esc_html( hv_opt( 'hero_bubble' ) ); ?></div>
+					</div>
+					<?php echo hv_hud_html( 'is-card' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML tĩnh. ?>
+					<?php echo hv_sc_name_form(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML tĩnh. ?>
+				</div>
 			</div>
 		</div>
 	</section>
@@ -43,18 +106,37 @@ function hv_sc_hero() {
 add_shortcode( 'hv_hero', 'hv_sc_hero' );
 
 /**
- * [hv_grades] – 5 thẻ lớp.
+ * [hv_world] – bản đồ 5 hòn đảo (5 lớp), có tiến độ phá đảo.
  *
  * @return string
  */
-function hv_sc_grades() {
-	$html = '<div class="hv-grade-grid" id="chon-lop">';
+function hv_sc_world() {
+	$by   = hv_lessons_by_grade();
+	$html = '<div class="hv-world" id="ban-do"><ol class="hv-islands">';
 	foreach ( hv_grades() as $n => $g ) {
-		$html .= '<a class="hv-grade g' . (int) $n . '" href="' . esc_url( hv_grade_link( $n ) ) . '"><i aria-hidden="true">' . esc_html( $g[2] ) . '</i><b>' . (int) $n . '</b><strong>' . esc_html( $g[0] ) . '</strong><small>' . esc_html( $g[4] ) . '</small></a>';
+		$slugs = isset( $by[ $n ] ) ? $by[ $n ] : array();
+		$html .= '<li><a class="hv-island g' . (int) $n . '" style="--c:' . esc_attr( $g[3] ) . '" href="' . esc_url( hv_grade_link( $n ) ) . '" data-hv-island="' . esc_attr( implode( ',', $slugs ) ) . '">'
+			. '<span class="hv-isl-art">' . hv_island_svg( $n ) . '</span>'
+			. '<span class="hv-isl-tag">' . esc_html( $g[0] ) . '</span>'
+			. '<strong>' . esc_html( $g[5] ) . '</strong>'
+			. '<small>' . esc_html( $g[4] ) . '</small>'
+			. '<span class="hv-isl-bar"><i></i></span><span class="hv-isl-count">0/' . count( $slugs ) . ' màn</span>'
+			. '<span class="hv-isl-go">Lên đảo ▶</span></a></li>';
 	}
-	return $html . '</div>';
+	return $html . '</ol></div>';
 }
-add_shortcode( 'hv_grades', 'hv_sc_grades' );
+add_shortcode( 'hv_world', 'hv_sc_world' );
+add_shortcode( 'hv_grades', 'hv_sc_world' );
+
+/**
+ * [hv_quests] – nhiệm vụ hôm nay.
+ *
+ * @return string
+ */
+function hv_sc_quests() {
+	return '<div class="hv-quests"><h3>📜 Nhiệm vụ hôm nay</h3><ul data-hv-quests></ul><p>Mỗi ngày học một chút để giữ ngọn lửa 🔥 luôn cháy nhé!</p></div>';
+}
+add_shortcode( 'hv_quests', 'hv_sc_quests' );
 
 /**
  * Link 1 môn (trong 1 lớp nếu có).
@@ -101,10 +183,10 @@ add_shortcode( 'hv_subjects', 'hv_sc_subjects' );
  * @return string
  */
 function hv_lesson_card( $p, $show_grade = true ) {
-	list( $grade, $subject ) = hv_lesson_terms( $p->ID );
+	list( $grade, $subject )        = hv_lesson_terms( $p->ID );
 	list( $sname, $sicon, $scolor ) = hv_subject_info( $subject );
-	$icon = hv_lesson_meta( 'icon', $p->ID );
-	$meta = trim( ( $show_grade && $grade ? 'Lớp ' . $grade . ' · ' : '' ) . $sname );
+	$icon                           = hv_lesson_meta( 'icon', $p->ID );
+	$meta                           = trim( ( $show_grade && $grade ? 'Lớp ' . $grade . ' · ' : '' ) . $sname );
 	return '<a class="hv-lesson-card" href="' . esc_url( get_permalink( $p ) ) . '" style="--c:' . esc_attr( $scolor ) . '"><i aria-hidden="true">' . esc_html( $icon ? $icon : $sicon ) . '</i><span><span class="hv-meta">' . esc_html( $meta ) . '</span><h3>' . esc_html( get_the_title( $p ) ) . '</h3><p>' . esc_html( wp_trim_words( get_the_excerpt( $p ), 18 ) ) . '</p></span></a>';
 }
 
@@ -142,20 +224,21 @@ function hv_sc_lessons( $atts ) {
 add_shortcode( 'hv_lessons', 'hv_sc_lessons' );
 
 /**
- * [hv_parent_steps] – cách học hiệu quả cùng Học Vui.
+ * [hv_parent_steps] – mỗi màn chơi gồm những bước nào.
  *
  * @return string
  */
 function hv_sc_parent_steps() {
 	$steps = array(
-		array( 'Chọn lớp, chọn môn', 'Bài học sắp xếp theo chủ đề của chương trình mới, bám bộ sách Kết nối tri thức với cuộc sống.' ),
-		array( 'Đọc bài 5–10 phút', 'Mỗi bài ngắn gọn: mục tiêu, giải thích dễ hiểu, ví dụ, mẹo nhớ nhanh.' ),
-		array( 'Luyện tập ngay', 'Câu hỏi trắc nghiệm cuối bài, có đọc to câu hỏi cho bé lớp 1.' ),
-		array( 'Chơi để nhớ lâu', 'Trò chơi tự sinh câu hỏi mới mỗi lượt, nhận sao và sưu tập nhãn dán.' ),
+		array( '🦉', 'Mở màn', 'Cú Bông kể một tình huống gần gũi, khơi gợi tò mò, được đọc to bằng giọng tiếng Việt.' ),
+		array( '🔍', 'Khám phá', 'Kiến thức chia thành từng thẻ ngắn, có ví dụ, bảng, mẹo nhớ nhanh – học từng chút một.' ),
+		array( '📜', 'Bí kíp', 'Tóm tắt điều cần ghi nhớ, giúp con ôn lại trước khi “đánh trùm”.' ),
+		array( '⚔️', 'Đánh trùm', 'Câu hỏi luyện tập: đúng nhiều được 3 sao, XP, lên cấp. Cuối mỗi môn có trùm cuối với 3 tim.' ),
+		array( '🏡', 'Nhiệm vụ ngoài đời', 'Một việc nhỏ con làm cùng gia đình để dùng ngay điều vừa học.' ),
 	);
 	$html  = '<div class="hv-steps">';
 	foreach ( $steps as $s ) {
-		$html .= '<div class="hv-step"><h3>' . esc_html( $s[0] ) . '</h3><p>' . esc_html( $s[1] ) . '</p></div>';
+		$html .= '<div class="hv-step-card"><i aria-hidden="true">' . esc_html( $s[0] ) . '</i><h3>' . esc_html( $s[1] ) . '</h3><p>' . esc_html( $s[2] ) . '</p></div>';
 	}
 	return $html . '</div>';
 }
@@ -177,21 +260,22 @@ function hv_sc_band( $atts ) {
 		),
 		$atts
 	);
-	$link = $a['link'] ? $a['link'] : ( get_page_by_path( 'goc-phu-huynh' ) ? get_permalink( get_page_by_path( 'goc-phu-huynh' ) ) : home_url( '/' ) );
+	$page = get_page_by_path( 'goc-phu-huynh' );
+	$link = $a['link'] ? $a['link'] : ( $page ? get_permalink( $page ) : home_url( '/' ) );
 	return '<div class="hv-band"><div><h2>' . esc_html( $a['title'] ) . '</h2><p>' . esc_html( $a['text'] ) . '</p></div><a class="hv-btn hv-btn-accent hv-btn-big" href="' . esc_url( $link ) . '">' . esc_html( $a['button'] ) . '</a></div>';
 }
 add_shortcode( 'hv_band', 'hv_sc_band' );
 
 /**
- * [hv_section title="" sub="" bg=""]…[/hv_section] – khung mục có tiêu đề.
+ * [hv_section title="" sub="" bg="" id=""]…[/hv_section] – khung mục có tiêu đề.
  *
  * @param array  $atts    Thuộc tính.
  * @param string $content Nội dung.
  * @return string
  */
 function hv_sc_section( $atts, $content = '' ) {
-	$a = shortcode_atts( array( 'title' => '', 'sub' => '', 'bg' => '', 'id' => '' ), $atts );
-	$h = '<section class="hv-section"' . ( $a['id'] ? ' id="' . esc_attr( $a['id'] ) . '"' : '' ) . ( $a['bg'] ? ' style="background:' . esc_attr( $a['bg'] ) . '"' : '' ) . '><div class="hv-wrap">';
+	$a = shortcode_atts( array( 'title' => '', 'sub' => '', 'bg' => '', 'id' => '', 'class' => '' ), $atts );
+	$h = '<section class="hv-section ' . esc_attr( $a['class'] ) . '"' . ( $a['id'] ? ' id="' . esc_attr( $a['id'] ) . '"' : '' ) . ( $a['bg'] ? ' style="background:' . esc_attr( $a['bg'] ) . '"' : '' ) . '><div class="hv-wrap">';
 	if ( $a['title'] ) {
 		$h .= '<h2 class="hv-section-title">' . esc_html( $a['title'] ) . '</h2>';
 	}
@@ -203,19 +287,46 @@ function hv_sc_section( $atts, $content = '' ) {
 add_shortcode( 'hv_section', 'hv_sc_section' );
 
 /**
- * [hv_pagehead title="" lead="" color=""] – dải tiêu đề màu cho trang thường (Trò chơi, Góc phụ huynh…).
+ * [hv_pagehead title="" lead="" color=""] – dải tiêu đề màu cho trang thường.
  *
  * @param array $atts Thuộc tính.
  * @return string
  */
 function hv_sc_pagehead( $atts ) {
-	$a = shortcode_atts( array( 'title' => get_the_title(), 'lead' => '', 'color' => hv_opt( 'color_primary' ) ), $atts );
+	$a = shortcode_atts( array( 'title' => get_the_title(), 'lead' => '', 'color' => hv_opt( 'color_primary' ), 'icon' => '' ), $atts );
 	ob_start();
 	get_template_part(
 		'template-parts/hocvui/pagehead',
 		null,
-		array( 'color' => $a['color'], 'crumbs' => array( array( $a['title'], '' ) ), 'title' => $a['title'], 'lead' => $a['lead'] )
+		array( 'color' => $a['color'], 'crumbs' => array( array( $a['title'], '' ) ), 'title' => $a['title'], 'lead' => $a['lead'], 'art' => $a['icon'] )
 	);
 	return ob_get_clean();
 }
 add_shortcode( 'hv_pagehead', 'hv_sc_pagehead' );
+
+/**
+ * [hv_profile] – hồ sơ nhân vật: cấp độ, ảnh đại diện, huy hiệu, album nhãn dán.
+ *
+ * @return string
+ */
+function hv_sc_profile() {
+	return '<div class="hv-profile">'
+		. '<div class="hv-box hv-profile-main"><div class="hv-owl" aria-hidden="true"></div>' . hv_hud_html( 'is-card' ) . hv_sc_name_form()
+		. '<h3>Chọn nhân vật của em</h3><div class="hv-avatars" data-hv-avatars></div></div>'
+		. '<div class="hv-box"><h2>🏅 Huy hiệu</h2><div class="hv-badges" data-hv-badges></div></div>'
+		. hv_sc_quests()
+		. hv_sc_album()
+		. '</div>';
+}
+add_shortcode( 'hv_profile', 'hv_sc_profile' );
+
+/**
+ * Thanh nhân vật dưới header (trừ trang chủ – đã có thẻ nhân vật ở banner).
+ */
+function hv_render_hudbar() {
+	if ( is_front_page() ) {
+		return;
+	}
+	echo '<div class="hv-hudbar"><div class="hv-wrap">' . hv_hud_html() . '</div></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML tĩnh.
+}
+add_action( 'flatsome_after_header', 'hv_render_hudbar' );

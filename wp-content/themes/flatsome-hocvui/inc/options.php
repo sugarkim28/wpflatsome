@@ -14,11 +14,11 @@ defined( 'ABSPATH' ) || exit;
  */
 function hv_option_fields() {
 	return array(
-		'hero_title'    => array( 'Tiêu đề banner (bọc chữ nổi bật trong *…*)', 'text', 'Học mà chơi, *chơi mà học!*' ),
-		'hero_lead'     => array( 'Mô tả dưới tiêu đề', 'textarea', 'Bài học lớp 1 đến lớp 5 theo chương trình sách giáo khoa mới, kèm trò chơi tính nhẩm, ghép chữ, đố vui, tiếng Anh… Mỗi bài làm đúng là nhận sao, sưu tập nhãn dán thật vui!' ),
-		'hero_bubble'   => array( 'Lời chào của bạn Cú Bông', 'text', 'Chào bạn! Hôm nay mình học gì nhỉ? 🦉' ),
-		'color_primary' => array( 'Màu chủ đạo', 'color', '#7b4fd6' ),
-		'color_accent'  => array( 'Màu nhấn (nút vàng, viền)', 'color', '#ffb400' ),
+		'hero_title'    => array( 'Tiêu đề banner (bọc chữ nổi bật trong *…*)', 'text', 'Phá đảo kiến thức, *vui hết nấc!*' ),
+		'hero_lead'     => array( 'Mô tả dưới tiêu đề', 'textarea', '5 hòn đảo là 5 lớp học. Mỗi bài là một màn chơi: nghe Cú Bông kể chuyện, khám phá kiến thức, ôn bí kíp rồi đánh trùm để giành sao, lên cấp. Bám sát sách Kết nối tri thức với cuộc sống.' ),
+		'hero_bubble'   => array( 'Lời chào của bạn Cú Bông', 'text', 'Chào em! Mình là Cú Bông. Cùng phá đảo nhé! 🦉' ),
+		'color_primary' => array( 'Màu chủ đạo', 'color', '#7c4dff' ),
+		'color_accent'  => array( 'Màu nhấn (nút vàng, viền)', 'color', '#ffc83d' ),
 		'contact'       => array( 'Liên hệ cho phụ huynh (email/Zalo, hiện ở trang Góc phụ huynh)', 'text', '' ),
 	);
 }

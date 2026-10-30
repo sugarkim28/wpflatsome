@@ -6,6 +6,8 @@
 # Cú pháp mỗi bài:
 # === slug | lớp | môn | Tên bài | Chủ đề / mạch kiến thức | biểu tượng | trò chơi gợi ý
 # > Tóm tắt 1 dòng
+# ~ Mở màn: Cú Bông kể tình huống, gợi tò mò (đọc to bằng giọng tiếng Việt)
+# ! Nhiệm vụ ngoài đời: việc nhỏ em làm cùng gia đình
 # + Mục tiêu (em sẽ học)
 # (các dòng HTML là nội dung bài)
 # * Ghi nhớ
@@ -13,6 +15,8 @@
 
 === toan-1-cac-so-tu-0-den-10 | 1 | toan | Các số từ 0 đến 10 | Các số từ 0 đến 10 | 🔢 | dem-hinh
 > Đếm, đọc, viết và so sánh các số từ 0 đến 10.
+~ Ối, cả đàn cá vàng vừa bơi vào hồ của Cú Bông! Em giúp Cú Bông đếm xem có bao nhiêu chú cá nhé? Muốn đếm thật giỏi, mình cùng làm quen với các số từ 0 đến 10 nào!
+! Tối nay, em đếm số bát trên mâm cơm và đọc thật to cho cả nhà cùng nghe.
 + Đếm đúng số lượng đồ vật từ 0 đến 10.
 + Đọc, viết các số từ 0 đến 10.
 + So sánh hai số bằng dấu &gt;, &lt;, =.
@@ -32,6 +36,8 @@
 
 === toan-1-cong-tru-pham-vi-10 | 1 | toan | Phép cộng, phép trừ trong phạm vi 10 | Phép cộng, phép trừ trong phạm vi 10 | ➕ | tinh-nham
 > Làm quen với phép cộng (gộp lại) và phép trừ (bớt đi) trong phạm vi 10.
+~ Cú Bông có 3 cái bánh, bạn Sóc tặng thêm 2 cái. Sau đó Cú Bông mời bạn Thỏ 1 cái. Cú Bông còn lại mấy cái bánh nhỉ? Phép cộng và phép trừ sẽ giúp em trả lời trong nháy mắt!
+! Lấy 10 hạt đậu, chia thành 2 nhóm theo nhiều cách khác nhau và đọc phép cộng của mỗi cách, ví dụ: 4 + 6 = 10.
 + Hiểu phép cộng là gộp lại, phép trừ là bớt đi.
 + Tính nhẩm cộng, trừ trong phạm vi 10.
 + Giải bài toán có lời văn đơn giản.
@@ -52,6 +58,8 @@
 
 === toan-1-hinh-phang | 1 | toan | Hình vuông, hình tròn, hình tam giác, hình chữ nhật | Hình phẳng và hình khối | 🔺 | dem-hinh
 > Nhận biết 4 hình phẳng quen thuộc qua đồ vật quanh em.
+~ Ôi không! Cây cầu sang Đảo Hạt Mầm được ghép từ các mảnh hình, mà gió thổi làm chúng rơi lung tung cả rồi. Em hãy làm thám tử hình học, nhận ra từng hình để sửa cầu giúp Cú Bông nhé!
+! Tìm trong nhà 3 đồ vật có dạng hình tròn và 3 đồ vật có dạng hình chữ nhật.
 + Nhận biết hình vuông, hình tròn, hình tam giác, hình chữ nhật.
 + Tìm các đồ vật có dạng các hình đó.
 <p>Quanh em có rất nhiều hình! Cùng làm thám tử đi tìm nhé:</p>
@@ -72,6 +80,8 @@
 
 === toan-1-xem-gio-dung | 1 | toan | Xem giờ đúng trên đồng hồ | Thời gian – giờ và lịch | ⏰ | xem-gio
 > Biết kim giờ, kim phút và đọc giờ đúng trên đồng hồ.
+~ Reng reng reng! Chiếc đồng hồ báo thức của Cú Bông kêu inh ỏi. Nhưng Cú Bông lại chưa biết xem giờ… Em dạy Cú Bông được không?
+! Mỗi sáng thức dậy, em nhìn đồng hồ và nói to: “Bây giờ là … giờ!”
 + Nhận biết kim ngắn (kim giờ) và kim dài (kim phút).
 + Đọc giờ đúng trên đồng hồ.
 <p>Đồng hồ có hai chiếc kim:</p>
@@ -88,6 +98,8 @@
 
 === tieng-viet-1-am-va-chu | 1 | tieng-viet | Âm và chữ cái tiếng Việt | Làm quen với âm, chữ | 🔤 | ghep-chu
 > Làm quen với bảng chữ cái, âm ghép và quy tắc viết k, gh, ngh.
+~ Trong rương báu của Cú Bông có 29 viên ngọc chữ cái. Ghép các viên ngọc lại sẽ thành tiếng, thành từ, thành cả một câu chuyện! Mình cùng mở rương nhé!
+! Tìm 3 đồ vật trong nhà có tên bắt đầu bằng chữ c (cốc, cửa…) và 3 đồ vật bắt đầu bằng chữ b (bàn, bát…).
 + Biết bảng chữ cái tiếng Việt có 29 chữ cái.
 + Nhận biết các âm được ghép bởi 2–3 chữ cái.
 + Nhớ quy tắc viết k, gh, ngh.
@@ -108,6 +120,8 @@
 
 === tieng-viet-1-van-va-thanh | 1 | tieng-viet | Vần và dấu thanh | Làm quen với âm, chữ | 🎵 | ghep-chu
 > Biết một tiếng gồm âm đầu, vần và thanh; nhận biết 6 thanh của tiếng Việt.
+~ Cùng là tiếng “ma”, nhưng thêm một dấu nhỏ xíu là thành “má”, “mà”, “mạ”… Dấu thanh có phép thuật biến hoá đấy! Em cùng Cú Bông khám phá nhé.
+! Đọc to: ma – mà – má – mả – mã – mạ. Sau đó nhờ bố mẹ đọc một tiếng bất kì để em đoán dấu thanh.
 + Tách tiếng thành âm đầu, vần, thanh.
 + Nhận biết 6 thanh: ngang, huyền, sắc, hỏi, ngã, nặng.
 <p>Mỗi <strong>tiếng</strong> thường gồm 3 phần: <strong>âm đầu + vần + thanh</strong>.</p>
@@ -132,6 +146,8 @@
 
 === tnxh-1-giu-ve-sinh-co-the | 1 | tu-nhien-xa-hoi | Giữ vệ sinh cơ thể | Con người và sức khoẻ | 🧼 | do-vui
 > Rửa tay, đánh răng, tắm gội đúng cách để luôn khoẻ mạnh.
+~ Suỵt! Những chú vi khuẩn tí hon đang trốn trên đôi tay của mình. Chúng nhỏ đến mức mắt không nhìn thấy được. Vũ khí bí mật để đánh bại chúng là gì nhỉ? Đó là xà phòng và nước sạch!
+! Trước bữa ăn hôm nay, em tự rửa tay đủ 4 bước. Khi xoa xà phòng, em hát hết bài “Chúc mừng sinh nhật” hai lần nhé.
 + Biết vì sao cần giữ vệ sinh cơ thể.
 + Thực hiện rửa tay, đánh răng đúng cách.
 <p>Trên tay chúng ta có rất nhiều vi khuẩn mà mắt không nhìn thấy được. Giữ vệ sinh giúp em <strong>không bị đau bụng, sâu răng hay ngứa ngáy</strong>.</p>
@@ -150,6 +166,8 @@
 
 === tnxh-1-cay-va-con-vat | 1 | tu-nhien-xa-hoi | Cây xanh và con vật quanh em | Thực vật và động vật | 🌳 | do-vui
 > Nhận biết các bộ phận của cây và con vật; biết chăm sóc, bảo vệ chúng.
+~ Khu vườn của Cú Bông có rất nhiều bạn: cây cam, bông hoa, chú mèo, chú chim… Mỗi bạn có những bộ phận khác nhau. Mình cùng đi dạo vườn nào!
+! Tưới nước cho một chậu cây và kể tên các bộ phận của cây đó cho bố mẹ nghe.
 + Kể tên các bộ phận chính của cây: rễ, thân, lá.
 + Nhận biết các bộ phận của con vật: đầu, mình, bộ phận di chuyển.
 + Biết chăm sóc cây và con vật.
@@ -167,6 +185,8 @@
 
 === dao-duc-1-yeu-thuong-gia-dinh | 1 | dao-duc | Yêu thương gia đình | Yêu thương gia đình | 💖 | do-vui
 > Thể hiện tình yêu thương với ông bà, bố mẹ, anh chị em bằng việc làm nhỏ.
+~ Ngôi nhà ấm áp nhất là nơi mọi người yêu thương nhau. Hôm nay Cú Bông muốn hỏi em: em đã làm gì để cả nhà vui chưa?
+! Làm một việc nhỏ giúp bố mẹ hôm nay, rồi ôm bố mẹ thật chặt và nói: “Con yêu bố mẹ!”
 + Biết vì sao cần yêu thương gia đình.
 + Làm được những việc nhỏ thể hiện tình yêu thương.
 <p>Gia đình là nơi em được yêu thương, chăm sóc. Em cũng có thể thể hiện tình yêu thương của mình bằng những việc rất nhỏ:</p>
@@ -181,6 +201,8 @@
 
 === toan-2-cong-co-nho-pham-vi-100 | 2 | toan | Phép cộng có nhớ trong phạm vi 100 | Phép cộng, phép trừ trong phạm vi 100 | ➕ | tinh-nham
 > Đặt tính và tính phép cộng có nhớ trong phạm vi 100.
+~ Đội bóng của Cú Bông có 38 quả bóng, vừa được tặng thêm 25 quả. Đếm từng quả thì lâu lắm! Có cách nào nhanh hơn không? Có chứ – đó là phép cộng có nhớ!
+! Nhờ bố mẹ nói tuổi, rồi em đặt tính và cộng tuổi của bố với tuổi của mẹ.
 + Đặt tính thẳng cột: đơn vị thẳng đơn vị, chục thẳng chục.
 + Thực hiện phép cộng có nhớ.
 + Giải bài toán về thêm, nhiều hơn.
@@ -196,6 +218,8 @@
 
 === toan-2-tru-co-nho-pham-vi-100 | 2 | toan | Phép trừ có nhớ trong phạm vi 100 | Phép cộng, phép trừ trong phạm vi 100 | ➖ | tinh-nham
 > Đặt tính và tính phép trừ có nhớ trong phạm vi 100.
+~ Tiệm bánh của bác Gấu có 52 cái bánh, đã bán 17 cái. Còn lại bao nhiêu cái nhỉ? Hôm nay mình học phép trừ có nhớ – mượn một chục rồi nhớ trả thật sòng phẳng nhé!
+! Đố bố mẹ một phép trừ có nhớ, rồi em tự kiểm tra kết quả bằng phép cộng.
 + Thực hiện phép trừ có nhớ.
 + Giải bài toán về bớt đi, ít hơn.
 <div class="hv-example"><strong>Tính 52 − 17:</strong><br>• 2 không trừ được 7, lấy 12 trừ 7 bằng 5, viết 5, nhớ 1.<br>• 1 thêm 1 bằng 2; 5 trừ 2 bằng 3, viết 3.<br>Vậy <strong>52 − 17 = 35</strong>.</div>
@@ -210,6 +234,8 @@
 
 === toan-2-phep-nhan-bang-2-bang-5 | 2 | toan | Phép nhân, phép chia – bảng nhân 2 và 5 | Phép nhân, phép chia | ✖️ | dem-hinh
 > Hiểu phép nhân là cộng các số hạng bằng nhau; học bảng nhân 2, 5 và phép chia.
+~ Mỗi chú chim có 2 cái chân. Vậy 5 chú chim có bao nhiêu cái chân? Cộng 2 + 2 + 2 + 2 + 2 thì dài quá! Phép nhân chính là “phép cộng siêu tốc” đấy.
+! Đếm tổng số chân của mọi người trong nhà bằng bảng nhân 2.
 + Hiểu ý nghĩa của phép nhân, phép chia.
 + Thuộc bảng nhân 2, bảng nhân 5.
 + Biết tên gọi thành phần: thừa số, tích, số bị chia, số chia, thương.
@@ -229,6 +255,8 @@
 
 === toan-2-cac-so-pham-vi-1000 | 2 | toan | Các số trong phạm vi 1000 | Các số trong phạm vi 1000 | 💯 | tinh-nham
 > Đọc, viết, so sánh số có ba chữ số; hiểu trăm – chục – đơn vị.
+~ Cú Bông xếp que tính thành từng bó: 10 que là 1 chục, 10 chục là 1 trăm. Cứ thế, kho que tính có thể lên tới 1000 que! Mình cùng đếm nhé.
+! Tìm một số có 3 chữ số trên tờ lịch hoặc vỏ hộp, đọc to và nói số đó gồm mấy trăm, mấy chục, mấy đơn vị.
 + Đọc, viết số có ba chữ số.
 + Phân tích số thành trăm, chục, đơn vị.
 + So sánh các số có ba chữ số.
@@ -247,6 +275,8 @@
 
 === toan-2-xem-dong-ho | 2 | toan | Xem đồng hồ – giờ rưỡi, 15 phút | Ngày – giờ, giờ – phút | 🕧 | xem-gio
 > Đọc giờ khi kim phút chỉ số 3, số 6; biết 1 ngày có 24 giờ, 1 giờ có 60 phút.
+~ Bạn Thỏ hẹn gặp Cú Bông lúc 8 giờ rưỡi. “Rưỡi” là sao nhỉ? Lúc ấy kim phút chỉ vào đâu? Hôm nay mình cùng giải mã chiếc đồng hồ nhé!
+! Ghi lại giờ em ăn tối và giờ em đi ngủ hôm nay.
 + Biết 1 giờ = 60 phút, 1 ngày có 24 giờ.
 + Đọc giờ khi kim phút chỉ số 12, số 3, số 6.
 <ul><li>Kim phút chỉ số <strong>12</strong> → giờ đúng (ví dụ: 8 giờ).</li><li>Kim phút chỉ số <strong>3</strong> → <strong>15 phút</strong> (ví dụ: 8 giờ 15 phút).</li><li>Kim phút chỉ số <strong>6</strong> → <strong>30 phút</strong>, còn gọi là <strong>rưỡi</strong> (ví dụ: 8 giờ 30 phút = 8 giờ rưỡi).</li></ul>
@@ -261,6 +291,8 @@
 
 === toan-2-ki-lo-gam-lit | 2 | toan | Ki-lô-gam và lít | Đo lường | ⚖️ | tinh-nham
 > Làm quen với ki-lô-gam (đo cân nặng) và lít (đo lượng chất lỏng).
+~ Quả dưa hấu nặng hơn hay quả cam nặng hơn? Chiếc bình chứa được bao nhiêu nước? Hai “thước đo thần kì” – ki-lô-gam và lít – sẽ giúp mình trả lời!
+! Cùng bố mẹ đọc số ki-lô-gam ghi trên bao gạo và số lít ghi trên chai dầu ăn.
 + Biết ki-lô-gam (kg) dùng để đo khối lượng.
 + Biết lít (l) dùng để đo dung tích, lượng chất lỏng.
 + Tính cộng, trừ với đơn vị kg, l.
@@ -277,6 +309,8 @@
 
 === tieng-viet-2-tu-chi-su-vat-hoat-dong-dac-diem | 2 | tieng-viet | Từ chỉ sự vật, hoạt động, đặc điểm | Luyện từ và câu | 🧩 | sap-xep-cau
 > Phân biệt từ chỉ sự vật, từ chỉ hoạt động và từ chỉ đặc điểm.
+~ Trong câu văn có ba đội: đội Sự vật, đội Hoạt động và đội Đặc điểm. Hôm nay em làm trọng tài, xếp mỗi từ về đúng đội của nó nhé!
+! Nói 3 từ chỉ hoạt động mà em đã làm sáng nay.
 + Nhận biết từ chỉ sự vật, hoạt động, đặc điểm.
 + Tìm được các từ đó trong câu.
 <table><thead><tr><th>Loại từ</th><th>Chỉ gì?</th><th>Ví dụ</th></tr></thead><tbody>
@@ -295,6 +329,8 @@
 
 === tieng-viet-2-cac-kieu-cau | 2 | tieng-viet | Câu giới thiệu, câu nêu hoạt động, câu nêu đặc điểm | Luyện từ và câu | 💬 | sap-xep-cau
 > Nhận biết ba kiểu câu: Ai là gì? Ai làm gì? Ai thế nào?
+~ Nhà Câu có ba anh em: một bạn chuyên giới thiệu, một bạn kể ai đang làm gì, một bạn khen cái gì đẹp ra sao. Cùng làm quen với ba anh em nhé!
+! Giới thiệu một người thân bằng một câu “Ai là gì?” và một câu “Ai làm gì?”.
 + Nhận biết câu giới thiệu, câu nêu hoạt động, câu nêu đặc điểm.
 + Đặt câu theo mẫu và dùng dấu chấm cuối câu.
 <table><thead><tr><th>Kiểu câu</th><th>Mẫu</th><th>Ví dụ</th></tr></thead><tbody>
@@ -312,6 +348,8 @@
 
 === tnxh-2-co-quan-van-dong-ho-hap | 2 | tu-nhien-xa-hoi | Cơ quan vận động và cơ quan hô hấp | Con người và sức khoẻ | 🫁 | do-vui
 > Tìm hiểu xương, cơ giúp ta vận động và mũi, phổi giúp ta thở.
+~ Em chạy nhảy được là nhờ ai? Em hít thở mỗi giây là nhờ ai? Có hai “đội bảo vệ” trong cơ thể đang làm việc rất chăm chỉ đấy!
+! Đặt tay lên ngực, hít thật sâu rồi thở ra thật chậm để cảm nhận phổi đang làm việc.
 + Kể tên bộ phận của cơ quan vận động, cơ quan hô hấp.
 + Biết cách giữ gìn, bảo vệ các cơ quan đó.
 <h2>Cơ quan vận động</h2>
@@ -330,6 +368,8 @@
 
 === tnxh-2-moi-truong-song | 2 | tu-nhien-xa-hoi | Môi trường sống của thực vật và động vật | Thực vật và động vật | 🐸 | do-vui
 > Thực vật và động vật sống ở trên cạn, dưới nước; cần bảo vệ môi trường sống của chúng.
+~ Nếu đưa chú cá lên cạn, hay thả chú thỏ xuống ao thì sao nhỉ? Mỗi bạn sinh vật đều có “ngôi nhà” riêng – gọi là môi trường sống.
+! Kể tên 2 con vật sống dưới nước và 2 con vật sống trên cạn mà em từng nhìn thấy.
 + Phân biệt sinh vật sống trên cạn và sống dưới nước.
 + Biết bảo vệ môi trường sống của thực vật, động vật.
 <p>Mỗi loài cây, con vật có <strong>môi trường sống</strong> riêng:</p>
@@ -344,6 +384,8 @@
 
 === dao-duc-2-quy-trong-thoi-gian | 2 | dao-duc | Quý trọng thời gian | Quý trọng thời gian | ⌛ | xem-gio
 > Biết sắp xếp thời gian hợp lí để học tập, vui chơi, nghỉ ngơi.
+~ Mỗi ngày ai cũng có 24 giờ như nhau. Vậy mà có bạn vừa học xong bài, vừa chơi thật vui, lại ngủ thật ngon. Bí quyết là gì? Cùng Cú Bông tìm hiểu nhé!
+! Cùng bố mẹ viết thời gian biểu buổi tối của em và dán lên góc học tập.
 + Biết vì sao cần quý trọng thời gian.
 + Lập được thời gian biểu đơn giản.
 <p>Thời gian trôi qua không bao giờ quay lại. Người biết <strong>quý trọng thời gian</strong> làm việc gì cũng đúng giờ, có đủ thời gian để học, chơi và nghỉ ngơi.</p>
@@ -357,6 +399,8 @@
 
 === toan-3-bang-nhan-6-7-8-9 | 3 | toan | Bảng nhân 6, 7, 8, 9 | Phép nhân, phép chia trong phạm vi 100 | ✖️ | tinh-nham
 > Hoàn thiện bảng nhân và mẹo nhớ nhanh bảng nhân 6, 7, 8, 9.
+~ Cánh cửa lâu đài Toán học có 4 ổ khoá: bảng nhân 6, 7, 8 và 9. Ai thuộc hết sẽ mở được kho báu. Em đã sẵn sàng chưa?
+! Đọc thuộc bảng nhân 7 cho bố mẹ nghe. Chỗ nào còn quên thì đánh dấu để ôn lại.
 + Thuộc bảng nhân 6, 7, 8, 9.
 + Vận dụng giải bài toán thực tế.
 <p>Em đã thuộc bảng nhân 2, 3, 4, 5. Giờ là lúc chinh phục bảng nhân <strong>6, 7, 8, 9</strong>!</p>
@@ -372,6 +416,8 @@
 
 === toan-3-chia-het-chia-co-du | 3 | toan | Phép chia hết và phép chia có dư | Phép nhân, phép chia trong phạm vi 100 | ➗ | tinh-nham
 > Phân biệt phép chia hết và phép chia có dư; số dư luôn bé hơn số chia.
+~ Cú Bông có 17 cái kẹo, chia đều cho 5 bạn. Chia xong mà vẫn còn thừa vài cái… Số kẹo thừa ấy có một cái tên riêng đấy: số dư!
+! Chia một nắm hạt đậu cho các thành viên trong nhà, rồi viết phép chia có dư.
 + Thực hiện phép chia có dư.
 + Biết số dư phải bé hơn số chia.
 <div class="hv-example"><strong>Chia 17 cái kẹo cho 5 bạn:</strong> mỗi bạn được 3 cái, còn thừa 2 cái.<br>Ta viết <strong>17 : 5 = 3 (dư 2)</strong>.</div>
@@ -387,6 +433,8 @@
 
 === toan-3-so-trong-pham-vi-100000 | 3 | toan | Các số trong phạm vi 100 000 | Các số trong phạm vi 100 000 | 🔟 | tinh-nham
 > Đọc, viết số có năm chữ số; hàng chục nghìn; làm tròn số.
+~ Một sân vận động có thể chứa hàng chục nghìn khán giả! Những số lớn như thế đọc và viết thế nào? Cùng Cú Bông leo lên những bậc thang số nhé!
+! Tìm một số có 5 chữ số trên tờ lịch, hoá đơn hay quyển sách rồi đọc to.
 + Đọc, viết, phân tích số có năm chữ số.
 + So sánh và làm tròn số đến hàng chục, trăm, nghìn.
 <p>Số có năm chữ số gồm các hàng: <strong>chục nghìn – nghìn – trăm – chục – đơn vị</strong>.</p>
@@ -403,6 +451,8 @@
 
 === toan-3-chu-vi-dien-tich | 3 | toan | Chu vi và diện tích hình chữ nhật, hình vuông | Hình học và đo lường | 📐 | tinh-nham
 > Tính chu vi, diện tích hình chữ nhật và hình vuông; làm quen xăng-ti-mét vuông.
+~ Cú Bông muốn rào quanh vườn rau và trải thảm cho phòng ngủ. Rào quanh là chu vi, trải kín là diện tích – hai việc khác nhau đấy!
+! Dùng thước đo chiều dài, chiều rộng quyển vở của em rồi tính chu vi.
 + Tính chu vi hình chữ nhật, hình vuông.
 + Tính diện tích hình chữ nhật, hình vuông (cm²).
 <p><strong>Chu vi</strong> là độ dài đường bao quanh hình. <strong>Diện tích</strong> là phần mặt phẳng bên trong hình, đo bằng <strong>xăng-ti-mét vuông (cm²)</strong>.</p>
@@ -421,6 +471,8 @@
 
 === toan-3-chu-so-la-ma | 3 | toan | Làm quen với chữ số La Mã | Các số trong phạm vi 10 000 | 🏛️ | xem-gio
 > Đọc, viết các số từ 1 đến 20 bằng chữ số La Mã.
+~ Hơn hai nghìn năm trước, người La Mã đã viết số bằng các chữ cái I, V, X. Ngày nay, những chữ số ấy vẫn nằm trên mặt nhiều chiếc đồng hồ đấy!
+! Viết số tuổi của em bằng chữ số La Mã.
 + Nhận biết các chữ số La Mã I, V, X.
 + Đọc, viết số từ 1 đến 20 bằng chữ số La Mã.
 <p>Người La Mã cổ dùng các chữ cái để ghi số: <strong>I = 1, V = 5, X = 10</strong>.</p>
@@ -438,6 +490,8 @@
 
 === tieng-viet-3-tu-nghia-giong-trai-nguoc | 3 | tieng-viet | Từ có nghĩa giống nhau, từ có nghĩa trái ngược nhau | Luyện từ và câu | ↔️ | sap-xep-cau
 > Tìm từ có nghĩa giống nhau (to – lớn) và trái ngược nhau (cao – thấp).
+~ Có những cặp từ là “bạn thân” vì nghĩa giống nhau, có những cặp lại là “đối thủ” vì nghĩa trái ngược. Em có tìm ra chúng không?
+! Tìm 3 cặp từ trái nghĩa khi tả đồ vật trong phòng em, ví dụ: to – nhỏ.
 + Nhận biết từ có nghĩa giống nhau, trái ngược nhau.
 + Dùng các từ đó để nói, viết câu hay hơn.
 <p><strong>Từ có nghĩa giống nhau</strong>: to – lớn, siêng năng – chăm chỉ, xinh – đẹp.</p>
@@ -452,6 +506,8 @@
 
 === tieng-viet-3-bien-phap-so-sanh | 3 | tieng-viet | Biện pháp so sánh | Luyện từ và câu | 🌙 | sap-xep-cau
 > Nhận biết và dùng hình ảnh so sánh để câu văn sinh động hơn.
+~ “Mặt trăng tròn như quả bóng.” “Mắt bé sáng như sao.” Chỉ một chữ “như” thôi mà câu văn đẹp hẳn lên! Đó là phép màu của so sánh.
+! Ngắm bầu trời và nói một câu có hình ảnh so sánh.
 + Nhận biết sự vật được so sánh và từ so sánh.
 + Đặt câu có hình ảnh so sánh.
 <p><strong>So sánh</strong> là đối chiếu sự vật này với sự vật khác có nét giống nhau, giúp câu văn sinh động, gợi hình hơn.</p>
@@ -467,6 +523,8 @@
 
 === tnxh-3-cac-bo-phan-cua-thuc-vat | 3 | tu-nhien-xa-hoi | Các bộ phận của thực vật | Thực vật và động vật | 🌻 | do-vui
 > Tìm hiểu rễ, thân, lá, hoa, quả và nhiệm vụ của từng bộ phận.
+~ Một cái cây giống như một đội bóng: mỗi bộ phận giữ một vị trí và làm một nhiệm vụ riêng. Cùng xem ai làm việc gì nhé!
+! Cắm một bông hoa trắng vào cốc nước pha màu (nhờ người lớn giúp) và quan sát sau một ngày.
 + Nêu chức năng của rễ, thân, lá, hoa, quả.
 + Phân loại một số cây theo đặc điểm.
 <table><thead><tr><th>Bộ phận</th><th>Nhiệm vụ</th></tr></thead><tbody>
@@ -486,6 +544,8 @@
 
 === tnxh-3-phuong-huong-mat-troi | 3 | tu-nhien-xa-hoi | Phương hướng và Mặt Trời | Trái Đất và bầu trời | 🧭 | do-vui
 > Xác định bốn phương Đông – Tây – Nam – Bắc dựa vào Mặt Trời.
+~ Lạc giữa hòn đảo mà không có la bàn thì làm sao đây? Đừng lo, Mặt Trời chính là chiếc la bàn khổng lồ trên bầu trời!
+! Buổi sáng, đứng ngoài sân và xác định phương Đông, Tây, Nam, Bắc theo cách vừa học.
 + Biết Mặt Trời mọc ở phương Đông, lặn ở phương Tây.
 + Xác định được các phương khi đứng ngoài trời.
 <p>Có bốn phương chính: <strong>Đông, Tây, Nam, Bắc</strong>. Mặt Trời <strong>mọc ở phương Đông</strong> và <strong>lặn ở phương Tây</strong>.</p>
@@ -500,6 +560,8 @@
 
 === tieng-anh-3-hello | 3 | tieng-anh | Hello! – Chào hỏi và giới thiệu | Greetings – Chào hỏi | 👋 | lat-the
 > Chào hỏi, giới thiệu tên và hỏi thăm sức khoẻ bằng tiếng Anh.
+~ Hello! Cú Bông vừa gặp một người bạn mới đến từ nước ngoài. Muốn làm quen thì phải chào hỏi bằng tiếng Anh. Mình cùng tập nói nhé!
+! Buổi sáng, em chào bố mẹ bằng tiếng Anh: “Good morning!”
 + Chào hỏi: Hello / Hi / Goodbye.
 + Giới thiệu tên: My name is… / I'm…
 + Hỏi thăm: How are you? – I'm fine, thank you.
@@ -521,6 +583,8 @@
 
 === tieng-anh-3-my-family | 3 | tieng-anh | My family – Gia đình em | Family – Gia đình | 👨‍👩‍👧 | lat-the
 > Gọi tên các thành viên trong gia đình bằng tiếng Anh.
+~ Cú Bông muốn khoe ảnh gia đình với bạn mới bằng tiếng Anh. Bố, mẹ, ông, bà nói thế nào nhỉ?
+! Chỉ vào từng người trong ảnh gia đình và nói tên gọi bằng tiếng Anh.
 + Học từ: father, mother, brother, sister, grandfather, grandmother.
 + Hỏi – đáp: Who's that? – It's my …
 <ul><li><strong>father</strong> – bố · <strong>mother</strong> – mẹ</li><li><strong>brother</strong> – anh/em trai · <strong>sister</strong> – chị/em gái</li><li><strong>grandfather</strong> – ông · <strong>grandmother</strong> – bà</li></ul>
@@ -533,6 +597,8 @@
 
 === tin-hoc-3-lam-quen-may-tinh | 3 | tin-hoc | Làm quen với máy tính | Máy tính và em | 💻 | do-vui
 > Nhận biết các bộ phận của máy tính và tư thế ngồi đúng.
+~ Máy tính là một người bạn rất thông minh, nhưng em cần biết cách “nói chuyện” với bạn ấy. Mình cùng làm quen từng bộ phận nhé!
+! Kể tên 4 bộ phận của máy tính cho bố mẹ nghe. Nếu nhà có máy tính, em chỉ vào từng bộ phận.
 + Kể tên các bộ phận cơ bản của máy tính.
 + Ngồi đúng tư thế, bảo vệ mắt khi dùng máy tính.
 <table><thead><tr><th>Bộ phận</th><th>Dùng để</th></tr></thead><tbody>
@@ -551,6 +617,8 @@
 
 === toan-4-so-co-nhieu-chu-so | 4 | toan | Số có nhiều chữ số – lớp nghìn, lớp triệu | Số tự nhiên | 🔢 | tinh-nham
 > Đọc, viết số đến lớp triệu; hiểu hàng và lớp.
+~ Nước ta có hơn 100 triệu dân – một con số rất lớn! Muốn đọc được những số khổng lồ như vậy, mình cần biết bí quyết chia lớp.
+! Đọc to số tiền ghi trên một hoá đơn tiền điện hoặc tiền nước của gia đình.
 + Đọc, viết số có nhiều chữ số.
 + Nhận biết hàng, lớp: lớp đơn vị, lớp nghìn, lớp triệu.
 <table><thead><tr><th colspan="3">Lớp triệu</th><th colspan="3">Lớp nghìn</th><th colspan="3">Lớp đơn vị</th></tr><tr><th>trăm triệu</th><th>chục triệu</th><th>triệu</th><th>trăm nghìn</th><th>chục nghìn</th><th>nghìn</th><th>trăm</th><th>chục</th><th>đơn vị</th></tr></thead><tbody>
@@ -567,6 +635,8 @@
 
 === toan-4-goc-nhon-tu-bet | 4 | toan | Góc nhọn, góc tù, góc bẹt | Hình học và đo lường | 📐 | xem-gio
 > Đo góc bằng thước đo góc; phân biệt góc nhọn, góc vuông, góc tù, góc bẹt.
+~ Kim đồng hồ, chiếc kéo, cánh cửa hé mở… đều tạo thành góc! Có góc nhọn sắc lẻm, có góc tù to bè. Cùng phân loại nhé!
+! Mở cánh cửa phòng lần lượt thành góc nhọn, góc vuông và góc tù.
 + Đo góc bằng thước đo góc (đơn vị độ, °).
 + Phân biệt góc nhọn, vuông, tù, bẹt.
 <table><thead><tr><th>Loại góc</th><th>Số đo</th><th>Ví dụ</th></tr></thead><tbody>
@@ -585,6 +655,8 @@
 
 === toan-4-phan-so | 4 | toan | Phân số – rút gọn, quy đồng, cộng phân số | Phân số | 🍕 | tinh-nham
 > Hiểu phân số, rút gọn, quy đồng và cộng hai phân số.
+~ Chiếc bánh pizza thơm phức được chia cho cả nhóm bạn. Ai được bao nhiêu phần đây? Phân số sẽ giúp chia thật công bằng!
+! Khi ăn bánh hoặc cam, em nói xem mình đã ăn mấy phần mấy của nó.
 + Đọc, viết phân số; biết tử số, mẫu số.
 + Rút gọn, quy đồng mẫu số.
 + Cộng hai phân số cùng mẫu số.
@@ -602,6 +674,8 @@
 
 === toan-4-trung-binh-cong | 4 | toan | Trung bình cộng | Số tự nhiên | ⚖️ | tinh-nham
 > Tìm số trung bình cộng của nhiều số và vận dụng vào bài toán thực tế.
+~ Ba bạn trong đội cao khác nhau. Nếu “san đều” để ai cũng cao như nhau thì mỗi bạn cao bao nhiêu? Đó chính là số trung bình cộng!
+! Ghi số giờ em ngủ trong 3 đêm gần đây rồi tính trung bình.
 + Tính số trung bình cộng.
 + Giải bài toán về trung bình cộng.
 <p>Muốn tìm <strong>số trung bình cộng</strong> của nhiều số, ta tính <strong>tổng</strong> các số đó rồi <strong>chia cho số các số hạng</strong>.</p>
@@ -615,6 +689,8 @@
 
 === toan-4-bieu-do-cot | 4 | toan | Đọc biểu đồ cột | Thống kê và xác suất | 📊 | tinh-nham
 > Đọc và nhận xét số liệu trên biểu đồ cột.
+~ Khối lớp 4 vừa thi trồng cây. Nhìn bảng số thì khó so sánh, nhưng vẽ thành biểu đồ cột thì chỉ liếc mắt là biết lớp nào thắng!
+! Đếm số áo màu đỏ, xanh, trắng trong tủ quần áo và vẽ biểu đồ cột.
 + Đọc số liệu trên biểu đồ cột.
 + So sánh, tính toán với số liệu.
 <p><strong>Biểu đồ: Số cây trồng được của khối lớp 4</strong></p>
@@ -634,6 +710,8 @@
 
 === tieng-viet-4-danh-tu-dong-tu-tinh-tu | 4 | tieng-viet | Danh từ, động từ, tính từ | Luyện từ và câu | 🏷️ | sap-xep-cau
 > Phân biệt danh từ, động từ, tính từ; viết hoa danh từ riêng.
+~ Mỗi từ trong tiếng Việt đều thuộc một “gia tộc”: Danh từ, Động từ hay Tính từ. Hôm nay em sẽ là người phân loại tài ba!
+! Viết một câu tả con vật em yêu thích, rồi gạch chân danh từ, động từ, tính từ trong câu.
 + Nhận biết danh từ, động từ, tính từ.
 + Viết hoa đúng danh từ riêng.
 <table><thead><tr><th>Từ loại</th><th>Là những từ chỉ…</th><th>Ví dụ</th></tr></thead><tbody>
@@ -651,6 +729,8 @@
 
 === tieng-viet-4-chu-ngu-vi-ngu | 4 | tieng-viet | Chủ ngữ và vị ngữ | Luyện từ và câu | 🧱 | sap-xep-cau
 > Xác định hai thành phần chính của câu: chủ ngữ và vị ngữ.
+~ Mỗi câu văn giống một ngôi nhà có hai tầng: tầng chủ ngữ và tầng vị ngữ. Thiếu một tầng là nhà đổ ngay!
+! Đặt 2 câu về gia đình em và chỉ ra chủ ngữ, vị ngữ của mỗi câu.
 + Tìm chủ ngữ, vị ngữ trong câu.
 + Đặt câu có đủ chủ ngữ, vị ngữ.
 <p>Câu thường có hai thành phần chính:</p>
@@ -665,6 +745,8 @@
 
 === tieng-viet-4-nhan-hoa | 4 | tieng-viet | Biện pháp nhân hoá | Luyện từ và câu | 🌞 | sap-xep-cau
 > Gọi, tả và trò chuyện với sự vật như với con người.
+~ Ông mặt trời thức dậy, chị gió hát ca, bác chim sẻ chào buổi sáng… Mọi vật bỗng biết nói, biết cười như người. Đó là phép nhân hoá!
+! Viết một câu nhân hoá về món đồ chơi em yêu thích.
 + Nhận biết các cách nhân hoá.
 + Viết câu có hình ảnh nhân hoá.
 <p><strong>Nhân hoá</strong> là gọi hoặc tả con vật, đồ vật, cây cối… bằng những từ ngữ vốn dùng cho con người, làm cho sự vật trở nên gần gũi, sinh động.</p>
@@ -677,6 +759,8 @@
 
 === khoa-hoc-4-nuoc-vong-tuan-hoan | 4 | khoa-hoc | Nước và vòng tuần hoàn của nước | Chất | 💧 | do-vui
 > Tính chất của nước, ba thể của nước và vòng tuần hoàn của nước trong tự nhiên.
+~ Giọt nước nhỏ có một chuyến du lịch vòng quanh thế giới: từ biển bay lên trời, hoá thành mây, rồi lại rơi xuống thành mưa. Cùng theo dấu giọt nước nhé!
+! Nhờ người lớn đặt một chiếc đĩa lên miệng cốc nước nóng, rồi quan sát những giọt nước đọng ở mặt dưới đĩa.
 + Nêu tính chất của nước.
 + Kể ba thể của nước và sự chuyển thể.
 + Mô tả vòng tuần hoàn của nước.
@@ -694,6 +778,8 @@
 
 === khoa-hoc-4-anh-sang-am-thanh | 4 | khoa-hoc | Ánh sáng và âm thanh | Năng lượng | 🔊 | do-vui
 > Ánh sáng truyền thẳng, vật cản sáng tạo bóng tối; âm thanh do vật rung động phát ra.
+~ Vì sao sau lưng em có bóng tối khi đứng dưới đèn? Vì sao áp tai xuống bàn lại nghe tiếng gõ rõ hơn? Cùng làm nhà khoa học nhí nhé!
+! Dùng đèn pin và bàn tay tạo hình bóng con vật trên tường.
 + Biết ánh sáng truyền theo đường thẳng; phân biệt vật cho ánh sáng truyền qua và vật cản sáng.
 + Biết âm thanh do vật rung động phát ra và lan truyền qua chất khí, lỏng, rắn.
 <h2>Ánh sáng</h2>
@@ -711,6 +797,8 @@
 
 === khoa-hoc-4-nam | 4 | khoa-hoc | Nấm quanh ta | Nấm | 🍄 | do-vui
 > Nấm ăn, nấm men có ích; nấm mốc làm hỏng thức ăn; cẩn thận với nấm độc.
+~ Có loại nấm làm bánh mì phồng xốp, có loại nấm nấu canh rất ngon, nhưng cũng có nấm độc nguy hiểm. Mình cùng tìm hiểu để dùng nấm thật an toàn!
+! Cùng bố mẹ kể tên các món ăn có nấm trong bữa cơm gia đình.
 + Kể tên một số nấm ăn và nấm có ích.
 + Biết nấm mốc làm hỏng thức ăn, nấm lạ có thể gây độc.
 <p>Nấm có nhiều hình dạng, màu sắc. Khác với cây xanh, nấm không có chất diệp lục.</p>
@@ -725,6 +813,8 @@
 
 === lich-su-dia-li-4-trung-du-mien-nui-bac-bo | 4 | lich-su-dia-li | Trung du và miền núi Bắc Bộ – Đền Hùng | Trung du và miền núi Bắc Bộ | ⛰️ | do-vui
 > Thiên nhiên vùng núi phía Bắc, dãy Hoàng Liên Sơn và Đền Hùng – nơi thờ các Vua Hùng.
+~ Lên vùng núi phía Bắc, em sẽ thấy ruộng bậc thang như những bậc cầu thang khổng lồ và đỉnh Phan-xi-păng chạm tới mây. Khởi hành thôi!
+! Hỏi ông bà, bố mẹ về ngày Giỗ Tổ Hùng Vương và ý nghĩa câu ca dao “Dù ai đi ngược về xuôi”.
 + Nêu đặc điểm thiên nhiên vùng Trung du và miền núi Bắc Bộ.
 + Kể về Đền Hùng và lễ Giỗ Tổ Hùng Vương.
 <p>Đây là vùng có <strong>nhiều đồi núi</strong>. Dãy <strong>Hoàng Liên Sơn</strong> cao và đồ sộ nhất nước ta; đỉnh <strong>Phan-xi-păng</strong> cao 3143 m, được gọi là “nóc nhà Đông Dương”.</p>
@@ -739,6 +829,8 @@
 
 === lich-su-dia-li-4-tay-nguyen | 4 | lich-su-dia-li | Tây Nguyên | Tây Nguyên | ☕ | do-vui
 > Vùng đất cao nguyên đất đỏ ba-dan, cây cà phê và văn hoá cồng chiêng.
+~ Tiếng cồng chiêng vang giữa núi rừng, những đồi cà phê trải dài trên đất đỏ ba-dan… Chào mừng em đến với Tây Nguyên!
+! Tìm vùng Tây Nguyên trên bản đồ Việt Nam.
 + Nêu đặc điểm địa hình, khí hậu Tây Nguyên.
 + Kể tên cây trồng và nét văn hoá tiêu biểu.
 <p>Tây Nguyên gồm các <strong>cao nguyên xếp tầng</strong> cao thấp khác nhau, nhiều nơi có <strong>đất đỏ ba-dan</strong> màu mỡ.</p>
@@ -754,6 +846,8 @@
 
 === tieng-anh-4-weather | 4 | tieng-anh | What's the weather like? – Thời tiết | Weather – Thời tiết | ⛅ | lat-the
 > Hỏi và trả lời về thời tiết bằng tiếng Anh.
+~ Hôm nay trời nắng hay mưa? Bạn nước ngoài của Cú Bông muốn biết thời tiết ở Việt Nam. Em trả lời bằng tiếng Anh nhé!
+! Mỗi sáng nhìn trời và nói thời tiết bằng tiếng Anh: “It's sunny!”, “It's rainy!”…
 + Học từ: sunny, rainy, windy, cloudy, snowy, stormy.
 + Hỏi – đáp: What's the weather like? – It's sunny.
 <ul><li>☀️ <strong>sunny</strong> – nắng · 🌧️ <strong>rainy</strong> – mưa · 🌬️ <strong>windy</strong> – có gió</li><li>☁️ <strong>cloudy</strong> – nhiều mây · ❄️ <strong>snowy</strong> – có tuyết · ⛈️ <strong>stormy</strong> – có bão</li></ul>
@@ -767,6 +861,8 @@
 
 === dao-duc-4-biet-on-nguoi-lao-dong | 4 | dao-duc | Biết ơn người lao động | Biết ơn người lao động | 👩‍🌾 | do-vui
 > Trân trọng công sức của người lao động bằng lời nói và việc làm.
+~ Hạt cơm em ăn, con đường em đi, ngôi trường em học… đều có bàn tay của rất nhiều người lao động. Mình cùng nói lời cảm ơn họ nhé!
+! Nói lời cảm ơn với một người lao động em gặp hôm nay: bác bảo vệ, cô lao công, cô bán hàng…
 + Biết vì sao phải biết ơn người lao động.
 + Thể hiện lòng biết ơn bằng việc làm cụ thể.
 <p>Hạt gạo em ăn có công bác nông dân, con đường sạch đẹp có công cô chú công nhân vệ sinh, bài giảng hay có công thầy cô giáo… Mọi người lao động đều đáng được <strong>tôn trọng và biết ơn</strong>.</p>
@@ -779,6 +875,8 @@
 
 === toan-5-so-thap-phan | 5 | toan | Số thập phân | Số thập phân | 🔟 | tinh-nham
 > Đọc, viết, so sánh số thập phân; cộng, trừ số thập phân.
+~ Em cao 1 mét và thêm một chút nữa… vậy viết thế nào cho chính xác? Số thập phân với dấu phẩy nhỏ xíu sẽ giúp em!
+! Tìm một số đo có dấu phẩy trên bao bì sản phẩm (ví dụ 1,5 l) và đọc to.
 + Đọc, viết số thập phân; biết phần nguyên, phần thập phân.
 + So sánh số thập phân.
 + Cộng, trừ số thập phân.
@@ -796,6 +894,8 @@
 
 === toan-5-ti-so-phan-tram | 5 | toan | Tỉ số phần trăm | Tỉ số phần trăm | 💯 | tinh-nham
 > Hiểu tỉ số phần trăm, tìm tỉ số phần trăm và tìm giá trị phần trăm của một số.
+~ “Giảm giá 50%!”, “Pin còn 20%”… Kí hiệu % xuất hiện ở khắp nơi. Hôm nay em sẽ hiểu hết bí mật của nó!
+! Tìm một biển giảm giá hoặc mức pin điện thoại, rồi giải thích con số phần trăm đó.
 + Hiểu ý nghĩa tỉ số phần trăm.
 + Tìm giá trị phần trăm của một số.
 + Tìm tỉ số phần trăm của hai số.
@@ -812,6 +912,8 @@
 
 === toan-5-dien-tich-tam-giac-hinh-thang | 5 | toan | Diện tích hình tam giác, hình thang | Hình học và đo lường | 🔺 | tinh-nham
 > Công thức và cách tính diện tích hình tam giác, hình thang.
+~ Mái nhà hình tam giác, chiếc túi xách hình thang… Muốn biết cần bao nhiêu giấy màu để dán kín chúng, mình phải tính diện tích!
+! Cắt một hình chữ nhật bằng giấy, cắt chéo thành 2 hình tam giác rồi chồng lên nhau để so sánh.
 + Tính diện tích hình tam giác.
 + Tính diện tích hình thang.
 <table><thead><tr><th>Hình</th><th>Diện tích</th></tr></thead><tbody>
@@ -830,6 +932,8 @@
 
 === toan-5-hinh-tron | 5 | toan | Hình tròn – chu vi và diện tích | Hình học và đo lường | ⭕ | tinh-nham
 > Bán kính, đường kính; chu vi và diện tích hình tròn.
+~ Bánh xe, đĩa nhạc, mặt trăng rằm… hình tròn ở khắp nơi! Có một con số thần kì là 3,14 giúp mình tính mọi thứ về hình tròn.
+! Dùng sợi dây đo vòng quanh miệng một chiếc cốc, đo thêm đường kính miệng cốc, rồi chia hai số cho nhau xem có gần bằng 3,14 không.
 + Biết bán kính, đường kính của hình tròn.
 + Tính chu vi và diện tích hình tròn.
 <p>Đường kính <strong>d</strong> dài gấp <strong>2 lần</strong> bán kính <strong>r</strong>: d = r × 2.</p>
@@ -846,6 +950,8 @@
 
 === toan-5-the-tich | 5 | toan | Thể tích hình hộp chữ nhật, hình lập phương | Hình học và đo lường | 📦 | tinh-nham
 > Đơn vị đo thể tích và cách tính thể tích hình hộp chữ nhật, hình lập phương.
+~ Hộp quà nào chứa được nhiều kẹo hơn? Không cần đổ kẹo vào thử – chỉ cần tính thể tích!
+! Đo chiều dài, chiều rộng, chiều cao của một hộp giấy và tính thể tích của nó.
 + Biết các đơn vị cm³, dm³, m³.
 + Tính thể tích hình hộp chữ nhật, hình lập phương.
 <p><strong>Thể tích</strong> cho biết vật chiếm bao nhiêu chỗ trong không gian. Đơn vị: xăng-ti-mét khối (cm³), đề-xi-mét khối (dm³), mét khối (m³).</p>
@@ -864,6 +970,8 @@
 
 === toan-5-van-toc | 5 | toan | Vận tốc, quãng đường, thời gian | Số đo thời gian và chuyển động đều | 🚗 | tinh-nham
 > Tính vận tốc, quãng đường, thời gian trong chuyển động đều.
+~ Ô tô, xe máy, xe đạp – ai nhanh hơn ai? Vận tốc sẽ trả lời! Thắt dây an toàn, chuẩn bị xuất phát nào!
+! Hỏi bố mẹ quãng đường từ nhà đến trường và thời gian đi, rồi tính vận tốc.
 + Hiểu ý nghĩa của vận tốc.
 + Tính vận tốc, quãng đường, thời gian.
 <p><strong>Vận tốc</strong> cho biết mỗi giờ (mỗi phút, mỗi giây) vật đi được bao xa. Đơn vị: km/giờ, m/phút, m/giây.</p>
@@ -882,6 +990,8 @@
 
 === tieng-viet-5-tu-dong-nghia-da-nghia | 5 | tieng-viet | Từ đồng nghĩa và từ đa nghĩa | Luyện từ và câu | 📚 | sap-xep-cau
 > Nhận biết từ đồng nghĩa; phân biệt nghĩa gốc và nghĩa chuyển của từ đa nghĩa.
+~ Cùng một ý mà có nhiều cách nói; cùng một từ mà có nhiều nghĩa. Tiếng Việt mình thật giàu đẹp! Cùng khám phá nhé.
+! Tìm 3 nghĩa khác nhau của từ “mắt”: mắt người, mắt na, mắt lưới…
 + Tìm và dùng từ đồng nghĩa phù hợp.
 + Phân biệt nghĩa gốc, nghĩa chuyển.
 <p><strong>Từ đồng nghĩa</strong> là những từ có nghĩa giống nhau hoặc gần giống nhau: siêng năng – chăm chỉ – cần cù; tổ quốc – đất nước – non sông.</p>
@@ -897,6 +1007,8 @@
 
 === tieng-viet-5-cau-ghep-ket-tu | 5 | tieng-viet | Câu ghép và kết từ | Luyện từ và câu | 🔗 | sap-xep-cau
 > Nhận biết câu ghép; nối các vế câu bằng kết từ hoặc dấu câu.
+~ Muốn kể hai việc có liên quan trong cùng một câu thì làm sao? Hãy dùng “keo dán” kết từ để ghép chúng thành câu ghép!
+! Viết 2 câu ghép kể về một ngày của em, dùng “vì… nên…” và “tuy… nhưng…”.
 + Nhận biết câu ghép và các vế câu.
 + Dùng kết từ phù hợp để nối các vế câu.
 <p><strong>Câu ghép</strong> do nhiều vế câu ghép lại; mỗi vế thường có đủ <strong>chủ ngữ – vị ngữ</strong>.</p>
@@ -912,6 +1024,8 @@
 
 === khoa-hoc-5-hon-hop-dung-dich | 5 | khoa-hoc | Hỗn hợp và dung dịch | Chất | 🧪 | do-vui
 > Phân biệt hỗn hợp và dung dịch; cách tách các chất.
+~ Mẹ pha cốc nước chanh: nước, đường, chanh hoà vào nhau. Đó là hỗn hợp hay dung dịch? Phòng thí nghiệm của Cú Bông mở cửa rồi!
+! Hoà một thìa muối vào cốc nước, khuấy đều và quan sát: muối đã đi đâu mất rồi?
 + Nhận biết hỗn hợp, dung dịch.
 + Biết một số cách tách chất ra khỏi hỗn hợp, dung dịch.
 <p><strong>Hỗn hợp</strong>: hai hay nhiều chất trộn lẫn với nhau, mỗi chất vẫn giữ nguyên tính chất của nó. Ví dụ: gạo lẫn sạn, cát lẫn nước.</p>
@@ -926,6 +1040,8 @@
 
 === khoa-hoc-5-nang-luong | 5 | khoa-hoc | Năng lượng và sử dụng năng lượng tiết kiệm | Năng lượng | ⚡ | do-vui
 > Các nguồn năng lượng; năng lượng tái tạo và cách tiết kiệm năng lượng.
+~ Đèn sáng, quạt quay, xe chạy… tất cả đều cần năng lượng. Nhưng có những nguồn năng lượng sẽ cạn dần. Mình cùng học cách dùng thật tiết kiệm nhé!
+! Làm “đội trưởng tiết kiệm điện” trong một ngày: nhắc cả nhà tắt đèn, quạt khi không dùng.
 + Kể tên một số nguồn năng lượng.
 + Phân biệt năng lượng tái tạo và không tái tạo.
 + Sử dụng điện an toàn, tiết kiệm.
@@ -943,6 +1059,8 @@
 
 === khoa-hoc-5-sinh-san-thuc-vat-co-hoa | 5 | khoa-hoc | Sự sinh sản của thực vật có hoa | Thực vật và động vật | 🌺 | do-vui
 > Hoa là cơ quan sinh sản; thụ phấn, thụ tinh, hình thành hạt và quả.
+~ Từ một bông hoa nhỏ xinh, làm thế nào lại có quả ngọt và hạt giống? Ong bướm chính là những người đưa thư chăm chỉ!
+! Quan sát một bông hoa (râm bụt, bí…) và tìm nhị, nhuỵ của hoa.
 + Kể tên các bộ phận của hoa.
 + Mô tả sự thụ phấn và hình thành hạt, quả.
 <p><strong>Hoa</strong> là cơ quan sinh sản của thực vật có hoa. Hoa có <strong>nhị</strong> (cơ quan sinh sản đực, chứa hạt phấn) và <strong>nhuỵ</strong> (cơ quan sinh sản cái).</p>
@@ -957,6 +1075,8 @@
 
 === lich-su-dia-li-5-vi-tri-lanh-tho | 5 | lich-su-dia-li | Vị trí địa lí và lãnh thổ Việt Nam | Đất nước và con người Việt Nam | 🗺️ | do-vui
 > Việt Nam nằm ở bán đảo Đông Dương, phần đất liền hình chữ S, có vùng biển rộng lớn.
+~ Nhìn trên bản đồ, đất nước mình cong cong hình chữ S, nằm bên bờ Biển Đông xanh thẳm. Cùng Cú Bông bay một vòng nhé!
+! Tìm trên bản đồ nơi em đang sống và kể tên các nước láng giềng của Việt Nam.
 + Mô tả vị trí địa lí và hình dạng lãnh thổ Việt Nam.
 + Kể tên các nước láng giềng.
 <p>Việt Nam nằm ở phía đông bán đảo Đông Dương, thuộc khu vực Đông Nam Á.</p>
@@ -971,6 +1091,8 @@
 
 === lich-su-dia-li-5-chien-thang-bach-dang-938 | 5 | lich-su-dia-li | Chiến thắng Bạch Đằng năm 938 | Xây dựng và bảo vệ đất nước | ⚓ | do-vui
 > Ngô Quyền dùng trận địa cọc trên sông Bạch Đằng đánh tan quân Nam Hán.
+~ Năm 938, trên dòng sông Bạch Đằng đã diễn ra một trận đánh thông minh bậc nhất lịch sử. Bí mật nằm ngay dưới lòng sông…
+! Kể lại cho bố mẹ nghe mưu kế cắm cọc của Ngô Quyền.
 + Kể lại diễn biến chính của trận Bạch Đằng năm 938.
 + Nêu ý nghĩa của chiến thắng.
 <p>Năm 938, quân Nam Hán kéo sang xâm lược nước ta. <strong>Ngô Quyền</strong> chỉ huy quân dân chuẩn bị đánh giặc trên <strong>sông Bạch Đằng</strong>.</p>
@@ -986,6 +1108,8 @@
 
 === lich-su-dia-li-5-cach-mang-thang-tam | 5 | lich-su-dia-li | Cách mạng tháng Tám năm 1945 | Xây dựng và bảo vệ đất nước | 🇻🇳 | do-vui
 > Nhân dân cả nước giành chính quyền; ngày 2/9/1945 Bác Hồ đọc Tuyên ngôn Độc lập.
+~ Mùa thu năm 1945, cả nước vùng lên giành độc lập. Ngày 2 tháng 9 trở thành ngày hội lớn của cả dân tộc. Cùng nghe câu chuyện nhé!
+! Cùng gia đình treo cờ Tổ quốc vào dịp Quốc khánh 2/9.
 + Kể lại sự kiện giành chính quyền ở Hà Nội, Huế, Sài Gòn.
 + Biết ngày 2/9/1945 là ngày Quốc khánh.
 <p>Mùa thu năm 1945, dưới sự lãnh đạo của Đảng và Chủ tịch Hồ Chí Minh, nhân dân cả nước đứng lên giành chính quyền:</p>
@@ -1000,6 +1124,8 @@
 
 === tieng-anh-5-jobs | 5 | tieng-anh | What does your father do? – Nghề nghiệp | Jobs – Nghề nghiệp | 🧑‍⚕️ | lat-the
 > Hỏi và trả lời về nghề nghiệp của người thân.
+~ Bố mẹ em làm nghề gì? Hôm nay em sẽ làm phóng viên nhí, giới thiệu nghề nghiệp của người thân bằng tiếng Anh!
+! Phỏng vấn bố mẹ bằng tiếng Anh: “What do you do?”
 + Học từ: doctor, teacher, farmer, cook, pilot, firefighter.
 + Hỏi – đáp: What does your father do? – He's a doctor.
 <ul><li>🧑‍⚕️ <strong>doctor</strong> – bác sĩ · 🧑‍🏫 <strong>teacher</strong> – giáo viên · 🧑‍🌾 <strong>farmer</strong> – nông dân</li><li>🧑‍🍳 <strong>cook</strong> – đầu bếp · 🧑‍✈️ <strong>pilot</strong> – phi công · 🧑‍🚒 <strong>firefighter</strong> – lính cứu hoả</li></ul>
@@ -1013,6 +1139,8 @@
 
 === dao-duc-5-vuot-qua-kho-khan | 5 | dao-duc | Vượt qua khó khăn | Vượt qua khó khăn | 💪 | do-vui
 > Kiên trì, tìm cách vượt qua khó khăn trong học tập và cuộc sống.
+~ Ai cũng có lúc gặp khó khăn. Người dũng cảm không phải là người không bao giờ sợ, mà là người không bỏ cuộc!
+! Chọn một việc còn khó với em (một bài toán, một động tác thể dục…) và kiên trì luyện tập trong 3 ngày.
 + Nhận biết những khó khăn thường gặp.
 + Biết cách vượt qua khó khăn phù hợp với lứa tuổi.
 <p>Ai cũng gặp khó khăn: bài toán khó, bị ốm phải nghỉ học, chưa biết bơi… Điều quan trọng là <strong>không nản lòng</strong> và <strong>tìm cách giải quyết</strong>.</p>

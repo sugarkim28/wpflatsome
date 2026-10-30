@@ -95,7 +95,7 @@ function hv_game_card( $id, $grade = 0 ) {
 	foreach ( $g[3] as $n ) {
 		$pills .= '<span class="hv-pill">Lớp ' . (int) $n . '</span>';
 	}
-	return '<a class="hv-game-card" href="' . esc_url( $url ) . '" style="--c:' . esc_attr( $g[4] ) . '"><i aria-hidden="true">' . esc_html( $g[1] ) . '</i><h3>' . esc_html( $g[0] ) . '</h3><span class="hv-meta">' . esc_html( $g[5] ) . '</span><p>' . esc_html( $g[2] ) . '</p><span class="hv-pills">' . $pills . '</span><span class="hv-play">Chơi ngay ▶</span></a>';
+	return '<a class="hv-game-card" href="' . esc_url( $url ) . '" style="--c:' . esc_attr( $g[4] ) . '"><span class="hv-gc-screen"><i aria-hidden="true">' . esc_html( $g[1] ) . '</i></span><span class="hv-meta">' . esc_html( $g[5] ) . '</span><h3>' . esc_html( $g[0] ) . '</h3><p>' . esc_html( $g[2] ) . '</p><span class="hv-pills">' . $pills . '</span><span class="hv-play">▶ Chơi ngay</span></a>';
 }
 
 /**
@@ -115,7 +115,7 @@ function hv_sc_games( $atts ) {
 		$pick = sanitize_key( wp_unslash( $_GET['choi'] ) );
 		$pg   = isset( $_GET['lop'] ) ? absint( $_GET['lop'] ) : 0;
 		if ( isset( $games[ $pick ] ) ) {
-			$html .= '<div id="choi" class="hv-now-playing">' . hv_game_html( $pick, $pg ) . '</div><h2 class="hv-section-title">Chọn trò chơi khác</h2>';
+			$html .= '<div id="choi" class="hv-now-playing">' . hv_game_html( $pick, $pg ) . '</div><h2 class="hv-section-title">Chọn máy chơi khác</h2>';
 		}
 	}
 	// phpcs:enable
@@ -136,7 +136,7 @@ add_shortcode( 'hv_games', 'hv_sc_games' );
  * @return string
  */
 function hv_sc_album() {
-	return '<div class="hv-box"><h2>🏆 Album nhãn dán của <span data-hv-name="em">em</span></h2><p>Mỗi trò chơi được 1–3 ⭐ (làm siêu tốc được thêm 1 ⭐). Cứ đủ 10 ⭐ là mở được 1 nhãn dán mới!</p><div data-hv-album><p class="hv-empty">Đang tải…</p></div><p style="text-align:center;margin-top:12px"><button type="button" class="hv-btn hv-btn-ghost" data-hv-reset>Bắt đầu lại từ đầu</button></p></div>';
+	return '<div class="hv-box hv-album"><h2>🏆 Album nhãn dán của <span data-hv-name="em">em</span></h2><p>Mỗi trò chơi được 1–3 ⭐ (làm siêu tốc được thêm 1 ⭐). Cứ đủ 10 ⭐ là mở được 1 nhãn dán mới!</p><div data-hv-album><p class="hv-empty">Đang tải…</p></div><p style="text-align:center;margin-top:12px"><button type="button" class="hv-btn hv-btn-ghost" data-hv-reset>Bắt đầu lại từ đầu</button></p></div>';
 }
 add_shortcode( 'hv_album', 'hv_sc_album' );
 

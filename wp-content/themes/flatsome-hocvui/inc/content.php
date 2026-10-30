@@ -10,17 +10,17 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * 5 lớp Tiểu học: số => [tên, slug, biểu tượng, màu, mô tả ngắn].
+ * 5 lớp Tiểu học = 5 hòn đảo cần phá đảo: số => [tên, slug, biểu tượng, màu, mô tả ngắn, tên đảo, màu đất].
  *
  * @return array
  */
 function hv_grades() {
 	return array(
-		1 => array( 'Lớp 1', 'lop-1', '🐣', '#ff6b6b', 'Làm quen chữ cái, đếm số đến 100' ),
-		2 => array( 'Lớp 2', 'lop-2', '🐥', '#ff922b', 'Cộng trừ có nhớ, bảng nhân 2 và 5' ),
-		3 => array( 'Lớp 3', 'lop-3', '🦊', '#40c057', 'Bảng nhân chia, bắt đầu học tiếng Anh' ),
-		4 => array( 'Lớp 4', 'lop-4', '🦁', '#339af0', 'Phân số, Khoa học, Lịch sử và Địa lí' ),
-		5 => array( 'Lớp 5', 'lop-5', '🦉', '#9775fa', 'Số thập phân, tỉ số phần trăm, hình học' ),
+		1 => array( 'Lớp 1', 'lop-1', '🌱', '#ff5d73', 'Làm quen chữ cái, đếm số, nhận biết hình', 'Đảo Hạt Mầm', '#7ed957' ),
+		2 => array( 'Lớp 2', 'lop-2', '🐠', '#ff9f1c', 'Cộng trừ có nhớ, bảng nhân 2 và 5', 'Đảo San Hô', '#ffb38a' ),
+		3 => array( 'Lớp 3', 'lop-3', '🌴', '#2ec27e', 'Bảng nhân chia, bắt đầu học tiếng Anh', 'Đảo Rừng Xanh', '#3fbf5f' ),
+		4 => array( 'Lớp 4', 'lop-4', '🌋', '#2f80ed', 'Phân số, Khoa học, Lịch sử và Địa lí', 'Đảo Núi Lửa', '#c98b5a' ),
+		5 => array( 'Lớp 5', 'lop-5', '🚀', '#8b5cf6', 'Số thập phân, phần trăm, lịch sử dân tộc', 'Đảo Ngôi Sao', '#b8a4ff' ),
 	);
 }
 
@@ -39,6 +39,24 @@ function hv_subjects() {
 		'lich-su-dia-li'  => array( 'Lịch sử và Địa lí', '🗺️', '#f59f00', array( 4, 5 ) ),
 		'dao-duc'         => array( 'Đạo đức', '💖', '#f06595', array( 1, 2, 3, 4, 5 ) ),
 		'tin-hoc'         => array( 'Tin học và Công nghệ', '💻', '#5c7cfa', array( 3, 4, 5 ) ),
+	);
+}
+
+/**
+ * Trùm cuối của mỗi môn (đánh khi đã học xong các màn): slug môn => [tên trùm, biểu tượng].
+ *
+ * @return array
+ */
+function hv_bosses() {
+	return array(
+		'toan'            => array( 'Rồng Số Học', '🐉' ),
+		'tieng-viet'      => array( 'Phù Thuỷ Chữ Cái', '🧙' ),
+		'tieng-anh'       => array( 'Robot Alphabet', '🤖' ),
+		'tu-nhien-xa-hoi' => array( 'Quái Vật Rừng Rậm', '👹' ),
+		'khoa-hoc'        => array( 'Giáo Sư Lộn Xộn', '🧪' ),
+		'lich-su-dia-li'  => array( 'Thuyền Trưởng Bí Ẩn', '🏴‍☠️' ),
+		'dao-duc'         => array( 'Mây Đen Cáu Kỉnh', '⛈️' ),
+		'tin-hoc'         => array( 'Virus Tí Hon', '🦠' ),
 	);
 }
 
@@ -193,6 +211,8 @@ function hv_lesson_fields() {
 	return array(
 		'chu_de'   => array( 'Chủ đề / mạch kiến thức trong chương trình', 'text', 'Phép cộng, phép trừ trong phạm vi 100' ),
 		'icon'     => array( 'Biểu tượng (emoji, để trống = theo môn)', 'text', '➕' ),
+		'mo_man'   => array( 'Mở màn – Cú Bông kể tình huống gợi tò mò (được đọc to)', 'textarea', 'Đội bóng của Cú Bông có 38 quả bóng, vừa được tặng thêm 25 quả…' ),
+		'nhiem_vu' => array( 'Nhiệm vụ ngoài đời – việc nhỏ em làm cùng gia đình', 'text', 'Đặt tính và cộng tuổi của bố với tuổi của mẹ.' ),
 		'muc_tieu' => array( 'Em sẽ học được – mỗi dòng 1 ý', 'textarea', "Đặt tính thẳng cột\nThực hiện phép cộng có nhớ" ),
 		'ghi_nho'  => array( 'Ghi nhớ – mỗi dòng 1 ý', 'textarea', 'Cộng hàng đơn vị được từ 10 trở lên thì nhớ 1 sang hàng chục.' ),
 		'cau_hoi'  => array( 'Câu hỏi luyện tập – mỗi dòng: Câu hỏi | Đáp án đúng | Đáp án sai | Đáp án sai (thứ tự đáp án tự xáo trộn khi hiển thị)', 'textarea', '47 + 35 = ? | 82 | 72 | 712' ),
@@ -404,6 +424,8 @@ function hv_curriculum() {
 				'icon'    => isset( $p[5] ) ? $p[5] : '',
 				'game'    => isset( $p[6] ) ? $p[6] : '',
 				'excerpt' => '',
+				'hook'    => '',
+				'mission' => '',
 				'goals'   => array(),
 				'content' => '',
 				'notes'   => array(),
@@ -418,6 +440,10 @@ function hv_curriculum() {
 		$rest = trim( substr( $line, 2 ) );
 		if ( '> ' === $tag ) {
 			$cur['excerpt'] = $rest;
+		} elseif ( '~ ' === $tag ) {
+			$cur['hook'] = $rest;
+		} elseif ( '! ' === $tag ) {
+			$cur['mission'] = $rest;
 		} elseif ( '+ ' === $tag ) {
 			$cur['goals'][] = $rest;
 		} elseif ( '* ' === $tag ) {

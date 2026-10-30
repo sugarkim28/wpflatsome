@@ -173,6 +173,8 @@ function hv_demo_lessons_build() {
 			array(
 				'_hv_chu_de'   => $l['topic'],
 				'_hv_icon'     => $l['icon'],
+				'_hv_mo_man'   => $l['hook'],
+				'_hv_nhiem_vu' => $l['mission'],
 				'_hv_muc_tieu' => implode( "\n", $l['goals'] ),
 				'_hv_ghi_nho'  => implode( "\n", $l['notes'] ),
 				'_hv_cau_hoi'  => implode( "\n", $l['quiz'] ),
@@ -215,10 +217,11 @@ function hv_demo_parent_content() {
 		. '<tr><td>Lớp 4, 5</td><td>Tiếng Việt, Toán, Tiếng Anh, Đạo đức, <strong>Khoa học</strong>, <strong>Lịch sử và Địa lí</strong>, Tin học và Công nghệ, Giáo dục thể chất, Nghệ thuật, Hoạt động trải nghiệm.</td></tr>'
 		. '</tbody></table>'
 		. '<h2>Gợi ý học 15 phút mỗi ngày</h2><ul>'
-		. '<li><strong>5 phút</strong> đọc bài học cùng con (bé lớp 1 có thể bấm 🔈 để nghe đọc câu hỏi).</li>'
-		. '<li><strong>5 phút</strong> làm phần Luyện tập cuối bài – sai thì cùng con xem lại phần Ghi nhớ.</li>'
-		. '<li><strong>5 phút</strong> chơi 1 trò chơi phù hợp lớp – câu hỏi mới được tạo ngẫu nhiên mỗi lượt.</li>'
+		. '<li><strong>5 phút</strong> cùng con đi qua phần Mở màn và Khám phá. Bấm 🔈 để Cú Bông đọc to; vào ⚙️ để chọn giọng đọc tiếng Việt và tốc độ chậm rãi.</li>'
+		. '<li><strong>5 phút</strong> đánh trùm màn (câu hỏi luyện tập) – sai thì cùng con xem lại Bí kíp ghi nhớ.</li>'
+		. '<li><strong>5 phút</strong> chơi màn thưởng, rồi giao con làm Nhiệm vụ ngoài đời cùng gia đình.</li>'
 		. '<li>Khen ngợi khi con nhận sao, mở nhãn dán mới; không nên cho con chơi quá 30 phút liên tục trên màn hình.</li></ul>'
+		. '<h2>Giọng đọc tiếng Việt</h2><p>Giọng đọc dùng sẵn trong máy (không cần tải thêm). Giọng ấm, tự nhiên nhất hiện nay là <strong>HoaiMy</strong> trên trình duyệt Microsoft Edge; Chrome có giọng <strong>Google Tiếng Việt</strong>; iPhone, iPad có giọng <strong>Linh</strong>. Nếu máy chưa có giọng tiếng Việt, vào Cài đặt điện thoại → Trợ năng → Nội dung được đọc → Giọng nói để thêm.</p>'
 		. '<h2>Riêng tư và an toàn</h2><p>Website không yêu cầu đăng ký, không thu thập thông tin của trẻ. Tên bé, số sao và nhãn dán chỉ lưu trên trình duyệt của máy đang dùng; xoá dữ liệu trình duyệt là mất. Không có quảng cáo hay liên kết mua hàng trong trò chơi.</p>';
 	if ( $contact ) {
 		$html .= '<h2>Liên hệ</h2><p>' . esc_html( $contact ) . '</p>';
@@ -237,11 +240,10 @@ function hv_demo_pages_build() {
 			'post_name'    => 'trang-chu',
 			'post_title'   => 'Trang chủ',
 			'post_content' => hv_demo_block( '[hv_hero]' )
-				. hv_demo_block( '[hv_section title="Em học lớp mấy?" sub="Chọn lớp để xem bài học của từng môn theo chương trình sách giáo khoa mới." id="lop-hoc"][hv_grades][/hv_section]' )
-				. hv_demo_block( '[hv_section title="Trò chơi học tập" sub="Câu hỏi tự sinh mới mỗi lượt, theo đúng kiến thức từng lớp. Làm đúng nhận sao, đủ 10 sao mở nhãn dán!" bg="#fff"][hv_games player="0"][/hv_section]' )
+				. hv_demo_block( '[hv_section title="Bản đồ phá đảo" sub="Mỗi lớp là một hòn đảo. Chọn đảo của em, vượt qua từng màn và hạ gục trùm cuối của mỗi môn!" class="hv-sea"][hv_world][/hv_section]' )
+				. hv_demo_block( '[hv_section title="Khu trò chơi" sub="Câu hỏi tự sinh mới mỗi lượt, đúng kiến thức từng lớp. Kiếm sao, XP và mở nhãn dán!" class="hv-arcade"][hv_games player="0"][/hv_section]' )
+				. hv_demo_block( '[hv_section title="Một màn chơi có gì?" sub="Mỗi bài học là một màn chơi ngắn 10–15 phút."][hv_parent_steps][/hv_section]' )
 				. hv_demo_block( '[hv_section title="Các môn học" sub="Theo Chương trình giáo dục phổ thông 2018 cấp Tiểu học."][hv_subjects][/hv_section]' )
-				. hv_demo_block( '[hv_section title="Bài học mới" bg="#fff"][hv_lessons so="6"][/hv_section]' )
-				. hv_demo_block( '[hv_section title="Học thế nào cho vui?"][hv_parent_steps][/hv_section]' )
 				. hv_demo_block( '[hv_section][hv_band][/hv_section]' ),
 		),
 		$blank
@@ -251,8 +253,8 @@ function hv_demo_pages_build() {
 			'post_type'    => 'page',
 			'post_name'    => 'tro-choi',
 			'post_title'   => 'Trò chơi',
-			'post_content' => hv_demo_block( '[hv_pagehead title="Trò chơi học tập" lead="7 trò chơi Toán, Tiếng Việt, Tiếng Anh, Khoa học – chọn lớp ngay trong trò chơi."]' )
-				. hv_demo_block( '[hv_section][hv_games][/hv_section]' ),
+			'post_content' => hv_demo_block( '[hv_pagehead title="Khu trò chơi" lead="7 trò chơi Toán, Tiếng Việt, Tiếng Anh, Khoa học – chọn lớp ngay trong trò chơi. Mỗi lượt được sao và XP!" icon="🕹️" color="#ff5d73"]' )
+				. hv_demo_block( '[hv_section class="hv-arcade"][hv_games][/hv_section]' ),
 		),
 		$blank
 	);
@@ -261,8 +263,8 @@ function hv_demo_pages_build() {
 			'post_type'    => 'page',
 			'post_name'    => 'goc-cua-em',
 			'post_title'   => 'Góc của em',
-			'post_content' => hv_demo_block( '[hv_pagehead title="Góc của em" lead="Nhập tên của em, xem số sao và bộ sưu tập nhãn dán." color="#f06595"]' )
-				. hv_demo_block( '[hv_section][hv_name_form][hv_album][/hv_section]' ),
+			'post_content' => hv_demo_block( '[hv_pagehead title="Góc của em" lead="Hồ sơ nhà thám hiểm: cấp độ, nhân vật, huy hiệu và bộ sưu tập nhãn dán." icon="🏅" color="#ff9f1c"]' )
+				. hv_demo_block( '[hv_section][hv_profile][/hv_section]' ),
 		),
 		$blank
 	);
@@ -271,9 +273,9 @@ function hv_demo_pages_build() {
 			'post_type'    => 'page',
 			'post_name'    => 'goc-phu-huynh',
 			'post_title'   => 'Góc phụ huynh',
-			'post_content' => hv_demo_block( '[hv_pagehead title="Góc phụ huynh" lead="Chương trình học, cách đồng hành cùng con và cam kết an toàn cho trẻ." color="#12b886"]' )
+			'post_content' => hv_demo_block( '[hv_pagehead title="Góc phụ huynh" lead="Chương trình học, cách đồng hành cùng con và cam kết an toàn cho trẻ." icon="👨‍👩‍👧" color="#2ec27e"]' )
 				. "<!-- wp:html -->\n<section class=\"hv-section\"><div class=\"hv-wrap\">" . hv_demo_parent_content() . "</div></section>\n<!-- /wp:html -->\n\n"
-				. hv_demo_block( '[hv_section title="Học thế nào cho vui?"][hv_parent_steps][/hv_section]' ),
+				. hv_demo_block( '[hv_section title="Một màn chơi có gì?"][hv_parent_steps][/hv_section]' ),
 		),
 		$blank
 	);
