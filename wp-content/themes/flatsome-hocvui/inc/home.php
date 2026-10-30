@@ -104,7 +104,7 @@ function hv_sc_hero() {
 		<ul class="hv-panel-stats">
 			<li><?php echo hv_icon3d( 'island', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>5 hòn đảo</b><span>5 lớp học, từ lớp 1 đến lớp 5</span></li>
 			<li><?php echo hv_icon3d( 'book', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b><?php echo (int) $count; ?> màn chơi</b><span>Bám sách Kết nối tri thức</span></li>
-			<li><?php echo hv_icon3d( 'game', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>11 trò chơi</b><span>Câu hỏi mới mỗi lượt chơi</span></li>
+			<li><?php echo hv_icon3d( 'game', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>16 trò chơi</b><span>Câu hỏi mới mỗi lượt chơi</span></li>
 			<li><?php echo hv_icon3d( 'heart', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>Miễn phí</b><span>Không quảng cáo, không đăng ký</span></li>
 		</ul>
 	</div>
@@ -263,7 +263,7 @@ function hv_sc_why() {
 			array( 'party', 'Học như chơi game', 'Mỗi bài là một màn chơi có chuyện kể, sao, XP, trùm cuối.' ),
 			array( 'speech', 'Cú Bông đọc cho nghe', 'Giọng tiếng Việt ấm áp, chậm rãi – bé lớp 1 chưa đọc thạo vẫn tự học được.' ),
 			array( 'trophy', 'Huy hiệu, nhãn dán', 'Sưu tập 20 nhãn dán, 8 huy hiệu, giữ chuỗi ngày học 🔥.' ),
-			array( 'game', '11 trò chơi tự sinh câu hỏi', 'Không bao giờ hết câu hỏi – mỗi lượt chơi là một đề mới.' ),
+			array( 'game', '16 trò chơi tự sinh câu hỏi', 'Không bao giờ hết câu hỏi – mỗi lượt chơi là một đề mới.' ),
 		),
 		'Phụ huynh' => array(
 			array( 'book', 'Đúng chương trình', 'Theo Chương trình GDPT 2018, bộ sách Kết nối tri thức với cuộc sống dùng chung toàn quốc.' ),

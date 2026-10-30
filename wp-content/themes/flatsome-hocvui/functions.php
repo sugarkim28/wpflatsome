@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HV_VERSION', '0.4.0' );
+define( 'HV_VERSION', '0.5.0' );
 define( 'HV_DIR', get_stylesheet_directory() );
 define( 'HV_URI', get_stylesheet_directory_uri() );
 
@@ -92,7 +92,11 @@ function hv_logo_url( $style = '' ) {
  * @return mixed
  */
 function hv_default_logo( $logo ) {
-	return $logo ? $logo : hv_logo_url();
+	// Flatsome trả về logo mặc định của nó khi chưa tải logo → thay bằng logo Học Vui.
+	if ( ! $logo || false !== strpos( (string) $logo, '/flatsome/assets/img/logo' ) ) {
+		return hv_logo_url();
+	}
+	return $logo;
 }
 add_filter( 'theme_mod_site_logo', 'hv_default_logo' );
 
@@ -118,3 +122,27 @@ function hv_after_switch() {
 	flush_rewrite_rules();
 }
 add_action( 'after_switch_theme', 'hv_after_switch' );
+
+/**
+ * Tối ưu tốc độ: tắt script đổi emoji thành ảnh của WordPress (tải thêm JS và ảnh từ máy chủ ngoài,
+ * làm vỡ biểu tượng khi mạng chậm) – trình duyệt hiện đại tự hiển thị emoji.
+ */
+function hv_disable_wp_emoji() {
+	remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
+	remove_action( 'wp_print_styles', 'print_emoji_styles' );
+	remove_filter( 'the_content_feed', 'wp_staticize_emoji' );
+	remove_filter( 'comment_text_rss', 'wp_staticize_emoji' );
+	remove_filter( 'wp_mail', 'wp_staticize_emoji_for_email' );
+	add_filter( 'emoji_svg_url', '__return_false' );
+}
+add_action( 'init', 'hv_disable_wp_emoji' );
+
+/**
+ * Tải trước ảnh Cú Bông ở banner trang chủ (cải thiện LCP).
+ */
+function hv_preload_hero() {
+	if ( is_front_page() ) {
+		echo '<link rel="preload" as="image" href="' . esc_url( HV_URI . '/assets/img/mascot.svg' ) . '">' . "\n";
+	}
+}
+add_action( 'wp_head', 'hv_preload_hero', 3 );

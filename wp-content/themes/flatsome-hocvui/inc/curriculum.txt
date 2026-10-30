@@ -139,7 +139,7 @@
 ? Bút chì dài 12 cm, que tính dài 10 cm. Vật nào dài hơn? | Bút chì | Que tính | Dài bằng nhau
 ? Vì sao đo bằng thước chính xác hơn đo bằng gang tay? | Vì 1 cm trên mọi thước đều bằng nhau | Vì thước đẹp hơn | Vì gang tay dài hơn
 
-=== toan-1-cong-tru-pham-vi-100 | 1 | toan | Phép cộng, phép trừ (không nhớ) trong phạm vi 100 | Chủ đề 8: Phép cộng, phép trừ (không nhớ) trong phạm vi 100 | ➕ | bong-bay
+=== toan-1-cong-tru-pham-vi-100 | 1 | toan | Phép cộng, phép trừ (không nhớ) trong phạm vi 100 | Chủ đề 8: Phép cộng, phép trừ (không nhớ) trong phạm vi 100 | ➕ | dua-xe
 > Đặt tính rồi tính cộng, trừ số có hai chữ số không nhớ.
 ~ Vườn cà chua của Cú Bông có 32 quả chín, hôm nay chín thêm 25 quả nữa. Đếm từng quả mỏi tay lắm! Học đặt tính là tính được ngay.
 ! Nhờ bố mẹ đọc một phép cộng hai số có hai chữ số (không nhớ), em đặt tính và tính vào giấy.
@@ -315,7 +315,7 @@
 ? 56 + 28 = ? | 84 | 74 | 85
 ? Lớp 2A có 18 bạn nam và 17 bạn nữ. Lớp có tất cả bao nhiêu bạn? | 35 bạn | 25 bạn | 36 bạn
 
-=== toan-2-tru-co-nho-pham-vi-100 | 2 | toan | Phép trừ có nhớ trong phạm vi 100 | Phép cộng, phép trừ (có nhớ) trong phạm vi 100 | ➖ | tinh-nham
+=== toan-2-tru-co-nho-pham-vi-100 | 2 | toan | Phép trừ có nhớ trong phạm vi 100 | Phép cộng, phép trừ (có nhớ) trong phạm vi 100 | ➖ | dua-xe
 > Đặt tính và tính phép trừ có nhớ trong phạm vi 100.
 ~ Tiệm bánh của bác Gấu có 52 cái bánh, đã bán 17 cái. Còn lại bao nhiêu cái nhỉ? Hôm nay mình học phép trừ có nhớ – mượn một chục rồi nhớ trả thật sòng phẳng nhé!
 ! Đố bố mẹ một phép trừ có nhớ, rồi em tự kiểm tra kết quả bằng phép cộng.
@@ -352,7 +352,7 @@
 ? Trong phép tính 5 × 3 = 15, số 15 được gọi là: | Tích | Thừa số | Thương
 ? 10 : 2 = ? | 5 | 8 | 20
 
-=== toan-2-cac-so-pham-vi-1000 | 2 | toan | Các số trong phạm vi 1000 | Các số trong phạm vi 1000 | 💯 | tinh-nham
+=== toan-2-cac-so-pham-vi-1000 | 2 | toan | Các số trong phạm vi 1000 | Các số trong phạm vi 1000 | 💯 | dap-chuot
 > Đọc, viết, so sánh số có ba chữ số; hiểu trăm – chục – đơn vị.
 ~ Cú Bông xếp que tính thành từng bó: 10 que là 1 chục, 10 chục là 1 trăm. Cứ thế, kho que tính có thể lên tới 1000 que! Mình cùng đếm nhé.
 ! Tìm một số có 3 chữ số trên tờ lịch hoặc vỏ hộp, đọc to và nói số đó gồm mấy trăm, mấy chục, mấy đơn vị.
@@ -513,7 +513,7 @@
 ? 8 × 8 = ? | 64 | 56 | 72
 ? Mỗi hộp có 6 cái bánh. Hỏi 7 hộp có bao nhiêu cái bánh? | 42 cái | 13 cái | 48 cái
 
-=== toan-3-chia-het-chia-co-du | 3 | toan | Phép chia hết và phép chia có dư | Phép nhân, phép chia trong phạm vi 1000 | ➗ | tinh-nham
+=== toan-3-chia-het-chia-co-du | 3 | toan | Phép chia hết và phép chia có dư | Phép nhân, phép chia trong phạm vi 1000 | ➗ | dua-xe
 > Phân biệt phép chia hết và phép chia có dư; số dư luôn bé hơn số chia.
 ~ Cú Bông có 17 cái kẹo, chia đều cho 5 bạn. Chia xong mà vẫn còn thừa vài cái… Số kẹo thừa ấy có một cái tên riêng đấy: số dư!
 ! Chia một nắm hạt đậu cho các thành viên trong nhà, rồi viết phép chia có dư.
@@ -732,7 +732,7 @@
 ? Chữ số 8 trong số 3 845 210 thuộc hàng nào? | Hàng trăm nghìn | Hàng chục nghìn | Hàng triệu
 ? Số nào lớn nhất? | 1 000 000 | 999 999 | 99 999
 
-=== toan-4-so-chan-so-le | 4 | toan | Số chẵn, số lẻ | Ôn tập và bổ sung | 🔢 | dung-sai
+=== toan-4-so-chan-so-le | 4 | toan | Số chẵn, số lẻ | Ôn tập và bổ sung | 🔢 | dap-chuot
 > Nhận biết số chẵn, số lẻ dựa vào chữ số tận cùng.
 ~ Cú Bông xếp hàng vào lớp theo đôi. Nếu số bạn là số chẵn thì vừa đủ từng đôi, còn số lẻ thì… thừa ra một bạn! Cùng tìm hiểu số chẵn, số lẻ nhé.
 ! Nhìn số nhà, biển số xe hoặc số trang sách và nói đó là số chẵn hay số lẻ.
@@ -1055,7 +1055,7 @@
 ? Thấy cô lao công quét đường, em nên: | Chào cô và bỏ rác đúng chỗ | Vứt rác ngay chỗ cô vừa quét | Không để ý
 ? Câu tục ngữ nào nói về lòng biết ơn? | Ăn quả nhớ kẻ trồng cây | Nước chảy đá mòn | Có công mài sắt có ngày nên kim
 
-=== toan-5-so-thap-phan | 5 | toan | Số thập phân | Chủ đề 2: Số thập phân | 🔟 | tinh-nham
+=== toan-5-so-thap-phan | 5 | toan | Số thập phân | Chủ đề 2: Số thập phân | 🔟 | dua-xe
 > Đọc, viết, so sánh số thập phân; cộng, trừ số thập phân.
 ~ Em cao 1 mét và thêm một chút nữa… vậy viết thế nào cho chính xác? Số thập phân với dấu phẩy nhỏ xíu sẽ giúp em!
 ! Tìm một số đo có dấu phẩy trên bao bì sản phẩm (ví dụ 1,5 l) và đọc to.
@@ -1356,3 +1356,156 @@
 ? Gặp bài toán khó, em nên: | Bình tĩnh suy nghĩ, nếu cần thì hỏi thầy cô | Bỏ qua không làm | Chép bài của bạn
 ? Câu tục ngữ nào khuyên ta kiên trì? | Có công mài sắt, có ngày nên kim | Ăn quả nhớ kẻ trồng cây | Uống nước nhớ nguồn
 ? Bạn em bị ốm phải nghỉ học nhiều ngày, em có thể: | Chép bài và giảng lại cho bạn | Không quan tâm | Trêu bạn học kém
+
+=== may-tinh-1-ban-may-tinh | 1 | may-tinh | Máy tính – người bạn mới | Làm quen máy tính | 🖥️ | bo-phan
+> Gọi tên các bộ phận của máy tính và biết mỗi bộ phận dùng để làm gì.
+~ Tèn ten! Nhà Cú Bông vừa có một người bạn mới biết vẽ tranh, chơi nhạc, giúp học bài. Bạn ấy có màn hình như khuôn mặt, có chuột và bàn phím như đôi tay. Đó là… máy tính!
+! Cùng bố mẹ chỉ vào từng bộ phận của máy tính (hoặc điện thoại, máy tính bảng) ở nhà và gọi tên.
++ Gọi tên màn hình, bàn phím, chuột, thân máy, loa.
++ Biết công dụng của mỗi bộ phận.
++ Nhận ra máy tính xách tay, máy tính bảng.
+<table><thead><tr><th>Bộ phận</th><th>Dùng để</th></tr></thead><tbody>
+<tr><td>🖥️ Màn hình</td><td>Hiện chữ, hình ảnh, phim hoạt hình</td></tr>
+<tr><td>⌨️ Bàn phím</td><td>Gõ chữ, gõ số</td></tr>
+<tr><td>🖱️ Chuột</td><td>Di chuyển con trỏ trên màn hình, nháy để chọn</td></tr>
+<tr><td>📦 Thân máy</td><td>“Bộ não” của máy tính – xử lí và lưu thông tin</td></tr>
+<tr><td>🔊 Loa</td><td>Phát ra âm thanh, tiếng nhạc</td></tr>
+</tbody></table>
+<div class="hv-example"><strong>Máy tính xách tay (laptop)</strong> gộp màn hình, bàn phím, thân máy làm một, gập lại mang đi được. <strong>Máy tính bảng</strong> chỉ có màn hình cảm ứng – em chạm ngón tay thay cho chuột.</div>
+<div class="hv-tip"><strong>Bật – tắt đúng cách:</strong> bật bằng nút nguồn; khi tắt, nhờ bố mẹ chọn “Shut down” (Tắt máy) rồi mới rút điện, không tắt đột ngột.</div>
+* Màn hình hiện hình; bàn phím gõ chữ; chuột chọn; thân máy xử lí; loa phát âm thanh.
+* Tắt máy đúng cách, không rút điện khi máy đang chạy.
+? Bộ phận nào dùng để gõ chữ? | Bàn phím | Màn hình | Loa
+? Bộ phận nào hiện hình ảnh? | Màn hình | Chuột | Thân máy
+? “Bộ não” của máy tính là: | Thân máy | Loa | Bàn phím
+? Máy tính bảng dùng gì thay cho chuột? | Ngón tay chạm màn hình | Bàn chân | Cái bút chì gỗ
+
+=== may-tinh-1-cam-chuot | 1 | may-tinh | Cầm chuột và nháy chuột | Làm quen máy tính | 🖱️ | hai-tao
+> Cầm chuột đúng cách, di chuyển con trỏ và nháy chuột.
+~ Chú chuột máy tính không biết chạy đâu, chỉ chờ bàn tay em dẫn đường thôi! Hôm nay mình cùng tập cầm chuột và hái táo bằng chuột nhé.
+! Nhờ bố mẹ mở một trò chơi vẽ hoặc tô màu trên máy tính, em dùng chuột tô 3 bức hình.
++ Biết các nút của chuột: nút trái, nút phải, con lăn.
++ Cầm chuột đúng cách.
++ Di chuyển con trỏ và nháy chuột.
+<p>Chuột có <strong>nút trái</strong>, <strong>nút phải</strong> và <strong>con lăn</strong> ở giữa. Khi em di chuyển chuột trên bàn, <strong>con trỏ</strong> (thường hình mũi tên) trên màn hình di chuyển theo.</p>
+<div class="hv-example"><strong>Cầm chuột đúng cách:</strong> úp lòng bàn tay lên chuột, <strong>ngón trỏ</strong> đặt lên nút trái, <strong>ngón giữa</strong> đặt lên nút phải, ngón cái và các ngón còn lại giữ hai bên chuột.</div>
+<div class="hv-example"><strong>Nháy chuột:</strong> nhấn nhanh nút trái một lần rồi thả tay. Em dùng nháy chuột để chọn một hình, mở một nút bấm.</div>
+<div class="hv-tip"><strong>Mẹo:</strong> đặt chuột trên tấm lót chuột, di chuyển nhẹ nhàng, cổ tay thả lỏng.</div>
+* Ngón trỏ – nút trái, ngón giữa – nút phải.
+* Nháy chuột: nhấn nhanh nút trái một lần rồi thả.
+? Ngón nào đặt lên nút trái của chuột? | Ngón trỏ | Ngón út | Ngón cái
+? Khi di chuyển chuột, cái gì trên màn hình di chuyển theo? | Con trỏ | Hình nền | Cả màn hình
+? Nháy chuột là: | Nhấn nhanh nút trái một lần rồi thả | Giữ nút phải thật lâu | Nhấc chuột lên cao
+? Chuột có mấy nút chính? | 2 nút: trái và phải | 5 nút | Không có nút
+
+=== may-tinh-2-nhay-dup-keo-tha | 2 | may-tinh | Nháy đúp và kéo thả chuột | Làm quen máy tính | 🖱️ | hai-tao
+> Thực hiện nháy đúp chuột để mở và kéo thả để di chuyển đối tượng.
+~ Muốn mở một trò chơi trên màn hình thì phải gõ cửa 2 lần thật nhanh – cốc cốc! Còn muốn mang quả táo vào giỏ thì phải nắm lấy và kéo đi. Cùng Cú Bông tập nhé!
+! Nhờ bố mẹ cho em thử nháy đúp mở một thư mục ảnh gia đình, rồi kéo một bức ảnh sang chỗ khác.
++ Nháy đúp chuột.
++ Kéo thả chuột.
+<div class="hv-example"><strong>Nháy đúp chuột:</strong> nháy nhanh <strong>2 lần liên tiếp</strong> nút trái. Dùng để mở một biểu tượng, một thư mục, một trò chơi.</div>
+<div class="hv-example"><strong>Kéo thả chuột:</strong> đưa con trỏ tới đối tượng, <strong>nhấn và giữ</strong> nút trái, di chuyển chuột tới chỗ mới rồi <strong>thả</strong> nút ra.</div>
+<div class="hv-tip"><strong>Mẹo nháy đúp:</strong> giữ chuột thật yên, hai lần nháy thật nhanh. Nếu nháy chậm quá, máy tính chỉ hiểu là hai lần nháy chuột riêng lẻ.</div>
+* Nháy đúp: nháy nhanh 2 lần nút trái – để mở.
+* Kéo thả: nhấn giữ nút trái, di chuyển, thả ra – để di chuyển.
+? Muốn mở một biểu tượng trò chơi, em thường làm gì? | Nháy đúp chuột | Nháy nút phải 1 lần | Lắc chuột
+? Kéo thả chuột gồm các bước: | Nhấn giữ nút trái – di chuyển – thả | Nháy nút phải – thả | Lăn con lăn
+? Nháy đúp là nháy mấy lần liên tiếp? | 2 lần | 1 lần | 5 lần
+? Vì sao nháy đúp chậm quá lại không mở được? | Máy hiểu là 2 lần nháy riêng lẻ | Vì chuột bị hỏng | Vì màn hình tắt
+
+=== may-tinh-2-hang-phim-co-so | 2 | may-tinh | Làm quen bàn phím – hàng phím cơ sở | Làm quen máy tính | ⌨️ | go-phim
+> Biết các hàng phím và đặt tay đúng trên hàng phím cơ sở.
+~ Bàn phím giống như một khu phố có nhiều dãy nhà. Dãy nhà quan trọng nhất là “hàng phím cơ sở” – nơi 8 ngón tay của em đứng chờ. Có 2 ngôi nhà có gờ đánh dấu, em tìm ra không?
+! Nhắm mắt lại, sờ bàn phím tìm 2 phím có gờ F và J, rồi đặt đúng 8 ngón tay lên hàng phím cơ sở.
++ Kể tên các hàng phím: hàng số, hàng trên, hàng cơ sở, hàng dưới, phím cách.
++ Đặt tay đúng trên hàng phím cơ sở.
+<p>Bàn phím có <strong>hàng phím số</strong>, <strong>hàng phím trên</strong>, <strong>hàng phím cơ sở</strong>, <strong>hàng phím dưới</strong> và <strong>phím cách</strong> dài nhất ở dưới cùng.</p>
+<div class="hv-example"><strong>Hàng phím cơ sở:</strong> A S D F G H J K L. Hai phím <strong>F</strong> và <strong>J</strong> có gờ nổi để em đặt <strong>2 ngón trỏ</strong> mà không cần nhìn.</div>
+<table><thead><tr><th>Tay trái</th><th>Tay phải</th></tr></thead><tbody>
+<tr><td>Út – A · Áp út – S · Giữa – D · Trỏ – F</td><td>Trỏ – J · Giữa – K · Áp út – L · Út – phím ;</td></tr>
+</tbody></table>
+<div class="hv-tip"><strong>Phím cách</strong> (Space) bấm bằng <strong>ngón cái</strong> để tạo khoảng trống giữa hai chữ.</div>
+* Hàng phím cơ sở: A S D F G H J K L; F và J có gờ.
+* Hai ngón trỏ đặt trên F và J; ngón cái bấm phím cách.
+? Hai phím nào có gờ nổi? | F và J | A và L | Q và P
+? Ngón trỏ trái đặt lên phím nào? | F | A | J
+? Phím dài nhất dưới cùng bàn phím là: | Phím cách | Phím F | Phím số 0
+? Phím cách được bấm bằng ngón nào? | Ngón cái | Ngón út | Ngón trỏ
+
+=== may-tinh-3-go-10-ngon | 3 | may-tinh | Gõ phím đúng cách bằng 10 ngón | Làm quen máy tính | ⌨️ | go-phim
+> Gõ các phím hàng trên, hàng dưới bằng đúng ngón tay, mắt nhìn màn hình.
+~ Các anh chị gõ phím nhanh như gió mà không cần nhìn bàn phím! Bí quyết là mỗi ngón tay chỉ phụ trách một nhóm phím riêng. Em cũng làm được đấy!
+! Mỗi ngày luyện trò chơi Tập gõ phím 5 phút, ghi lại số chữ gõ trúng để xem mình tiến bộ.
++ Biết ngón tay phụ trách từng phím.
++ Gõ các phím hàng trên, hàng dưới rồi đưa ngón tay về hàng cơ sở.
+<p>Từ hàng phím cơ sở, mỗi ngón vươn lên hàng trên hoặc xuống hàng dưới để gõ, gõ xong lại <strong>trở về hàng cơ sở</strong>.</p>
+<table><thead><tr><th>Ngón</th><th>Tay trái</th><th>Tay phải</th></tr></thead><tbody>
+<tr><td>Út</td><td>Q A Z</td><td>P ;</td></tr>
+<tr><td>Áp út</td><td>W S X</td><td>O L</td></tr>
+<tr><td>Giữa</td><td>E D C</td><td>I K</td></tr>
+<tr><td>Trỏ</td><td>R F V T G B</td><td>Y H N U J M</td></tr>
+</tbody></table>
+<div class="hv-tip"><strong>Tư thế:</strong> ngồi thẳng lưng, hai tay thả lỏng, cổ tay không tì lên bàn phím, mắt nhìn màn hình chứ không nhìn bàn phím.</div>
+* Mỗi ngón phụ trách một nhóm phím; gõ xong đưa ngón về hàng cơ sở.
+* Ngón trỏ phụ trách nhiều phím nhất.
+? Phím E được gõ bằng ngón nào của tay trái? | Ngón giữa | Ngón út | Ngón trỏ
+? Gõ xong một phím, ngón tay cần: | Trở về hàng phím cơ sở | Đặt lên màn hình | Nhấc ra khỏi bàn phím
+? Khi gõ phím, mắt em nên nhìn vào đâu? | Màn hình | Bàn phím | Chuột
+? Ngón trỏ phải phụ trách các phím: | Y H N U J M | Q A Z | O L
+
+=== may-tinh-3-tu-the-an-toan | 3 | may-tinh | Ngồi đúng tư thế, dùng máy tính an toàn | Làm quen máy tính | 🪑 | bo-phan
+> Ngồi đúng tư thế, bảo vệ mắt và an toàn điện khi dùng máy tính.
+~ Máy tính rất vui, nhưng ngồi sai tư thế lâu sẽ mỏi lưng, mỏi mắt đấy! Cú Bông có 5 bí kíp để vừa học vui vừa khoẻ mạnh.
+! Cùng bố mẹ chỉnh lại bàn ghế, màn hình ở góc học máy tính cho đúng tư thế.
++ Ngồi đúng tư thế khi dùng máy tính.
++ Bảo vệ mắt: khoảng cách, thời gian nghỉ.
++ An toàn điện khi dùng máy tính.
+<ul><li>Ngồi <strong>thẳng lưng</strong>, hai chân đặt chạm sàn.</li><li>Mắt cách màn hình khoảng <strong>50–80 cm</strong>, màn hình ngang tầm mắt hoặc thấp hơn một chút.</li><li>Phòng đủ sáng, màn hình không bị chói.</li><li>Cứ khoảng <strong>20–30 phút</strong> thì nghỉ, nhìn ra xa cho mắt thư giãn.</li></ul>
+<div class="hv-tip"><strong>An toàn điện:</strong> không chạm vào ổ cắm, dây điện; không để nước, đồ ăn gần máy tính; tay ướt thì lau khô trước khi dùng.</div>
+* Lưng thẳng, mắt cách màn hình 50–80 cm, nghỉ sau 20–30 phút.
+* Không để nước gần máy, không nghịch ổ điện.
+? Mắt nên cách màn hình khoảng: | 50–80 cm | 5 cm | 3 mét
+? Dùng máy tính khoảng bao lâu thì nên nghỉ? | 20–30 phút | 5 giờ | Không cần nghỉ
+? Việc nào KHÔNG nên làm? | Để cốc nước cạnh bàn phím | Ngồi thẳng lưng | Nghỉ mắt nhìn ra xa
+? Khi ngồi, hai chân em nên: | Đặt chạm sàn | Gác lên bàn | Co lên ghế
+
+=== may-tinh-4-go-telex | 4 | may-tinh | Gõ chữ Việt kiểu Telex | Làm quen máy tính | 🇻🇳 | go-phim
+> Gõ được chữ có dấu tiếng Việt theo kiểu Telex.
+~ Bàn phím không có sẵn chữ ă, â, đ hay dấu sắc, dấu huyền… Vậy làm sao gõ được “Việt Nam”? Có một phép thuật tên là Telex: gõ thêm một chữ là ra dấu ngay!
+! Mở phần mềm soạn thảo (nhờ bố mẹ bật bộ gõ tiếng Việt), gõ họ tên đầy đủ của em có dấu.
++ Gõ chữ ă, â, ê, ô, ơ, ư, đ.
++ Gõ 5 dấu thanh.
+<table><thead><tr><th>Muốn có</th><th>Gõ</th><th>Muốn có dấu</th><th>Gõ thêm</th></tr></thead><tbody>
+<tr><td>â</td><td>aa</td><td>sắc</td><td>s</td></tr>
+<tr><td>ă</td><td>aw</td><td>huyền</td><td>f</td></tr>
+<tr><td>ê</td><td>ee</td><td>hỏi</td><td>r</td></tr>
+<tr><td>ô</td><td>oo</td><td>ngã</td><td>x</td></tr>
+<tr><td>ơ</td><td>ow</td><td>nặng</td><td>j</td></tr>
+<tr><td>ư</td><td>uw</td><td>xoá dấu</td><td>z</td></tr>
+<tr><td>đ</td><td>dd</td><td></td><td></td></tr>
+</tbody></table>
+<div class="hv-example"><strong>Ví dụ:</strong> “Học Vui” → gõ <code>Hocj Vui</code> · “Việt Nam” → gõ <code>Vieejt Nam</code> · “đẹp” → gõ <code>ddepj</code>.</div>
+<div class="hv-tip"><strong>Nhớ:</strong> phải bật bộ gõ tiếng Việt (như Unikey, EVKey hoặc bộ gõ có sẵn của máy) và chọn kiểu gõ Telex.</div>
+* aa=â, aw=ă, ee=ê, oo=ô, ow=ơ, uw=ư, dd=đ.
+* s sắc, f huyền, r hỏi, x ngã, j nặng, z xoá dấu.
+? Muốn gõ chữ “đ” theo kiểu Telex, em gõ: | dd | d1 | dw
+? Gõ “aw” sẽ được chữ: | ă | â | ơ
+? Dấu huyền gõ bằng phím: | f | s | j
+? “Mẹ” gõ theo kiểu Telex là: | mej | mes | mef
+
+=== may-tinh-5-internet-an-toan | 5 | may-tinh | Dùng Internet an toàn | Làm quen máy tính | 🛡️ | bo-phan
+> Biết giữ bí mật thông tin cá nhân và xử lí khi gặp điều không an toàn trên mạng.
+~ Internet giống như một thành phố khổng lồ: có thư viện, rạp phim, sân chơi… nhưng cũng có người lạ và nơi nguy hiểm. Hôm nay Cú Bông trao cho em chiếc khiên an toàn!
+! Cùng bố mẹ lập “Quy tắc dùng Internet của gia đình” và dán cạnh máy tính.
++ Nhận biết thông tin cá nhân cần giữ bí mật.
++ Biết cách xử lí khi gặp người lạ, nội dung xấu trên mạng.
+<p><strong>Thông tin cá nhân</strong> cần giữ bí mật: họ tên đầy đủ, địa chỉ nhà, tên trường, số điện thoại, ảnh riêng tư và đặc biệt là <strong>mật khẩu</strong>.</p>
+<div class="hv-example"><strong>Tình huống:</strong> một người lạ trên mạng khen em và hỏi nhà em ở đâu, rủ đi gặp mặt. Em <strong>không trả lời</strong>, <strong>không hẹn gặp</strong> và <strong>kể ngay với bố mẹ hoặc thầy cô</strong>.</div>
+<div class="hv-tip"><strong>5 quy tắc vàng:</strong> 1) Không chia sẻ thông tin cá nhân. 2) Không nói chuyện, hẹn gặp người lạ. 3) Gặp hình ảnh, lời nói khiến em sợ – tắt đi và báo người lớn. 4) Hỏi bố mẹ trước khi tải, cài đặt hay mua gì. 5) Dùng mạng đúng giờ đã thống nhất.</div>
+* Giữ bí mật họ tên đầy đủ, địa chỉ, trường, số điện thoại, mật khẩu.
+* Gặp điều bất thường: dừng lại và báo ngay cho người lớn.
+? Thông tin nào cần giữ bí mật trên mạng? | Mật khẩu và địa chỉ nhà | Màu sắc em thích | Tên con vật em thích
+? Người lạ trên mạng rủ em đi gặp mặt, em nên: | Không đi và kể ngay với bố mẹ | Đi gặp một mình | Gửi địa chỉ nhà
+? Muốn tải một trò chơi mới, em nên: | Hỏi bố mẹ trước | Tự tải ngay | Nhập mật khẩu của bố mẹ
+? Thấy hình ảnh khiến em sợ, em nên: | Tắt đi và báo người lớn | Chia sẻ cho bạn | Xem tiếp

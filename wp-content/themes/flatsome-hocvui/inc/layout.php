@@ -110,7 +110,7 @@ function hv_sc_footer() {
 		<div class="hv-wrap hv-fgrid">
 			<div class="hv-fbrand">
 				<a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="hv-flogo"><img src="<?php echo esc_url( hv_logo_url( 'white' ) ); ?>" width="300" height="82" alt="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>" loading="lazy"></a>
-				<p>Học mà chơi – chơi mà học. Bài học lớp 1–5 theo Chương trình GDPT 2018, bám sách Kết nối tri thức với cuộc sống và Tiếng Anh Global Success, kèm 11 trò chơi học tập miễn phí.</p>
+				<p>Học mà chơi – chơi mà học. Bài học lớp 1–5 theo Chương trình GDPT 2018, bám sách Kết nối tri thức với cuộc sống và Tiếng Anh Global Success, kèm 16 trò chơi học tập miễn phí.</p>
 				<div class="hv-fmaker">
 					<img src="<?php echo esc_url( HV_URI . '/assets/img/brand/tinhoc119-tron.webp' ); ?>" width="64" height="64" alt="" loading="lazy">
 					<span><small>Đơn vị phát triển</small><strong><?php echo esc_html( hv_opt( 'org_name' ) ); ?></strong><em><?php echo esc_html( hv_opt( 'org_slogan' ) ); ?></em></span>

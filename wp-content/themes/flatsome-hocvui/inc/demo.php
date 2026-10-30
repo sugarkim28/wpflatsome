@@ -1,6 +1,6 @@
 <?php
 /**
- * Giao diện → Tạo site mẫu: dựng 5 lớp, 8 môn, hơn 60 bài học (inc/curriculum.txt) kèm câu hỏi luyện tập,
+ * Giao diện → Tạo site mẫu: dựng 5 lớp, 9 môn, hơn 80 bài học (inc/curriculum.txt) kèm câu hỏi luyện tập,
  * trang chủ, Trò chơi, Góc của em, Góc phụ huynh, menu chính. Chạy lại được (cập nhật theo slug, không tạo trùng).
  *
  * @package Flatsome_Hocvui
@@ -32,7 +32,7 @@ function hv_demo_page() {
 		<?php endif; ?>
 		<p>Nút <strong>Tạo site mẫu</strong> dựng sẵn:</p>
 		<ul style="list-style:disc;margin-left:20px">
-			<li>5 lớp (Lớp 1 – Lớp 5) và 8 môn theo Chương trình GDPT 2018: Toán, Tiếng Việt, Tiếng Anh, Tự nhiên và Xã hội, Khoa học, Lịch sử và Địa lí, Đạo đức, Tin học và Công nghệ.</li>
+			<li>5 lớp (Lớp 1 – Lớp 5), 8 môn theo Chương trình GDPT 2018 (Toán, Tiếng Việt, Tiếng Anh, Tự nhiên và Xã hội, Khoa học, Lịch sử và Địa lí, Đạo đức, Tin học và Công nghệ) và môn ngoại khoá <em>Làm quen máy tính</em>.</li>
 			<li><?php echo (int) count( hv_curriculum() ); ?> bài học có mục tiêu, nội dung, ví dụ, ghi nhớ, 3–4 câu hỏi luyện tập và trò chơi gợi ý (bám bộ sách <em>Kết nối tri thức với cuộc sống</em> và <em>Tiếng Anh Global Success</em> – bộ sách dùng chung toàn quốc từ năm học 2026–2027).</li>
 			<li>Trang <em>Trang chủ</em> (đặt làm trang chủ), <em>Trò chơi</em>, <em>Góc của em</em> (album nhãn dán), <em>Góc phụ huynh</em>.</li>
 			<li>Menu chính (Lớp học, Môn học, Trò chơi…) gán vào header Flatsome.</li>
@@ -153,6 +153,7 @@ function hv_demo_lessons_build() {
 		'lich-su-dia-li'  => 'Địa phương em, các vùng miền Việt Nam, lịch sử dựng nước và giữ nước (lớp 4–5).',
 		'dao-duc'         => 'Kĩ năng sống, ứng xử với gia đình, thầy cô, bạn bè và cộng đồng.',
 		'tin-hoc'         => 'Máy tính và em, sử dụng an toàn, làm quen lập trình (lớp 3–5).',
+		'may-tinh'        => 'Môn ngoại khoá cho bé từ lớp 1: các bộ phận máy tính, cầm chuột, nháy đúp, kéo thả, gõ phím 10 ngón, gõ tiếng Việt, dùng Internet an toàn – học qua trò chơi.',
 	);
 	foreach ( hv_subjects() as $slug => $s ) {
 		hv_demo_term( 'mon_hoc', $s[0], $slug, $subject_desc[ $slug ] );
@@ -254,7 +255,7 @@ function hv_demo_pages_build() {
 			'post_type'    => 'page',
 			'post_name'    => 'tro-choi',
 			'post_title'   => 'Trò chơi',
-			'post_content' => hv_demo_block( '[hv_pagehead title="Khu trò chơi" lead="11 trò chơi Toán, Tiếng Việt, Tiếng Anh, Khoa học – chọn lớp ngay trong trò chơi. Mỗi lượt được sao và XP!" icon="🕹️" color="#ff5d73"]' )
+			'post_content' => hv_demo_block( '[hv_pagehead title="Khu trò chơi" lead="16 trò chơi Toán, Tiếng Việt, Tiếng Anh, Khoa học – chọn lớp ngay trong trò chơi. Mỗi lượt được sao và XP!" icon="🕹️" color="#ff5d73"]' )
 				. hv_demo_block( '[hv_section][hv_games][/hv_section]' ),
 		),
 		$blank
@@ -333,7 +334,6 @@ function hv_demo_pages_build() {
 	$page = function ( $title, $id ) {
 		return array( 'menu-item-title' => $title, 'menu-item-object' => 'page', 'menu-item-object-id' => $id, 'menu-item-type' => 'post_type' );
 	};
-	$add( $page( 'Trang chủ', $home ), 0, 'house' );
 	$by  = hv_lessons_by_grade();
 	$lop = $add( array( 'menu-item-title' => 'Lớp học', 'menu-item-url' => home_url( '/#ban-do' ), 'menu-item-type' => 'custom' ), 0, 'island', '', 'hv-mega' );
 	foreach ( hv_grades() as $n => $g ) {
@@ -381,6 +381,14 @@ function hv_demo_pages_build() {
 	set_theme_mod( 'color_primary', '#2ea3f2' );
 	set_theme_mod( 'color_secondary', '#58b847' );
 	set_theme_mod( 'back_to_top', 1 );
+	set_theme_mod( 'site_width', 1240 );
+	set_theme_mod( 'header_width', 'container' );
+	set_theme_mod( 'nav_spacing', 'xsmall' );
+	set_theme_mod( 'disable_fonts', 1 ); // Theme đã tải Nunito + Baloo 2, không cần phông mặc định của Flatsome.
+	if ( false !== strpos( get_bloginfo( 'name' ), '.' ) || '' === get_bloginfo( 'name' ) ) {
+		update_option( 'blogname', 'Học Vui' ); // Tên site đang là tên miền → đặt tên thương hiệu.
+		update_option( 'blogdescription', 'Học mà chơi – chơi mà học, lớp 1 đến lớp 5' );
+	}
 
 	// Chân trang = UX Block "Chân trang Học Vui" (sửa được bằng UX Builder), dải bản quyền của Flatsome để trống.
 	$existing = get_page_by_path( 'chan-trang-hoc-vui', OBJECT, 'blocks' );
@@ -414,7 +422,7 @@ function hv_demo_info_content( $slug ) {
 	switch ( $slug ) {
 		case 'gioi-thieu':
 			return '<div class="hv-box hv-content"><img class="alignright" src="' . esc_url( HV_URI . '/assets/img/brand/hocvui-huy-hieu.png' ) . '" width="220" height="220" alt="Huy hiệu Học Vui">'
-				. '<h2>Học Vui là gì?</h2><p>Học Vui là sân chơi học tập trực tuyến miễn phí cho học sinh lớp 1 đến lớp 5. Mỗi lớp là một hòn đảo, mỗi bài học là một màn chơi ngắn: nghe bạn Cú Bông kể chuyện, khám phá kiến thức từng chút một, ôn bí kíp rồi đánh trùm để giành sao. Bé còn có 11 trò chơi học tập tự sinh câu hỏi mới mỗi lượt.</p>'
+				. '<h2>Học Vui là gì?</h2><p>Học Vui là sân chơi học tập trực tuyến miễn phí cho học sinh lớp 1 đến lớp 5. Mỗi lớp là một hòn đảo, mỗi bài học là một màn chơi ngắn: nghe bạn Cú Bông kể chuyện, khám phá kiến thức từng chút một, ôn bí kíp rồi đánh trùm để giành sao. Bé còn có 16 trò chơi học tập tự sinh câu hỏi mới mỗi lượt.</p>'
 				. '<h2>Bám sát chương trình mới</h2><p>Bài học sắp xếp theo Chương trình giáo dục phổ thông 2018 và chủ đề của bộ sách <strong>Kết nối tri thức với cuộc sống</strong>, Tiếng Anh <strong>Global Success</strong> – bộ sách dùng chung toàn quốc từ năm học 2026–2027. Nội dung do đội ngũ tự biên soạn để ôn tập, không sao chép và không thay thế sách giáo khoa.</p>'
 				. '<h2>Đơn vị phát triển</h2><p><img src="' . esc_url( HV_URI . '/assets/img/brand/tinhoc119-ngang.webp' ) . '" width="360" height="97" alt="' . $org . '" loading="lazy"></p><p>Học Vui do <strong>' . $org . '</strong> xây dựng và vận hành với tinh thần <em>' . esc_html( hv_opt( 'org_slogan' ) ) . '</em>.</p></div>';
 		case 'lien-he':

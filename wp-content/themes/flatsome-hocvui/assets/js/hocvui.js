@@ -589,6 +589,11 @@
 			title: 'Ghép chữ – Đánh vần', icon: '🔤', grades: [1, 2, 3], total: 8,
 			make: function (g, st) { st.used = st.used || {}; return wordQ(Math.min(g, 3), st.used); }
 		},
+		'dua-xe': { title: 'Đua xe tính nhẩm', icon: '🏎️', grades: [1, 2, 3, 4, 5], custom: 'race', hint: 'Trả lời đúng để xe chạy – về đích trước xe của Cú Bông!' },
+		'dap-chuot': { title: 'Đập chuột chũi', icon: '🔨', grades: [1, 2, 3, 4, 5], custom: 'whack', hint: 'Đập thật nhanh chú chuột mang số đúng yêu cầu trong 45 giây' },
+		'hai-tao': { title: 'Hái táo – Tập dùng chuột', icon: '🍎', grades: [1, 2, 3, 4, 5], custom: 'mouse', hint: '3 bước: nháy chuột, nháy đúp, kéo thả táo vào giỏ' },
+		'go-phim': { title: 'Tập gõ phím', icon: '⌨️', grades: [1, 2, 3, 4, 5], custom: 'typing', hint: 'Gõ đúng phím để phá bong bóng chữ trước khi chạm đất' },
+		'bo-phan': { title: 'Ghép bộ phận máy tính', icon: '🖥️', grades: [1, 2, 3, 4, 5], custom: 'parts', hint: 'Kéo tên (hoặc chạm tên rồi chạm dấu ?) vào đúng bộ phận' },
 		'do-vui': {
 			title: 'Đố vui khoa học – xã hội', icon: '🔬', grades: [1, 2, 3, 4, 5], total: 8,
 			deck: function (g) {
@@ -660,6 +665,8 @@
 	Player.prototype.intro = function () {
 		var self = this;
 		if (this.stopTimer) { this.stopTimer(); this.stopTimer = null; }
+		clearTimeout(this.cdTimer);
+		this.root.classList.remove('is-playing', 'is-hot');
 		var name = store.get('name', '');
 		var b = this.body;
 		var sub = this.def.fromData ? 'Trả lời các câu hỏi để ôn lại bài nhé!' : (this.def.grades.length ? 'Lớp ' + this.grade + ' · ' : '') + (this.def.hint ? this.def.hint : this.def.custom === 'memory' ? 'Lật 2 thẻ giống nhau để ghép đôi' : this.def.custom === 'order' ? 'Chạm vào các từ theo đúng thứ tự' : 'Chọn đáp án đúng');
@@ -668,14 +675,82 @@
 			'<button type="button" class="hv-btn hv-btn-big">Bắt đầu chơi ▶</button></div>';
 		b.querySelector('button').addEventListener('click', function () { self.start(); });
 	};
+	/* ---------- Cảm giác game: đếm ngược, điểm, combo, Cú Bông cổ vũ, kỷ lục ---------- */
 	Player.prototype.start = function () {
+		var self = this;
+		if (this.stopTimer) { this.stopTimer(); this.stopTimer = null; }
+		this.points = 0;
+		this.combo = 0;
+		this.bestCombo = 0;
+		this.root.classList.add('is-playing');
+		this.updateScore();
+		if (this.def.fromData) { return this.begin(); }
+		var steps = ['3', '2', '1', 'Bắt đầu!'];
+		var k = 0;
+		var tick = function () {
+			if (k >= steps.length) { return self.begin(); }
+			self.body.innerHTML = '<div class="hv-countdown"><span>' + steps[k] + '</span></div>';
+			tone(k < 3 ? [520] : [660, 880], k < 3 ? 0.12 : 0.14);
+			k++;
+			self.cdTimer = setTimeout(tick, k < 4 ? 650 : 750);
+		};
+		tick();
+	};
+	Player.prototype.updateScore = function () {
+		if (!this.scoreEl) {
+			this.scoreEl = el('div', 'hv-scorebar');
+			this.scoreEl.setAttribute('aria-hidden', 'true');
+			this.root.insertBefore(this.scoreEl, this.body);
+			this.coach = el('div', 'hv-coach', (CFG.img ? '<img src="' + esc(CFG.img + 'owl.webp') + '" width="64" height="64" alt="">' : '🦉') + '<span></span>');
+			this.coach.setAttribute('aria-hidden', 'true');
+			this.root.appendChild(this.coach);
+		}
+		this.scoreEl.innerHTML = '<span class="hv-pts">' + (ico('star', 22) || '⭐') + ' <b>' + (this.points || 0) + '</b> điểm</span>' +
+			(this.combo >= 2 ? '<span class="hv-combo">🔥 Combo x' + this.combo + '</span>' : '');
+	};
+	// Gọi mỗi lần trả lời: cộng điểm theo combo, hiện "+điểm" bay lên, Cú Bông nhảy mừng hoặc động viên.
+	Player.prototype.hit = function (ok, anchor) {
+		var self = this;
+		if (ok) {
+			this.combo++;
+			this.bestCombo = Math.max(this.bestCombo, this.combo);
+			var add = 10 * Math.min(this.combo, 5);
+			this.points += add;
+			tone([660 + this.combo * 30, 880 + this.combo * 40], 0.1);
+			if (this.combo >= 3 && this.combo % 3 === 0) { tone([784, 988, 1175], 0.08); }
+			var r = this.root.getBoundingClientRect();
+			var a = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : { left: r.left + r.width / 2, top: r.top + r.height / 2, width: 0, height: 0 };
+			var f = el('span', 'hv-float', '+' + add + (this.combo >= 3 ? ' 🔥' : ''));
+			f.style.left = (a.left - r.left + a.width / 2) + 'px';
+			f.style.top = (a.top - r.top) + 'px';
+			this.root.appendChild(f);
+			setTimeout(function () { f.remove(); }, 900);
+		} else {
+			this.combo = 0;
+			sfx.bad();
+		}
+		if (this.coach) {
+			var c = this.coach;
+			c.className = 'hv-coach ' + (ok ? 'is-cheer' : 'is-sad');
+			c.querySelector('span').textContent = ok ? pick(this.combo >= 3 ? ['Combo đỉnh quá!', 'Không cản nổi!', 'Siêu sao!'] : ['Giỏi quá!', 'Đúng rồi!', 'Tuyệt!', 'Hay lắm!']) : pick(['Cố lên!', 'Không sao đâu!', 'Thử lại nào!']);
+			clearTimeout(this.coachT);
+			this.coachT = setTimeout(function () { c.className = 'hv-coach'; }, 1100);
+		}
+		this.updateScore();
+		self.root.classList.toggle('is-hot', this.combo >= 3);
+	};
+	Player.prototype.begin = function () {
 		if (this.def.custom === 'memory') { return this.memory(); }
 		if (this.def.custom === 'order') { return this.order(); }
-		if (this.stopTimer) { this.stopTimer(); this.stopTimer = null; }
 		if (this.def.custom === 'balloon') { return this.balloon(); }
 		if (this.def.custom === 'fishing') { return this.fishing(); }
 		if (this.def.custom === 'truefalse') { return this.truefalse(); }
 		if (this.def.custom === 'climb') { return this.climb(); }
+		if (this.def.custom === 'race') { return this.race(); }
+		if (this.def.custom === 'whack') { return this.whack(); }
+		if (this.def.custom === 'mouse') { return this.mouse(); }
+		if (this.def.custom === 'typing') { return this.typing(); }
+		if (this.def.custom === 'parts') { return this.parts(); }
 		this.state = {};
 		this.marks = [];
 		this.maxHearts = parseInt(this.root.getAttribute('data-hearts'), 10) || 0;
@@ -752,14 +827,14 @@
 		var fb = this.body.querySelector('.hv-feedback');
 		if (ok) {
 			this.right++;
-			sfx.good();
+			this.hit(true, btn);
 			var nm = store.get('name', '');
 			var praise = pick(['Giỏi quá đi!', 'Chính xác luôn!', 'Tuyệt vời!', 'Đúng rồi, em giỏi lắm!', 'Quá đỉnh!']) + (nm && Math.random() < 0.4 ? ' ' + nm + ' ơi!' : '');
 			fb.innerHTML = esc(praise) + ' ' + pick(['🎉', '🌟', '👏', '💯', '🔥']);
 			this.say(praise);
 		} else {
 			btn.classList.add('is-wrong');
-			sfx.bad();
+			this.hit(false, btn);
 			fb.innerHTML = 'Gần đúng rồi! Đáp án là <b>' + esc(q.o.a) + '</b>' + (q.hint ? ' (' + esc(q.hint) + ')' : '') + '. Lần sau em sẽ làm được! 💪';
 			this.say('Chưa đúng. Đáp án là ' + q.o.a);
 			if (this.hearts !== null) { this.hearts--; }
@@ -792,6 +867,13 @@
 			store.set('done', done);
 		}
 		this.marks = [];
+		this.root.classList.remove('is-playing', 'is-hot');
+		if (this.stopTimer) { this.stopTimer(); this.stopTimer = null; }
+		var pts = (this.points || 0) + got * 20;
+		var bestKey = 'best_' + (lvl || this.id + '_' + this.grade);
+		var best = store.get(bestKey, 0);
+		var record = pts > best && pts > 0;
+		if (record) { store.set(bestKey, pts); }
 		var next = this.root.getAttribute('data-next-url');
 		var home = this.root.getAttribute('data-home-url');
 		var starsHtml = '';
@@ -800,6 +882,7 @@
 		this.body.innerHTML = '<div class="hv-result"><div class="hv-big-stars" aria-label="' + got + ' sao">' + starsHtml + '</div>' +
 			'<h3>' + msg + '</h3><p>' + (extra ? esc(extra) : 'Em làm đúng <b>' + right + '/' + total + '</b>' + (this.def.timer ? ' · ' + secs + ' giây' : '')) + '</p>' +
 			(fast ? '<p class="hv-fast">⚡ Siêu tốc! Thêm 1 sao thưởng</p>' : '') +
+			'<div class="hv-score-final"><b>' + pts + '</b> điểm' + (this.bestCombo >= 2 ? ' · combo dài nhất 🔥 x' + this.bestCombo : '') + '<small>' + (record ? (ico('trophy', 24) || '🏆') + ' KỶ LỤC MỚI!' : 'Kỷ lục của em: ' + Math.max(best, pts)) + '</small></div>' +
 			'<p class="hv-reward"><span>' + (ico('star', 26) || '⭐') + ' +' + earned + '</span><span>' + (ico('gem', 26) || '💎') + ' +' + xp + ' XP</span></p>' +
 			(lvUp ? '<div class="hv-levelup">' + (ico('party', 36) || '🎉') + ' Lên <b>cấp ' + lvUp + '</b> – ' + esc(titleOf(lvUp)) + '!</div>' : '') +
 			(sticker ? '<div class="hv-new-sticker"><span>' + sticker + '</span>Em mở được nhãn dán mới!</div>' : '') +
@@ -853,7 +936,7 @@
 					open.forEach(function (o) { o.btn.classList.add('is-done'); o.btn.disabled = true; });
 					open = [];
 					found++;
-					sfx.good();
+					self.hit(true, btn);
 					self.say('Ghép đúng: ' + c.word);
 					if (found === pairs.length) {
 						// Lượt thừa (ngoài số cặp) càng ít càng nhiều sao.
@@ -911,7 +994,8 @@
 				if (done) { return; }
 				done = true;
 				self.marks[self.i] = ok;
-				if (ok) { self.right++; sfx.good(); } else { sfx.bad(); }
+				if (ok) { self.right++; }
+				self.hit(ok, arena.querySelector('.is-pop') || arena);
 				fb.className = 'hv-feedback ' + (ok ? 'ok' : 'no');
 				fb.innerHTML = msg;
 				arena.querySelectorAll('.hv-balloon').forEach(function (b) {
@@ -996,7 +1080,8 @@
 					var ok = b.getAttribute('data-v') === q.ans;
 					self.marks[self.i] = ok;
 					self.body.querySelectorAll('.hv-fish').forEach(function (f) { f.disabled = true; f.style.animationPlayState = 'paused'; if (f.getAttribute('data-v') === q.ans) { f.classList.add('is-caught'); } });
-					if (ok) { self.right++; sfx.good(); fb.className = 'hv-feedback ok'; fb.innerHTML = 'Câu trúng rồi! 🎣 <b>' + esc(q.word) + '</b>'; } else { b.classList.add('is-wrong'); sfx.bad(); fb.className = 'hv-feedback no'; fb.innerHTML = 'Con cá đúng mang <b>' + esc(q.ans) + '</b>' + (english ? ' – <i>' + esc(q.word) + '</i>' : ''); }
+					self.hit(ok, b);
+					if (ok) { self.right++; fb.className = 'hv-feedback ok'; fb.innerHTML = 'Câu trúng rồi! 🎣 <b>' + esc(q.word) + '</b>'; } else { b.classList.add('is-wrong'); fb.className = 'hv-feedback no'; fb.innerHTML = 'Con cá đúng mang <b>' + esc(q.ans) + '</b>' + (english ? ' – <i>' + esc(q.word) + '</i>' : ''); }
 					speak(q.word, q.lang);
 					setTimeout(function () { self.i++; next(); }, ok ? 1200 : 2400);
 				});
@@ -1055,7 +1140,8 @@
 			busy = true;
 			total++;
 			var ok = say === cur.truth;
-			if (ok) { self.right++; sfx.good(); } else { sfx.bad(); }
+			if (ok) { self.right++; }
+			self.hit(ok, card);
 			card.className = 'hv-tf-card ' + (ok ? 'ok' : 'no');
 			fb.className = 'hv-feedback ' + (ok ? 'ok' : 'no');
 			fb.innerHTML = ok ? 'Chính xác!' : (cur.truth ? 'Câu này đúng đấy!' : 'Câu này sai. Đáp án đúng: <b>' + esc(cur.ans) + '</b>');
@@ -1118,7 +1204,7 @@
 				btn.addEventListener('click', function () {
 					buttons.forEach(function (b, k) { b.disabled = true; if (q.o.choices[k] === q.o.a) { b.classList.add('is-right'); } });
 					if (q.o.choices[idx] === q.o.a) {
-						sfx.good();
+						self.hit(true, btn);
 						level++;
 						self.marks.push(true);
 						fb.className = 'hv-feedback ok';
@@ -1126,7 +1212,7 @@
 						setTimeout(function () { if (level >= deck.length) { self.finish(deck.length, deck.length, 'Em đã chinh phục đỉnh núi tri thức! 🏔️'); } else { draw(); } }, 1000);
 					} else {
 						btn.classList.add('is-wrong');
-						sfx.bad();
+						self.hit(false, btn);
 						fb.className = 'hv-feedback no';
 						fb.innerHTML = 'Đáp án đúng là <b>' + esc(q.o.a) + '</b>. Em đã leo được ' + level + '/' + deck.length + ' nấc!';
 						setTimeout(function () { self.finish(level, deck.length, 'Em leo được ' + level + '/' + deck.length + ' nấc núi'); }, 2400);
@@ -1135,6 +1221,503 @@
 			});
 		};
 		draw();
+	};
+
+	/* ---------- Đua xe tính nhẩm: trả lời đúng để xe chạy, về đích trước xe của Cú Bông ---------- */
+	Player.prototype.race = function () {
+		var self = this;
+		var g = this.grade;
+		var goal = 10;
+		var me = 0;
+		var over = false;
+		var botTime = [0, 80, 75, 70, 65, 60][g] || 70;
+		var started = Date.now();
+		var seen = {};
+		this.right = 0;
+		this.marks = [];
+		this.deck = [];
+		this.t0 = started;
+		this.body.innerHTML = '<div class="hv-race"><div class="hv-track">' +
+			'<div class="hv-lane"><span class="hv-car me" style="--p:0">' + (ico('racecar', 64, 'hv-car-img') || '🏎️') + '<em>Em</em></span></div>' +
+			'<div class="hv-lane"><span class="hv-car bot" style="--p:0">' + (ico('car', 64, 'hv-car-img') || '🚙') + '<em>Cú Bông</em></span></div>' +
+			'<span class="hv-finish">' + (ico('finish', 40) || '🏁') + '</span></div><div class="hv-race-q"></div></div>';
+		var meCar = this.body.querySelector('.hv-car.me');
+		var botCar = this.body.querySelector('.hv-car.bot');
+		var qbox = this.body.querySelector('.hv-race-q');
+		var end = function (win) {
+			if (over) { return; }
+			over = true;
+			clearInterval(timer);
+			setTimeout(function () { self.finish(win ? goal : me, goal, win ? 'Em về nhất! Vượt mặt xe của Cú Bông rồi! 🏆' : 'Cú Bông về đích trước mất rồi. Em chạy được ' + me + '/' + goal + ' chặng – đua lại nhé!'); }, 700);
+		};
+		var timer = setInterval(function () {
+			var p = Math.min(1, (Date.now() - started) / (botTime * 1000));
+			botCar.style.setProperty('--p', p);
+			if (p >= 1) { end(false); }
+		}, 120);
+		this.stopTimer = function () { clearInterval(timer); over = true; };
+		var ask = function () {
+			if (over) { return; }
+			var q;
+			var guard = 0;
+			do { q = mathQ(g); } while (seen[q.q] && guard++ < 30);
+			seen[q.q] = 1;
+			var h = '<div class="hv-q-text' + (q.big ? ' is-big' : '') + '">' + esc(q.q) + '</div><div class="hv-choices n' + q.o.choices.length + '">';
+			q.o.choices.forEach(function (c) { h += '<button type="button" class="hv-choice' + (q.frac ? ' is-frac' : '') + '">' + fracHtml(c, q.frac) + '</button>'; });
+			qbox.innerHTML = h + '</div>';
+			if (autoRead(g)) { speak(q.say || q.q); }
+			var buttons = qbox.querySelectorAll('.hv-choice');
+			buttons.forEach(function (b, idx) {
+				b.addEventListener('click', function () {
+					if (over) { return; }
+					buttons.forEach(function (x) { x.disabled = true; });
+					var ok = q.o.choices[idx] === q.o.a;
+					self.hit(ok, b);
+					if (ok) {
+						me++;
+						self.right++;
+						b.classList.add('is-right');
+						meCar.style.setProperty('--p', me / goal);
+						meCar.classList.remove('is-boost');
+						void meCar.offsetWidth;
+						meCar.classList.add('is-boost');
+						if (me >= goal) { end(true); return; }
+						setTimeout(ask, 350);
+					} else {
+						b.classList.add('is-wrong');
+						buttons.forEach(function (x, k) { if (q.o.choices[k] === q.o.a) { x.classList.add('is-right'); } });
+						meCar.classList.remove('is-spin');
+						void meCar.offsetWidth;
+						meCar.classList.add('is-spin');
+						setTimeout(ask, 1300);
+					}
+				});
+			});
+		};
+		ask();
+	};
+
+	/* ---------- Đập chuột chũi: đập đúng chú chuột theo yêu cầu trong 45 giây ---------- */
+	Player.prototype.whack = function () {
+		var self = this;
+		var g = this.grade;
+		var left = 45;
+		var hits = 0;
+		var wrongs = 0;
+		var rule = null;
+		var ruleHits = 0;
+		var stay = Math.max(1100, 1900 - g * 140);
+		this.right = 0;
+		this.marks = [];
+		this.t0 = Date.now();
+		var newRule = function () {
+			var kinds = g >= 2 ? ['math', 'even', 'odd', 'gt'] : ['math', 'gt', 'math'];
+			var kind = pick(kinds);
+			var max = [0, 10, 50, 100, 1000, 1000][g] || 100;
+			if (kind === 'math') {
+				var q;
+				var guard = 0;
+				do { q = mathQ(g); } while ((!q.big || q.frac) && guard++ < 30);
+				var others = q.o.choices.filter(function (c) { return c !== q.o.a; });
+				rule = { text: 'Đập chuột mang kết quả của ' + q.q.replace(' = ?', ''), say: q.say, ok: function (v) { return v === q.o.a; }, make: function (good) { return good ? q.o.a : pick(others.length ? others : ['?']); } };
+			} else if (kind === 'even' || kind === 'odd') {
+				var even = kind === 'even';
+				rule = { text: 'Đập chuột mang SỐ ' + (even ? 'CHẴN' : 'LẺ'), ok: function (v) { return (+v.replace(/\D/g, '')) % 2 === (even ? 0 : 1); }, make: function (good) { var n; do { n = rnd(1, max); } while ((n % 2 === 0) !== (good === even)); return num(n); } };
+			} else {
+				var t = g === 1 ? rnd(3, 7) : rnd(Math.round(max / 5), Math.round(max * 0.7));
+				rule = { text: 'Đập chuột mang số LỚN HƠN ' + num(t), ok: function (v) { return +v.replace(/\D/g, '') > t; }, make: function (good) { return num(good ? rnd(t + 1, Math.max(t + 1, max)) : rnd(Math.max(0, t - (g === 1 ? 5 : max / 4)), t)); } };
+			}
+			ruleHits = 0;
+			var rb = self.body.querySelector('.hv-rule');
+			rb.textContent = rule.text;
+			rb.classList.remove('is-new');
+			void rb.offsetWidth;
+			rb.classList.add('is-new');
+			speak(rule.say ? 'Đập chuột mang kết quả của ' + rule.say.replace(/ bằng (mấy|bao nhiêu)\?$/, '') : rule.text);
+		};
+		var h = '<div class="hv-whack"><div class="hv-timer"><i></i><b>45 giây</b></div><div class="hv-rule" aria-live="polite"></div><div class="hv-holes">';
+		for (var i = 0; i < 9; i++) { h += '<div class="hv-hole"><button type="button" class="hv-mole" tabindex="-1">' + (ico('mole', 72, 'hv-mole-img') || '🐭') + '<b></b></button></div>'; }
+		this.body.innerHTML = h + '</div><div class="hv-tf-score">Đập trúng <b>0</b></div></div>';
+		var moles = Array.prototype.slice.call(this.body.querySelectorAll('.hv-mole'));
+		var bar = this.body.querySelector('.hv-timer i');
+		var tl = this.body.querySelector('.hv-timer b');
+		var score = this.body.querySelector('.hv-tf-score b');
+		newRule();
+		var pop = function () {
+			var free = moles.filter(function (m) { return !m.classList.contains('is-up'); });
+			if (!free.length) { return; }
+			var m = pick(free);
+			var good = Math.random() < 0.45;
+			var v = rule.make(good);
+			m.querySelector('b').textContent = v;
+			m.setAttribute('data-v', v);
+			m.tabIndex = 0;
+			m.classList.remove('is-hit', 'is-miss');
+			m.classList.add('is-up');
+			m._t = setTimeout(function () { m.classList.remove('is-up'); m.tabIndex = -1; }, stay);
+		};
+		moles.forEach(function (m) {
+			m.addEventListener('click', function () {
+				if (!m.classList.contains('is-up') || left <= 0) { return; }
+				clearTimeout(m._t);
+				var ok = rule.ok(m.getAttribute('data-v'));
+				m.classList.add(ok ? 'is-hit' : 'is-miss');
+				self.hit(ok, m);
+				if (ok) { hits++; self.right++; ruleHits++; score.textContent = hits; } else { wrongs++; }
+				setTimeout(function () { m.classList.remove('is-up'); m.tabIndex = -1; }, 350);
+				if (ok && ruleHits >= 3) { setTimeout(newRule, 400); }
+			});
+		});
+		var spawn = setInterval(pop, Math.max(550, 950 - g * 70));
+		var clock = setInterval(function () {
+			left--;
+			bar.style.width = (left / 45 * 100) + '%';
+			tl.textContent = left + ' giây';
+			if (left <= 0) {
+				self.stopTimer();
+				self.finish(hits, Math.max(hits + wrongs, 12), 'Em đập trúng ' + hits + ' chú chuột trong 45 giây' + (wrongs ? ' (nhầm ' + wrongs + ' lần)' : ''));
+			}
+		}, 1000);
+		this.stopTimer = function () { clearInterval(spawn); clearInterval(clock); moles.forEach(function (m) { clearTimeout(m._t); }); };
+	};
+
+	/* ---------- Hái táo: tập nháy chuột, nháy đúp, kéo thả ---------- */
+	Player.prototype.mouse = function () {
+		var self = this;
+		var small = this.grade <= 1;
+		var stages = [
+			{ type: 'click', n: small ? 6 : 8, text: 'Nháy chuột (chạm) vào từng quả táo đỏ để hái', key: 'apple' },
+			{ type: 'dbl', n: small ? 4 : 5, text: 'Nháy đúp – nháy thật nhanh 2 lần – vào quả táo vàng', key: 'apple' },
+			{ type: 'drag', n: small ? 4 : 5, text: 'Kéo quả táo thả vào giỏ', key: 'apple' }
+		];
+		var si = 0;
+		var done = 0;
+		var total = stages.reduce(function (a, s) { return a + s.n; }, 0);
+		var mistakes = 0;
+		this.right = 0;
+		this.marks = [];
+		this.t0 = Date.now();
+		this.body.innerHTML = '<div class="hv-orchard-wrap"><div class="hv-stage-title" aria-live="polite"></div><div class="hv-orchard">' + (ico('tree', 192, 'hv-tree') || '') + '<div class="hv-basket">' + (ico('basket', 96) || '🧺') + '<b>0</b></div></div><div class="hv-stage-dots"></div></div>';
+		var orchard = this.body.querySelector('.hv-orchard');
+		var basket = this.body.querySelector('.hv-basket');
+		var title = this.body.querySelector('.hv-stage-title');
+		var dots = this.body.querySelector('.hv-stage-dots');
+		var place = function (a) {
+			a.style.left = rnd(18, 66) + '%';
+			a.style.top = rnd(8, 46) + '%';
+		};
+		var collect = function (a) {
+			done++;
+			self.right++;
+			self.hit(true, a);
+			basket.querySelector('b').textContent = done;
+			a.classList.add('is-picked');
+			setTimeout(function () { a.remove(); }, 450);
+			if (orchard.querySelectorAll('.hv-apple:not(.is-picked)').length === 0) { setTimeout(stage, 600); }
+		};
+		var stage = function () {
+			if (si >= stages.length) {
+				var secs = Math.round((Date.now() - self.t0) / 1000);
+				var limit = total * (small ? 4 : 3);
+				var score = secs <= limit ? 10 : secs <= limit * 1.6 ? 7 : 4;
+				score = Math.max(1, score - Math.floor(mistakes / 4));
+				return self.finish(score, 10, 'Em hái xong ' + total + ' quả táo trong ' + secs + ' giây – đôi tay dùng chuột thật khéo!');
+			}
+			var st = stages[si++];
+			title.innerHTML = '<b>Bước ' + si + '/3:</b> ' + esc(st.text);
+			dots.innerHTML = stages.map(function (x, k) { return '<i class="' + (k < si - 1 ? 'ok' : k === si - 1 ? 'cur' : '') + '"></i>'; }).join('');
+			speak(st.text);
+			for (var k = 0; k < st.n; k++) {
+				var a = el('button', 'hv-apple' + (st.type === 'dbl' ? ' is-gold' : '') + (st.type === 'drag' ? ' is-drag' : ''), ico('apple', 56) || '🍎');
+				a.type = 'button';
+				a.setAttribute('aria-label', st.type === 'drag' ? 'Quả táo – kéo vào giỏ' : 'Quả táo');
+				place(a);
+				orchard.appendChild(a);
+				bind(a, st.type);
+			}
+		};
+		var bind = function (a, type) {
+			if (type === 'click') {
+				a.addEventListener('click', function () { if (!a.classList.contains('is-picked')) { collect(a); } });
+			} else if (type === 'dbl') {
+				var last = 0;
+				a.addEventListener('click', function () {
+					var now = Date.now();
+					if (now - last < 450) { if (!a.classList.contains('is-picked')) { collect(a); } } else {
+						a.classList.remove('is-wobble');
+						void a.offsetWidth;
+						a.classList.add('is-wobble');
+					}
+					last = now;
+				});
+			} else {
+				var sx = 0, sy = 0, dx = 0, dy = 0, dragging = false;
+				a.addEventListener('pointerdown', function (e) {
+					dragging = true; sx = e.clientX; sy = e.clientY; dx = 0; dy = 0;
+					a.setPointerCapture(e.pointerId);
+					a.classList.add('is-dragging');
+				});
+				a.addEventListener('pointermove', function (e) {
+					if (!dragging) { return; }
+					dx = e.clientX - sx; dy = e.clientY - sy;
+					a.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(1.1)';
+				});
+				var drop = function () {
+					if (!dragging) { return; }
+					dragging = false;
+					a.classList.remove('is-dragging');
+					var ar = a.getBoundingClientRect();
+					var br = basket.getBoundingClientRect();
+					var cx = ar.left + ar.width / 2;
+					var cy = ar.top + ar.height / 2;
+					if (cx > br.left - 10 && cx < br.right + 10 && cy > br.top - 20 && cy < br.bottom + 10) {
+						a.style.transform = '';
+						collect(a);
+					} else {
+						if (Math.abs(dx) + Math.abs(dy) > 8) { mistakes++; }
+						a.style.transform = '';
+					}
+				};
+				a.addEventListener('pointerup', drop);
+				a.addEventListener('pointercancel', drop);
+				// Bàn phím: Enter để "thả" vào giỏ (hỗ trợ trẻ không dùng chuột).
+				a.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); collect(a); } });
+			}
+		};
+		orchard.addEventListener('click', function (e) { if (e.target === orchard) { mistakes++; } });
+		stage();
+	};
+
+	/* ---------- Tập gõ phím: chữ rơi trong bong bóng, gõ đúng phím để phá ---------- */
+	var FINGERS = { Q: 'Ngón út trái', A: 'Ngón út trái', Z: 'Ngón út trái', 1: 'Ngón út trái', W: 'Ngón áp út trái', S: 'Ngón áp út trái', X: 'Ngón áp út trái', 2: 'Ngón áp út trái', E: 'Ngón giữa trái', D: 'Ngón giữa trái', C: 'Ngón giữa trái', 3: 'Ngón giữa trái', R: 'Ngón trỏ trái', F: 'Ngón trỏ trái', V: 'Ngón trỏ trái', T: 'Ngón trỏ trái', G: 'Ngón trỏ trái', B: 'Ngón trỏ trái', 4: 'Ngón trỏ trái', 5: 'Ngón trỏ trái', Y: 'Ngón trỏ phải', H: 'Ngón trỏ phải', N: 'Ngón trỏ phải', U: 'Ngón trỏ phải', J: 'Ngón trỏ phải', M: 'Ngón trỏ phải', 6: 'Ngón trỏ phải', 7: 'Ngón trỏ phải', I: 'Ngón giữa phải', K: 'Ngón giữa phải', 8: 'Ngón giữa phải', O: 'Ngón áp út phải', L: 'Ngón áp út phải', 9: 'Ngón áp út phải', P: 'Ngón út phải', 0: 'Ngón út phải' };
+	Player.prototype.typing = function () {
+		var self = this;
+		var g = this.grade;
+		var sets = { 1: 'FJDK', 2: 'ASDFJKL', 3: 'ASDFGHJKLQWERTYUIOP', 4: 'QWERTYUIOPASDFGHJKLZXCVBNM', 5: 'QWERTYUIOPASDFGHJKLZXCVBNM1234567890' };
+		var letters = (sets[g] || sets[3]).split('');
+		var total = 20;
+		var lives = 5;
+		var spawned = 0;
+		var popped = 0;
+		var bubbles = [];
+		var running = true;
+		var lastSpawn = 0;
+		var lastT = performance.now();
+		var speed = 26 + g * 7;
+		this.right = 0;
+		this.marks = [];
+		this.t0 = Date.now();
+		var rows = ['1234567890', 'QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+		var kb = '<div class="hv-kb" aria-label="Bàn phím ảo">';
+		rows.forEach(function (r, ri) {
+			if (ri === 0 && g < 5) { return; }
+			kb += '<div class="hv-kb-row">';
+			r.split('').forEach(function (k) { kb += '<button type="button" class="hv-key' + (letters.indexOf(k) < 0 ? ' is-off' : '') + (k === 'F' || k === 'J' ? ' is-bump' : '') + '" data-k="' + k + '">' + k + '</button>'; });
+			kb += '</div>';
+		});
+		kb += '</div>';
+		this.body.innerHTML = '<div class="hv-type"><div class="hv-type-top"><span class="hv-lives"></span><span class="hv-finger" aria-live="polite"></span><span class="hv-tf-score">Gõ trúng <b>0</b>/' + total + '</span></div><div class="hv-type-sky"></div>' + kb + '<p class="hv-note">Đặt 2 ngón trỏ lên phím có gờ <b>F</b> và <b>J</b>. Gõ trên bàn phím thật hoặc chạm phím ảo.</p></div>';
+		var sky = this.body.querySelector('.hv-type-sky');
+		var livesEl = this.body.querySelector('.hv-lives');
+		var finger = this.body.querySelector('.hv-finger');
+		var score = this.body.querySelector('.hv-tf-score b');
+		var drawLives = function () { livesEl.innerHTML = new Array(lives + 1).join('❤️') + new Array(5 - lives + 1).join('🤍'); };
+		drawLives();
+		var target = function () {
+			var low = null;
+			bubbles.forEach(function (b) { if (!b.dead && (!low || b.y > low.y)) { low = b; } });
+			self.body.querySelectorAll('.hv-key.is-target').forEach(function (k) { k.classList.remove('is-target'); });
+			if (low) {
+				var key = self.body.querySelector('.hv-key[data-k="' + low.ch + '"]');
+				if (key) { key.classList.add('is-target'); }
+				finger.textContent = 'Gõ ' + low.ch + ' bằng ' + (FINGERS[low.ch] || 'ngón tay').toLowerCase();
+			}
+		};
+		var stopAll = function () { running = false; document.removeEventListener('keydown', onKey); };
+		var check = function () {
+			if ((popped + (5 - lives) >= total && !bubbles.some(function (b) { return !b.dead; })) || lives <= 0 || (spawned >= total && !bubbles.some(function (b) { return !b.dead; }))) {
+				stopAll();
+				self.finish(popped, total, 'Em gõ trúng ' + popped + '/' + total + ' chữ' + (lives <= 0 ? ' – hết tim rồi, luyện thêm nhé!' : '!'));
+				return true;
+			}
+			return false;
+		};
+		var press = function (ch, keyEl) {
+			if (!running) { return; }
+			var hitB = null;
+			bubbles.forEach(function (b) { if (!b.dead && b.ch === ch && (!hitB || b.y > hitB.y)) { hitB = b; } });
+			if (keyEl) { keyEl.classList.remove('is-press'); void keyEl.offsetWidth; keyEl.classList.add('is-press'); }
+			if (hitB) {
+				hitB.dead = true;
+				hitB.el.classList.add('is-pop');
+				popped++;
+				self.right++;
+				score.textContent = popped;
+				self.hit(true, hitB.el);
+				setTimeout(function () { hitB.el.remove(); }, 300);
+				target();
+				check();
+			} else if (letters.indexOf(ch) >= 0) {
+				self.hit(false, keyEl);
+			}
+		};
+		var onKey = function (e) {
+			if (e.ctrlKey || e.metaKey || e.altKey) { return; }
+			var ch = (e.key || '').toUpperCase();
+			if (ch.length !== 1 || !/[A-Z0-9]/.test(ch)) { return; }
+			e.preventDefault();
+			press(ch, self.body.querySelector('.hv-key[data-k="' + ch + '"]'));
+		};
+		document.addEventListener('keydown', onKey);
+		this.body.querySelectorAll('.hv-key:not(.is-off)').forEach(function (k) {
+			k.addEventListener('pointerdown', function (e) { e.preventDefault(); press(k.getAttribute('data-k'), k); });
+		});
+		var frame = function (now) {
+			if (!running || !self.body.contains(sky)) { stopAll(); return; }
+			var dt = Math.min(0.05, (now - lastT) / 1000);
+			lastT = now;
+			var alive = bubbles.filter(function (b) { return !b.dead; }).length;
+			if (spawned < total && now - lastSpawn > Math.max(900, 2200 - g * 150 - popped * 25) && alive < 3) {
+				lastSpawn = now;
+				spawned++;
+				var ch = pick(letters);
+				var b = { ch: ch, y: -10, x: rnd(6, 84), el: el('span', 'hv-bubble-key', ch) };
+				b.el.style.left = b.x + '%';
+				sky.appendChild(b.el);
+				bubbles.push(b);
+				target();
+			}
+			var hgt = sky.clientHeight - 56;
+			bubbles.forEach(function (b) {
+				if (b.dead) { return; }
+				b.y += (speed + popped * 1.5) * dt;
+				b.el.style.transform = 'translateY(' + b.y + 'px)';
+				if (b.y >= hgt) {
+					b.dead = true;
+					b.el.classList.add('is-miss');
+					lives--;
+					drawLives();
+					self.hit(false, b.el);
+					setTimeout(function () { b.el.remove(); }, 400);
+					target();
+				}
+			});
+			if (!check()) { requestAnimationFrame(frame); }
+		};
+		requestAnimationFrame(frame);
+		this.stopTimer = stopAll;
+	};
+
+	/* ---------- Ghép bộ phận máy tính: kéo (hoặc chạm) tên thả vào đúng bộ phận ---------- */
+	var PC_PARTS = [
+		{ id: 'monitor', name: 'Màn hình', fn: 'Hiện chữ và hình ảnh', x: 48, y: 30 },
+		{ id: 'keyboard', name: 'Bàn phím', fn: 'Gõ chữ, gõ số', x: 46, y: 80 },
+		{ id: 'mouse', name: 'Chuột', fn: 'Di chuyển con trỏ, nháy chọn', x: 72, y: 82 },
+		{ id: 'case', name: 'Thân máy', fn: 'Bộ não – xử lí và lưu thông tin', x: 87, y: 46 },
+		{ id: 'speaker', name: 'Loa', fn: 'Phát ra âm thanh', x: 16, y: 44 }
+	];
+	function pcSvg() {
+		return '<svg class="hv-pc" viewBox="0 0 600 340" aria-hidden="true">' +
+			'<rect x="0" y="300" width="600" height="40" rx="8" fill="#e7d3b5"/>' +
+			'<rect x="70" y="110" width="58" height="90" rx="12" fill="#44527c"/><circle cx="99" cy="140" r="14" fill="#2b3557"/><circle cx="99" cy="140" r="6" fill="#8fa0d0"/><circle cx="99" cy="178" r="9" fill="#2b3557"/>' +
+			'<rect x="160" y="22" width="260" height="170" rx="14" fill="#2b3a67"/><rect x="174" y="36" width="232" height="142" rx="6" fill="#8fd6ff"/>' +
+			'<path d="M196 160 L240 110 L270 140 L310 90 L384 160 Z" fill="#58b847" opacity=".85"/><circle cx="360" cy="70" r="16" fill="#ffd45e"/>' +
+			'<rect x="270" y="192" width="40" height="40" fill="#2b3a67"/><rect x="225" y="230" width="130" height="12" rx="6" fill="#2b3a67"/>' +
+			'<rect x="150" y="256" width="290" height="44" rx="9" fill="#dfe7f3" stroke="#aebbd3" stroke-width="2"/>' +
+			'<g fill="#fff" stroke="#c3cee0">' + (function () { var k = ''; for (var r = 0; r < 3; r++) { for (var c = 0; c < 12; c++) { k += '<rect x="' + (160 + c * 23) + '" y="' + (261 + r * 12) + '" width="19" height="9" rx="2"/>'; } } return k; })() + '</g>' +
+			'<ellipse cx="460" cy="282" rx="17" ry="24" fill="#dfe7f3" stroke="#aebbd3" stroke-width="2"/><path d="M460 258 V276" stroke="#aebbd3" stroke-width="2"/><path d="M460 258 C 470 230, 430 230, 420 252" stroke="#aebbd3" stroke-width="3" fill="none"/>' +
+			'<rect x="490" y="74" width="84" height="226" rx="12" fill="#4a5a8a"/><rect x="504" y="94" width="56" height="10" rx="4" fill="#2b3557"/><rect x="504" y="112" width="56" height="10" rx="4" fill="#2b3557"/><circle cx="532" cy="160" r="9" fill="#58b847"/>' +
+			'</svg>';
+	}
+	Player.prototype.parts = function () {
+		var self = this;
+		var rounds = [{ key: 'name', title: 'Kéo tên bộ phận vào đúng chỗ' }];
+		if (this.grade >= 2) { rounds.push({ key: 'fn', title: 'Bộ phận nào làm việc này? Kéo vào đúng chỗ' }); }
+		var parts = this.grade <= 1 ? PC_PARTS.slice(0, 4) : PC_PARTS;
+		var ri = 0;
+		var placed = 0;
+		var tries = 0;
+		var firstTry = 0;
+		this.right = 0;
+		this.marks = [];
+		this.t0 = Date.now();
+		var round = function () {
+			if (ri >= rounds.length) { return self.finish(firstTry, parts.length * rounds.length, 'Em ghép đúng ngay lần đầu ' + firstTry + '/' + (parts.length * rounds.length) + ' lần'); }
+			var rd = rounds[ri++];
+			placed = 0;
+			var h = '<div class="hv-parts"><div class="hv-stage-title"><b>Vòng ' + ri + '/' + rounds.length + ':</b> ' + esc(rd.title) + '</div><div class="hv-pc-wrap">' + pcSvg();
+			parts.forEach(function (p) { h += '<button type="button" class="hv-zone-drop" data-id="' + p.id + '" style="left:' + p.x + '%;top:' + p.y + '%" aria-label="Chỗ trống">?</button>'; });
+			h += '</div><div class="hv-labels">';
+			shuffle(parts).forEach(function (p) { h += '<button type="button" class="hv-label" data-id="' + p.id + '">' + esc(rd.key === 'name' ? p.name : p.fn) + '</button>'; });
+			self.body.innerHTML = h + '</div><div class="hv-feedback" aria-live="polite"></div></div>';
+			speak(rd.title);
+			var fb = self.body.querySelector('.hv-feedback');
+			var selected = null;
+			var attempts = {};
+			var tryDrop = function (label, zone) {
+				if (!label || !zone || zone.classList.contains('is-ok')) { return; }
+				var id = label.getAttribute('data-id');
+				attempts[id] = (attempts[id] || 0) + 1;
+				tries++;
+				if (zone.getAttribute('data-id') === id) {
+					zone.classList.add('is-ok');
+					zone.textContent = label.textContent;
+					label.remove();
+					placed++;
+					self.right++;
+					if (attempts[id] === 1) { firstTry++; }
+					self.hit(true, zone);
+					var part = PC_PARTS.filter(function (p) { return p.id === id; })[0];
+					fb.className = 'hv-feedback ok';
+					fb.textContent = part.name + ': ' + part.fn;
+					speak(part.name + '. ' + part.fn);
+					if (placed >= parts.length) { setTimeout(round, 1300); }
+				} else {
+					zone.classList.remove('is-no');
+					void zone.offsetWidth;
+					zone.classList.add('is-no');
+					self.hit(false, zone);
+					fb.className = 'hv-feedback no';
+					fb.textContent = 'Chưa đúng chỗ, em thử lại nhé!';
+				}
+				if (selected) { selected.classList.remove('is-sel'); selected = null; }
+			};
+			self.body.querySelectorAll('.hv-label').forEach(function (lb) {
+				lb.addEventListener('click', function () {
+					if (selected) { selected.classList.remove('is-sel'); }
+					selected = lb === selected ? null : lb;
+					if (selected) { selected.classList.add('is-sel'); fb.className = 'hv-feedback'; fb.textContent = 'Giờ chạm vào dấu ? đúng chỗ'; }
+				});
+				var sx, sy, moved = false, dragging = false;
+				lb.addEventListener('pointerdown', function (e) { dragging = true; moved = false; sx = e.clientX; sy = e.clientY; lb.setPointerCapture(e.pointerId); });
+				lb.addEventListener('pointermove', function (e) {
+					if (!dragging) { return; }
+					var dx = e.clientX - sx;
+					var dy = e.clientY - sy;
+					if (Math.abs(dx) + Math.abs(dy) > 6) { moved = true; lb.classList.add('is-dragging'); }
+					lb.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+				});
+				var up = function (e) {
+					if (!dragging) { return; }
+					dragging = false;
+					lb.classList.remove('is-dragging');
+					lb.style.transform = '';
+					if (!moved) { return; }
+					lb.style.pointerEvents = 'none';
+					var under = document.elementFromPoint(e.clientX, e.clientY);
+					lb.style.pointerEvents = '';
+					var zone = under && under.closest ? under.closest('.hv-zone-drop') : null;
+					if (zone) { tryDrop(lb, zone); }
+					setTimeout(function () { if (selected === lb) { lb.classList.remove('is-sel'); selected = null; } }, 0);
+				};
+				lb.addEventListener('pointerup', up);
+				lb.addEventListener('pointercancel', up);
+			});
+			self.body.querySelectorAll('.hv-zone-drop').forEach(function (z) {
+				z.addEventListener('click', function () { if (selected) { tryDrop(selected, z); } });
+			});
+		};
+		round();
 	};
 
 	/* Sắp xếp câu */
@@ -1176,7 +1759,8 @@
 					var fb = self.body.querySelector('.hv-feedback');
 					tries++;
 					if (ok || tries >= 2) {
-						if (ok) { self.right++; sfx.good(); fb.innerHTML = 'Đúng rồi! 🎉'; } else { sfx.bad(); fb.innerHTML = 'Câu đúng là: <b>' + esc(sentence) + '.</b>'; }
+						self.hit(ok, fb);
+						if (ok) { self.right++; fb.innerHTML = 'Đúng rồi! 🎉'; } else { fb.innerHTML = 'Câu đúng là: <b>' + esc(sentence) + '.</b>'; }
 						fb.className = 'hv-feedback ' + (ok ? 'ok' : 'no');
 						self.marks[self.i] = ok;
 						self.say(ok ? 'Đúng rồi' : 'Câu đúng là ' + sentence);

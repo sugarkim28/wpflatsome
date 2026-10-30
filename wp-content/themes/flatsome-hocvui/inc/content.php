@@ -39,6 +39,7 @@ function hv_subjects() {
 		'lich-su-dia-li'  => array( 'Lịch sử và Địa lí', '🗺️', '#f59f00', array( 4, 5 ), 'map' ),
 		'dao-duc'         => array( 'Đạo đức', '💖', '#f06595', array( 1, 2, 3, 4, 5 ), 'heart' ),
 		'tin-hoc'         => array( 'Tin học và Công nghệ', '💻', '#5c7cfa', array( 3, 4, 5 ), 'laptop' ),
+		'may-tinh'        => array( 'Làm quen máy tính', '🖱️', '#00b8d9', array( 1, 2, 3, 4, 5 ), 'desktop' ),
 	);
 }
 
@@ -57,6 +58,7 @@ function hv_bosses() {
 		'lich-su-dia-li'  => array( 'Thuyền Trưởng Bí Ẩn', '🏴‍☠️', 'pirate' ),
 		'dao-duc'         => array( 'Mây Đen Cáu Kỉnh', '⛈️', 'storm' ),
 		'tin-hoc'         => array( 'Virus Tí Hon', '🦠', 'microbe' ),
+		'may-tinh'        => array( 'Chuột Nghịch Ngợm', '🐭', 'mole' ),
 	);
 }
 

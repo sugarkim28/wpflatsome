@@ -25,6 +25,11 @@ function hv_games() {
 		'cau-ca'      => array( 'Câu cá – Nghe và chọn', '🎣', 'Cú Bông đọc to, bé câu đúng con cá: lớp 1–2 luyện đọc tiếng Việt, lớp 3–5 luyện nghe tiếng Anh.', array( 1, 2, 3, 4, 5 ), '#2ea3f2', 'Tiếng Việt · Tiếng Anh', 'fishing' ),
 		'dung-sai'    => array( 'Đúng hay Sai 60 giây', '✅', 'Phản xạ siêu nhanh: phép tính và kiến thức khoa học – xã hội, bấm Đúng hay Sai trong 60 giây.', array( 1, 2, 3, 4, 5 ), '#58b847', 'Toán · Khoa học · Xã hội', 'check' ),
 		'leo-nui'     => array( 'Leo núi tri thức', '🏔️', '10 nấc câu hỏi khó dần lên đỉnh núi, có 2 quyền trợ giúp: bỏ bớt đáp án sai và hỏi Cú Bông.', array( 1, 2, 3, 4, 5 ), '#7c4dff', 'Tổng hợp', 'mountain' ),
+		'dua-xe'      => array( 'Đua xe tính nhẩm', '🏎️', 'Trả lời đúng là xe tăng tốc! Về đích trước xe của Cú Bông để giành cúp.', array( 1, 2, 3, 4, 5 ), '#ff9f1c', 'Toán', 'racecar' ),
+		'dap-chuot'   => array( 'Đập chuột chũi', '🔨', 'Chuột chũi thò lên mang số – đập thật nhanh đúng chú chuột theo yêu cầu trong 45 giây.', array( 1, 2, 3, 4, 5 ), '#8b5a2b', 'Toán', 'hammer' ),
+		'hai-tao'     => array( 'Hái táo – Tập dùng chuột', '🍎', 'Làm quen máy tính: nháy chuột, nháy đúp, kéo thả táo vào giỏ – càng nhanh càng nhiều sao.', array( 1, 2, 3, 4, 5 ), '#ff5d73', 'Làm quen máy tính', 'mouse' ),
+		'go-phim'     => array( 'Tập gõ phím', '⌨️', 'Bong bóng chữ rơi xuống – gõ đúng phím để phá! Có bàn phím ảo và hướng dẫn ngón tay.', array( 1, 2, 3, 4, 5 ), '#00b8d9', 'Làm quen máy tính', 'keyboard' ),
+		'bo-phan'     => array( 'Ghép bộ phận máy tính', '🖥️', 'Kéo tên màn hình, bàn phím, chuột, thân máy, loa vào đúng chỗ; lớp 2 trở lên ghép cả công dụng.', array( 1, 2, 3, 4, 5 ), '#5c7cfa', 'Làm quen máy tính', 'desktop' ),
 		'do-vui'      => array( 'Đố vui khoa học – xã hội', '🔬', 'Câu đố Tự nhiên và Xã hội, Khoa học, Lịch sử và Địa lí, Đạo đức theo từng lớp.', array( 1, 2, 3, 4, 5 ), '#9775fa', 'TN&XH · Khoa học · LS&ĐL', 'bulb' ),
 	);
 }
