@@ -9,19 +9,19 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Danh sách trò chơi: id => [tên, biểu tượng, mô tả, các lớp, màu, môn].
+ * Danh sách trò chơi: id => [tên, biểu tượng, mô tả, các lớp, màu, môn, ảnh 3D].
  *
  * @return array
  */
 function hv_games() {
 	return array(
-		'tinh-nham'   => array( 'Tính nhẩm siêu tốc', '🧮', 'Cộng, trừ, nhân, chia, phân số, số thập phân – câu hỏi tự sinh theo đúng kiến thức từng lớp.', array( 1, 2, 3, 4, 5 ), '#ff6b6b', 'Toán' ),
-		'dem-hinh'    => array( 'Đếm hình & nhận biết hình', '🔢', 'Đếm đồ vật, so sánh số, gọi tên hình; lớp 2 đếm theo nhóm để hiểu phép nhân.', array( 1, 2 ), '#ff922b', 'Toán' ),
-		'xem-gio'     => array( 'Bé xem đồng hồ', '⏰', 'Đọc giờ đúng (lớp 1), giờ rưỡi, 15 phút (lớp 2), giờ và phút (lớp 3).', array( 1, 2, 3 ), '#f59f00', 'Toán' ),
-		'ghep-chu'    => array( 'Ghép chữ – Đánh vần', '🔤', 'Nhìn hình chọn âm đầu (lớp 1), chọn vần (lớp 2), chọn từ viết đúng chính tả (lớp 3).', array( 1, 2, 3 ), '#40c057', 'Tiếng Việt' ),
-		'sap-xep-cau' => array( 'Sắp xếp câu', '🧩', 'Chạm vào các từ theo đúng thứ tự để tạo thành câu hoàn chỉnh.', array( 1, 2, 3, 4, 5 ), '#12b886', 'Tiếng Việt' ),
-		'lat-the'     => array( 'Lật thẻ tiếng Anh', '🃏', 'Lật thẻ tìm cặp hình – từ tiếng Anh, nghe phát âm chuẩn. Chủ đề thay đổi theo lớp.', array( 1, 2, 3, 4, 5 ), '#339af0', 'Tiếng Anh' ),
-		'do-vui'      => array( 'Đố vui khoa học – xã hội', '🔬', 'Câu đố Tự nhiên và Xã hội, Khoa học, Lịch sử và Địa lí, Đạo đức theo từng lớp.', array( 1, 2, 3, 4, 5 ), '#9775fa', 'TN&XH · Khoa học · LS&ĐL' ),
+		'tinh-nham'   => array( 'Tính nhẩm siêu tốc', '🧮', 'Cộng, trừ, nhân, chia, phân số, số thập phân – câu hỏi tự sinh theo đúng kiến thức từng lớp.', array( 1, 2, 3, 4, 5 ), '#ff6b6b', 'Toán', 'numbers' ),
+		'dem-hinh'    => array( 'Đếm hình & nhận biết hình', '🔢', 'Đếm đồ vật, so sánh số, gọi tên hình; lớp 2 đếm theo nhóm để hiểu phép nhân.', array( 1, 2 ), '#ff922b', 'Toán', 'crayon' ),
+		'xem-gio'     => array( 'Bé xem đồng hồ', '⏰', 'Đọc giờ đúng (lớp 1), giờ rưỡi, 15 phút (lớp 2), giờ và phút (lớp 3).', array( 1, 2, 3 ), '#f59f00', 'Toán', 'clock' ),
+		'ghep-chu'    => array( 'Ghép chữ – Đánh vần', '🔤', 'Nhìn hình chọn âm đầu (lớp 1), chọn vần (lớp 2), chọn từ viết đúng chính tả (lớp 3).', array( 1, 2, 3 ), '#40c057', 'Tiếng Việt', 'letters' ),
+		'sap-xep-cau' => array( 'Sắp xếp câu', '🧩', 'Chạm vào các từ theo đúng thứ tự để tạo thành câu hoàn chỉnh.', array( 1, 2, 3, 4, 5 ), '#12b886', 'Tiếng Việt', 'puzzle' ),
+		'lat-the'     => array( 'Lật thẻ tiếng Anh', '🃏', 'Lật thẻ tìm cặp hình – từ tiếng Anh, nghe phát âm chuẩn. Chủ đề thay đổi theo lớp.', array( 1, 2, 3, 4, 5 ), '#339af0', 'Tiếng Anh', 'joker' ),
+		'do-vui'      => array( 'Đố vui khoa học – xã hội', '🔬', 'Câu đố Tự nhiên và Xã hội, Khoa học, Lịch sử và Địa lí, Đạo đức theo từng lớp.', array( 1, 2, 3, 4, 5 ), '#9775fa', 'TN&XH · Khoa học · LS&ĐL', 'bulb' ),
 	);
 }
 
@@ -95,7 +95,7 @@ function hv_game_card( $id, $grade = 0 ) {
 	foreach ( $g[3] as $n ) {
 		$pills .= '<span class="hv-pill">Lớp ' . (int) $n . '</span>';
 	}
-	return '<a class="hv-game-card" href="' . esc_url( $url ) . '" style="--c:' . esc_attr( $g[4] ) . '"><span class="hv-gc-screen"><i aria-hidden="true">' . esc_html( $g[1] ) . '</i></span><span class="hv-meta">' . esc_html( $g[5] ) . '</span><h3>' . esc_html( $g[0] ) . '</h3><p>' . esc_html( $g[2] ) . '</p><span class="hv-pills">' . $pills . '</span><span class="hv-play">▶ Chơi ngay</span></a>';
+	return '<a class="hv-game-card" href="' . esc_url( $url ) . '" style="--c:' . esc_attr( $g[4] ) . '"><span class="hv-gc-screen">' . hv_icon3d( $g[6], 96 ) . '</span><span class="hv-meta">' . esc_html( $g[5] ) . '</span><h3>' . esc_html( $g[0] ) . '</h3><p>' . esc_html( $g[2] ) . '</p><span class="hv-pills">' . $pills . '</span><span class="hv-play">▶ Chơi ngay</span></a>';
 }
 
 /**

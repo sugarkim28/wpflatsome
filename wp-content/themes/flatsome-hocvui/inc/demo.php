@@ -241,8 +241,9 @@ function hv_demo_pages_build() {
 			'post_title'   => 'Trang chủ',
 			'post_content' => hv_demo_block( '[hv_hero]' )
 				. hv_demo_block( '[hv_section title="Bản đồ phá đảo" sub="Mỗi lớp là một hòn đảo. Chọn đảo của em, vượt qua từng màn và hạ gục trùm cuối của mỗi môn!" class="hv-sea"][hv_world][/hv_section]' )
-				. hv_demo_block( '[hv_section title="Khu trò chơi" sub="Câu hỏi tự sinh mới mỗi lượt, đúng kiến thức từng lớp. Kiếm sao, XP và mở nhãn dán!" class="hv-arcade"][hv_games player="0"][/hv_section]' )
-				. hv_demo_block( '[hv_section title="Một màn chơi có gì?" sub="Mỗi bài học là một màn chơi ngắn 10–15 phút."][hv_parent_steps][/hv_section]' )
+				. hv_demo_block( '[hv_section title="Trò chơi được yêu thích nhất" sub="Câu hỏi tự sinh mới mỗi lượt, đúng kiến thức từng lớp. Kiếm sao, XP và mở nhãn dán!"][hv_games player="0"][/hv_section]' )
+				. hv_demo_block( '[hv_section title="Lộ trình một màn chơi" sub="Mỗi bài học là một màn chơi ngắn 10–15 phút, đi từ dễ đến khó."][hv_parent_steps][/hv_section]' )
+				. hv_demo_block( '[hv_section title="Vì sao chọn Học Vui?"][hv_why][/hv_section]' )
 				. hv_demo_block( '[hv_section title="Các môn học" sub="Theo Chương trình giáo dục phổ thông 2018 cấp Tiểu học."][hv_subjects][/hv_section]' )
 				. hv_demo_block( '[hv_section][hv_band][/hv_section]' ),
 		),
@@ -254,7 +255,7 @@ function hv_demo_pages_build() {
 			'post_name'    => 'tro-choi',
 			'post_title'   => 'Trò chơi',
 			'post_content' => hv_demo_block( '[hv_pagehead title="Khu trò chơi" lead="7 trò chơi Toán, Tiếng Việt, Tiếng Anh, Khoa học – chọn lớp ngay trong trò chơi. Mỗi lượt được sao và XP!" icon="🕹️" color="#ff5d73"]' )
-				. hv_demo_block( '[hv_section class="hv-arcade"][hv_games][/hv_section]' ),
+				. hv_demo_block( '[hv_section][hv_games][/hv_section]' ),
 		),
 		$blank
 	);

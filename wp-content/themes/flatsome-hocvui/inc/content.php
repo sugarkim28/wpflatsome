@@ -10,53 +10,53 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * 5 lớp Tiểu học = 5 hòn đảo cần phá đảo: số => [tên, slug, biểu tượng, màu, mô tả ngắn, tên đảo, màu đất].
+ * 5 lớp Tiểu học = 5 hòn đảo cần phá đảo: số => [tên, slug, biểu tượng, màu, mô tả ngắn, tên đảo, màu đất, ảnh 3D].
  *
  * @return array
  */
 function hv_grades() {
 	return array(
-		1 => array( 'Lớp 1', 'lop-1', '🌱', '#ff5d73', 'Làm quen chữ cái, đếm số, nhận biết hình', 'Đảo Hạt Mầm', '#7ed957' ),
-		2 => array( 'Lớp 2', 'lop-2', '🐠', '#ff9f1c', 'Cộng trừ có nhớ, bảng nhân 2 và 5', 'Đảo San Hô', '#ffb38a' ),
-		3 => array( 'Lớp 3', 'lop-3', '🌴', '#2ec27e', 'Bảng nhân chia, bắt đầu học tiếng Anh', 'Đảo Rừng Xanh', '#3fbf5f' ),
-		4 => array( 'Lớp 4', 'lop-4', '🌋', '#2f80ed', 'Phân số, Khoa học, Lịch sử và Địa lí', 'Đảo Núi Lửa', '#c98b5a' ),
-		5 => array( 'Lớp 5', 'lop-5', '🚀', '#8b5cf6', 'Số thập phân, phần trăm, lịch sử dân tộc', 'Đảo Ngôi Sao', '#b8a4ff' ),
+		1 => array( 'Lớp 1', 'lop-1', '🌱', '#ff5d73', 'Làm quen chữ cái, đếm số, nhận biết hình', 'Đảo Hạt Mầm', '#7ed957', 'seedling' ),
+		2 => array( 'Lớp 2', 'lop-2', '🐠', '#ff9f1c', 'Cộng trừ có nhớ, bảng nhân 2 và 5', 'Đảo San Hô', '#ffb38a', 'fish' ),
+		3 => array( 'Lớp 3', 'lop-3', '🌴', '#2ec27e', 'Bảng nhân chia, bắt đầu học tiếng Anh', 'Đảo Rừng Xanh', '#3fbf5f', 'palm' ),
+		4 => array( 'Lớp 4', 'lop-4', '🌋', '#2f80ed', 'Phân số, Khoa học, Lịch sử và Địa lí', 'Đảo Núi Lửa', '#c98b5a', 'volcano' ),
+		5 => array( 'Lớp 5', 'lop-5', '🚀', '#8b5cf6', 'Số thập phân, phần trăm, lịch sử dân tộc', 'Đảo Ngôi Sao', '#b8a4ff', 'rocket' ),
 	);
 }
 
 /**
- * Môn học theo Chương trình GDPT 2018: slug => [tên, biểu tượng, màu, các lớp học].
+ * Môn học theo Chương trình GDPT 2018: slug => [tên, biểu tượng, màu, các lớp học, ảnh 3D].
  *
  * @return array
  */
 function hv_subjects() {
 	return array(
-		'toan'            => array( 'Toán', '🔢', '#ff6b6b', array( 1, 2, 3, 4, 5 ) ),
-		'tieng-viet'      => array( 'Tiếng Việt', '📖', '#ff922b', array( 1, 2, 3, 4, 5 ) ),
-		'tieng-anh'       => array( 'Tiếng Anh', '🔤', '#339af0', array( 3, 4, 5 ) ),
-		'tu-nhien-xa-hoi' => array( 'Tự nhiên và Xã hội', '🌱', '#40c057', array( 1, 2, 3 ) ),
-		'khoa-hoc'        => array( 'Khoa học', '🔬', '#12b886', array( 4, 5 ) ),
-		'lich-su-dia-li'  => array( 'Lịch sử và Địa lí', '🗺️', '#f59f00', array( 4, 5 ) ),
-		'dao-duc'         => array( 'Đạo đức', '💖', '#f06595', array( 1, 2, 3, 4, 5 ) ),
-		'tin-hoc'         => array( 'Tin học và Công nghệ', '💻', '#5c7cfa', array( 3, 4, 5 ) ),
+		'toan'            => array( 'Toán', '🔢', '#ff6b6b', array( 1, 2, 3, 4, 5 ), 'abacus' ),
+		'tieng-viet'      => array( 'Tiếng Việt', '📖', '#ff922b', array( 1, 2, 3, 4, 5 ), 'book' ),
+		'tieng-anh'       => array( 'Tiếng Anh', '🔤', '#339af0', array( 3, 4, 5 ), 'abc' ),
+		'tu-nhien-xa-hoi' => array( 'Tự nhiên và Xã hội', '🌱', '#40c057', array( 1, 2, 3 ), 'seedling' ),
+		'khoa-hoc'        => array( 'Khoa học', '🔬', '#12b886', array( 4, 5 ), 'microscope' ),
+		'lich-su-dia-li'  => array( 'Lịch sử và Địa lí', '🗺️', '#f59f00', array( 4, 5 ), 'map' ),
+		'dao-duc'         => array( 'Đạo đức', '💖', '#f06595', array( 1, 2, 3, 4, 5 ), 'heart' ),
+		'tin-hoc'         => array( 'Tin học và Công nghệ', '💻', '#5c7cfa', array( 3, 4, 5 ), 'laptop' ),
 	);
 }
 
 /**
- * Trùm cuối của mỗi môn (đánh khi đã học xong các màn): slug môn => [tên trùm, biểu tượng].
+ * Trùm cuối của mỗi môn (đánh khi đã học xong các màn): slug môn => [tên trùm, biểu tượng, ảnh 3D].
  *
  * @return array
  */
 function hv_bosses() {
 	return array(
-		'toan'            => array( 'Rồng Số Học', '🐉' ),
-		'tieng-viet'      => array( 'Phù Thuỷ Chữ Cái', '🧙' ),
-		'tieng-anh'       => array( 'Robot Alphabet', '🤖' ),
-		'tu-nhien-xa-hoi' => array( 'Quái Vật Rừng Rậm', '👹' ),
-		'khoa-hoc'        => array( 'Giáo Sư Lộn Xộn', '🧪' ),
-		'lich-su-dia-li'  => array( 'Thuyền Trưởng Bí Ẩn', '🏴‍☠️' ),
-		'dao-duc'         => array( 'Mây Đen Cáu Kỉnh', '⛈️' ),
-		'tin-hoc'         => array( 'Virus Tí Hon', '🦠' ),
+		'toan'            => array( 'Rồng Số Học', '🐉', 'dragon' ),
+		'tieng-viet'      => array( 'Yêu Tinh Chữ Cái', '👹', 'ogre' ),
+		'tieng-anh'       => array( 'Robot Alphabet', '🤖', 'robot' ),
+		'tu-nhien-xa-hoi' => array( 'Khủng Long Rừng Rậm', '🦖', 'trex' ),
+		'khoa-hoc'        => array( 'Giáo Sư Lộn Xộn', '🧪', 'testtube' ),
+		'lich-su-dia-li'  => array( 'Thuyền Trưởng Bí Ẩn', '🏴‍☠️', 'pirate' ),
+		'dao-duc'         => array( 'Mây Đen Cáu Kỉnh', '⛈️', 'storm' ),
+		'tin-hoc'         => array( 'Virus Tí Hon', '🦠', 'microbe' ),
 	);
 }
 
@@ -83,6 +83,22 @@ function hv_books() {
  */
 function hv_default_books( $subject ) {
 	return array( 'tieng-anh' === $subject ? 'global' : 'kntt' );
+}
+
+/**
+ * Ảnh biểu tượng 3D (Microsoft Fluent Emoji, giấy phép MIT – assets/img/3d/).
+ *
+ * @param string $key   Tên tệp (không đuôi).
+ * @param int    $size  Kích thước hiển thị (px).
+ * @param string $alt   Chữ thay thế (để trống = ảnh trang trí).
+ * @param string $class Class.
+ * @return string
+ */
+function hv_icon3d( $key, $size = 64, $alt = '', $class = 'hv-3d' ) {
+	if ( ! $key || ! file_exists( HV_DIR . '/assets/img/3d/' . $key . '.webp' ) ) {
+		return '';
+	}
+	return '<img class="' . esc_attr( $class ) . '" src="' . esc_url( HV_URI . '/assets/img/3d/' . $key . '.webp' ) . '" width="' . (int) $size . '" height="' . (int) $size . '" alt="' . esc_attr( $alt ) . '"' . ( $alt ? '' : ' aria-hidden="true"' ) . ' loading="lazy" decoding="async">';
 }
 
 /**
@@ -165,15 +181,15 @@ function hv_lesson_terms( $post_id ) {
  * Thông tin hiển thị của môn (biểu tượng, màu) – theo slug, mặc định cho môn tự thêm.
  *
  * @param WP_Term|string|null $subject Môn.
- * @return array [ tên, biểu tượng, màu ]
+ * @return array [ tên, biểu tượng, màu, ảnh 3D ]
  */
 function hv_subject_info( $subject ) {
 	$all  = hv_subjects();
 	$slug = $subject instanceof WP_Term ? $subject->slug : (string) $subject;
 	if ( isset( $all[ $slug ] ) ) {
-		return array( $subject instanceof WP_Term ? $subject->name : $all[ $slug ][0], $all[ $slug ][1], $all[ $slug ][2] );
+		return array( $subject instanceof WP_Term ? $subject->name : $all[ $slug ][0], $all[ $slug ][1], $all[ $slug ][2], $all[ $slug ][4] );
 	}
-	return array( $subject instanceof WP_Term ? $subject->name : $slug, '📘', '#7b4fd6' );
+	return array( $subject instanceof WP_Term ? $subject->name : $slug, '📘', '#7c4dff', 'book' );
 }
 
 /**

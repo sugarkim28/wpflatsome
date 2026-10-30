@@ -14,7 +14,7 @@ while ( have_posts() ) :
 	the_post();
 	$hv_id                                 = get_the_ID();
 	list( $hv_grade, $hv_subject )         = hv_lesson_terms( $hv_id );
-	list( $hv_sname, $hv_sicon, $hv_scol ) = hv_subject_info( $hv_subject );
+	list( $hv_sname, $hv_sicon, $hv_scol, $hv_s3d ) = hv_subject_info( $hv_subject );
 	$hv_grades                             = hv_grades();
 	$hv_g                                  = isset( $hv_grades[ $hv_grade ] ) ? $hv_grades[ $hv_grade ] : null;
 	$hv_icon                               = hv_lesson_meta( 'icon' ) ? hv_lesson_meta( 'icon' ) : $hv_sicon;
@@ -72,7 +72,7 @@ while ( have_posts() ) :
 			'meta'   => ( false !== $hv_pos ? 'Màn ' . ( $hv_pos + 1 ) . '/' . count( $hv_siblings ) . ' · ' : '' ) . trim( ( $hv_grade ? 'Lớp ' . $hv_grade . ' · ' : '' ) . $hv_sname ),
 			'title'  => get_the_title(),
 			'lead'   => $hv_topic ? 'Chủ đề: ' . $hv_topic : '',
-			'art'    => $hv_icon,
+			'art'    => hv_icon3d( $hv_s3d, 150 ) ? hv_icon3d( $hv_s3d, 150 ) : $hv_icon,
 			'after'  => $hv_books ? '<div class="hv-books">' . $hv_books . '</div>' : '',
 		)
 	);
@@ -90,18 +90,18 @@ while ( have_posts() ) :
 
 			<section class="hv-step hv-step-intro" data-title="Mở màn">
 				<div class="hv-story">
-					<div class="hv-owl" aria-hidden="true"></div>
+					<img class="hv-owl-img" src="<?php echo esc_url( HV_URI . '/assets/img/mascot.svg' ); ?>" width="130" height="130" alt="">
 					<div class="hv-speech" data-read><?php echo esc_html( $hv_hook ? $hv_hook : get_the_excerpt() ); ?></div>
 				</div>
 				<?php if ( $hv_goals ) : ?>
 					<div class="hv-goals">
-						<h2>🎯 Qua màn này, em sẽ:</h2>
+						<h2><?php echo hv_icon3d( 'target', 32 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> Qua màn này, em sẽ:</h2>
 						<ul><?php foreach ( $hv_goals as $hv_l ) : ?><li><?php echo wp_kses_post( $hv_l ); ?></li><?php endforeach; ?></ul>
 					</div>
 				<?php endif; ?>
 				<div class="hv-actions">
-					<button type="button" class="hv-btn hv-btn-ghost" data-hv-hear>🔈 Nghe Cú Bông kể</button>
-					<button type="button" class="hv-btn hv-btn-accent hv-btn-big" data-hv-start>▶ Vào màn chơi</button>
+					<button type="button" class="hv-btn hv-btn-white" data-hv-hear>🔈 Nghe Cú Bông kể</button>
+					<button type="button" class="hv-btn hv-btn-big" data-hv-start>Vào màn chơi ›</button>
 				</div>
 			</section>
 
@@ -118,7 +118,7 @@ while ( have_posts() ) :
 			<?php if ( $hv_notes ) : ?>
 				<section class="hv-step" data-title="Bí kíp ghi nhớ">
 					<div class="hv-card-xl hv-remember" data-read>
-						<h2>📜 Bí kíp ghi nhớ</h2>
+						<h2><?php echo hv_icon3d( 'scroll', 40 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> Bí kíp ghi nhớ</h2>
 						<ul><?php foreach ( $hv_notes as $hv_l ) : ?><li><?php echo wp_kses_post( $hv_l ); ?></li><?php endforeach; ?></ul>
 					</div>
 				</section>
@@ -127,7 +127,7 @@ while ( have_posts() ) :
 			<?php if ( $hv_mission ) : ?>
 				<section class="hv-step" data-title="Nhiệm vụ ngoài đời">
 					<div class="hv-card-xl hv-mission" data-read>
-						<h2>🏡 Nhiệm vụ ngoài đời</h2>
+						<h2><?php echo hv_icon3d( 'house', 40 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> Nhiệm vụ ngoài đời</h2>
 						<p><?php echo esc_html( $hv_mission ); ?></p>
 						<small>Làm cùng bố mẹ sau giờ học nhé. Còn bây giờ – chuẩn bị đánh trùm màn!</small>
 					</div>
@@ -153,7 +153,7 @@ while ( have_posts() ) :
 					?>
 				<?php endif; ?>
 				<?php if ( $hv_game && array_key_exists( $hv_game, hv_games() ) ) : ?>
-					<h2 class="hv-bonus-title">🎁 Màn thưởng: chơi thêm để kiếm XP</h2>
+					<h2 class="hv-bonus-title"><?php echo hv_icon3d( 'gem', 36 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> Màn thưởng: chơi thêm để kiếm XP</h2>
 					<?php echo hv_game_html( $hv_game, $hv_grade ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hàm tự escape. ?>
 				<?php endif; ?>
 			</section>

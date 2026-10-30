@@ -2,6 +2,10 @@
 
 Theme con của **Flatsome**: bài học theo Chương trình GDPT 2018, bám bộ sách dùng chung toàn quốc từ năm học 2026–2027 (**Kết nối tri thức với cuộc sống**, **Tiếng Anh Global Success** – QĐ 3588/QĐ-BGDĐT), kèm luyện tập và trò chơi học tập.
 
+## Giao diện trời xanh – đảo bay (bản 0.3)
+Phong cách tham khảo các nền tảng học tập trẻ em như VioEdu (không dùng hình ảnh, logo hay nội dung của họ): nền trời xanh mây trắng, thẻ trắng bóng đổ mềm, thẻ pastel, nút xanh lá bo tròn, chữ xanh navy, lộ trình cột vòm, tab *Vì sao chọn Học Vui* (Học sinh / Phụ huynh / Giáo viên), chân trang xanh lá đồi cỏ, Cú Bông trợ giúp nổi góc phải.
+Biểu tượng 3D: **Microsoft Fluent Emoji** (giấy phép MIT, `assets/img/3d/LICENSE-fluentui-emoji.txt`), 48 ảnh WebP ~400 KB.
+
 ## Phong cách "phá đảo" (bản 0.2)
 - **5 hòn đảo = 5 lớp**: Đảo Hạt Mầm, San Hô, Rừng Xanh, Núi Lửa, Ngôi Sao – bản đồ có tiến độ từng đảo.
 - **Mỗi bài = 1 màn chơi** theo từng bước: Mở màn (Cú Bông kể tình huống) → Khám phá (từng thẻ ngắn) → Bí kíp ghi nhớ → Nhiệm vụ ngoài đời → Đánh trùm màn → Màn thưởng.

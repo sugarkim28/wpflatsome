@@ -202,7 +202,7 @@
 			var slow = store.get('rate', 'slow') === 'slow';
 			u.rate = lang === 'en' ? 0.8 : (slow ? 0.82 : 0.95);
 			u.pitch = lang === 'en' ? 1.1 : 1.08;
-			var mascots = document.querySelectorAll('.hv-mascot, .hv-owl');
+			var mascots = document.querySelectorAll('.hv-mascot, .hv-owl, .hv-owl-img');
 			mascots.forEach(function (m) { m.classList.add('is-talking'); });
 			u.onend = u.onerror = function () { mascots.forEach(function (m) { m.classList.remove('is-talking'); }); };
 			window.speechSynthesis.speak(u);
@@ -790,8 +790,8 @@
 		this.body.innerHTML = '<div class="hv-result"><div class="hv-big-stars" aria-label="' + got + ' sao">' + starsHtml + '</div>' +
 			'<h3>' + msg + '</h3><p>' + (extra ? esc(extra) : 'Em làm đúng <b>' + right + '/' + total + '</b>' + (this.def.timer ? ' · ' + secs + ' giây' : '')) + '</p>' +
 			(fast ? '<p class="hv-fast">⚡ Siêu tốc! Thêm 1 sao thưởng</p>' : '') +
-			'<p class="hv-reward"><span>+' + earned + ' ⭐</span><span>+' + xp + ' XP</span></p>' +
-			(lvUp ? '<div class="hv-levelup">🎉 Lên <b>cấp ' + lvUp + '</b> – ' + esc(titleOf(lvUp)) + '!</div>' : '') +
+			'<p class="hv-reward"><span>' + (ico('star', 26) || '⭐') + ' +' + earned + '</span><span>' + (ico('gem', 26) || '💎') + ' +' + xp + ' XP</span></p>' +
+			(lvUp ? '<div class="hv-levelup">' + (ico('party', 36) || '🎉') + ' Lên <b>cấp ' + lvUp + '</b> – ' + esc(titleOf(lvUp)) + '!</div>' : '') +
 			(sticker ? '<div class="hv-new-sticker"><span>' + sticker + '</span>Em mở được nhãn dán mới!</div>' : '') +
 			'<div class="hv-actions">' + (next && got >= 1 ? '<a class="hv-btn hv-btn-accent hv-btn-big" href="' + esc(next) + '">' + esc(this.root.getAttribute('data-next-label') || 'Màn tiếp theo') + ' ▶</a>' : '') +
 			'<button type="button" class="hv-btn hv-again">Chơi lại ↻</button>' +
@@ -959,15 +959,19 @@
 	/* ---------- Thanh nhân vật, bản đồ đảo, nhiệm vụ, huy hiệu ---------- */
 	var AVATARS = ['🦉', '🐯', '🐼', '🦊', '🐸', '🐵', '🦄', '🐙', '🐶', '🐱', '🐰', '🐲'];
 	var BADGES = [
-		['🥇', 'Màn đầu tiên', 'Phá đảo 1 màn bài học', function (p) { return p.cleared >= 1; }],
-		['🗺️', 'Nhà thám hiểm', 'Phá đảo 5 màn', function (p) { return p.cleared >= 5; }],
-		['🏝️', 'Chúa đảo', 'Phá đảo 20 màn', function (p) { return p.cleared >= 20; }],
-		['👾', 'Diệt trùm', 'Hạ gục 1 trùm cuối', function (p) { return p.bosses >= 1; }],
-		['🔥', 'Lửa nhỏ', 'Học 3 ngày liên tiếp', function (p) { return p.streak >= 3; }],
-		['☄️', 'Lửa lớn', 'Học 7 ngày liên tiếp', function (p) { return p.streak >= 7; }],
-		['⚡', 'Tia chớp', 'Đạt 200 XP', function (p) { return p.xp >= 200; }],
-		['👑', 'Huyền thoại', 'Đạt 1000 XP', function (p) { return p.xp >= 1000; }]
+		['medal', 'Màn đầu tiên', 'Phá đảo 1 màn bài học', function (p) { return p.cleared >= 1; }],
+		['map', 'Nhà thám hiểm', 'Phá đảo 5 màn', function (p) { return p.cleared >= 5; }],
+		['island', 'Chúa đảo', 'Phá đảo 20 màn', function (p) { return p.cleared >= 20; }],
+		['swords', 'Diệt trùm', 'Hạ gục 1 trùm cuối', function (p) { return p.bosses >= 1; }],
+		['fire', 'Lửa nhỏ', 'Học 3 ngày liên tiếp', function (p) { return p.streak >= 3; }],
+		['sun', 'Mặt trời nhỏ', 'Học 7 ngày liên tiếp', function (p) { return p.streak >= 7; }],
+		['hundred', 'Tia chớp', 'Đạt 200 XP', function (p) { return p.xp >= 200; }],
+		['crown', 'Huyền thoại', 'Đạt 1000 XP', function (p) { return p.xp >= 1000; }]
 	];
+	// Ảnh biểu tượng 3D trong theme (Fluent Emoji, MIT).
+	function ico(key, size, cls) {
+		return CFG.img ? '<img class="' + (cls || 'hv-3d') + '" src="' + esc(CFG.img + key + '.webp') + '" width="' + size + '" height="' + size + '" alt="" aria-hidden="true">' : '';
+	}
 	function profile() {
 		var done = store.get('done', {});
 		var cleared = 0;
@@ -984,7 +988,7 @@
 		return '<a class="hv-hud-ava" href="' + esc(CFG.profileUrl || '#') + '" aria-label="Hồ sơ của em">' + esc(p.avatar) + '<b>' + lv + '</b></a>' +
 			'<div class="hv-hud-who"><strong>' + esc(p.name || 'Bạn nhỏ') + '</strong><span>Cấp ' + lv + ' · ' + esc(titleOf(lv)) + '</span>' +
 			'<div class="hv-xpbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Kinh nghiệm"><i style="width:' + pct + '%"></i><em>' + p.xp + ' XP</em></div></div>' +
-			'<div class="hv-hud-stats"><span title="Sao">⭐ <b>' + stars() + '</b></span><span title="Chuỗi ngày học" class="' + (p.streak ? 'is-hot' : '') + '">🔥 <b>' + p.streak + '</b></span><span title="Màn đã phá">🏁 <b>' + p.cleared + '</b></span></div>' +
+			'<div class="hv-hud-stats"><span title="Sao">' + (ico('star', 22) || '⭐') + ' <b>' + stars() + '</b></span><span title="Chuỗi ngày học" class="' + (p.streak ? 'is-hot' : '') + '">' + (ico('fire', 22) || '🔥') + ' <b>' + p.streak + '</b></span><span title="Màn đã phá">' + (ico('trophy', 22) || '🏁') + ' <b>' + p.cleared + '</b></span></div>' +
 			'<button type="button" class="hv-hud-set" data-hv-settings aria-label="Cài đặt âm thanh và giọng đọc">⚙️</button>';
 	}
 	function renderProgress() {
@@ -1015,12 +1019,12 @@
 		});
 		// Nhiệm vụ hôm nay.
 		var t = today();
-		var quests = [['📖', 'Phá đảo 1 màn bài học', t.lessons, 1], ['🎮', 'Chơi 3 lượt trò chơi', t.plays, 3], ['🌟', 'Đạt 3 sao trong 1 lượt', t.perfect, 1]];
+		var quests = [['book', 'Phá đảo 1 màn bài học', t.lessons, 1], ['game', 'Chơi 3 lượt trò chơi', t.plays, 3], ['star', 'Đạt 3 sao trong 1 lượt', t.perfect, 1]];
 		document.querySelectorAll('[data-hv-quests]').forEach(function (box) {
 			var h = '';
 			quests.forEach(function (q) {
 				var ok = q[2] >= q[3];
-				h += '<li class="' + (ok ? 'is-ok' : '') + '"><i aria-hidden="true">' + q[0] + '</i><span>' + esc(q[1]) + '<small><b style="width:' + Math.min(100, Math.round(q[2] / q[3] * 100)) + '%"></b></small></span><em>' + (ok ? '✔' : Math.min(q[2], q[3]) + '/' + q[3]) + '</em></li>';
+				h += '<li class="' + (ok ? 'is-ok' : '') + '">' + ico(q[0], 36) + '<span>' + esc(q[1]) + '<small><b style="width:' + Math.min(100, Math.round(q[2] / q[3] * 100)) + '%"></b></small></span><em>' + (ok ? '✔' : Math.min(q[2], q[3]) + '/' + q[3]) + '</em></li>';
 			});
 			box.innerHTML = h;
 		});
@@ -1029,7 +1033,7 @@
 			var h = '';
 			BADGES.forEach(function (b) {
 				var ok = b[3](p);
-				h += '<div class="hv-badge' + (ok ? ' on' : '') + '" title="' + esc(b[2]) + '"><i aria-hidden="true">' + (ok ? b[0] : '🔒') + '</i><strong>' + esc(b[1]) + '</strong><small>' + esc(b[2]) + '</small></div>';
+				h += '<div class="hv-badge' + (ok ? ' on' : '') + '" title="' + esc(b[2]) + '">' + ico(b[0], 56) + '<strong>' + esc(b[1]) + '</strong><small>' + esc(b[2]) + '</small></div>';
 			});
 			box.innerHTML = h;
 		});
@@ -1046,6 +1050,32 @@
 		if (s) { openSettings(); }
 		var b = e.target.closest && e.target.closest('[data-hv-boss-link]');
 		if (b) { openArena(b.getAttribute('href')); }
+		// Tab "Vì sao chọn Học Vui".
+		var tab = e.target.closest && e.target.closest('[data-hv-tabs] [role="tab"]');
+		if (tab) {
+			var box = tab.closest('[data-hv-tabs]');
+			box.querySelectorAll('[role="tab"]').forEach(function (x) { var on = x === tab; x.setAttribute('aria-selected', on); x.tabIndex = on ? 0 : -1; });
+			box.querySelectorAll('[role="tabpanel"]').forEach(function (pn) { pn.hidden = pn.id !== tab.getAttribute('aria-controls'); });
+		}
+		// Cú Bông trợ giúp.
+		var hb = e.target.closest && e.target.closest('[data-hv-helper-toggle]');
+		if (hb) {
+			var pop = document.querySelector('[data-hv-helper] .hv-helper-pop');
+			pop.hidden = !pop.hidden;
+			if (!pop.hidden) {
+				var pr = profile();
+				var tips = [
+					'Chào ' + (pr.name || 'em') + '! Hôm nay mình phá đảo thêm một màn nhé?',
+					'Em đang có ' + stars() + ' sao. Đủ 10 sao là mở được nhãn dán mới đó!',
+					pr.streak ? 'Ngọn lửa của em đã cháy ' + pr.streak + ' ngày rồi. Giỏi lắm, giữ lửa nhé!' : 'Học mỗi ngày một chút để thắp ngọn lửa chăm chỉ nha!',
+					'Làm sai cũng không sao đâu. Mỗi lần sai là một lần mình học thêm được điều mới!'
+				];
+				var msg = pick(tips);
+				pop.querySelector('[data-hv-helper-text]').textContent = msg;
+				speak(msg);
+			}
+		}
+		if (e.target.closest && e.target.closest('[data-hv-helper-say]')) { speak(document.querySelector('[data-hv-helper-text]').textContent); }
 	});
 
 	function openArena(hash) {

@@ -10,25 +10,28 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Hình hòn đảo (SVG) của 1 lớp.
+ * Hòn đảo bay của 1 lớp (cỏ xanh, đá nâu, cờ số lớp, ảnh 3D đặc trưng).
  *
  * @param int $grade Lớp.
  * @return string
  */
 function hv_island_svg( $grade ) {
-	$g    = hv_grades();
-	$g    = isset( $g[ $grade ] ) ? $g[ $grade ] : $g[1];
-	$land = $g[6];
-	return '<svg class="hv-isl-svg" viewBox="0 0 200 150" aria-hidden="true">'
-		. '<ellipse cx="100" cy="122" rx="94" ry="20" fill="#fff" opacity=".35"/>'
-		. '<path d="M14 110 C16 92 52 84 100 84 C150 84 186 92 186 110 C186 126 150 134 100 134 C50 134 14 126 14 110 Z" fill="#ffe1a1" stroke="#1d1442" stroke-width="4"/>'
-		. '<path d="M34 108 C30 76 64 46 102 46 C142 46 172 76 166 108 C150 116 54 116 34 108 Z" fill="' . esc_attr( $land ) . '" stroke="#1d1442" stroke-width="4"/>'
-		. '<path d="M52 92 q10 -6 20 0 M120 98 q10 -6 20 0" stroke="#1d1442" stroke-width="3" fill="none" stroke-linecap="round" opacity=".35"/>'
-		. '<path d="M150 70 V20" stroke="#1d1442" stroke-width="4" stroke-linecap="round"/>'
-		. '<path d="M150 20 L184 30 L150 40 Z" fill="' . esc_attr( $g[3] ) . '" stroke="#1d1442" stroke-width="3" stroke-linejoin="round"/>'
-		. '<text x="163" y="35" font-size="13" font-weight="800" fill="#fff" text-anchor="middle" font-family="Baloo 2,Arial">' . (int) $grade . '</text>'
-		. '<text x="98" y="92" font-size="46" text-anchor="middle">' . esc_html( $g[2] ) . '</text>'
-		. '</svg>';
+	$g = hv_grades();
+	$g = isset( $g[ $grade ] ) ? $g[ $grade ] : $g[1];
+	$u = 'hvi' . (int) $grade;
+	return '<span class="hv-fly" style="--c:' . esc_attr( $g[3] ) . '">'
+		. '<svg class="hv-isl-svg" viewBox="0 0 200 170" aria-hidden="true"><defs>'
+		. '<linearGradient id="' . $u . 'g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6ec6a"/><stop offset="1" stop-color="#4cb648"/></linearGradient>'
+		. '<linearGradient id="' . $u . 'r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c08a57"/><stop offset="1" stop-color="#6b4227"/></linearGradient></defs>'
+		. '<path d="M16 62 C40 104 62 128 100 166 C138 128 160 104 184 62 Z" fill="url(#' . $u . 'r)"/>'
+		. '<path d="M60 92 L80 120 M120 98 L104 132 M140 84 L150 104" stroke="#5a3620" stroke-width="3" stroke-linecap="round" opacity=".45"/>'
+		. '<ellipse cx="100" cy="60" rx="88" ry="26" fill="#8a5a33"/>'
+		. '<ellipse cx="100" cy="54" rx="90" ry="26" fill="url(#' . $u . 'g)"/>'
+		. '<ellipse cx="78" cy="46" rx="44" ry="9" fill="#fff" opacity=".22"/>'
+		. '<path d="M150 50 V12" stroke="#5a3620" stroke-width="3.5" stroke-linecap="round"/>'
+		. '<path d="M150 12 L180 21 L150 30 Z" fill="' . esc_attr( $g[3] ) . '"/>'
+		. '<text x="161" y="25.5" font-size="11" font-weight="900" fill="#fff" text-anchor="middle" font-family="Nunito,Arial">' . (int) $grade . '</text>'
+		. '</svg>' . hv_icon3d( $g[7], 96, '', 'hv-fly-icon' ) . '</span>';
 }
 
 /**
@@ -62,44 +65,49 @@ function hv_hud_html( $extra = '' ) {
 }
 
 /**
- * [hv_hero] – màn hình chào kiểu trò chơi: tiêu đề, nút bắt đầu, thẻ nhân vật.
+ * [hv_hero] – banner trời xanh mây trắng: tiêu đề, nút bắt đầu, Cú Bông và đồ vật 3D bay quanh;
+ * thẻ nhân vật + số liệu nổi lên mép dưới banner.
  *
  * @return string
  */
 function hv_sc_hero() {
 	$title = esc_html( hv_opt( 'hero_title' ) );
 	$title = preg_replace( '/\*(.+?)\*/u', '<em>$1</em>', $title );
+	$count = (int) array_sum( array_map( 'count', hv_lessons_by_grade() ) );
 	ob_start();
 	?>
 	<section class="hv-hero">
-		<div class="hv-hero-sea" aria-hidden="true"></div>
 		<div class="hv-wrap hv-hero-in">
 			<div class="hv-hero-copy">
 				<span class="hv-kicker">🏝️ Hành trình phá đảo tri thức</span>
 				<h1><?php echo wp_kses( $title, array( 'em' => array() ) ); ?></h1>
 				<p class="hv-hero-lead"><?php echo esc_html( hv_opt( 'hero_lead' ) ); ?></p>
 				<div class="hv-hero-btns">
-					<a class="hv-btn hv-btn-accent hv-btn-big" href="#ban-do">▶ Bắt đầu phá đảo</a>
-					<a class="hv-btn hv-btn-big hv-btn-dark" href="<?php echo esc_url( hv_games_url() ); ?>">🎮 Khu trò chơi</a>
+					<a class="hv-btn hv-btn-big" href="#ban-do">Bắt đầu phá đảo <span aria-hidden="true">›</span></a>
+					<a class="hv-play-link" href="<?php echo esc_url( hv_games_url() ); ?>"><span aria-hidden="true">▶</span> Vào khu trò chơi</a>
 				</div>
-				<ul class="hv-hero-facts">
-					<li><b>5</b> hòn đảo</li>
-					<li><b><?php echo (int) array_sum( array_map( 'count', hv_lessons_by_grade() ) ); ?></b> màn chơi</li>
-					<li><b>7</b> trò chơi</li>
-				</ul>
 			</div>
-			<div class="hv-hero-side">
-				<div class="hv-player-card">
-					<div class="hv-pc-top">
-						<div class="hv-owl" aria-hidden="true"></div>
-						<div class="hv-bubble"><?php echo esc_html( hv_opt( 'hero_bubble' ) ); ?></div>
-					</div>
-					<?php echo hv_hud_html( 'is-card' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML tĩnh. ?>
-					<?php echo hv_sc_name_form(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML tĩnh. ?>
-				</div>
+			<div class="hv-hero-art">
+				<div class="hv-bubble"><?php echo esc_html( hv_opt( 'hero_bubble' ) ); ?></div>
+				<img class="hv-hero-owl hv-owl-img" src="<?php echo esc_url( HV_URI . '/assets/img/mascot.svg' ); ?>" width="340" height="340" alt="Bạn Cú Bông – linh vật Học Vui" fetchpriority="high">
+				<?php
+				foreach ( array( 'book' => 'f1', 'star' => 'f2', 'abacus' => 'f3', 'cap' => 'f4', 'rocket' => 'f5' ) as $hv_k => $hv_c ) {
+					echo hv_icon3d( $hv_k, 72, '', 'hv-float ' . $hv_c ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- hàm tự escape.
+				}
+				?>
 			</div>
 		</div>
+		<div class="hv-clouds" aria-hidden="true"></div>
 	</section>
+	<div class="hv-wrap hv-hero-panel">
+		<div class="hv-panel-player"><?php echo hv_hud_html( 'is-card' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML tĩnh. ?><?php echo hv_sc_name_form(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML tĩnh. ?></div>
+		<ul class="hv-panel-stats">
+			<li><?php echo hv_icon3d( 'island', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>5 hòn đảo</b><span>5 lớp học, từ lớp 1 đến lớp 5</span></li>
+			<li><?php echo hv_icon3d( 'book', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b><?php echo (int) $count; ?> màn chơi</b><span>Bám sách Kết nối tri thức</span></li>
+			<li><?php echo hv_icon3d( 'game', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>7 trò chơi</b><span>Câu hỏi mới mỗi lượt chơi</span></li>
+			<li><?php echo hv_icon3d( 'heart', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>Miễn phí</b><span>Không quảng cáo, không đăng ký</span></li>
+		</ul>
+	</div>
 	<?php
 	return ob_get_clean();
 }
@@ -117,11 +125,11 @@ function hv_sc_world() {
 		$slugs = isset( $by[ $n ] ) ? $by[ $n ] : array();
 		$html .= '<li><a class="hv-island g' . (int) $n . '" style="--c:' . esc_attr( $g[3] ) . '" href="' . esc_url( hv_grade_link( $n ) ) . '" data-hv-island="' . esc_attr( implode( ',', $slugs ) ) . '">'
 			. '<span class="hv-isl-art">' . hv_island_svg( $n ) . '</span>'
-			. '<span class="hv-isl-tag">' . esc_html( $g[0] ) . '</span>'
+			. '<span class="hv-isl-card"><span class="hv-isl-tag">' . esc_html( $g[0] ) . '</span>'
 			. '<strong>' . esc_html( $g[5] ) . '</strong>'
 			. '<small>' . esc_html( $g[4] ) . '</small>'
 			. '<span class="hv-isl-bar"><i></i></span><span class="hv-isl-count">0/' . count( $slugs ) . ' màn</span>'
-			. '<span class="hv-isl-go">Lên đảo ▶</span></a></li>';
+			. '<span class="hv-isl-go">Lên đảo ›</span></span></a></li>';
 	}
 	return $html . '</ol></div>';
 }
@@ -134,7 +142,7 @@ add_shortcode( 'hv_grades', 'hv_sc_world' );
  * @return string
  */
 function hv_sc_quests() {
-	return '<div class="hv-quests"><h3>📜 Nhiệm vụ hôm nay</h3><ul data-hv-quests></ul><p>Mỗi ngày học một chút để giữ ngọn lửa 🔥 luôn cháy nhé!</p></div>';
+	return '<div class="hv-quests"><h3>' . hv_icon3d( 'target', 32 ) . ' Nhiệm vụ hôm nay</h3><ul data-hv-quests></ul><p>Mỗi ngày học một chút để giữ ngọn lửa 🔥 luôn cháy nhé!</p></div>';
 }
 add_shortcode( 'hv_quests', 'hv_sc_quests' );
 
@@ -169,7 +177,7 @@ function hv_sc_subjects( $atts ) {
 			continue;
 		}
 		$range = min( $s[3] ) === max( $s[3] ) ? 'Lớp ' . min( $s[3] ) : 'Lớp ' . min( $s[3] ) . '–' . max( $s[3] );
-		$html .= '<a class="hv-subject" style="--c:' . esc_attr( $s[2] ) . '" href="' . esc_url( hv_subject_link( $slug, $grade ) ) . '"><i aria-hidden="true">' . esc_html( $s[1] ) . '</i><span>' . esc_html( $s[0] ) . '<small>' . esc_html( $range ) . '</small></span></a>';
+		$html .= '<a class="hv-subject" style="--c:' . esc_attr( $s[2] ) . '" href="' . esc_url( hv_subject_link( $slug, $grade ) ) . '"><strong>' . esc_html( $s[0] ) . '</strong>' . hv_icon3d( $s[4], 84 ) . '<span class="hv-pill">' . esc_html( $range ) . '</span></a>';
 	}
 	return $html . '</div>';
 }
@@ -230,19 +238,66 @@ add_shortcode( 'hv_lessons', 'hv_sc_lessons' );
  */
 function hv_sc_parent_steps() {
 	$steps = array(
-		array( '🦉', 'Mở màn', 'Cú Bông kể một tình huống gần gũi, khơi gợi tò mò, được đọc to bằng giọng tiếng Việt.' ),
-		array( '🔍', 'Khám phá', 'Kiến thức chia thành từng thẻ ngắn, có ví dụ, bảng, mẹo nhớ nhanh – học từng chút một.' ),
-		array( '📜', 'Bí kíp', 'Tóm tắt điều cần ghi nhớ, giúp con ôn lại trước khi “đánh trùm”.' ),
-		array( '⚔️', 'Đánh trùm', 'Câu hỏi luyện tập: đúng nhiều được 3 sao, XP, lên cấp. Cuối mỗi môn có trùm cuối với 3 tim.' ),
-		array( '🏡', 'Nhiệm vụ ngoài đời', 'Một việc nhỏ con làm cùng gia đình để dùng ngay điều vừa học.' ),
+		array( 'speech', 'Mở màn', 'Cú Bông kể một tình huống gần gũi, khơi gợi tò mò, được đọc to bằng giọng tiếng Việt.' ),
+		array( 'search', 'Khám phá', 'Kiến thức chia thành từng thẻ ngắn, có ví dụ, bảng, mẹo nhớ nhanh – học từng chút một.' ),
+		array( 'scroll', 'Bí kíp', 'Tóm tắt điều cần ghi nhớ, giúp con ôn lại trước khi “đánh trùm”.' ),
+		array( 'swords', 'Đánh trùm', 'Câu hỏi luyện tập: đúng nhiều được 3 sao, XP, lên cấp. Cuối mỗi môn có trùm cuối với 3 tim.' ),
+		array( 'house', 'Nhiệm vụ ngoài đời', 'Một việc nhỏ con làm cùng gia đình để dùng ngay điều vừa học.' ),
 	);
-	$html  = '<div class="hv-steps">';
-	foreach ( $steps as $s ) {
-		$html .= '<div class="hv-step-card"><i aria-hidden="true">' . esc_html( $s[0] ) . '</i><h3>' . esc_html( $s[1] ) . '</h3><p>' . esc_html( $s[2] ) . '</p></div>';
+	$html  = '<ol class="hv-steps">';
+	foreach ( $steps as $i => $s ) {
+		$html .= '<li class="hv-step-card"><b class="hv-hex">' . ( $i + 1 ) . '</b><h3>' . esc_html( $s[1] ) . '</h3><span class="hv-arch">' . hv_icon3d( $s[0], 72 ) . '<span>' . esc_html( $s[2] ) . '</span></span></li>';
 	}
-	return $html . '</div>';
+	return $html . '</ol>';
 }
 add_shortcode( 'hv_parent_steps', 'hv_sc_parent_steps' );
+
+/**
+ * [hv_why] – Vì sao chọn Học Vui (tab Học sinh / Phụ huynh / Giáo viên).
+ *
+ * @return string
+ */
+function hv_sc_why() {
+	$tabs = array(
+		'Học sinh'  => array(
+			array( 'party', 'Học như chơi game', 'Mỗi bài là một màn chơi có chuyện kể, sao, XP, trùm cuối.' ),
+			array( 'speech', 'Cú Bông đọc cho nghe', 'Giọng tiếng Việt ấm áp, chậm rãi – bé lớp 1 chưa đọc thạo vẫn tự học được.' ),
+			array( 'trophy', 'Huy hiệu, nhãn dán', 'Sưu tập 20 nhãn dán, 8 huy hiệu, giữ chuỗi ngày học 🔥.' ),
+			array( 'game', '7 trò chơi tự sinh câu hỏi', 'Không bao giờ hết câu hỏi – mỗi lượt chơi là một đề mới.' ),
+		),
+		'Phụ huynh' => array(
+			array( 'book', 'Đúng chương trình', 'Theo Chương trình GDPT 2018, bộ sách Kết nối tri thức với cuộc sống dùng chung toàn quốc.' ),
+			array( 'clock', '15 phút mỗi ngày', 'Màn chơi ngắn, vừa sức, có nhiệm vụ nhỏ làm cùng gia đình.' ),
+			array( 'heart', 'An toàn cho trẻ', 'Không quảng cáo, không đăng ký, không thu thập dữ liệu của con.' ),
+			array( 'gem', 'Hoàn toàn miễn phí', 'Học và chơi không giới hạn trên máy tính, điện thoại, máy tính bảng.' ),
+		),
+		'Giáo viên' => array(
+			array( 'scroll', 'Tự soạn bài dễ dàng', 'Thêm bài, câu hỏi luyện tập ngay trong trang quản trị, mỗi dòng một câu.' ),
+			array( 'target', 'Bám mục tiêu bài học', 'Mỗi màn ghi rõ mục tiêu, bí kíp ghi nhớ và câu hỏi kiểm tra.' ),
+			array( 'cap', 'Dùng trên lớp', 'Chiếu trò chơi lên máy chiếu, cả lớp cùng thi tính nhẩm, đố vui.' ),
+			array( 'map', 'Theo chủ đề chương trình', 'Bài sắp xếp theo lớp, môn và mạch kiến thức, dễ tra cứu.' ),
+		),
+	);
+	$id   = 'hv-why-' . wp_rand( 100, 999 );
+	$html = '<div class="hv-why" data-hv-tabs><div class="hv-tabbar" role="tablist">';
+	$i    = 0;
+	foreach ( array_keys( $tabs ) as $name ) {
+		$html .= '<button type="button" role="tab" id="' . esc_attr( $id . '-t' . $i ) . '" aria-controls="' . esc_attr( $id . '-p' . $i ) . '" aria-selected="' . ( 0 === $i ? 'true' : 'false' ) . '"' . ( $i ? ' tabindex="-1"' : '' ) . '>' . esc_html( $name ) . '</button>';
+		$i++;
+	}
+	$html .= '</div><div class="hv-why-body"><div class="hv-why-panels">';
+	$i     = 0;
+	foreach ( $tabs as $items ) {
+		$html .= '<div class="hv-why-grid" role="tabpanel" id="' . esc_attr( $id . '-p' . $i ) . '" aria-labelledby="' . esc_attr( $id . '-t' . $i ) . '"' . ( $i ? ' hidden' : '' ) . '>';
+		foreach ( $items as $it ) {
+			$html .= '<div class="hv-why-item">' . hv_icon3d( $it[0], 48 ) . '<h3>' . esc_html( $it[1] ) . '</h3><p>' . esc_html( $it[2] ) . '</p></div>';
+		}
+		$html .= '</div>';
+		$i++;
+	}
+	return $html . '</div><img class="hv-why-owl hv-owl-img" src="' . esc_url( HV_URI . '/assets/img/mascot.svg' ) . '" width="260" height="260" alt="" loading="lazy"></div></div>';
+}
+add_shortcode( 'hv_why', 'hv_sc_why' );
 
 /**
  * [hv_band title="" text="" button="" link=""] – dải kêu gọi.
@@ -262,7 +317,7 @@ function hv_sc_band( $atts ) {
 	);
 	$page = get_page_by_path( 'goc-phu-huynh' );
 	$link = $a['link'] ? $a['link'] : ( $page ? get_permalink( $page ) : home_url( '/' ) );
-	return '<div class="hv-band"><div><h2>' . esc_html( $a['title'] ) . '</h2><p>' . esc_html( $a['text'] ) . '</p></div><a class="hv-btn hv-btn-accent hv-btn-big" href="' . esc_url( $link ) . '">' . esc_html( $a['button'] ) . '</a></div>';
+	return '<div class="hv-band">' . hv_icon3d( 'house', 96, '', 'hv-band-ico' ) . '<div><h2>' . esc_html( $a['title'] ) . '</h2><p>' . esc_html( $a['text'] ) . '</p></div><a class="hv-btn hv-btn-white hv-btn-big" href="' . esc_url( $link ) . '">' . esc_html( $a['button'] ) . ' ›</a></div>';
 }
 add_shortcode( 'hv_band', 'hv_sc_band' );
 
@@ -311,9 +366,9 @@ add_shortcode( 'hv_pagehead', 'hv_sc_pagehead' );
  */
 function hv_sc_profile() {
 	return '<div class="hv-profile">'
-		. '<div class="hv-box hv-profile-main"><div class="hv-owl" aria-hidden="true"></div>' . hv_hud_html( 'is-card' ) . hv_sc_name_form()
+		. '<div class="hv-box hv-profile-main"><img class="hv-owl-img" src="' . esc_url( HV_URI . '/assets/img/mascot.svg' ) . '" width="120" height="120" alt="">' . hv_hud_html( 'is-card' ) . hv_sc_name_form()
 		. '<h3>Chọn nhân vật của em</h3><div class="hv-avatars" data-hv-avatars></div></div>'
-		. '<div class="hv-box"><h2>🏅 Huy hiệu</h2><div class="hv-badges" data-hv-badges></div></div>'
+		. '<div class="hv-box"><h2>' . hv_icon3d( 'medal', 36 ) . ' Huy hiệu</h2><div class="hv-badges" data-hv-badges></div></div>'
 		. hv_sc_quests()
 		. hv_sc_album()
 		. '</div>';
@@ -330,3 +385,12 @@ function hv_render_hudbar() {
 	echo '<div class="hv-hudbar"><div class="hv-wrap">' . hv_hud_html() . '</div></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML tĩnh.
 }
 add_action( 'flatsome_after_header', 'hv_render_hudbar' );
+
+/**
+ * Cú Bông trợ giúp nổi góc phải: chào bé, đọc to, mở cài đặt giọng đọc.
+ */
+function hv_render_helper() {
+	echo '<div class="hv-helper" data-hv-helper><div class="hv-helper-pop" hidden><p data-hv-helper-text>Chào em! Mình là Cú Bông.</p><div class="hv-helper-acts"><button type="button" class="hv-btn hv-btn-sm" data-hv-helper-say>🔈 Nghe</button><button type="button" class="hv-btn hv-btn-sm hv-btn-white" data-hv-settings>⚙️ Giọng đọc</button></div></div>'
+		. '<button type="button" class="hv-helper-btn" aria-label="Hỏi Cú Bông" data-hv-helper-toggle><img src="' . esc_url( HV_URI . '/assets/img/3d/owl.webp' ) . '" width="64" height="64" alt=""></button></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- đã escape.
+}
+add_action( 'wp_footer', 'hv_render_helper' );
