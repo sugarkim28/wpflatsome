@@ -2,6 +2,20 @@
 
 Theme con của **Flatsome**: bài học theo Chương trình GDPT 2018, bám bộ sách dùng chung toàn quốc từ năm học 2026–2027 (**Kết nối tri thức với cuộc sống**, **Tiếng Anh Global Success** – QĐ 3588/QĐ-BGDĐT), kèm luyện tập và trò chơi học tập.
 
+## Bản 0.7: giọng đọc Cô giáo / Thầy giáo, tài khoản phụ huynh nhiều bé
+
+- **Giọng đọc** (nút ⚙️): chọn *Cô giáo* (giọng nữ) hoặc *Thầy giáo* (giọng nam), tốc độ *Chậm – Vừa phải – Nhanh* (mặc định vừa phải). Bài đọc được tách từng câu nên rõ ràng, có ngắt nghỉ; phép tính đọc thành lời ("5 + 3 = 8" → "năm cộng ba bằng tám").
+  Giọng tự nhiên nhất: Microsoft Edge (HoaiMy nữ, NamMinh nam). Máy không có giọng nam tiếng Việt thì Thầy giáo đọc giọng trầm.
+- **Tài khoản phụ huynh** – trang `tai-khoan` với shortcode `[hv_parent]`:
+  - Đăng ký (họ tên, email, mật khẩu) / đăng nhập ngay trên trang, quên mật khẩu dùng chức năng của WordPress. Bật/tắt tự đăng ký ở Tuỳ biến → Học Vui.
+  - Một phụ huynh thêm tối đa 8 bé (tên, lớp, nhân vật). Mỗi bé có tiến độ riêng lưu trên máy chủ → học tiếp trên mọi thiết bị.
+  - Báo cáo từng bé: bài đã học, sao, chuỗi ngày, tiến độ từng môn của lớp, bài tiếp theo, bài nên ôn lại.
+  - Sửa bé, cho bé học lại từ đầu, xoá bé, xoá tài khoản.
+  - Máy dùng chung: nút 👪 trên thanh nhân vật để đổi bé; đăng nhập mà chưa chọn bé thì hiện "Hôm nay bé nào học?". Đăng xuất thì máy quay về chế độ khách.
+  - Lần đầu thêm bé có thể chuyển tiến độ đang học trên máy (chế độ khách) vào hồ sơ của bé.
+- Phụ huynh có vai trò riêng `hv_parent`: không thấy thanh quản trị, không vào được wp-admin.
+- REST API `hocvui/v1/kids` (cần đăng nhập): trình duyệt tự gửi tiến độ của bé đang học, máy chủ gộp lại để không bao giờ mất sao/XP.
+
 ## Bản 0.6: kiến thức là chính, trò chơi là phụ
 
 - Mỗi câu hỏi luyện tập có **lời giải thích "Vì sao?"** (viết sau dấu `=>` trong ô Câu hỏi). Trả lời xong, bé đọc/nghe giải thích rồi bấm "Câu tiếp theo".

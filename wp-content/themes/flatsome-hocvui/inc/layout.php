@@ -97,6 +97,7 @@ function hv_sc_footer() {
 	$explore = array(
 		array( 'Khu trò chơi', hv_games_url(), 'game' ),
 		array( 'Góc của em', hv_page_url( 'goc-cua-em' ), 'trophy' ),
+		array( 'Tài khoản phụ huynh', hv_page_url( 'tai-khoan' ), 'house' ),
 		array( 'Góc phụ huynh', hv_page_url( 'goc-phu-huynh' ), 'heart' ),
 		array( 'Tất cả bài học', get_post_type_archive_link( 'bai_hoc' ), 'book' ),
 		array( 'Câu hỏi thường gặp', hv_page_url( 'cau-hoi-thuong-gap' ), 'bulb' ),
@@ -199,10 +200,11 @@ add_shortcode( 'hv_contact', 'hv_sc_contact' );
  */
 function hv_faq_items() {
 	return array(
-		array( 'Học Vui có mất phí không?', 'Hoàn toàn miễn phí. Bé học và chơi không giới hạn, không cần tạo tài khoản.' ),
+		array( 'Học Vui có mất phí không?', 'Hoàn toàn miễn phí. Bé học và chơi không giới hạn, không bắt buộc tạo tài khoản.' ),
 		array( 'Bài học theo bộ sách nào?', 'Theo Chương trình GDPT 2018, sắp xếp theo chủ đề của bộ sách Kết nối tri thức với cuộc sống (Tiếng Anh: Global Success) – bộ sách dùng chung toàn quốc từ năm học 2026–2027. Nội dung là bài tóm tắt, ví dụ, câu hỏi tự biên soạn để ôn tập, không thay thế sách giáo khoa.' ),
-		array( 'Bé lớp 1 chưa đọc thạo có dùng được không?', 'Được. Cú Bông đọc to bài học và câu hỏi bằng giọng tiếng Việt. Bố mẹ vào nút ⚙️ để chọn giọng đọc và tốc độ chậm rãi.' ),
-		array( 'Sao và nhãn dán của bé được lưu ở đâu?', 'Lưu ngay trên trình duyệt của máy đang dùng, không gửi đi đâu. Đổi máy hoặc xoá dữ liệu trình duyệt thì tiến độ sẽ bắt đầu lại.' ),
+		array( 'Bé lớp 1 chưa đọc thạo có dùng được không?', 'Được. Cú Bông đọc to bài học và câu hỏi bằng giọng tiếng Việt. Bố mẹ bấm nút ⚙️ để chọn người đọc Cô giáo (giọng nữ) hoặc Thầy giáo (giọng nam) và tốc độ Chậm – Vừa phải – Nhanh.' ),
+		array( 'Sao và nhãn dán của bé được lưu ở đâu?', 'Không đăng nhập: lưu ngay trên trình duyệt của máy đang dùng, đổi máy thì bắt đầu lại. Có tài khoản phụ huynh: tiến độ của từng bé lưu vào tài khoản, học tiếp trên mọi thiết bị.' ),
+		array( 'Nhà có 2–3 bé thì sao?', 'Bố mẹ tạo một tài khoản phụ huynh rồi thêm từng bé (tối đa 8 bé), mỗi bé một hồ sơ, lớp và tiến độ riêng. Trên máy dùng chung, bấm nút 👪 trên thanh nhân vật để đổi bé đang học.' ),
 		array( 'Mỗi ngày bé nên học bao lâu?', 'Khoảng 15 phút: 1 màn bài học (mở màn, khám phá, bí kíp, đánh trùm) và 1 lượt trò chơi. Không nên để bé dùng màn hình quá 30 phút liên tục.' ),
 		array( 'Máy không có tiếng đọc tiếng Việt thì làm sao?', 'Dùng trình duyệt Microsoft Edge (giọng HoaiMy rất ấm) hoặc Google Chrome. Trên điện thoại: Cài đặt → Trợ năng → Nội dung được đọc → Giọng nói → thêm Tiếng Việt.' ),
 		array( 'Thầy cô có dùng trên lớp được không?', 'Được. Chiếu trò chơi lên máy chiếu để cả lớp thi tính nhẩm, đố vui. Nhà trường có thể tự thêm bài, câu hỏi trong trang quản trị.' ),

@@ -291,6 +291,7 @@ function hv_demo_pages_build() {
 	$heads = array(
 		'gioi-thieu'          => array( 'Giới thiệu', 'Học Vui là sân chơi học tập miễn phí cho học sinh tiểu học, do Tin Học 119 phát triển.', 'owl', '#7c4dff' ),
 		'lien-he'             => array( 'Liên hệ', 'Bố mẹ, thầy cô có góp ý hay cần hỗ trợ? Cú Bông luôn sẵn sàng lắng nghe!', 'speech', '#2ea3f2' ),
+		'tai-khoan'           => array( 'Tài khoản phụ huynh', 'Một tài khoản cho cả nhà: mỗi bé một hồ sơ riêng, học tiếp trên mọi thiết bị, bố mẹ xem bé học đến đâu.', 'house', '#2ec27e' ),
 		'so-tay-kien-thuc'    => array( 'Sổ tay kiến thức', 'Tất cả phần Ghi nhớ của các bài học, theo lớp và môn – xem nhanh, ôn tập, in ra giấy.', 'scroll', '#ff9f1c' ),
 		'cau-hoi-thuong-gap'  => array( 'Câu hỏi thường gặp', 'Những điều bố mẹ và thầy cô hay hỏi về Học Vui.', 'bulb', '#ff9f1c' ),
 		'chinh-sach-bao-mat'  => array( 'Chính sách bảo mật', 'Học Vui tôn trọng và bảo vệ quyền riêng tư của trẻ em.', 'heart', '#2ec27e' ),
@@ -355,6 +356,7 @@ function hv_demo_pages_build() {
 	$add( $page( 'Sổ tay', $info['so-tay-kien-thuc'] ), 0, 'scroll' );
 	$add( $page( 'Góc của em', $kid ), 0, 'trophy' );
 	$ph = $add( $page( 'Phụ huynh', $parent ), 0, 'heart' );
+	$add( $page( 'Tài khoản phụ huynh', $info['tai-khoan'] ), $ph, 'house', 'Đăng nhập, quản lý các bé, xem tiến độ' );
 	$add( $page( 'Góc phụ huynh', $parent ), $ph, 'heart', 'Chương trình học, cách đồng hành cùng con' );
 	$add( $page( 'Câu hỏi thường gặp', $info['cau-hoi-thuong-gap'] ), $ph, 'bulb', 'Giải đáp nhanh cho bố mẹ, thầy cô' );
 	$add( $page( 'Giới thiệu', $info['gioi-thieu'] ), $ph, 'owl', 'Học Vui và Tin Học 119' );
@@ -435,12 +437,13 @@ function hv_demo_info_content( $slug ) {
 			return do_shortcode( '[hv_faq]' );
 		case 'so-tay-kien-thuc':
 			return '[hv_handbook]';
+		case 'tai-khoan':
+			return '[hv_parent]';
 		case 'chinh-sach-bao-mat':
-			return '<div class="hv-box hv-content"><h2>1. Thông tin chúng tôi thu thập</h2><p>Học Vui không yêu cầu đăng ký tài khoản và không thu thập họ tên, ngày sinh, địa chỉ hay hình ảnh của trẻ. Tên bé tự nhập, số sao, cấp độ, nhãn dán chỉ được lưu trong bộ nhớ trình duyệt (localStorage) trên chính thiết bị đang dùng và không gửi về máy chủ.</p>'
-				. '<h2>2. Cookie và thống kê</h2><p>Website có thể dùng cookie kỹ thuật cần thiết để vận hành. Nếu bật công cụ thống kê truy cập, dữ liệu được tổng hợp ẩn danh, không dùng để quảng cáo nhắm vào trẻ em.</p>'
+			return '<div class="hv-box hv-content"><h2>1. Thông tin chúng tôi thu thập</h2><p>Bé có thể học mà không cần tài khoản: khi đó tên bé tự nhập, số sao, cấp độ, nhãn dán chỉ lưu trong bộ nhớ trình duyệt (localStorage) trên thiết bị đang dùng và không gửi về máy chủ.</p><p>Nếu bố mẹ tạo <strong>tài khoản phụ huynh</strong>, chúng tôi lưu: họ tên và email của phụ huynh, mật khẩu (đã mã hoá); với mỗi bé: tên gọi do bố mẹ đặt (có thể là tên ở nhà), lớp, nhân vật và tiến độ học (sao, XP, bài đã học). Chúng tôi không thu thập ngày sinh, địa chỉ, ảnh hay giọng nói của trẻ, và không chia sẻ dữ liệu cho bên thứ ba.</p><h2>2. Cookie và thống kê</h2><p>Website có thể dùng cookie kỹ thuật cần thiết để vận hành. Nếu bật công cụ thống kê truy cập, dữ liệu được tổng hợp ẩn danh, không dùng để quảng cáo nhắm vào trẻ em.</p>'
 				. '<h2>3. Quảng cáo</h2><p>Học Vui không hiển thị quảng cáo và không có liên kết mua hàng trong trò chơi.</p>'
 				. '<h2>4. Giọng đọc</h2><p>Tính năng đọc to dùng bộ chuyển văn bản thành giọng nói có sẵn của trình duyệt/thiết bị; nội dung đọc không được ghi âm hay lưu lại.</p>'
-				. '<h2>5. Xoá dữ liệu</h2><p>Bố mẹ có thể xoá toàn bộ tiến độ của bé ở trang Góc của em (nút “Bắt đầu lại từ đầu”) hoặc xoá dữ liệu trình duyệt.</p>'
+				. '<h2>5. Xoá dữ liệu</h2><p>Bố mẹ có thể xoá tiến độ trên máy ở trang Góc của em (nút “Bắt đầu lại từ đầu”) hoặc xoá dữ liệu trình duyệt. Với tài khoản phụ huynh, bố mẹ tự xoá từng bé hoặc xoá hẳn tài khoản cùng toàn bộ dữ liệu ở trang Tài khoản phụ huynh.</p>'
 				. '<h2>6. Liên hệ</h2><p>Mọi thắc mắc về quyền riêng tư, vui lòng liên hệ ' . $org . ' qua hotline ' . esc_html( hv_opt( 'hotline' ) ) . '.</p></div>';
 		case 'dieu-khoan-su-dung':
 			return '<div class="hv-box hv-content"><h2>1. Mục đích</h2><p>Học Vui cung cấp bài ôn tập và trò chơi học tập miễn phí nhằm hỗ trợ học sinh tiểu học, không thay thế sách giáo khoa và bài giảng của thầy cô.</p>'

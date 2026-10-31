@@ -154,11 +154,16 @@
 		flip: function () { tone([520], 0.06); },
 		win: function () { tone([523, 659, 784, 1046], 0.13); }
 	};
-	/* Giọng đọc: ưu tiên giọng nữ tự nhiên, ấm (Edge: HoaiMy Natural; Chrome: Google Tiếng Việt; iOS/macOS: Linh),
-	   đọc chậm rãi, cao giọng nhẹ cho thân thiện với trẻ. Tiếng Anh ưu tiên giọng trẻ em "Ana" của Edge. */
+	/* Giọng đọc: Cô giáo (nữ) hoặc Thầy giáo (nam), đọc rõ ràng, tốc độ vừa phải.
+	   Ưu tiên giọng tự nhiên: Edge có HoaiMy (nữ) và NamMinh (nam); Chrome có Google Tiếng Việt; iOS/macOS có Linh.
+	   Máy không có giọng nam tiếng Việt thì Thầy giáo đọc bằng giọng trầm (hạ cao độ giọng nữ). */
 	var voices = [];
-	var VI_PREF = [/HoaiMy/i, /Hoài\s?My/i, /Google.*(Vi|Việt)/i, /Linh/i, /NamMinh/i, /An\b/i];
-	var EN_PREF = [/\bAna\b/i, /Jenny/i, /Aria/i, /Google US English/i, /Samantha/i];
+	var MALE = /NamMinh|Nam\s?Minh|Microsoft An\b|^An\b|\bmale\b|\bGuy\b|Christopher|Eric|Davis|Andrew|Brian|Roger|Daniel|Alex\b|Fred|Google UK English Male|Aaron|Arthur|Tom\b/i;
+	var PREF = {
+		vi: { female: [/HoaiMy/i, /Hoài\s?My/i, /Google.*(Vi|Việt)/i, /Linh/i], male: [/NamMinh/i, /Nam\s?Minh/i, /\bAn\b/i] },
+		en: { female: [/\bAna\b/i, /Jenny/i, /Aria/i, /Google US English/i, /Samantha/i], male: [/Guy/i, /Christopher/i, /Andrew/i, /Google UK English Male/i, /Daniel/i, /Alex\b/i] }
+	};
+	var RATES = { slow: [0.75, 0.68], normal: [0.9, 0.8], fast: [1.05, 0.92] };
 	function loadVoices() {
 		try { voices = window.speechSynthesis.getVoices() || []; } catch (e) { voices = []; }
 		document.querySelectorAll('[data-set="voice"]').forEach(fillVoiceSelect);
@@ -167,45 +172,84 @@
 		loadVoices();
 		if (window.speechSynthesis.addEventListener) { window.speechSynthesis.addEventListener('voiceschanged', loadVoices); }
 	}
+	function isMale(v) { return MALE.test(v.name) || /male/i.test(v.voiceURI || '') && !/female/i.test(v.voiceURI || ''); }
 	function langVoices(want) {
 		return voices.filter(function (v) { return (v.lang || '').toLowerCase().replace('_', '-').indexOf(want) === 0; })
 			.sort(function (a, b) { return (/Natural|Online|Neural/i.test(b.name) ? 1 : 0) - (/Natural|Online|Neural/i.test(a.name) ? 1 : 0); });
 	}
-	function voiceFor(lang) {
+	function gender() { return store.get('vgender', 'female') === 'male' ? 'male' : 'female'; }
+	function rateKey() { var r = store.get('rate', 'normal'); return RATES[r] ? r : 'normal'; }
+	// Chọn giọng theo ngôn ngữ và giới tính; trả về { v: giọng, fake: true nếu phải giả giọng nam }.
+	function pickVoice(lang) {
 		var want = lang === 'en' ? 'en' : 'vi';
 		var list = langVoices(want);
-		if (!list.length) { return null; }
+		if (!list.length) { return { v: null, fake: gender() === 'male' }; }
 		if (want === 'vi') {
 			var chosen = store.get('voice', '');
 			var c = list.filter(function (v) { return v.name === chosen; })[0];
-			if (c) { return c; }
+			if (c) { return { v: c, fake: false }; }
 		}
-		var prefs = want === 'en' ? EN_PREF : VI_PREF;
+		var g = gender();
+		var same = list.filter(function (v) { return isMale(v) === (g === 'male'); });
+		var prefs = PREF[want][g];
 		for (var i = 0; i < prefs.length; i++) {
-			var hit = list.filter(function (v) { return prefs[i].test(v.name); })[0];
-			if (hit) { return hit; }
+			var hit = same.filter(function (v) { return prefs[i].test(v.name); })[0];
+			if (hit) { return { v: hit, fake: false }; }
 		}
-		return list[0];
+		if (same.length) { return { v: same[0], fake: false }; }
+		// Không có giọng đúng giới tính: dùng giọng còn lại (giọng nam giả bằng cách hạ cao độ).
+		var other = PREF[want].female.map(function (re) { return list.filter(function (v) { return re.test(v.name); })[0]; }).filter(Boolean)[0] || list[0];
+		return { v: other, fake: g === 'male' };
 	}
+	function voiceFor(lang) { return pickVoice(lang).v; }
+	function hasRealMale() { return langVoices('vi').some(isMale); }
 	function speechText(t) {
 		return String(t).replace(/−/g, ' trừ ').replace(/×/g, ' nhân ').replace(/(\d) : (\d)/g, '$1 chia $2').replace(/=\s*\?/g, 'bằng bao nhiêu?')
+			.replace(/(\d)\s*=\s*(?=\d)/g, '$1 bằng ').replace(/(\d)\s*\+\s*(?=\d)/g, '$1 cộng ').replace(/(\d)\s*>\s*(?=\d)/g, '$1 lớn hơn ').replace(/(\d)\s*<\s*(?=\d)/g, '$1 bé hơn ')
+			.replace(/…/g, '.').replace(/[→›»]/g, ', ')
 			.replace(/[🔈🔊🎯⭐✏️🎮]/gu, '').replace(/\s+/g, ' ').trim();
 	}
+	// Tách thành từng câu ngắn: đọc rõ, có ngắt nghỉ, và tránh lỗi Chrome tự dừng khi câu đọc quá 15 giây.
+	function chunks(text) {
+		var out = [];
+		String(text).replace(/([.!?;:])\s+/g, '$1\n').split(/\n+/).forEach(function (s) {
+			s = s.trim();
+			while (s.length > 180) {
+				var cut = s.lastIndexOf(',', 180);
+				cut = cut > 40 ? cut + 1 : s.lastIndexOf(' ', 180);
+				if (cut < 1) { cut = 180; }
+				out.push(s.slice(0, cut).trim());
+				s = s.slice(cut).trim();
+			}
+			if (s) { out.push(s); }
+		});
+		return out;
+	}
+	var speakId = 0;
 	function speak(text, lang) {
 		if (!soundOn() || !('speechSynthesis' in window) || !text) { return; }
 		try {
 			window.speechSynthesis.cancel();
-			var u = new window.SpeechSynthesisUtterance(lang === 'en' ? String(text) : speechText(text));
-			var v = voiceFor(lang);
-			if (v) { u.voice = v; }
-			u.lang = lang === 'en' ? 'en-US' : 'vi-VN';
-			var slow = store.get('rate', 'slow') === 'slow';
-			u.rate = lang === 'en' ? 0.8 : (slow ? 0.82 : 0.95);
-			u.pitch = lang === 'en' ? 1.1 : 1.08;
+			var en = lang === 'en';
+			var pick = pickVoice(lang);
+			var rate = RATES[rateKey()][en ? 1 : 0];
+			var pitch = pick.fake ? 0.7 : 1;
+			var parts = chunks(en ? String(text) : speechText(text));
+			var id = ++speakId;
 			var mascots = document.querySelectorAll('.hv-mascot, .hv-owl, .hv-owl-img');
 			mascots.forEach(function (m) { m.classList.add('is-talking'); });
-			u.onend = u.onerror = function () { mascots.forEach(function (m) { m.classList.remove('is-talking'); }); };
-			window.speechSynthesis.speak(u);
+			var stop = function () { mascots.forEach(function (m) { m.classList.remove('is-talking'); }); };
+			parts.forEach(function (part, i) {
+				var u = new window.SpeechSynthesisUtterance(part);
+				if (pick.v) { u.voice = pick.v; }
+				u.lang = en ? 'en-US' : 'vi-VN';
+				u.rate = rate;
+				u.pitch = pitch;
+				u.volume = 1;
+				if (i === parts.length - 1) { u.onend = function () { if (id === speakId) { stop(); } }; }
+				u.onerror = stop;
+				window.speechSynthesis.speak(u);
+			});
 		} catch (e) { /* bỏ qua */ }
 	}
 	function autoRead(grade) {
@@ -1819,6 +1863,10 @@
 		});
 		document.querySelectorAll('[data-hv-reset]').forEach(function (b) {
 			b.addEventListener('click', function () {
+				if (curKid()) {
+					if (window.confirm('Tiến độ của bé đang lưu trong tài khoản phụ huynh. Mở trang Tài khoản phụ huynh để chọn "Học lại từ đầu"?')) { window.location.href = USER.account; }
+					return;
+				}
 				if (window.confirm('Xoá toàn bộ sao, XP, màn đã phá và nhãn dán trên máy này?')) {
 					['stars', 'played', 'xp', 'done', 'streak', 'lastDay', 'today'].forEach(function (k) { try { window.localStorage.removeItem('hv_' + k); } catch (e) { /* bỏ qua */ } });
 					renderProgress(); renderAlbums();
@@ -1860,6 +1908,7 @@
 			'<div class="hv-hud-who"><strong>' + esc(p.name || 'Bạn nhỏ') + '</strong><span>Cấp ' + lv + ' · ' + esc(titleOf(lv)) + '</span>' +
 			'<div class="hv-xpbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="Kinh nghiệm"><i style="width:' + pct + '%"></i><em>' + p.xp + ' XP</em></div></div>' +
 			'<div class="hv-hud-stats"><span title="Sao">' + (ico('star', 22) || '⭐') + ' <b>' + stars() + '</b></span><span title="Chuỗi ngày học" class="' + (p.streak ? 'is-hot' : '') + '">' + (ico('fire', 22) || '🔥') + ' <b>' + p.streak + '</b></span><span title="Màn đã phá">' + (ico('trophy', 22) || '🏁') + ' <b>' + p.cleared + '</b></span></div>' +
+			(USER.in ? '<button type="button" class="hv-hud-set hv-hud-kids" data-hv-kids aria-label="Đổi bé đang học" title="Đổi bé đang học">👪</button>' : '<a class="hv-hud-set hv-hud-kids" href="' + esc(USER.account || '#') + '" aria-label="Phụ huynh đăng nhập" title="Phụ huynh đăng nhập">👪</a>') +
 			'<button type="button" class="hv-hud-set" data-hv-settings aria-label="Cài đặt âm thanh và giọng đọc">⚙️</button>';
 	}
 	function renderProgress() {
@@ -1959,12 +2008,14 @@
 	/* ---------- Cài đặt âm thanh, giọng đọc ---------- */
 	function fillVoiceSelect(sel) {
 		var list = langVoices('vi');
-		var cur = voiceFor('vi');
-		sel.innerHTML = list.length ? list.map(function (v) {
-			return '<option value="' + esc(v.name) + '"' + (cur && cur.name === v.name ? ' selected' : '') + '>' + esc(v.name.replace(/Microsoft |Online |\(Natural\)| - Vietnamese \(Vietnam\)/g, '')) + '</option>';
+		var chosen = store.get('voice', '');
+		sel.innerHTML = list.length ? '<option value="">Tự động theo Cô giáo / Thầy giáo</option>' + list.map(function (v) {
+			return '<option value="' + esc(v.name) + '"' + (chosen === v.name ? ' selected' : '') + '>' + esc(v.name.replace(/Microsoft |Online |\(Natural\)| - Vietnamese \(Vietnam\)/g, '').trim()) + (isMale(v) ? ' · nam' : ' · nữ') + '</option>';
 		}).join('') : '<option value="">(Máy chưa có giọng tiếng Việt)</option>';
 		var note = document.querySelector('.hv-voice-note');
 		if (note) { note.hidden = !!list.length; }
+		var mnote = document.querySelector('.hv-male-note');
+		if (mnote) { mnote.hidden = !list.length || gender() !== 'male' || hasRealMale(); }
 	}
 	var settingsBox = null;
 	function openSettings() {
@@ -1976,15 +2027,18 @@
 			settingsBox.innerHTML = '<div class="hv-settings-card"><div class="hv-owl" aria-hidden="true"></div><h3>Cài đặt giọng đọc</h3>' +
 				'<label class="hv-switch"><input type="checkbox" data-set="sound"><span></span>Âm thanh và giọng đọc</label>' +
 				'<label class="hv-switch"><input type="checkbox" data-set="autoread"><span></span>Tự đọc to bài học và câu hỏi</label>' +
-				'<label class="hv-field">Giọng tiếng Việt<select data-set="voice"></select></label>' +
-				'<div class="hv-field">Tốc độ đọc<div class="hv-seg"><button type="button" data-rate="slow">🐢 Chậm rãi</button><button type="button" data-rate="normal">🐇 Vừa phải</button></div></div>' +
+				'<div class="hv-field">Người đọc<div class="hv-seg hv-seg-voice"><button type="button" data-gender="female"><span aria-hidden="true">👩‍🏫</span> Cô giáo<small>giọng nữ</small></button><button type="button" data-gender="male"><span aria-hidden="true">👨‍🏫</span> Thầy giáo<small>giọng nam</small></button></div></div>' +
+				'<div class="hv-field">Tốc độ đọc<div class="hv-seg hv-seg-3"><button type="button" data-rate="slow">🐢 Chậm</button><button type="button" data-rate="normal">🙂 Vừa phải</button><button type="button" data-rate="fast">🐇 Nhanh</button></div></div>' +
+				'<p class="hv-male-note" hidden>Máy này chưa có giọng nam tiếng Việt nên Thầy giáo đọc bằng giọng trầm. Mở Học Vui bằng trình duyệt Microsoft Edge để nghe giọng thầy giáo tự nhiên (NamMinh).</p>' +
+				'<details class="hv-voice-adv"><summary>Chọn giọng cụ thể</summary><label class="hv-field"><select data-set="voice" aria-label="Giọng tiếng Việt"></select></label></details>' +
 				'<p class="hv-voice-note" hidden>Máy này chưa có giọng tiếng Việt. Gợi ý: dùng trình duyệt Microsoft Edge (giọng HoaiMy rất ấm), Google Chrome, hoặc vào Cài đặt điện thoại → Trợ năng → Nội dung được đọc → Giọng nói → thêm Tiếng Việt.</p>' +
 				'<div class="hv-actions"><button type="button" class="hv-btn hv-btn-accent" data-test>🔈 Nghe thử</button><button type="button" class="hv-btn" data-close>Xong</button></div></div>';
 			document.body.appendChild(settingsBox);
 			var sync = function () {
 				settingsBox.querySelector('[data-set="sound"]').checked = soundOn();
 				settingsBox.querySelector('[data-set="autoread"]').checked = autoRead(store.get('grade', 1));
-				settingsBox.querySelectorAll('[data-rate]').forEach(function (b) { b.classList.toggle('is-on', store.get('rate', 'slow') === b.getAttribute('data-rate')); });
+				settingsBox.querySelectorAll('[data-rate]').forEach(function (b) { b.classList.toggle('is-on', rateKey() === b.getAttribute('data-rate')); });
+				settingsBox.querySelectorAll('[data-gender]').forEach(function (b) { b.classList.toggle('is-on', gender() === b.getAttribute('data-gender')); });
 				fillVoiceSelect(settingsBox.querySelector('[data-set="voice"]'));
 			};
 			settingsBox._sync = sync;
@@ -1992,14 +2046,16 @@
 				var k = e.target.getAttribute('data-set');
 				if (k === 'sound') { store.set('sound', e.target.checked); document.querySelectorAll('.hv-sound').forEach(function (b) { b.textContent = soundOn() ? '🔊' : '🔇'; }); }
 				if (k === 'autoread') { store.set('autoread', e.target.checked); }
-				if (k === 'voice') { store.set('voice', e.target.value); speak('Chào em! Đây là giọng đọc mới của Cú Bông.'); }
+				if (k === 'voice') { store.set('voice', e.target.value); speak('Chào em! Đây là giọng đọc mới.'); }
 			});
 			settingsBox.addEventListener('click', function (e) {
 				if (e.target === settingsBox || e.target.hasAttribute('data-close')) { settingsBox.hidden = true; }
-				if (e.target.hasAttribute('data-rate')) { store.set('rate', e.target.getAttribute('data-rate')); sync(); speak('Cú Bông sẽ đọc với tốc độ này nhé.'); }
+				var gb = e.target.closest && e.target.closest('[data-gender]');
+				if (gb) { store.set('vgender', gb.getAttribute('data-gender')); store.set('voice', ''); sync(); speak(gender() === 'male' ? 'Chào em! Thầy sẽ đọc bài cho em nghe nhé.' : 'Chào em! Cô sẽ đọc bài cho em nghe nhé.'); }
+				if (e.target.hasAttribute('data-rate')) { store.set('rate', e.target.getAttribute('data-rate')); sync(); speak('Mình sẽ đọc với tốc độ này. Em nghe có rõ không?'); }
 				if (e.target.hasAttribute('data-test')) {
 					var nm = store.get('name', '');
-					speak('Chào ' + (nm || 'em') + '! Mình là Cú Bông. Hôm nay mình cùng học thật vui nhé!');
+					speak('Chào ' + (nm || 'em') + '! Hôm nay chúng mình học bài: Các số từ 0 đến 10. Năm cộng ba bằng tám. Em hãy đọc to cùng ' + (gender() === 'male' ? 'thầy' : 'cô') + ' nhé!');
 				}
 			});
 			document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && settingsBox) { settingsBox.hidden = true; } });
@@ -2078,8 +2134,161 @@
 		}
 	};
 
+	/* ---------- Tài khoản phụ huynh: một phụ huynh nhiều bé, tiến độ của bé lưu trên máy chủ ---------- */
+	var USER = CFG.user || {};
+	var PKEYS = ['stars', 'played', 'xp', 'done', 'streak', 'lastDay', 'today'];
+	var rawSet = store.set;
+	var pushT = null;
+	// Mọi thay đổi tiến độ, tên, nhân vật của bé đang học sẽ được gửi lên tài khoản (gom lại 1,5 giây một lần).
+	store.set = function (k, v) {
+		rawSet(k, v);
+		if (PKEYS.indexOf(k) > -1 || k === 'name' || k === 'avatar') { schedulePush(); }
+	};
+	function kidList() { return USER.in && USER.kids ? USER.kids : []; }
+	function kidById(id) { return kidList().filter(function (k) { return k.id === id; })[0] || null; }
+	function curKid() { return kidById(store.get('kid', '')); }
+	function localProgress() {
+		var done = store.get('done', {});
+		return {
+			stars: store.get('stars', 0), played: store.get('played', 0), xp: store.get('xp', 0), streak: store.get('streak', 0),
+			lastDay: store.get('lastDay', ''), today: store.get('today', {}), done: done && !Array.isArray(done) ? done : {}
+		};
+	}
+	function clearLocal() {
+		PKEYS.concat(['name', 'avatar', 'kidR']).forEach(function (k) { try { window.localStorage.removeItem('hv_' + k); } catch (e) { /* bỏ qua */ } });
+	}
+	function dayNum(d) { var m = String(d || '').split('-'); return m.length === 3 ? new Date(+m[0], m[1] - 1, +m[2]).getTime() : 0; }
+	// Gộp như máy chủ: không bao giờ mất sao, XP, bài đã học.
+	function mergeP(a, b) {
+		var o = { stars: Math.max(a.stars || 0, b.stars || 0), played: Math.max(a.played || 0, b.played || 0), xp: Math.max(a.xp || 0, b.xp || 0), done: {} };
+		[a.done, b.done].forEach(function (d) { Object.keys(d && !Array.isArray(d) ? d : {}).forEach(function (k) { o.done[k] = Math.max(o.done[k] || 0, d[k] || 0); }); });
+		var newer = dayNum(a.lastDay) >= dayNum(b.lastDay) ? a : b;
+		o.lastDay = newer.lastDay || ''; o.streak = newer.streak || 0;
+		var ta = a.today || {}, tb = b.today || {};
+		o.today = ta.date === tb.date ? { date: ta.date, plays: Math.max(ta.plays || 0, tb.plays || 0), lessons: Math.max(ta.lessons || 0, tb.lessons || 0), perfect: Math.max(ta.perfect || 0, tb.perfect || 0) } : (dayNum(ta.date) > dayNum(tb.date) ? ta : tb);
+		return o;
+	}
+	function applyKid(k, merge) {
+		var p = merge ? mergeP(localProgress(), k.p || {}) : (k.p || {});
+		PKEYS.forEach(function (key) {
+			var v = p[key];
+			if (key === 'done' && (!v || Array.isArray(v))) { v = {}; }
+			if (v !== undefined && v !== null) { rawSet(key, v); }
+		});
+		rawSet('name', k.name); rawSet('avatar', k.avatar); rawSet('kid', k.id); rawSet('kidR', k.r || 0);
+	}
+	function switchKid(id) {
+		var k = kidById(id);
+		if (!k) { return false; }
+		var cur = curKid();
+		if (cur && cur.id === id) { applyKid(k, true); return true; }
+		if (cur) { pushNow(true); }
+		clearLocal();
+		applyKid(k, false);
+		rawSet('grade', k.grade);
+		return true;
+	}
+	function schedulePush() {
+		if (!curKid()) { return; }
+		clearTimeout(pushT);
+		pushT = setTimeout(function () { pushNow(false); }, 1500);
+	}
+	function pushNow(keep) {
+		clearTimeout(pushT);
+		pushT = null;
+		var k = curKid();
+		if (!k || !window.fetch) { return; }
+		var body = { progress: localProgress(), avatar: store.get('avatar', k.avatar) };
+		if (store.get('name', '')) { body.name = store.get('name', ''); }
+		window.fetch(USER.rest + '/' + k.id, {
+			method: 'POST', credentials: 'same-origin', keepalive: !!keep,
+			headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': USER.nonce },
+			body: JSON.stringify(body)
+		}).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+			if (d && d.id) { USER.kids = kidList().map(function (x) { return x.id === d.id ? d : x; }); }
+		}).catch(function () { /* mất mạng: lần sau gửi lại */ });
+	}
+	function flushPush() { if (pushT) { pushNow(true); } }
+	window.addEventListener('pagehide', flushPush);
+	document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') { flushPush(); } });
+	function initAccount() {
+		var id = store.get('kid', '');
+		if (!USER.in) {
+			// Phụ huynh đã đăng xuất: máy này quay về chế độ khách (tiến độ của bé vẫn an toàn trên tài khoản).
+			if (id) { clearLocal(); rawSet('kid', ''); }
+			return;
+		}
+		var q = window.location.search.match(/[?&]hv_pick=([a-z0-9]+)/);
+		if (q && kidById(q[1])) {
+			if (curKid() && curKid().id === q[1]) { rawSet('kid', ''); }
+			switchKid(q[1]);
+			if (window.history.replaceState) { window.history.replaceState(null, '', window.location.href.replace(/([?&])hv_pick=[a-z0-9]+&?/, '$1').replace(/[?&]$/, '')); }
+			return;
+		}
+		var k = curKid();
+		if (id && !k) { clearLocal(); rawSet('kid', ''); return; }
+		if (k) {
+			// Bố mẹ vừa bấm "Học lại từ đầu" trên thiết bị khác: bỏ tiến độ cũ trên máy này.
+			if ((k.r || 0) !== store.get('kidR', 0)) { clearLocal(); applyKid(k, false); return; }
+			applyKid(k, true);
+			if (JSON.stringify(mergeP(k.p || {}, localProgress())) !== JSON.stringify(mergeP(k.p || {}, k.p || {}))) { schedulePush(); }
+		}
+	}
+	var kidsBox = null;
+	function openKids(force) {
+		if (!USER.in || (!force && document.querySelector('.hv-account'))) { return; }
+		if (!kidsBox) {
+			kidsBox = el('div', 'hv-settings hv-kids-pick');
+			kidsBox.setAttribute('role', 'dialog');
+			kidsBox.setAttribute('aria-modal', 'true');
+			kidsBox.setAttribute('aria-label', 'Chọn bé');
+			document.body.appendChild(kidsBox);
+			kidsBox.addEventListener('click', function (e) {
+				var b = e.target.closest && e.target.closest('[data-kid]');
+				if (b) { switchKid(b.getAttribute('data-kid')); window.location.reload(); return; }
+				if (e.target === kidsBox || e.target.hasAttribute('data-close')) { kidsBox.hidden = true; }
+			});
+		}
+		var cur = curKid();
+		var list = kidList();
+		kidsBox.innerHTML = '<div class="hv-settings-card"><div class="hv-owl" aria-hidden="true"></div><h3>' + (list.length ? 'Hôm nay bé nào học?' : 'Thêm bé để bắt đầu') + '</h3>' +
+			'<div class="hv-kid-list">' + list.map(function (k) {
+				return '<button type="button" data-kid="' + esc(k.id) + '" class="' + (cur && cur.id === k.id ? 'is-on' : '') + '"><span>' + esc(k.avatar) + '</span><b>' + esc(k.name) + '</b><small>Lớp ' + (+k.grade) + ' · ' + ((k.p && k.p.xp) || 0) + ' XP</small></button>';
+			}).join('') + '</div>' +
+			'<div class="hv-actions"><a class="hv-btn hv-btn-white" href="' + esc(USER.account || '#') + '">👪 Quản lý các bé</a>' + (cur ? '<button type="button" class="hv-btn" data-close>Đóng</button>' : '') + '</div></div>';
+		kidsBox.hidden = false;
+		var f = kidsBox.querySelector('button');
+		if (f) { f.focus(); }
+	}
+	function bindAccount() {
+		document.addEventListener('click', function (e) {
+			var p = e.target.closest && e.target.closest('[data-hv-pick]');
+			if (p) {
+				switchKid(p.getAttribute('data-hv-pick'));
+				if (p.tagName === 'BUTTON') { window.location.href = p.getAttribute('data-go') || '/'; }
+				return;
+			}
+			if (e.target.closest && e.target.closest('[data-hv-kids]')) { openKids(true); }
+		});
+		document.querySelectorAll('form[data-hv-confirm]').forEach(function (f) {
+			f.addEventListener('submit', function (e) { if (!window.confirm(f.getAttribute('data-hv-confirm'))) { e.preventDefault(); } });
+		});
+		// Thêm bé đầu tiên: hỏi có chuyển tiến độ khách đang có trên máy này cho bé không.
+		document.querySelectorAll('[data-hv-adopt]').forEach(function (lab) {
+			var lp = localProgress();
+			var n = Object.keys(lp.done).filter(function (k) { return lp.done[k] > 0; }).length;
+			if (curKid() || (!lp.xp && !n)) { return; }
+			lab.hidden = false;
+			lab.querySelector('span').textContent = 'Chuyển tiến độ đang có trên máy này cho bé (' + lp.xp + ' XP, ' + n + ' bài, ' + lp.stars + ' sao).';
+			lab.closest('form').querySelector('[name="adopt_data"]').value = JSON.stringify(lp);
+		});
+		// Đang đăng nhập mà máy này chưa chọn bé: hỏi "Hôm nay bé nào học?".
+		if (USER.in && kidList().length && !curKid()) { openKids(false); }
+	}
+
 	/* ---------- Khởi động ---------- */
 	function init() {
+		initAccount();
 		document.querySelectorAll('[data-hv-game]').forEach(function (n) {
 			if (!n.__hv) { n.__hv = new Player(n); }
 		});
@@ -2089,6 +2298,7 @@
 		renderProgress();
 		renderAlbums();
 		bindName();
+		bindAccount();
 		openArena(window.location.hash);
 		document.querySelectorAll('[data-hv-speak]').forEach(function (b) {
 			b.addEventListener('click', function () { speak(b.getAttribute('data-hv-speak'), b.getAttribute('data-lang') || 'vi'); });

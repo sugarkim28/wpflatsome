@@ -20,6 +20,7 @@ function hv_option_fields() {
 		'color_primary' => array( 'Màu chủ đạo', 'color', '#7c4dff' ),
 		'color_accent'  => array( 'Màu nhấn (nút vàng, viền)', 'color', '#ffc83d' ),
 		'contact'       => array( 'Ghi chú liên hệ thêm (hiện ở trang Góc phụ huynh)', 'text', '' ),
+		'parent_signup' => array( 'Cho phụ huynh tự tạo tài khoản', 'select', '1', array( '1' => 'Có', '0' => 'Không' ) ),
 		'logo_style'    => array( 'Logo trên header', 'select', 'cobrand', array( 'cobrand' => 'Học Vui × Tin Học 119', 'hocvui' => 'Chỉ Học Vui', 'tinhoc119' => 'Chỉ Tin Học 119' ) ),
 		'org_name'      => array( 'Đơn vị phát triển', 'text', 'Tin Học 119' ),
 		'org_slogan'    => array( 'Khẩu hiệu đơn vị', 'text', 'Uy tín tạo niềm tin' ),

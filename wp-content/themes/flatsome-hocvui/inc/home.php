@@ -105,7 +105,7 @@ function hv_sc_hero() {
 			<li><?php echo hv_icon3d( 'book', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b><?php echo (int) $count; ?> bài học</b><span>9 môn, lớp 1 đến lớp 5</span></li>
 			<li><?php echo hv_icon3d( 'bulb', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>Có lời giải thích</b><span>Sai ở đâu, hiểu ngay vì sao</span></li>
 			<li><?php echo hv_icon3d( 'speech', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>Đọc to bài học</b><span>Bé lớp 1 tự học được</span></li>
-			<li><?php echo hv_icon3d( 'heart', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>Miễn phí</b><span>Không quảng cáo, không đăng ký</span></li>
+			<li><?php echo hv_icon3d( 'heart', 52 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><b>Miễn phí</b><span>Không quảng cáo, không bắt buộc đăng ký</span></li>
 		</ul>
 	</div>
 	<?php
@@ -268,7 +268,7 @@ function hv_sc_why() {
 		'Phụ huynh' => array(
 			array( 'book', 'Đúng chương trình', 'Theo Chương trình GDPT 2018, bộ sách Kết nối tri thức với cuộc sống dùng chung toàn quốc.' ),
 			array( 'clock', '15 phút mỗi ngày', 'Màn chơi ngắn, vừa sức, có nhiệm vụ nhỏ làm cùng gia đình.' ),
-			array( 'heart', 'An toàn cho trẻ', 'Không quảng cáo, không đăng ký, không thu thập dữ liệu của con.' ),
+			array( 'heart', 'An toàn cho trẻ', 'Không quảng cáo, không bắt buộc đăng ký. Tài khoản phụ huynh chỉ lưu tên gọi và tiến độ học của bé.' ),
 			array( 'gem', 'Hoàn toàn miễn phí', 'Học và chơi không giới hạn trên máy tính, điện thoại, máy tính bảng.' ),
 		),
 		'Giáo viên' => array(
