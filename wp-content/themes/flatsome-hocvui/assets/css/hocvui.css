@@ -792,6 +792,9 @@ body.single-bai_hoc .hv-helper { display: none; }
 .hv-seg-3 button { padding: 8px 4px; font-size: .92rem; }
 .hv-male-note { margin: -4px 0 14px; padding: 10px 14px; border-radius: 14px; background: #eef6ff; font-size: .88rem; }
 .hv-male-note[hidden] { display: none; }
+.hv-ai-note { margin: -4px 0 14px; padding: 10px 14px; border-radius: 14px; background: #e7f8e3; color: #24622a; font-size: .88rem; }
+.hv-ai-note[hidden] { display: none; }
+.hv-seg-voice button { padding: 8px 4px; }
 .hv-voice-adv { margin: 0 0 14px; }
 .hv-voice-adv summary { margin-bottom: 6px; color: var(--hv-ink-2); font-weight: 800; font-size: .9rem; cursor: pointer; }
 .hv-hud-kids { display: grid; place-items: center; text-decoration: none !important; }

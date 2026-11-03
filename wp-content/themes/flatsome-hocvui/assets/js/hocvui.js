@@ -177,7 +177,9 @@
 		return voices.filter(function (v) { return (v.lang || '').toLowerCase().replace('_', '-').indexOf(want) === 0; })
 			.sort(function (a, b) { return (/Natural|Online|Neural/i.test(b.name) ? 1 : 0) - (/Natural|Online|Neural/i.test(a.name) ? 1 : 0); });
 	}
-	function gender() { return store.get('vgender', 'female') === 'male' ? 'male' : 'female'; }
+	// Người đọc: Cô giáo (nữ), Thầy giáo (nam), Cú Bông (giọng cô tươi, cao hơn – kể chuyện cho bé lớp 1–2).
+	function persona() { var p = store.get('vgender', 'female'); return p === 'male' || p === 'owl' ? p : 'female'; }
+	function gender() { return persona() === 'male' ? 'male' : 'female'; }
 	function rateKey() { var r = store.get('rate', 'normal'); return RATES[r] ? r : 'normal'; }
 	// Chọn giọng theo ngôn ngữ và giới tính; trả về { v: giọng, fake: true nếu phải giả giọng nam }.
 	function pickVoice(lang) {
@@ -203,11 +205,41 @@
 	}
 	function voiceFor(lang) { return pickVoice(lang).v; }
 	function hasRealMale() { return langVoices('vi').some(isMale); }
+	/* Chuẩn hoá câu trước khi đọc để phát âm đúng kiểu cô giáo đọc bài: phép tính, phân số, ngày tháng,
+	   giờ, đơn vị đo, số có dấu cách hàng nghìn, chỗ trống, chữ viết tắt; bỏ biểu tượng cảm xúc. */
+	var UNITS = { 'km²': 'ki-lô-mét vuông', 'm²': 'mét vuông', 'dm²': 'đề-xi-mét vuông', 'cm²': 'xăng-ti-mét vuông', 'cm³': 'xăng-ti-mét khối', 'dm³': 'đề-xi-mét khối', 'm³': 'mét khối', 'km/h': 'ki-lô-mét một giờ', 'km': 'ki-lô-mét', 'hm': 'héc-tô-mét', 'dam': 'đề-ca-mét', 'dm': 'đề-xi-mét', 'cm': 'xăng-ti-mét', 'mm': 'mi-li-mét', 'kg': 'ki-lô-gam', 'ml': 'mi-li-lít', 'g': 'gam', 'l': 'lít', 'm': 'mét', 'ha': 'héc-ta', '°C': 'độ C', '%': 'phần trăm', 'đ': 'đồng' };
+	var ABBR = [[/\bTP\.?\s?HCM\b/g, 'Thành phố Hồ Chí Minh'], [/\bTP\.\s?/g, 'thành phố '], [/\bVD:/g, 'Ví dụ:'], [/\bSGK\b/g, 'sách giáo khoa'], [/\bGDPT\b/g, 'giáo dục phổ thông'], [/\bXP\b/g, 'điểm kinh nghiệm'], [/\bSTT\b/g, 'số thứ tự']];
 	function speechText(t) {
-		return String(t).replace(/−/g, ' trừ ').replace(/×/g, ' nhân ').replace(/(\d) : (\d)/g, '$1 chia $2').replace(/=\s*\?/g, 'bằng bao nhiêu?')
-			.replace(/(\d)\s*=\s*(?=\d)/g, '$1 bằng ').replace(/(\d)\s*\+\s*(?=\d)/g, '$1 cộng ').replace(/(\d)\s*>\s*(?=\d)/g, '$1 lớn hơn ').replace(/(\d)\s*<\s*(?=\d)/g, '$1 bé hơn ')
-			.replace(/…/g, '.').replace(/[→›»]/g, ', ')
-			.replace(/[🔈🔊🎯⭐✏️🎮]/gu, '').replace(/\s+/g, ' ').trim();
+		var s = String(t);
+		try { s = s.replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{20E3}]/gu, ' '); } catch (e) { s = s.replace(/[🔈🔊🎯⭐✏️🎮]/g, ''); }
+		// Xuống dòng (đoạn, hàng bảng) → ngắt câu; ô trong cùng hàng (tab) → ngắt nhẹ.
+		s = s.replace(/[ \t]*\t[ \t]*/g, ', ').replace(/([^.!?:;,\s])[ \t]*\n\s*/g, '$1.\n').replace(/\s*\n\s*/g, '\n');
+		ABBR.forEach(function (r) { s = s.replace(r[0], r[1]); });
+		s = s
+			.replace(/(\d) (?=\d{3}(?!\d))/g, '$1')                           // 10 000 → 10000
+			.replace(/(\d)\.(?=\d{3}(?!\d))/g, '$1')                          // 1.000 → 1000
+			.replace(/(\d),(\d)/g, '$1 phẩy $2')                               // 2,5 → 2 phẩy 5
+			.replace(/(ngày|Quốc khánh|dịp|lễ|Tết) (\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?/gi, function (m, w, d, mo, y) { return w + ' ' + d + ' tháng ' + mo + (y ? ' năm ' + y : ''); })
+			.replace(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/g, 'ngày $1 tháng $2 năm $3')
+			.replace(/\)\s*\/\s*\(/g, ') phần (').replace(/\b(\d{1,4})\/(\d{1,4})\b/g, '$1 phần $2')   // phân số
+			.replace(/≠/g, ' khác ').replace(/≈/g, ' xấp xỉ ')
+			.replace(/\b(\d{1,2}):(\d{2})\b/g, function (m, h, mi) { return h + ' giờ' + (+mi ? ' ' + (+mi) + ' phút' : ''); })
+			.replace(/(\d)\s*(km²|m²|dm²|cm²|cm³|dm³|m³|km\/h|km|hm|dam|dm|cm|mm|kg|ml|ha|°C|%|đ|g|l|m)(?![A-Za-zÀ-ỹ0-9])/g, function (m, n, u) { return n + ' ' + UNITS[u]; })
+			.replace(/(\d)\s*[−–-]\s+(?=\d)|(\d)\s+[−–-]\s*(?=\d)|(\d)\s*−\s*(?=\d)/g, function (m, a, b, c) { return (a || b || c) + ' trừ '; })
+			.replace(/(\d)[–-](?=\d)/g, '$1 đến ')                               // lớp 1–5, 2026–2027
+			.replace(/(\d|\?|…|_+)\s*[×x*]\s*(?=\d|\?|…|_)/g, '$1 nhân ')
+			.replace(/(\d|\?|…|_+)\s*[:÷]\s+(?=\d|\?|…|_)/g, '$1 chia ')
+			.replace(/(\d|\?|…|_+)\s*\+\s*(?=\d|\?|…|_)/g, '$1 cộng ')
+			.replace(/=\s*\?/g, ' bằng bao nhiêu?')
+			.replace(/(\d|\?|…|_|\))\s*=\s*/g, '$1 bằng ')
+			.replace(/(\d|\?|…|_)\s*(?:>|&gt;)\s*(?=\d|\?|…|_)/g, '$1 lớn hơn ')
+			.replace(/(\d|\?|…|_)\s*(?:<|&lt;)\s*(?=\d|\?|…|_)/g, '$1 bé hơn ')
+			.replace(/(^|[\s(])(?:…|\.{3,}|_{2,})(?=[\s).,?!]|$)/g, '$1 chỗ trống ')    // ô trống cần điền
+			.replace(/\?(?=\s*(?:cộng|trừ|nhân|chia|bằng))/g, ' mấy ')
+			.replace(/(cộng|trừ|nhân|chia|bằng)\s*\?/g, '$1 mấy?')
+			.replace(/…/g, '.').replace(/[→⇒➔›»]/g, ', ').replace(/[•·|]/g, ', ')
+			.replace(/[ \t]+([,.!?])/g, '$1').replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n').trim();
+		return s;
 	}
 	// Tách thành từng câu ngắn: đọc rõ, có ngắt nghỉ, và tránh lỗi Chrome tự dừng khi câu đọc quá 15 giây.
 	function chunks(text) {
@@ -221,36 +253,81 @@
 				out.push(s.slice(0, cut).trim());
 				s = s.slice(cut).trim();
 			}
-			if (s) { out.push(s); }
+			if (s && /[\p{L}\p{N}]/u.test(s)) { out.push(s); }
 		});
 		return out;
 	}
+	/* Giọng đọc AI của máy chủ (nếu quản trị đã bật ở Giao diện → Giọng đọc AI): mỗi câu là 1 file MP3
+	   đã lưu sẵn, nghe giống nhau trên mọi máy. Một thẻ <audio> dùng lại cho mọi câu (iPhone chỉ cho phát
+	   tiếp trên thẻ đã được bé chạm mở); câu sau được tải trước để đọc liền mạch. Lỗi → dùng giọng trình duyệt. */
+	var TTS = CFG.tts && CFG.tts.url ? CFG.tts : null;
+	var ttsAudio = null;
+	var ttsDownUntil = 0;
+	function ttsUrl(text, en) {
+		return TTS.url + (TTS.url.indexOf('?') > -1 ? '&' : '?') + 't=' + encodeURIComponent(text) + '&v=' + persona() + '&l=' + (en ? 'en' : 'vi') + '&r=' + rateKey();
+	}
 	var speakId = 0;
+	var talkers = [];
+	function talk(on) {
+		if (on) { talkers = document.querySelectorAll('.hv-mascot, .hv-owl, .hv-owl-img'); }
+		talkers.forEach(function (m) { m.classList.toggle('is-talking', !!on); });
+	}
+	function stopSpeech() {
+		speakId++;
+		if (ttsAudio) { try { ttsAudio.pause(); } catch (e) { /* bỏ qua */ } }
+		if ('speechSynthesis' in window) { try { window.speechSynthesis.cancel(); } catch (e) { /* bỏ qua */ } }
+		talk(false);
+	}
+	function speakBrowser(parts, en, id) {
+		if (!('speechSynthesis' in window) || !parts.length) { talk(false); return; }
+		var pick = pickVoice(en ? 'en' : 'vi');
+		var rate = RATES[rateKey()][en ? 1 : 0];
+		var pitch = persona() === 'owl' ? 1.2 : (pick.fake ? 0.7 : 1);
+		parts.forEach(function (part, i) {
+			var u = new window.SpeechSynthesisUtterance(part);
+			if (pick.v) { u.voice = pick.v; }
+			u.lang = en ? 'en-US' : 'vi-VN';
+			u.rate = rate;
+			u.pitch = pitch;
+			u.volume = 1;
+			if (i === parts.length - 1) { u.onend = function () { if (id === speakId) { talk(false); } }; }
+			u.onerror = function () { if (id === speakId) { talk(false); } };
+			window.speechSynthesis.speak(u);
+		});
+	}
+	function speakServer(parts, en, id) {
+		if (!ttsAudio) { ttsAudio = new window.Audio(); ttsAudio.preload = 'auto'; }
+		var a = ttsAudio;
+		var i = 0;
+		var fail = function () {
+			if (id !== speakId) { return; }
+			ttsDownUntil = Date.now() + 5 * 60 * 1000; // Máy chủ lỗi/hết hạn mức: dùng giọng trình duyệt 5 phút.
+			speakBrowser(parts.slice(i), en, id);
+		};
+		var next = function () {
+			if (id !== speakId) { return; }
+			if (i >= parts.length) { talk(false); return; }
+			var url = ttsUrl(parts[i], en);
+			if (parts[i + 1] && window.fetch) { window.fetch(ttsUrl(parts[i + 1], en)).catch(function () { /* tải trước */ }); }
+			a.onended = function () { i++; next(); };
+			a.onerror = fail;
+			a.src = url;
+			var pr = a.play();
+			if (pr && pr.catch) { pr.catch(function (err) { if (err && err.name === 'NotAllowedError') { talk(false); } else { fail(); } }); }
+		};
+		next();
+	}
 	function speak(text, lang) {
-		if (!soundOn() || !('speechSynthesis' in window) || !text) { return; }
+		if (!soundOn() || !text) { return; }
 		try {
-			window.speechSynthesis.cancel();
+			stopSpeech();
 			var en = lang === 'en';
-			var pick = pickVoice(lang);
-			var rate = RATES[rateKey()][en ? 1 : 0];
-			var pitch = pick.fake ? 0.7 : 1;
 			var parts = chunks(en ? String(text) : speechText(text));
-			var id = ++speakId;
-			var mascots = document.querySelectorAll('.hv-mascot, .hv-owl, .hv-owl-img');
-			mascots.forEach(function (m) { m.classList.add('is-talking'); });
-			var stop = function () { mascots.forEach(function (m) { m.classList.remove('is-talking'); }); };
-			parts.forEach(function (part, i) {
-				var u = new window.SpeechSynthesisUtterance(part);
-				if (pick.v) { u.voice = pick.v; }
-				u.lang = en ? 'en-US' : 'vi-VN';
-				u.rate = rate;
-				u.pitch = pitch;
-				u.volume = 1;
-				if (i === parts.length - 1) { u.onend = function () { if (id === speakId) { stop(); } }; }
-				u.onerror = stop;
-				window.speechSynthesis.speak(u);
-			});
-		} catch (e) { /* bỏ qua */ }
+			if (!parts.length) { return; }
+			var id = speakId;
+			talk(true);
+			if (TTS && Date.now() > ttsDownUntil && window.Audio) { speakServer(parts, en, id); } else { speakBrowser(parts, en, id); }
+		} catch (e) { talk(false); }
 	}
 	function autoRead(grade) {
 		var v = store.get('autoread', null);
@@ -701,7 +778,7 @@
 		});
 		this.head.querySelector('.hv-sound').addEventListener('click', function () {
 			store.set('sound', !soundOn());
-			if (!soundOn() && 'speechSynthesis' in window) { window.speechSynthesis.cancel(); }
+			if (!soundOn()) { stopSpeech(); }
 			document.querySelectorAll('.hv-sound').forEach(function (b) { b.textContent = soundOn() ? '🔊' : '🔇'; });
 		});
 	};
@@ -897,11 +974,11 @@
 			fb.parentNode.insertBefore(box, fb.nextSibling);
 			speak((ok ? 'Đúng rồi. ' : 'Đáp án là ' + q.o.a + '. ') + q.why);
 			var nb = box.querySelector('.hv-next-q');
-			nb.addEventListener('click', function () { if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); } go(); });
+			nb.addEventListener('click', function () { stopSpeech(); go(); });
 			setTimeout(function () { try { nb.focus({ preventScroll: true }); } catch (e) { nb.focus(); } }, 50);
 			return;
 		}
-		if (q.word && ok) { speak(q.word); } else if (soundOn() && 'speechSynthesis' in window) { speak(ok ? fb.textContent.replace(/[^\p{L}\p{N}\s,!.]/gu, '') : 'Đáp án là ' + q.o.a); }
+		if (q.word && ok) { speak(q.word); } else if (soundOn()) { speak(ok ? fb.textContent.replace(/[^\p{L}\p{N}\s,!.]/gu, '') : 'Đáp án là ' + q.o.a); }
 		setTimeout(go, ok ? 1000 : 2400);
 	};
 	Player.prototype.finish = function (right, total, extra) {
@@ -1087,7 +1164,7 @@
 		var self = this;
 		var total = 8;
 		var english = this.grade >= 3;
-		var hasVoice = soundOn() && 'speechSynthesis' in window && langVoices(english ? 'en' : 'vi').length > 0;
+		var hasVoice = soundOn() && (!!TTS || ('speechSynthesis' in window && langVoices(english ? 'en' : 'vi').length > 0));
 		var deck = [];
 		if (english) {
 			var pool = [];
@@ -2013,9 +2090,9 @@
 			return '<option value="' + esc(v.name) + '"' + (chosen === v.name ? ' selected' : '') + '>' + esc(v.name.replace(/Microsoft |Online |\(Natural\)| - Vietnamese \(Vietnam\)/g, '').trim()) + (isMale(v) ? ' · nam' : ' · nữ') + '</option>';
 		}).join('') : '<option value="">(Máy chưa có giọng tiếng Việt)</option>';
 		var note = document.querySelector('.hv-voice-note');
-		if (note) { note.hidden = !!list.length; }
+		if (note) { note.hidden = !!TTS || !!list.length; }
 		var mnote = document.querySelector('.hv-male-note');
-		if (mnote) { mnote.hidden = !list.length || gender() !== 'male' || hasRealMale(); }
+		if (mnote) { mnote.hidden = !!TTS || !list.length || gender() !== 'male' || hasRealMale(); }
 	}
 	var settingsBox = null;
 	function openSettings() {
@@ -2027,8 +2104,9 @@
 			settingsBox.innerHTML = '<div class="hv-settings-card"><div class="hv-owl" aria-hidden="true"></div><h3>Cài đặt giọng đọc</h3>' +
 				'<label class="hv-switch"><input type="checkbox" data-set="sound"><span></span>Âm thanh và giọng đọc</label>' +
 				'<label class="hv-switch"><input type="checkbox" data-set="autoread"><span></span>Tự đọc to bài học và câu hỏi</label>' +
-				'<div class="hv-field">Người đọc<div class="hv-seg hv-seg-voice"><button type="button" data-gender="female"><span aria-hidden="true">👩‍🏫</span> Cô giáo<small>giọng nữ</small></button><button type="button" data-gender="male"><span aria-hidden="true">👨‍🏫</span> Thầy giáo<small>giọng nam</small></button></div></div>' +
+				'<div class="hv-field">Người đọc<div class="hv-seg hv-seg-voice"><button type="button" data-gender="female"><span aria-hidden="true">👩‍🏫</span> Cô giáo<small>giọng nữ</small></button><button type="button" data-gender="male"><span aria-hidden="true">👨‍🏫</span> Thầy giáo<small>giọng nam</small></button><button type="button" data-gender="owl"><span aria-hidden="true">🦉</span> Cú Bông<small>kể chuyện</small></button></div></div>' +
 				'<div class="hv-field">Tốc độ đọc<div class="hv-seg hv-seg-3"><button type="button" data-rate="slow">🐢 Chậm</button><button type="button" data-rate="normal">🙂 Vừa phải</button><button type="button" data-rate="fast">🐇 Nhanh</button></div></div>' +
+				'<p class="hv-ai-note" hidden>✨ Đang dùng <b>giọng đọc AI</b> của Học Vui – tự nhiên, rõ ràng và nghe giống nhau trên mọi máy.</p>' +
 				'<p class="hv-male-note" hidden>Máy này chưa có giọng nam tiếng Việt nên Thầy giáo đọc bằng giọng trầm. Mở Học Vui bằng trình duyệt Microsoft Edge để nghe giọng thầy giáo tự nhiên (NamMinh).</p>' +
 				'<details class="hv-voice-adv"><summary>Chọn giọng cụ thể</summary><label class="hv-field"><select data-set="voice" aria-label="Giọng tiếng Việt"></select></label></details>' +
 				'<p class="hv-voice-note" hidden>Máy này chưa có giọng tiếng Việt. Gợi ý: dùng trình duyệt Microsoft Edge (giọng HoaiMy rất ấm), Google Chrome, hoặc vào Cài đặt điện thoại → Trợ năng → Nội dung được đọc → Giọng nói → thêm Tiếng Việt.</p>' +
@@ -2038,7 +2116,9 @@
 				settingsBox.querySelector('[data-set="sound"]').checked = soundOn();
 				settingsBox.querySelector('[data-set="autoread"]').checked = autoRead(store.get('grade', 1));
 				settingsBox.querySelectorAll('[data-rate]').forEach(function (b) { b.classList.toggle('is-on', rateKey() === b.getAttribute('data-rate')); });
-				settingsBox.querySelectorAll('[data-gender]').forEach(function (b) { b.classList.toggle('is-on', gender() === b.getAttribute('data-gender')); });
+				settingsBox.querySelectorAll('[data-gender]').forEach(function (b) { b.classList.toggle('is-on', persona() === b.getAttribute('data-gender')); });
+				settingsBox.querySelector('.hv-ai-note').hidden = !TTS;
+				settingsBox.querySelector('.hv-voice-adv').hidden = !!TTS;
 				fillVoiceSelect(settingsBox.querySelector('[data-set="voice"]'));
 			};
 			settingsBox._sync = sync;
@@ -2051,11 +2131,11 @@
 			settingsBox.addEventListener('click', function (e) {
 				if (e.target === settingsBox || e.target.hasAttribute('data-close')) { settingsBox.hidden = true; }
 				var gb = e.target.closest && e.target.closest('[data-gender]');
-				if (gb) { store.set('vgender', gb.getAttribute('data-gender')); store.set('voice', ''); sync(); speak(gender() === 'male' ? 'Chào em! Thầy sẽ đọc bài cho em nghe nhé.' : 'Chào em! Cô sẽ đọc bài cho em nghe nhé.'); }
+				if (gb) { store.set('vgender', gb.getAttribute('data-gender')); store.set('voice', ''); sync(); speak(persona() === 'male' ? 'Chào em! Thầy sẽ đọc bài cho em nghe nhé.' : (persona() === 'owl' ? 'Chào bạn nhỏ! Mình là Cú Bông. Mình sẽ kể bài cho bạn nghe nhé!' : 'Chào em! Cô sẽ đọc bài cho em nghe nhé.')); }
 				if (e.target.hasAttribute('data-rate')) { store.set('rate', e.target.getAttribute('data-rate')); sync(); speak('Mình sẽ đọc với tốc độ này. Em nghe có rõ không?'); }
 				if (e.target.hasAttribute('data-test')) {
 					var nm = store.get('name', '');
-					speak('Chào ' + (nm || 'em') + '! Hôm nay chúng mình học bài: Các số từ 0 đến 10. Năm cộng ba bằng tám. Em hãy đọc to cùng ' + (gender() === 'male' ? 'thầy' : 'cô') + ' nhé!');
+					speak('Chào ' + (nm || 'em') + '! Hôm nay chúng mình học bài: Phép cộng trong phạm vi 10. 5 + 3 = 8. Em hãy đọc to cùng ' + (persona() === 'male' ? 'thầy' : (persona() === 'owl' ? 'Cú Bông' : 'cô')) + ' nhé!');
 				}
 			});
 			document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && settingsBox) { settingsBox.hidden = true; } });
@@ -2130,7 +2210,7 @@
 		if (user) {
 			var top = this.root.getBoundingClientRect().top + window.pageYOffset - 90;
 			if (window.pageYOffset > top) { window.scrollTo({ top: top, behavior: 'smooth' }); }
-			if (autoRead(this.grade) && !last) { this.read(); } else if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
+			if (autoRead(this.grade) && !last) { this.read(); } else { stopSpeech(); }
 		}
 	};
 

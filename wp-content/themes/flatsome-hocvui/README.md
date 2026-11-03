@@ -2,6 +2,16 @@
 
 Theme con của **Flatsome**: bài học theo Chương trình GDPT 2018, bám bộ sách dùng chung toàn quốc từ năm học 2026–2027 (**Kết nối tri thức với cuộc sống**, **Tiếng Anh Global Success** – QĐ 3588/QĐ-BGDĐT), kèm luyện tập và trò chơi học tập.
 
+## Bản 0.8: giọng đọc AI tự nhiên trên mọi máy
+
+- **Giao diện → Giọng đọc AI**: chọn Microsoft Azure Speech (khuyên dùng – giọng HoaiMy nữ, NamMinh nam, gói miễn phí 500 000 ký tự/tháng) hoặc Google Cloud Text-to-Speech, dán khoá API, bấm Nghe thử.
+  - Máy chủ tạo MP3 cho từng câu **một lần** rồi lưu ở `uploads/hocvui-tts/`; lần sau phát ngay, không tốn phí. REST: `GET hocvui/v1/tts?t=…&v=female|male|owl&l=vi|en&r=slow|normal|fast` → chuyển tới file MP3.
+  - Chống lạm dụng: tối đa 400 ký tự/câu, 300 câu mới/giờ cho mỗi IP, giới hạn ký tự mỗi ngày (chỉnh được). Câu đã lưu luôn phát được.
+  - Lỗi/hết hạn mức → tự chuyển sang giọng trình duyệt trong 5 phút.
+- Người đọc thứ ba **Cú Bông** (giọng kể chuyện cho bé lớp 1–2).
+- **Phát âm chuẩn hơn**: phép tính, ô trống ("4 + … = 9" → "bốn cộng chỗ trống bằng chín"), phân số ("3/4" → "ba phần tư"), ngày tháng ("Quốc khánh 2/9"), giờ ("7:30" → "7 giờ 30 phút"), đơn vị đo (cm, m², kg, km/h…), số có dấu cách hàng nghìn ("10 000"), số thập phân ("2,5" → "2 phẩy 5"), viết tắt (TP. HCM, VD:, SGK), khoảng ("lớp 1–5" → "lớp 1 đến 5"); bảng đọc từng hàng có ngắt nghỉ; bỏ biểu tượng cảm xúc.
+- Không dùng chung với plugin/đoạn mã "Học Vui 2.2 – Giọng đọc AI" (ghi đè speechSynthesis, dùng đường dẫn không chính thức của Google Dịch): hãy gỡ bỏ.
+
 ## Bản 0.7: giọng đọc Cô giáo / Thầy giáo, tài khoản phụ huynh nhiều bé
 
 - **Giọng đọc** (nút ⚙️): chọn *Cô giáo* (giọng nữ) hoặc *Thầy giáo* (giọng nam), tốc độ *Chậm – Vừa phải – Nhanh* (mặc định vừa phải). Bài đọc được tách từng câu nên rõ ràng, có ngắt nghỉ; phép tính đọc thành lời ("5 + 3 = 8" → "năm cộng ba bằng tám").
