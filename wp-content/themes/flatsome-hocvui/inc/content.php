@@ -236,6 +236,7 @@ function hv_lesson_fields() {
 		'em_co_biet' => array( 'Em có biết? – điều thú vị mở rộng kiến thức (được đọc to)', 'textarea', 'Số 0 do người Ấn Độ cổ phát minh ra…' ),
 		'cau_hoi'  => array( 'Câu hỏi luyện tập – mỗi dòng: Câu hỏi | Đáp án đúng | Đáp án sai | Đáp án sai => Lời giải thích (thứ tự đáp án tự xáo trộn; phần sau => hiện ra sau khi bé trả lời)', 'textarea', '47 + 35 = ? | 82 | 72 | 712 => 7 + 5 = 12, viết 2 nhớ 1; 4 + 3 = 7, thêm 1 là 8. Vậy 82.' ),
 		'tro_choi' => array( 'Trò chơi luyện thêm', 'game', '' ),
+		'hoclieu'  => array( 'Học liệu điện tử hoclieu.vn của bài (tuỳ chọn – mở bài trong sách điện tử trên hoclieu.vn rồi chép đường dẫn vào đây)', 'url', 'https://hoclieu.vn/…' ),
 		'video'    => array( 'Video bài giảng YouTube (tuỳ chọn)', 'url', 'https://www.youtube.com/watch?v=…' ),
 		'bo_sach'  => array( 'Dùng được với bộ sách', 'books', '' ),
 	);

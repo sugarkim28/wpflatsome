@@ -97,8 +97,11 @@ function hv_tts_voice( $who, $lang, $rate ) {
 		'fast'   => array( '+5%', 1.05 ),
 	);
 	$r     = isset( $rates[ $rate ] ) ? $rates[ $rate ] : $rates['normal'];
-	// Cú Bông: giọng cô giáo cao và tươi hơn một chút, kể chuyện cho bé lớp 1–2.
-	$pitch = 'owl' === $who ? array( '+12%', 3.0 ) : array( '+0%', 0.0 );
+	// Cú Bông: giọng cô giáo cao hơn một chút, kể chuyện cho bé lớp 1–2.
+	$pitch = 'owl' === $who ? array( '+8%', 2.0 ) : array( '+0%', 0.0 );
+	if ( 'owl' === $who ) { // Kể chuyện: tươi, nhanh hơn một chút.
+		$r = array( sprintf( '%+d%%', (int) $r[0] + 4 ), $r[1] + 0.04 );
+	}
 	return array( $name, $r[0], $r[1], $pitch[0], $pitch[1] );
 }
 
@@ -122,7 +125,8 @@ function hv_tts_synthesize( $text, $lang, $voice ) {
 					array(
 						'input'       => array( 'text' => $text ),
 						'voice'       => array( 'languageCode' => 'en' === $lang ? 'en-US' : 'vi-VN', 'name' => $voice[0] ),
-						'audioConfig' => array( 'audioEncoding' => 'MP3', 'speakingRate' => $voice[2], 'pitch' => $voice[4] ),
+						// Giọng Chirp 3 HD (tự nhiên nhất của Google) không nhận chỉnh cao độ.
+						'audioConfig' => false !== stripos( $voice[0], 'Chirp' ) ? array( 'audioEncoding' => 'MP3', 'speakingRate' => $voice[2] ) : array( 'audioEncoding' => 'MP3', 'speakingRate' => $voice[2], 'pitch' => $voice[4] ),
 					)
 				),
 			)
@@ -137,8 +141,9 @@ function hv_tts_synthesize( $text, $lang, $voice ) {
 		return base64_decode( $body['audioContent'] ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- dữ liệu âm thanh từ Google.
 	}
 	$region = preg_replace( '/[^a-z0-9]/', '', strtolower( $s['region'] ) );
-	$ssml   = '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="' . ( 'en' === $lang ? 'en-US' : 'vi-VN' ) . '">'
-		. '<voice name="' . esc_attr( $voice[0] ) . '"><prosody rate="' . $voice[1] . '" pitch="' . $voice[3] . '">'
+	// Ngắt nghỉ giữa các câu dài hơn một chút (350 ms) cho bé kịp nghe, giống cô giáo đọc bài.
+	$ssml   = '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="' . ( 'en' === $lang ? 'en-US' : 'vi-VN' ) . '">'
+		. '<voice name="' . esc_attr( $voice[0] ) . '"><mstts:silence type="Sentenceboundary" value="350ms"/><prosody rate="' . $voice[1] . '" pitch="' . $voice[3] . '">'
 		. htmlspecialchars( $text, ENT_XML1 | ENT_QUOTES, 'UTF-8' ) . '</prosody></voice></speak>';
 	$res    = wp_remote_post(
 		'https://' . $region . '.tts.speech.microsoft.com/cognitiveservices/v1',
@@ -385,7 +390,7 @@ function hv_tts_page() {
 						<p><label><span style="display:inline-block;width:190px"><?php echo esc_html( $l ); ?></span>
 						<input type="text" name="hv_tts[<?php echo esc_attr( $k ); ?>]" value="<?php echo esc_attr( $s[ $k ] ); ?>" placeholder="<?php echo esc_attr( $def[ $k ] ); ?>"></label></p>
 					<?php endforeach; ?>
-					<p class="description">Cú Bông dùng giọng cô giáo, cao và tươi hơn một chút.</p>
+					<p class="description">Cú Bông dùng giọng cô giáo, tươi và nhanh hơn một chút. Google: giọng tự nhiên nhất là dòng <em>Chirp 3 HD</em>, ví dụ <code>vi-VN-Chirp3-HD-Aoede</code> (nữ), <code>vi-VN-Chirp3-HD-Charon</code> (nam). Đổi giọng xong bấm "Xoá âm thanh đã lưu".</p>
 				</td></tr>
 				<tr><th scope="row"><label for="hv-tts-budget">Giới hạn mỗi ngày</label></th><td>
 					<input id="hv-tts-budget" type="number" min="1000" step="1000" name="hv_tts[budget]" value="<?php echo (int) $s['budget']; ?>"> ký tự

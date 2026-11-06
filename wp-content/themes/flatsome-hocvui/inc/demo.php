@@ -291,6 +291,7 @@ function hv_demo_pages_build() {
 	$heads = array(
 		'gioi-thieu'          => array( 'Giới thiệu', 'Học Vui là sân chơi học tập miễn phí cho học sinh tiểu học, do Tin Học 119 phát triển.', 'owl', '#7c4dff' ),
 		'lien-he'             => array( 'Liên hệ', 'Bố mẹ, thầy cô có góp ý hay cần hỗ trợ? Cú Bông luôn sẵn sàng lắng nghe!', 'speech', '#2ea3f2' ),
+		'giao-an'             => array( 'Giáo án cho thầy cô', 'Kế hoạch bài dạy theo Công văn 2345 cho từng bài học – xem, in, lưu PDF hoặc tải Word. Học liệu điện tử: hoclieu.vn.', 'scroll', '#7c4dff' ),
 		'tai-khoan'           => array( 'Tài khoản phụ huynh', 'Một tài khoản cho cả nhà: mỗi bé một hồ sơ riêng, học tiếp trên mọi thiết bị, bố mẹ xem bé học đến đâu.', 'house', '#2ec27e' ),
 		'so-tay-kien-thuc'    => array( 'Sổ tay kiến thức', 'Tất cả phần Ghi nhớ của các bài học, theo lớp và môn – xem nhanh, ôn tập, in ra giấy.', 'scroll', '#ff9f1c' ),
 		'cau-hoi-thuong-gap'  => array( 'Câu hỏi thường gặp', 'Những điều bố mẹ và thầy cô hay hỏi về Học Vui.', 'bulb', '#ff9f1c' ),
@@ -358,6 +359,7 @@ function hv_demo_pages_build() {
 	$ph = $add( $page( 'Phụ huynh', $parent ), 0, 'heart' );
 	$add( $page( 'Tài khoản phụ huynh', $info['tai-khoan'] ), $ph, 'house', 'Đăng nhập, quản lý các bé, xem tiến độ' );
 	$add( $page( 'Góc phụ huynh', $parent ), $ph, 'heart', 'Chương trình học, cách đồng hành cùng con' );
+	$add( $page( 'Giáo án cho thầy cô', $info['giao-an'] ), $ph, 'scroll', 'Kế hoạch bài dạy, in hoặc tải Word' );
 	$add( $page( 'Câu hỏi thường gặp', $info['cau-hoi-thuong-gap'] ), $ph, 'bulb', 'Giải đáp nhanh cho bố mẹ, thầy cô' );
 	$add( $page( 'Giới thiệu', $info['gioi-thieu'] ), $ph, 'owl', 'Học Vui và Tin Học 119' );
 	$add( $page( 'Liên hệ', $info['lien-he'] ), $ph, 'speech', 'Hotline, Zalo, góp ý' );
@@ -439,6 +441,8 @@ function hv_demo_info_content( $slug ) {
 			return '[hv_handbook]';
 		case 'tai-khoan':
 			return '[hv_parent]';
+		case 'giao-an':
+			return '[hv_lesson_plans]';
 		case 'chinh-sach-bao-mat':
 			return '<div class="hv-box hv-content"><h2>1. Thông tin chúng tôi thu thập</h2><p>Bé có thể học mà không cần tài khoản: khi đó tên bé tự nhập, số sao, cấp độ, nhãn dán chỉ lưu trong bộ nhớ trình duyệt (localStorage) trên thiết bị đang dùng và không gửi về máy chủ.</p><p>Nếu bố mẹ tạo <strong>tài khoản phụ huynh</strong>, chúng tôi lưu: họ tên và email của phụ huynh, mật khẩu (đã mã hoá); với mỗi bé: tên gọi do bố mẹ đặt (có thể là tên ở nhà), lớp, nhân vật và tiến độ học (sao, XP, bài đã học). Chúng tôi không thu thập ngày sinh, địa chỉ, ảnh hay giọng nói của trẻ, và không chia sẻ dữ liệu cho bên thứ ba.</p><h2>2. Cookie và thống kê</h2><p>Website có thể dùng cookie kỹ thuật cần thiết để vận hành. Nếu bật công cụ thống kê truy cập, dữ liệu được tổng hợp ẩn danh, không dùng để quảng cáo nhắm vào trẻ em.</p>'
 				. '<h2>3. Quảng cáo</h2><p>Học Vui không hiển thị quảng cáo và không có liên kết mua hàng trong trò chơi.</p>'

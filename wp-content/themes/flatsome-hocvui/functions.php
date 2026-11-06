@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HV_VERSION', '0.8.0' );
+define( 'HV_VERSION', '0.9.0' );
 define( 'HV_DIR', get_stylesheet_directory() );
 define( 'HV_URI', get_stylesheet_directory_uri() );
 
@@ -19,6 +19,7 @@ require_once HV_DIR . '/inc/layout.php';
 require_once HV_DIR . '/inc/seo.php';
 require_once HV_DIR . '/inc/parents.php';
 require_once HV_DIR . '/inc/tts.php';
+require_once HV_DIR . '/inc/lesson-plan.php';
 require_once HV_DIR . '/inc/demo.php';
 
 /**

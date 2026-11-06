@@ -295,7 +295,17 @@
 			window.speechSynthesis.speak(u);
 		});
 	}
+	// Giọng AI: gộp các câu ngắn liền nhau (tối đa ~260 ký tự) để ngữ điệu liền mạch, ít khoảng lặng giữa các file.
+	function groupParts(parts) {
+		var out = [];
+		parts.forEach(function (p) {
+			var last = out[out.length - 1];
+			if (last && last.length + p.length < 260 && !/:$/.test(last)) { out[out.length - 1] = last + ' ' + p; } else { out.push(p); }
+		});
+		return out;
+	}
 	function speakServer(parts, en, id) {
+		parts = groupParts(parts);
 		if (!ttsAudio) { ttsAudio = new window.Audio(); ttsAudio.preload = 'auto'; }
 		var a = ttsAudio;
 		var i = 0;
@@ -308,7 +318,7 @@
 			if (id !== speakId) { return; }
 			if (i >= parts.length) { talk(false); return; }
 			var url = ttsUrl(parts[i], en);
-			if (parts[i + 1] && window.fetch) { window.fetch(ttsUrl(parts[i + 1], en)).catch(function () { /* tải trước */ }); }
+			[1, 2].forEach(function (k) { if (parts[i + k] && window.fetch) { window.fetch(ttsUrl(parts[i + k], en)).catch(function () { /* tải trước */ }); } });
 			a.onended = function () { i++; next(); };
 			a.onerror = fail;
 			a.src = url;
@@ -727,10 +737,42 @@
 		'lat-the': { title: 'Lật thẻ tiếng Anh', icon: '🃏', grades: [1, 2, 3, 4, 5], custom: 'memory' },
 		'bong-bay': { title: 'Bắn bóng bay', icon: '🎈', grades: [1, 2, 3, 4, 5], custom: 'balloon', hint: 'Chạm quả bóng mang đáp án đúng trước khi bóng bay mất' },
 		'cau-ca': { title: 'Câu cá – Nghe và chọn', icon: '🎣', grades: [1, 2, 3, 4, 5], custom: 'fishing', hint: 'Nghe Cú Bông đọc rồi câu đúng con cá' },
-		'dung-sai': { title: 'Đúng hay Sai 60 giây', icon: '✅', grades: [1, 2, 3, 4, 5], custom: 'truefalse', hint: 'Trả lời Đúng hay Sai thật nhanh trong 60 giây' },
-		'leo-nui': { title: 'Leo núi tri thức', icon: '🏔️', grades: [1, 2, 3, 4, 5], custom: 'climb', hint: 'Trả lời đúng để leo 10 nấc lên đỉnh – có 2 quyền trợ giúp' },
+		'dung-sai': { title: 'Đúng hay Sai siêu tốc', icon: '✅', grades: [1, 2, 3, 4, 5], custom: 'truefalse', hint: 'Trả lời Đúng hay Sai thật nhanh trước khi hết giờ' },
+		'leo-nui': { title: 'Leo núi tri thức', icon: '🏔️', grades: [1, 2, 3, 4, 5], custom: 'climb', hint: 'Trả lời đúng để leo 10 nấc lên đỉnh – có quyền trợ giúp' },
 		'quiz': { title: 'Luyện tập', icon: '✏️', grades: [], total: 0, fromData: true }
 	};
+
+	/* ---------- Độ khó: thời gian đếm ngược, số lựa chọn, tim, hệ số điểm ---------- */
+	var DIFFS = {
+		1: { name: 'Dễ', icon: '🐣', sec: 20, time: 1.35, speed: 0.75, choices: 3, hearts: 0, extra: 0, mul: 1, desc: 'Thong thả, 3 lựa chọn' },
+		2: { name: 'Vừa', icon: '🐯', sec: 12, time: 1, speed: 1, choices: 4, hearts: 0, extra: 0, mul: 1.5, desc: 'Nhanh tay hơn, điểm x1,5' },
+		3: { name: 'Khó', icon: '🐲', sec: 7, time: 0.75, speed: 1.3, choices: 4, hearts: 3, extra: 2, mul: 2, desc: 'Siêu tốc, 3 tim, câu thử thách, điểm x2' }
+	};
+	// Trò chơi hỏi–đáp: thời gian mỗi câu nhân thêm khi câu dài (đọc chữ, xem hình).
+	var READ_MUL = { 'do-vui': 1.5, 'ghep-chu': 1.3, 'xem-gio': 1.3, 'dem-hinh': 1.2 };
+	function diffOf(p) { return DIFFS[p.d] || DIFFS[2]; }
+	// Mô tả độ khó riêng cho từng kiểu trò chơi (mặc định: mô tả chung của DIFFS).
+	var DIFF_TEXT = {
+		balloon: ['Bóng bay chậm, 3 quả', 'Bóng bay vừa, điểm x1,5', 'Bóng bay nhanh, điểm x2'],
+		truefalse: ['80 giây, thong thả', '60 giây, điểm x1,5', '45 giây, điểm x2'],
+		race: ['Xe Cú Bông chạy chậm', 'Xe Cú Bông chạy vừa, điểm x1,5', 'Xe Cú Bông chạy nhanh, điểm x2'],
+		whack: ['Chuột thò lên lâu', 'Chuột nhanh hơn, điểm x1,5', 'Chuột siêu nhanh, điểm x2'],
+		typing: ['7 tim, chữ rơi chậm', '5 tim, điểm x1,5', '3 tim, chữ rơi nhanh, điểm x2'],
+		climb: ['2 quyền trợ giúp', '2 quyền trợ giúp, điểm x1,5', '1 quyền trợ giúp, điểm x2'],
+		memory: ['Ít thẻ, dễ nhớ', 'Nhiều thẻ hơn, điểm x1,5', 'Nhiều thẻ nhất, điểm x2'],
+		other: ['Điểm x1', 'Điểm x1,5', 'Điểm x2']
+	};
+	function diffText(p, d) {
+		if (!p.def.custom) { return DIFFS[d].desc; }
+		return (DIFF_TEXT[p.def.custom] || DIFF_TEXT.other)[d - 1];
+	}
+	// Đổi màu, rung và kêu tích tắc khi thanh thời gian sắp hết.
+	function timerAlert(wrap, left, limit) {
+		if (!wrap) { return; }
+		wrap.classList.toggle('is-warn', left <= Math.max(5, limit * 0.35) && left > Math.min(5, limit * 0.2));
+		wrap.classList.toggle('is-danger', left <= Math.min(5, limit * 0.2) || left <= 3);
+		if (left > 0 && left <= 5) { tone([left <= 2 ? 990 : 760], 0.05); }
+	}
 
 	/* ---------- Trình chơi ---------- */
 	function Player(root) {
@@ -741,6 +783,7 @@
 		var g = parseInt(root.getAttribute('data-grade'), 10) || store.get('grade', 1);
 		if (this.def.grades.length && this.def.grades.indexOf(g) < 0) { g = this.def.grades[0]; }
 		this.grade = g;
+		this.d = this.def.fromData ? 2 : (parseInt(store.get('diff_' + this.id, 2), 10) || 2);
 		this.title = root.getAttribute('data-title') || this.def.title;
 		root.classList.add('hv-player');
 		root.innerHTML = '';
@@ -786,15 +829,78 @@
 	Player.prototype.intro = function () {
 		var self = this;
 		if (this.stopTimer) { this.stopTimer(); this.stopTimer = null; }
+		this.stopClock();
 		clearTimeout(this.cdTimer);
 		this.root.classList.remove('is-playing', 'is-hot');
 		var name = store.get('name', '');
 		var b = this.body;
 		var sub = this.def.fromData ? 'Trả lời các câu hỏi để ôn lại bài nhé!' : (this.def.grades.length ? 'Lớp ' + this.grade + ' · ' : '') + (this.def.hint ? this.def.hint : this.def.custom === 'memory' ? 'Lật 2 thẻ giống nhau để ghép đôi' : this.def.custom === 'order' ? 'Chạm vào các từ theo đúng thứ tự' : 'Chọn đáp án đúng');
-		b.innerHTML = '<div class="hv-intro"><div class="hv-mascot" aria-hidden="true"></div>' +
-			'<h3>' + (name ? 'Chào ' + esc(name) + '!' : 'Chào bạn nhỏ!') + '</h3><p>' + esc(sub) + '</p>' +
-			'<button type="button" class="hv-btn hv-btn-big">Bắt đầu chơi ▶</button></div>';
-		b.querySelector('button').addEventListener('click', function () { self.start(); });
+		var h = '<div class="hv-intro"><div class="hv-intro-art" aria-hidden="true"><span class="hv-mascot"></span><span class="hv-intro-ico">' + this.def.icon + '</span></div>' +
+			'<h3>' + (name ? 'Chào ' + esc(name) + '!' : 'Chào bạn nhỏ!') + '</h3><p>' + esc(sub) + '</p>';
+		if (!this.def.fromData) {
+			var deckGame = !this.def.custom;
+			var rm = READ_MUL[this.id] || 1;
+			h += '<div class="hv-diff" role="radiogroup" aria-label="Chọn độ khó">';
+			[1, 2, 3].forEach(function (d) {
+				var D = DIFFS[d];
+				var t = deckGame ? ' · ' + Math.round(D.sec * rm) + ' giây/câu' : '';
+				h += '<button type="button" role="radio" class="hv-diff-btn d' + d + (d === self.d ? ' is-on' : '') + '" aria-checked="' + (d === self.d) + '" data-d="' + d + '"><span aria-hidden="true">' + D.icon + '</span><b>' + D.name + '</b><small>' + esc(diffText(self, d) + t) + '</small></button>';
+			});
+			h += '</div>';
+			if (deckGame) {
+				h += '<label class="hv-switch hv-timed"><input type="checkbox" data-timed' + (store.get('timed', true) ? ' checked' : '') + '><span></span>⏱️ Đếm ngược thời gian mỗi câu</label>';
+			}
+			var best = store.get(this.bestKey(), 0);
+			h += '<p class="hv-best">' + (best ? (ico('trophy', 22) || '🏆') + ' Kỷ lục mức ' + DIFFS[this.d].name + ': <b>' + best + '</b> điểm' : 'Chưa có kỷ lục ở mức này – phá kỷ lục đầu tiên nào!') + '</p>';
+		}
+		b.innerHTML = h + '<button type="button" class="hv-btn hv-btn-big hv-go">Bắt đầu chơi ▶</button></div>';
+		b.querySelectorAll('[data-d]').forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				self.d = parseInt(btn.getAttribute('data-d'), 10);
+				store.set('diff_' + self.id, self.d);
+				tone([520 + self.d * 120], 0.08);
+				self.intro();
+				var again = self.body.querySelector('[data-d="' + self.d + '"]');
+				if (again) { again.focus(); }
+			});
+		});
+		var tg = b.querySelector('[data-timed]');
+		if (tg) { tg.addEventListener('change', function () { store.set('timed', tg.checked); }); }
+		b.querySelector('.hv-go').addEventListener('click', function () { self.start(); });
+	};
+	Player.prototype.bestKey = function () {
+		var lvl = this.root.getAttribute('data-level');
+		return 'best_' + (lvl || this.id + '_' + this.grade + (this.d !== 2 ? '_d' + this.d : ''));
+	};
+	/* Đồng hồ đếm ngược từng câu: vòng tròn đổi màu xanh → cam → đỏ, tích tắc 5 giây cuối, hết giờ tính là sai. */
+	Player.prototype.startClock = function (secs, onEnd) {
+		var self = this;
+		this.stopClock();
+		if (!this.clockEl) { return; }
+		var end = Date.now() + secs * 1000;
+		var lastSec = -1;
+		this.clockEl.hidden = false;
+		this.clockSecs = secs;
+		var draw = function () {
+			if (!self.clockEl || !self.clockEl.isConnected) { self.stopClock(); return; }
+			var left = Math.max(0, (end - Date.now()) / 1000);
+			var whole = Math.ceil(left);
+			self.clockLeft = left;
+			self.clockEl.style.setProperty('--p', (left / secs).toFixed(3));
+			if (whole !== lastSec) {
+				lastSec = whole;
+				self.clockEl.querySelector('b').textContent = whole;
+				timerAlert(self.clockEl, whole, secs);
+			}
+			if (left <= 0) { self.stopClock(); onEnd(); }
+		};
+		draw();
+		this.clockT = setInterval(draw, 100);
+	};
+	Player.prototype.stopClock = function () {
+		clearInterval(this.clockT);
+		this.clockT = null;
+		if (this.clockEl) { this.clockEl.classList.remove('is-warn', 'is-danger'); }
 	};
 	/* ---------- Cảm giác game: đếm ngược, điểm, combo, Cú Bông cổ vũ, kỷ lục ---------- */
 	Player.prototype.start = function () {
@@ -819,29 +925,32 @@
 	};
 	Player.prototype.updateScore = function () {
 		if (!this.scoreEl) {
-			this.scoreEl = el('div', 'hv-scorebar');
+			this.scoreEl = el('div', 'hv-scorebar', '<span class="hv-score-in"></span><span class="hv-clock" hidden><svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15.9"></circle><circle class="hv-clock-arc" cx="18" cy="18" r="15.9"></circle></svg><b>0</b></span>');
 			this.scoreEl.setAttribute('aria-hidden', 'true');
+			this.clockEl = this.scoreEl.querySelector('.hv-clock');
 			this.root.insertBefore(this.scoreEl, this.body);
 			this.coach = el('div', 'hv-coach', (CFG.img ? '<img src="' + esc(CFG.img + 'owl.webp') + '" width="64" height="64" alt="">' : '🦉') + '<span></span>');
 			this.coach.setAttribute('aria-hidden', 'true');
 			this.root.appendChild(this.coach);
 		}
-		this.scoreEl.innerHTML = '<span class="hv-pts">' + (ico('star', 22) || '⭐') + ' <b>' + (this.points || 0) + '</b> điểm</span>' +
+		var D = diffOf(this);
+		this.scoreEl.querySelector('.hv-score-in').innerHTML = (this.def.fromData ? '' : '<span class="hv-dbadge d' + this.d + '">' + D.icon + ' ' + D.name + '</span>') +
+			'<span class="hv-pts">' + (ico('star', 22) || '⭐') + ' <b>' + (this.points || 0) + '</b> điểm</span>' +
 			(this.combo >= 2 ? '<span class="hv-combo">🔥 Combo x' + this.combo + '</span>' : '');
 	};
 	// Gọi mỗi lần trả lời: cộng điểm theo combo, hiện "+điểm" bay lên, Cú Bông nhảy mừng hoặc động viên.
-	Player.prototype.hit = function (ok, anchor) {
+	Player.prototype.hit = function (ok, anchor, bonus) {
 		var self = this;
 		if (ok) {
 			this.combo++;
 			this.bestCombo = Math.max(this.bestCombo, this.combo);
-			var add = 10 * Math.min(this.combo, 5);
+			var add = Math.round((10 * Math.min(this.combo, 5) + (bonus || 0)) * diffOf(this).mul);
 			this.points += add;
 			tone([660 + this.combo * 30, 880 + this.combo * 40], 0.1);
 			if (this.combo >= 3 && this.combo % 3 === 0) { tone([784, 988, 1175], 0.08); }
 			var r = this.root.getBoundingClientRect();
 			var a = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : { left: r.left + r.width / 2, top: r.top + r.height / 2, width: 0, height: 0 };
-			var f = el('span', 'hv-float', '+' + add + (this.combo >= 3 ? ' 🔥' : ''));
+			var f = el('span', 'hv-float', '+' + add + (bonus ? ' ⏱️' : '') + (this.combo >= 3 ? ' 🔥' : ''));
 			f.style.left = (a.left - r.left + a.width / 2) + 'px';
 			f.style.top = (a.top - r.top) + 'px';
 			this.root.appendChild(f);
@@ -853,7 +962,8 @@
 		if (this.coach) {
 			var c = this.coach;
 			c.className = 'hv-coach ' + (ok ? 'is-cheer' : 'is-sad');
-			c.querySelector('span').textContent = ok ? pick(this.combo >= 3 ? ['Combo đỉnh quá!', 'Không cản nổi!', 'Siêu sao!'] : ['Giỏi quá!', 'Đúng rồi!', 'Tuyệt!', 'Hay lắm!']) : pick(['Cố lên!', 'Không sao đâu!', 'Thử lại nào!']);
+			var cs = c.querySelector('span');
+			if (cs) { cs.textContent = ok ? pick(this.combo >= 3 ? ['Combo đỉnh quá!', 'Không cản nổi!', 'Siêu sao!'] : ['Giỏi quá!', 'Đúng rồi!', 'Tuyệt!', 'Hay lắm!']) : pick(['Cố lên!', 'Không sao đâu!', 'Thử lại nào!']); }
 			clearTimeout(this.coachT);
 			this.coachT = setTimeout(function () { c.className = 'hv-coach'; }, 1100);
 		}
@@ -874,7 +984,10 @@
 		if (this.def.custom === 'parts') { return this.parts(); }
 		this.state = {};
 		this.marks = [];
-		this.maxHearts = parseInt(this.root.getAttribute('data-hearts'), 10) || 0;
+		var D = diffOf(this);
+		this.maxHearts = parseInt(this.root.getAttribute('data-hearts'), 10) || (this.def.fromData ? 0 : D.hearts);
+		this.timed = !this.def.fromData && store.get('timed', true);
+		this.qSecs = Math.round(D.sec * (READ_MUL[this.id] || 1));
 		this.hearts = this.maxHearts ? this.maxHearts : null;
 		this.i = 0;
 		this.right = 0;
@@ -885,16 +998,31 @@
 			var limit = parseInt(this.root.getAttribute('data-limit'), 10) || data.length;
 			this.deck = shuffle(data).slice(0, limit).map(function (r) { return { q: r.q, say: r.q, tag: r.t || '', why: r.e || '', o: { choices: shuffle([r.a].concat(r.w || [])), a: r.a } }; });
 		} else if (this.def.deck) {
-			this.deck = this.def.deck(this.grade).slice(0, this.def.total);
+			this.deck = this.def.deck(this.grade).slice(0, this.def.total + D.extra);
 		} else {
+			// Dễ: xen câu của lớp dưới; Khó: thêm câu "thử thách" của lớp trên (nếu trò chơi có lớp đó).
 			this.deck = [];
 			var seen = {};
 			var guard = 0;
-			while (this.deck.length < this.def.total && guard++ < 100) {
-				var q = this.def.make(this.grade, this.state);
+			var gs = this.def.grades;
+			while (this.deck.length < this.def.total + D.extra && guard++ < 150) {
+				var gq = this.grade;
+				var hard = false;
+				if (this.d === 1 && gs.indexOf(gq - 1) > -1 && Math.random() < 0.5) { gq--; }
+				if (this.d === 3 && gs.indexOf(gq + 1) > -1 && Math.random() < 0.25) { gq++; hard = true; }
+				var q = this.def.make(gq, this.state);
+				if (hard) { q.tag = '⚡ Thử thách'; }
 				var k = q.q + (q.visual || '') + q.o.a;
 				if (!seen[k]) { seen[k] = 1; this.deck.push(q); }
 			}
+		}
+		if (D.choices < 4) {
+			this.deck.forEach(function (q) {
+				if (q.o.choices.length > D.choices) {
+					var wrong = q.o.choices.filter(function (c) { return c !== q.o.a; }).slice(0, D.choices - 1);
+					q.o.choices = shuffle([q.o.a].concat(wrong));
+				}
+			});
 		}
 		if (!this.deck.length) { this.body.innerHTML = '<p class="hv-empty">Chưa có câu hỏi.</p>'; return; }
 		this.ask();
@@ -930,6 +1058,13 @@
 			btn.addEventListener('click', function () { self.answer(q, q.o.choices[idx], btn, buttons); });
 		});
 		if (autoRead(this.grade)) { speak(q.say || q.q); }
+		if (this.timed) {
+			// Bé lớp 1–2 nghe đọc câu hỏi: cộng thêm vài giây.
+			this.startClock(this.qSecs + (autoRead(this.grade) ? 3 : 0), function () {
+				// Chỉ tính hết giờ nếu câu này vẫn đang hiện (bé chưa chuyển màn/chơi lại).
+				if (self.deck && self.deck[self.i] === q && buttons[0] && self.body.contains(buttons[0])) { self.answer(q, null, null, buttons); }
+			});
+		}
 	};
 	function fracHtml(s, isFrac) {
 		if (!isFrac || String(s).indexOf('/') < 0) { return esc(s); }
@@ -940,7 +1075,10 @@
 		var self = this;
 		if (this.locked) { return; }
 		this.locked = true;
-		var ok = val === q.o.a;
+		var timeout = val === null;
+		var bonus = this.timed && this.clockT ? Math.round(Math.max(0, this.clockLeft || 0) / this.qSecs * 10) : 0;
+		this.stopClock();
+		var ok = !timeout && val === q.o.a;
 		buttons.forEach(function (b, idx) {
 			b.disabled = true;
 			if (q.o.choices[idx] === q.o.a) { b.classList.add('is-right'); }
@@ -948,15 +1086,15 @@
 		var fb = this.body.querySelector('.hv-feedback');
 		if (ok) {
 			this.right++;
-			this.hit(true, btn);
+			this.hit(true, btn, bonus);
 			var nm = store.get('name', '');
 			var praise = pick(['Giỏi quá đi!', 'Chính xác luôn!', 'Tuyệt vời!', 'Đúng rồi, em giỏi lắm!', 'Quá đỉnh!']) + (nm && Math.random() < 0.4 ? ' ' + nm + ' ơi!' : '');
 			fb.innerHTML = esc(praise) + ' ' + pick(['🎉', '🌟', '👏', '💯', '🔥']);
 			this.say(praise);
 		} else {
-			btn.classList.add('is-wrong');
+			if (btn) { btn.classList.add('is-wrong'); }
 			this.hit(false, btn);
-			fb.innerHTML = 'Gần đúng rồi! Đáp án là <b>' + esc(q.o.a) + '</b>' + (q.hint ? ' (' + esc(q.hint) + ')' : '') + '. Lần sau em sẽ làm được! 💪';
+			fb.innerHTML = (timeout ? '⏰ Hết giờ! ' : 'Gần đúng rồi! ') + 'Đáp án là <b>' + esc(q.o.a) + '</b>' + (q.hint ? ' (' + esc(q.hint) + ')' : '') + '. Lần sau em sẽ làm được! 💪';
 			this.say('Chưa đúng. Đáp án là ' + q.o.a);
 			if (this.hearts !== null) { this.hearts--; }
 		}
@@ -1001,8 +1139,10 @@
 		this.marks = [];
 		this.root.classList.remove('is-playing', 'is-hot');
 		if (this.stopTimer) { this.stopTimer(); this.stopTimer = null; }
-		var pts = (this.points || 0) + got * 20;
-		var bestKey = 'best_' + (lvl || this.id + '_' + this.grade);
+		this.stopClock();
+		if (this.clockEl) { this.clockEl.hidden = true; }
+		var pts = (this.points || 0) + Math.round(got * 20 * diffOf(this).mul);
+		var bestKey = this.bestKey();
 		var best = store.get(bestKey, 0);
 		var record = pts > best && pts > 0;
 		if (record) { store.set(bestKey, pts); }
@@ -1012,12 +1152,15 @@
 		for (var i = 1; i <= 3; i++) { starsHtml += '<span class="' + (i <= got ? 'on' : '') + '">★</span>'; }
 		var msg = lvl && got >= 2 ? (lvl.indexOf('boss-') === 0 ? 'Hạ gục trùm!' : 'Phá đảo màn này!') : got === 3 ? 'Xuất sắc!' : got === 2 ? 'Làm tốt lắm!' : got === 1 ? 'Cố lên, sắp được rồi!' : 'Mình thử lại nào!';
 		this.body.innerHTML = '<div class="hv-result"><div class="hv-big-stars" aria-label="' + got + ' sao">' + starsHtml + '</div>' +
+			(this.def.fromData ? '' : '<span class="hv-dbadge d' + this.d + '">' + diffOf(this).icon + ' Mức ' + diffOf(this).name + '</span>') +
 			'<h3>' + msg + '</h3><p>' + (extra ? esc(extra) : 'Em làm đúng <b>' + right + '/' + total + '</b>' + (this.def.timer ? ' · ' + secs + ' giây' : '')) + '</p>' +
 			(fast ? '<p class="hv-fast">⚡ Siêu tốc! Thêm 1 sao thưởng</p>' : '') +
 			'<div class="hv-score-final"><b>' + pts + '</b> điểm' + (this.bestCombo >= 2 ? ' · combo dài nhất 🔥 x' + this.bestCombo : '') + '<small>' + (record ? (ico('trophy', 24) || '🏆') + ' KỶ LỤC MỚI!' : 'Kỷ lục của em: ' + Math.max(best, pts)) + '</small></div>' +
 			'<p class="hv-reward"><span>' + (ico('star', 26) || '⭐') + ' +' + earned + '</span><span>' + (ico('gem', 26) || '💎') + ' +' + xp + ' XP</span></p>' +
 			(lvUp ? '<div class="hv-levelup">' + (ico('party', 36) || '🎉') + ' Lên <b>cấp ' + lvUp + '</b> – ' + esc(titleOf(lvUp)) + '!</div>' : '') +
 			(sticker ? '<div class="hv-new-sticker"><span>' + sticker + '</span>Em mở được nhãn dán mới!</div>' : '') +
+			(!this.def.fromData && got === 3 && this.d < 3 ? '<p class="hv-up">' + DIFFS[this.d + 1].icon + ' Em giỏi quá! Thử sức ở mức <b>' + DIFFS[this.d + 1].name + '</b> nhé? <button type="button" class="hv-btn hv-btn-accent hv-harder">Lên mức ' + DIFFS[this.d + 1].name + ' ▶</button></p>' : '') +
+			(!this.def.fromData && got <= 1 && this.d > 1 ? '<p class="hv-up">Thử mức <b>' + DIFFS[this.d - 1].name + '</b> ' + DIFFS[this.d - 1].icon + ' để luyện thêm nhé! <button type="button" class="hv-btn hv-btn-white hv-easier">Chơi mức ' + DIFFS[this.d - 1].name + '</button></p>' : '') +
 			'<div class="hv-actions">' + (next && got >= 1 ? '<a class="hv-btn hv-btn-accent hv-btn-big" href="' + esc(next) + '">' + esc(this.root.getAttribute('data-next-label') || 'Màn tiếp theo') + ' ▶</a>' : '') +
 			'<button type="button" class="hv-btn hv-again">Chơi lại ↻</button>' +
 			(home ? '<a class="hv-btn hv-btn-ghost" href="' + esc(home) + '">🏝️ Về đảo</a>' : '') +
@@ -1026,6 +1169,11 @@
 		try { this.root.dispatchEvent(new CustomEvent('hv:done', { bubbles: true, detail: { level: lvl, stars: got } })); } catch (e) { /* trình duyệt cũ */ }
 		speak(msg + (got ? ' Em được ' + earned + ' sao.' : ''));
 		this.body.querySelector('.hv-again').addEventListener('click', function () { self.start(); });
+		var shift = function (delta) { self.d = Math.max(1, Math.min(3, self.d + delta)); store.set('diff_' + self.id, self.d); self.start(); };
+		var hb = this.body.querySelector('.hv-harder');
+		if (hb) { hb.addEventListener('click', function () { shift(1); }); }
+		var eb = this.body.querySelector('.hv-easier');
+		if (eb) { eb.addEventListener('click', function () { shift(-1); }); }
 		if (got >= 2) { sfx.win(); confetti(this.root); }
 		this.say(msg + ' Em làm đúng ' + right + ' trên ' + total);
 	};
@@ -1034,7 +1182,7 @@
 	Player.prototype.memory = function () {
 		var self = this;
 		var topic = pick(EN_TOPICS[this.grade] || EN_TOPICS[3]);
-		var pairs = shuffle(EN[topic]).slice(0, this.grade <= 2 ? 4 : 6);
+		var pairs = shuffle(EN[topic]).slice(0, [0, this.grade <= 2 ? 3 : 4, this.grade <= 2 ? 4 : 6, 6][this.d] || 4);
 		var cards = [];
 		pairs.forEach(function (p, i) {
 			cards.push({ id: i, face: p[0], kind: 'pic', word: p[1] });
@@ -1090,7 +1238,7 @@
 	Player.prototype.balloon = function () {
 		var self = this;
 		var total = 10;
-		var dur = [0, 11, 10, 9.5, 9, 8.5][this.grade] || 9.5;
+		var dur = ([0, 11, 10, 9.5, 9, 8.5][this.grade] || 9.5) * diffOf(this).time;
 		var colors = ['#ff5d73', '#2ea3f2', '#58b847', '#ffb81c', '#9775fa'];
 		var deck = [];
 		var seen = {};
@@ -1098,6 +1246,9 @@
 		while (deck.length < total && guard++ < 200) {
 			var q0 = mathQ(this.grade);
 			if (!seen[q0.q]) { seen[q0.q] = 1; deck.push(q0); }
+		}
+		if (this.d === 1) {
+			deck.forEach(function (q) { var w = q.o.choices.filter(function (c) { return c !== q.o.a; }).slice(0, 2); q.o.choices = shuffle([q.o.a].concat(w)); });
 		}
 		this.deck = deck;
 		this.i = 0;
@@ -1240,7 +1391,7 @@
 	}
 	Player.prototype.truefalse = function () {
 		var self = this;
-		var limit = 60;
+		var limit = Math.round(60 * diffOf(this).time / 5) * 5;
 		var left = limit;
 		var total = 0;
 		this.right = 0;
@@ -1248,7 +1399,7 @@
 		this.t0 = Date.now();
 		var cur = tfStatement(this.grade);
 		var busy = false;
-		this.body.innerHTML = '<div class="hv-tf"><div class="hv-timer"><i></i><b>60 giây</b></div><div class="hv-tf-score">Đúng <b>0</b> / 0</div><div class="hv-tf-card" aria-live="polite"></div>' +
+		this.body.innerHTML = '<div class="hv-tf"><div class="hv-timer"><i></i><b>' + limit + ' giây</b></div><div class="hv-tf-score">Đúng <b>0</b> / 0</div><div class="hv-tf-card" aria-live="polite"></div>' +
 			'<div class="hv-tf-btns"><button type="button" class="hv-tf-btn yes">' + (ico('check', 40) || '✔') + ' Đúng</button><button type="button" class="hv-tf-btn no">' + (ico('cross', 40) || '✘') + ' Sai</button></div><div class="hv-feedback"></div></div>';
 		var card = this.body.querySelector('.hv-tf-card');
 		var bar = this.body.querySelector('.hv-timer i');
@@ -1261,9 +1412,10 @@
 			left--;
 			bar.style.width = (left / limit * 100) + '%';
 			tlabel.textContent = left + ' giây';
+			timerAlert(bar.parentNode, left, limit);
 			if (left <= 0) {
 				clearInterval(timer);
-				self.finish(self.right, Math.max(total, 10), 'Em trả lời đúng ' + self.right + '/' + total + ' câu trong 60 giây');
+				self.finish(self.right, Math.max(total, 10), 'Em trả lời đúng ' + self.right + '/' + total + ' câu trong ' + limit + ' giây');
 			}
 		}, 1000);
 		this.stopTimer = function () { clearInterval(timer); };
@@ -1293,7 +1445,7 @@
 		});
 		var deck = [mathQ(Math.max(1, g - 1)), mathQ(Math.max(1, g - 1)), facts[0], mathQ(g), facts[1], mathQ(g), facts[2], mathQ(g), facts[3] || mathQ(g), mathQ(Math.min(5, g + 1))];
 		var level = 0;
-		var help = { half: true, owl: true };
+		var help = { half: true, owl: this.d < 3 }; // Mức Khó chỉ có 1 quyền trợ giúp.
 		this.deck = deck;
 		this.t0 = Date.now();
 		this.marks = [];
@@ -1362,7 +1514,7 @@
 		var goal = 10;
 		var me = 0;
 		var over = false;
-		var botTime = [0, 80, 75, 70, 65, 60][g] || 70;
+		var botTime = ([0, 80, 75, 70, 65, 60][g] || 70) * diffOf(this).time;
 		var started = Date.now();
 		var seen = {};
 		this.right = 0;
@@ -1438,7 +1590,7 @@
 		var wrongs = 0;
 		var rule = null;
 		var ruleHits = 0;
-		var stay = Math.max(1100, 1900 - g * 140);
+		var stay = Math.max(1100, 1900 - g * 140) * diffOf(this).time;
 		this.right = 0;
 		this.marks = [];
 		this.t0 = Date.now();
@@ -1500,11 +1652,12 @@
 				if (ok && ruleHits >= 3) { setTimeout(newRule, 400); }
 			});
 		});
-		var spawn = setInterval(pop, Math.max(550, 950 - g * 70));
+		var spawn = setInterval(pop, Math.max(450, 950 - g * 70) * diffOf(this).time);
 		var clock = setInterval(function () {
 			left--;
 			bar.style.width = (left / 45 * 100) + '%';
 			tl.textContent = left + ' giây';
+			timerAlert(bar.parentNode, left, 45);
 			if (left <= 0) {
 				self.stopTimer();
 				self.finish(hits, Math.max(hits + wrongs, 12), 'Em đập trúng ' + hits + ' chú chuột trong 45 giây' + (wrongs ? ' (nhầm ' + wrongs + ' lần)' : ''));
@@ -1628,14 +1781,15 @@
 		var sets = { 1: 'FJDK', 2: 'ASDFJKL', 3: 'ASDFGHJKLQWERTYUIOP', 4: 'QWERTYUIOPASDFGHJKLZXCVBNM', 5: 'QWERTYUIOPASDFGHJKLZXCVBNM1234567890' };
 		var letters = (sets[g] || sets[3]).split('');
 		var total = 20;
-		var lives = 5;
+		var lives = [0, 7, 5, 3][this.d] || 5;
+		var maxLives = lives;
 		var spawned = 0;
 		var popped = 0;
 		var bubbles = [];
 		var running = true;
 		var lastSpawn = 0;
 		var lastT = performance.now();
-		var speed = 26 + g * 7;
+		var speed = (26 + g * 7) * diffOf(this).speed;
 		this.right = 0;
 		this.marks = [];
 		this.t0 = Date.now();
@@ -1653,7 +1807,7 @@
 		var livesEl = this.body.querySelector('.hv-lives');
 		var finger = this.body.querySelector('.hv-finger');
 		var score = this.body.querySelector('.hv-tf-score b');
-		var drawLives = function () { livesEl.innerHTML = new Array(lives + 1).join('❤️') + new Array(5 - lives + 1).join('🤍'); };
+		var drawLives = function () { livesEl.innerHTML = new Array(lives + 1).join('❤️') + new Array(maxLives - lives + 1).join('🤍'); };
 		drawLives();
 		var target = function () {
 			var low = null;
@@ -1667,7 +1821,7 @@
 		};
 		var stopAll = function () { running = false; document.removeEventListener('keydown', onKey); };
 		var check = function () {
-			if ((popped + (5 - lives) >= total && !bubbles.some(function (b) { return !b.dead; })) || lives <= 0 || (spawned >= total && !bubbles.some(function (b) { return !b.dead; }))) {
+			if ((popped + (maxLives - lives) >= total && !bubbles.some(function (b) { return !b.dead; })) || lives <= 0 || (spawned >= total && !bubbles.some(function (b) { return !b.dead; }))) {
 				stopAll();
 				self.finish(popped, total, 'Em gõ trúng ' + popped + '/' + total + ' chữ' + (lives <= 0 ? ' – hết tim rồi, luyện thêm nhé!' : '!'));
 				return true;

@@ -885,6 +885,76 @@ body.single-bai_hoc .hv-helper { display: none; }
 	.hv-form-row { grid-template-columns: 1fr; gap: 0; }
 }
 
+
+/* ---------- Trò chơi: màn chào, độ khó, đồng hồ đếm ngược ---------- */
+.hv-player .hv-p-body { background: radial-gradient(circle at 12% 18%, color-mix(in srgb, var(--c) 7%, transparent) 0 60px, transparent 61px), radial-gradient(circle at 88% 82%, color-mix(in srgb, var(--hv-accent) 14%, transparent) 0 80px, transparent 81px), #fff; }
+.hv-intro-art { position: relative; width: 150px; height: 130px; margin: 0 auto 4px; }
+.hv-intro-art .hv-mascot { position: absolute; left: 0; bottom: 0; width: 110px; height: 110px; margin: 0; }
+.hv-intro-ico { position: absolute; right: 0; top: 0; display: grid; place-items: center; width: 62px; height: 62px; border-radius: 20px; background: #fff; box-shadow: 0 6px 0 color-mix(in srgb, var(--c) 30%, #fff), var(--hv-shadow); font-size: 2rem; animation: hv-bob 2.6s ease-in-out infinite; }
+.hv-diff { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 620px; margin: 0 auto 16px; }
+.hv-diff-btn { --dc: var(--hv-green); position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 0; margin: 0; padding: 14px 8px 12px; border: 3px solid #e3eaf6; border-radius: 22px; background: #fff; color: var(--hv-ink); cursor: pointer; text-transform: none; letter-spacing: 0; box-shadow: 0 5px 0 #e3eaf6; transition: transform .15s, border-color .15s, box-shadow .15s; }
+.hv-diff-btn.d2 { --dc: var(--hv-orange); }
+.hv-diff-btn.d3 { --dc: #e8436a; }
+.hv-diff-btn span { font-size: 2.2rem; line-height: 1.1; }
+.hv-diff-btn b { font: 900 1.2rem var(--hv-head); }
+.hv-diff-btn small { color: var(--hv-ink-2); font: 700 .78rem/1.3 'Nunito', sans-serif; }
+.hv-diff-btn:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--dc) 55%, #fff); }
+.hv-diff-btn.is-on { border-color: var(--dc); background: color-mix(in srgb, var(--dc) 10%, #fff); box-shadow: 0 5px 0 var(--dc); }
+.hv-diff-btn.is-on::after { content: '✓'; position: absolute; top: -10px; right: -8px; width: 26px; height: 26px; display: grid; place-items: center; border: 3px solid #fff; border-radius: 50%; background: var(--dc); color: #fff; font: 900 .8rem var(--hv-head); }
+.hv-intro .hv-timed { display: inline-flex; margin: 0 auto 10px; font-weight: 800; }
+.hv-best { margin: 0 0 16px !important; color: var(--hv-ink-2); font-size: .92rem; }
+.hv-best img { vertical-align: -5px; }
+.hv-dbadge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 999px; background: #e7f8e3; color: #24622a; font: 900 .85rem var(--hv-head); }
+.hv-dbadge.d2 { background: #fff1e0; color: #a35a00; }
+.hv-dbadge.d3 { background: #ffe5ec; color: #b4173f; }
+.hv-result .hv-dbadge { margin-top: 6px; }
+.hv-score-in { display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; }
+.hv-clock { --p: 1; --cc: var(--hv-green); position: relative; display: grid; place-items: center; width: 52px; height: 52px; }
+.hv-clock[hidden] { display: none; }
+.hv-clock svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.hv-clock circle { fill: #fff; stroke: #e6edf8; stroke-width: 3.6; }
+.hv-clock .hv-clock-arc { fill: none; stroke: var(--cc); stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: calc(100 - var(--p) * 100); transition: stroke-dashoffset .1s linear, stroke .3s; }
+.hv-clock b { position: relative; font: 900 1.2rem var(--hv-head); color: var(--hv-ink); }
+.hv-clock.is-warn { --cc: var(--hv-orange); }
+.hv-clock.is-danger { --cc: var(--hv-no); animation: hv-tick .5s ease-in-out infinite alternate; }
+.hv-clock.is-danger b { color: var(--hv-no); }
+@keyframes hv-tick { to { transform: scale(1.12); } }
+.hv-timer.is-warn i { background: linear-gradient(90deg, #ff7a3d, #ffb84d); }
+.hv-timer.is-danger i { background: linear-gradient(90deg, #f03e3e, #ff6b6b); }
+.hv-timer.is-danger { animation: hv-tick .5s ease-in-out infinite alternate; }
+.hv-up { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; margin: 10px auto; padding: 10px 16px; max-width: 560px; border-radius: 18px; background: #f3efff; font-weight: 700; }
+.hv-up .hv-btn { margin: 0; padding: 8px 16px; font-size: .95rem; }
+@media (max-width: 560px) {
+	.hv-diff { gap: 8px; }
+	.hv-diff-btn { padding: 10px 4px; }
+	.hv-diff-btn small { font-size: .7rem; }
+	.hv-intro-art { width: 120px; height: 104px; }
+	.hv-intro-art .hv-mascot { width: 88px; height: 88px; }
+}
+@media (prefers-reduced-motion: reduce) { .hv-intro-ico, .hv-clock.is-danger, .hv-timer.is-danger { animation: none; } }
+
+
+/* ---------- Giáo án cho thầy cô ---------- */
+.hv-teacher h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 1.1rem; }
+.hv-teacher p { margin: 0 0 10px; color: var(--hv-ink-2); font-size: .92rem; }
+.hv-teacher-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.hv-teacher-btns .hv-btn { margin: 0; padding: 8px 14px; font-size: .9rem; }
+.hv-teacher-hl { margin: 0 !important; font-weight: 800; }
+.hv-plans-intro p { display: flex; gap: 12px; align-items: flex-start; margin: 0; }
+.hv-plans-intro img { flex: none; }
+.hv-plans .hv-tabbar { margin: 4px 0 18px; }
+.hv-plans-panel { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 0 22px; align-items: start; }
+.hv-plans-panel[hidden] { display: none; }
+.hv-plans-subj { border-top: 5px solid var(--c); }
+.hv-plans-subj h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 1.15rem; }
+.hv-plans-subj ol { margin: 0; padding-left: 22px; }
+.hv-plans-subj li { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+.hv-plans-subj li::marker { font-weight: 800; color: var(--c); }
+.hv-plans-subj li span { flex: 1; font-weight: 700; }
+.hv-plans-subj li a { flex: none; padding: 3px 10px; border-radius: 999px; background: #eef4ff; color: var(--hv-ink) !important; font: 800 .8rem var(--hv-head); text-decoration: none !important; }
+.hv-plans-subj li a.is-word { background: #2b579a; color: #fff !important; }
+@media (max-width: 760px) { .hv-plans-panel { grid-template-columns: 1fr; } }
+
 @media print {
 	#wpadminbar, .header-wrapper, #header, .footer-wrapper, .hv-hudbar, .hv-helper, .hv-pagehead, .hv-hb-top, .hv-stepbar, .hv-stepnav, .hv-player, .hv-side, .hv-bonus-title, #top-link { display: none !important; }
 	body.hv { background: #fff; font-size: 12pt; }

@@ -99,6 +99,7 @@ function hv_sc_footer() {
 		array( 'Góc của em', hv_page_url( 'goc-cua-em' ), 'trophy' ),
 		array( 'Tài khoản phụ huynh', hv_page_url( 'tai-khoan' ), 'house' ),
 		array( 'Góc phụ huynh', hv_page_url( 'goc-phu-huynh' ), 'heart' ),
+		array( 'Giáo án cho thầy cô', hv_page_url( 'giao-an' ), 'scroll' ),
 		array( 'Tất cả bài học', get_post_type_archive_link( 'bai_hoc' ), 'book' ),
 		array( 'Câu hỏi thường gặp', hv_page_url( 'cau-hoi-thuong-gap' ), 'bulb' ),
 		array( 'Giới thiệu', hv_page_url( 'gioi-thieu' ), 'owl' ),

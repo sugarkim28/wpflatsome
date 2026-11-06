@@ -2,6 +2,17 @@
 
 Theme con của **Flatsome**: bài học theo Chương trình GDPT 2018, bám bộ sách dùng chung toàn quốc từ năm học 2026–2027 (**Kết nối tri thức với cuộc sống**, **Tiếng Anh Global Success** – QĐ 3588/QĐ-BGDĐT), kèm luyện tập và trò chơi học tập.
 
+## Bản 0.9: độ khó và đồng hồ đếm ngược, giáo án cho thầy cô, giọng đọc liền mạch hơn
+
+- **Trò chơi có 3 mức độ khó** chọn ngay ở màn chào: 🐣 Dễ · 🐯 Vừa · 🐲 Khó (nhớ theo từng trò chơi).
+  - Trò hỏi–đáp: Dễ 20 giây/câu, 3 lựa chọn, xen câu lớp dưới; Vừa 12 giây, điểm x1,5; Khó 7 giây, 3 tim, câu "⚡ Thử thách" của lớp trên, điểm x2. Câu đọc chữ/xem hình được thêm giờ.
+  - **Đồng hồ đếm ngược** dạng vòng tròn xanh → cam → đỏ, tích tắc 5 giây cuối, hết giờ tính là sai; trả lời nhanh được **điểm thưởng thời gian**. Có công tắc tắt đếm ngược cho bé nhỏ.
+  - Trò riêng: Đúng/Sai 80/60/45 giây, bóng bay, xe đua, chuột chũi nhanh dần, gõ phím 7/5/3 tim, leo núi 2/2/1 quyền trợ giúp, lật thẻ ít/nhiều cặp.
+  - Kỷ lục lưu riêng từng mức; đạt 3 sao gợi ý "Lên mức Khó", điểm thấp gợi ý mức dễ hơn. Bài luyện tập trong bài học không đổi (kiến thức là chính).
+- **Giáo án cho thầy cô** (`?giao-an=1` trên trang bài học, trang `giao-an` với `[hv_lesson_plans]`): kế hoạch bài dạy theo Công văn 2345/BGDĐT-GDTH soạn tự động từ bài học – yêu cầu cần đạt, đồ dùng, 4 hoạt động có cột GV/HS, câu hỏi luyện tập kèm đáp án và lời giải, điều chỉnh sau bài dạy. In/Lưu PDF khổ A4 hoặc **tải file Word** (`&tai=word`) để chỉnh sửa.
+  - Ô mới **Học liệu điện tử hoclieu.vn** trong trang sửa bài: dán đường dẫn bài tương ứng trên hoclieu.vn (sách điện tử NXB Giáo dục) để giáo án và trang bài học dẫn thẳng tới đó. Nội dung hoclieu.vn thuộc bản quyền NXB Giáo dục nên theme chỉ dẫn link, không sao chép.
+- **Giọng đọc AI tự nhiên hơn**: gộp các câu ngắn liền nhau để ngữ điệu liền mạch, tải trước 2 đoạn kế tiếp, ngắt nghỉ 350 ms giữa câu (Azure), Cú Bông tươi và nhẹ nhàng hơn; hỗ trợ giọng Google **Chirp 3 HD** (ví dụ `vi-VN-Chirp3-HD-Aoede`).
+
 ## Bản 0.8: giọng đọc AI tự nhiên trên mọi máy
 
 - **Giao diện → Giọng đọc AI**: chọn Microsoft Azure Speech (khuyên dùng – giọng HoaiMy nữ, NamMinh nam, gói miễn phí 500 000 ký tự/tháng) hoặc Google Cloud Text-to-Speech, dán khoá API, bấm Nghe thử.

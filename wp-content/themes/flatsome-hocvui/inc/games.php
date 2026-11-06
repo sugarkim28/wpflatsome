@@ -23,7 +23,7 @@ function hv_games() {
 		'lat-the'     => array( 'Lật thẻ tiếng Anh', '🃏', 'Lật thẻ tìm cặp hình – từ tiếng Anh, nghe phát âm chuẩn. Chủ đề thay đổi theo lớp.', array( 1, 2, 3, 4, 5 ), '#339af0', 'Tiếng Anh', 'joker' ),
 		'bong-bay'    => array( 'Bắn bóng bay', '🎈', 'Bóng bay mang đáp án trôi lên trời – chạm đúng quả trước khi bóng bay mất! Phép tính theo đúng lớp.', array( 1, 2, 3, 4, 5 ), '#ff5d73', 'Toán', 'balloon' ),
 		'cau-ca'      => array( 'Câu cá – Nghe và chọn', '🎣', 'Cú Bông đọc to, bé câu đúng con cá: lớp 1–2 luyện đọc tiếng Việt, lớp 3–5 luyện nghe tiếng Anh.', array( 1, 2, 3, 4, 5 ), '#2ea3f2', 'Tiếng Việt · Tiếng Anh', 'fishing' ),
-		'dung-sai'    => array( 'Đúng hay Sai 60 giây', '✅', 'Phản xạ siêu nhanh: phép tính và kiến thức khoa học – xã hội, bấm Đúng hay Sai trong 60 giây.', array( 1, 2, 3, 4, 5 ), '#58b847', 'Toán · Khoa học · Xã hội', 'check' ),
+		'dung-sai'    => array( 'Đúng hay Sai siêu tốc', '✅', 'Phản xạ siêu nhanh: phép tính và kiến thức khoa học – xã hội, bấm Đúng hay Sai trước khi hết giờ (45–80 giây tuỳ độ khó).', array( 1, 2, 3, 4, 5 ), '#58b847', 'Toán · Khoa học · Xã hội', 'check' ),
 		'leo-nui'     => array( 'Leo núi tri thức', '🏔️', '10 nấc câu hỏi khó dần lên đỉnh núi, có 2 quyền trợ giúp: bỏ bớt đáp án sai và hỏi Cú Bông.', array( 1, 2, 3, 4, 5 ), '#7c4dff', 'Tổng hợp', 'mountain' ),
 		'dua-xe'      => array( 'Đua xe tính nhẩm', '🏎️', 'Trả lời đúng là xe tăng tốc! Về đích trước xe của Cú Bông để giành cúp.', array( 1, 2, 3, 4, 5 ), '#ff9f1c', 'Toán', 'racecar' ),
 		'dap-chuot'   => array( 'Đập chuột chũi', '🔨', 'Chuột chũi thò lên mang số – đập thật nhanh đúng chú chuột theo yêu cầu trong 45 giây.', array( 1, 2, 3, 4, 5 ), '#8b5a2b', 'Toán', 'hammer' ),

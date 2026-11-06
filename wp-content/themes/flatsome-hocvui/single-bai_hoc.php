@@ -180,6 +180,12 @@ while ( have_posts() ) :
 					</ol>
 				</div>
 			<?php endif; ?>
+			<div class="hv-box hv-teacher">
+				<h3><?php echo hv_icon3d( 'scroll', 32 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> Dành cho thầy cô</h3>
+				<p>Giáo án bài này theo khung Công văn 2345, kèm đáp án và lời giải.</p>
+				<p class="hv-teacher-btns"><a class="hv-btn hv-btn-white" href="<?php echo esc_url( hv_lesson_plan_url( $hv_id ) ); ?>" target="_blank" rel="noopener">📄 Xem / In giáo án</a><a class="hv-btn hv-btn-white" href="<?php echo esc_url( hv_lesson_plan_url( $hv_id, true ) ); ?>">⬇️ Tải Word</a></p>
+				<p class="hv-teacher-hl"><a href="<?php echo esc_url( hv_lesson_meta( 'hoclieu' ) ? hv_lesson_meta( 'hoclieu' ) : HV_HOCLIEU_URL ); ?>" target="_blank" rel="noopener">📘 Học liệu điện tử trên hoclieu.vn ›</a></p>
+			</div>
 			<div class="hv-box">
 				<?php echo hv_sc_quests(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML tĩnh. ?>
 				<p><a class="hv-btn hv-btn-ghost" href="<?php echo esc_url( $hv_island ); ?>">🏝️ Về <?php echo esc_html( $hv_g ? $hv_g[5] : 'bản đồ' ); ?></a></p>
