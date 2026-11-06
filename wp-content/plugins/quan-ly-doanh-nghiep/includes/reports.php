@@ -114,6 +114,20 @@ function qldn_page_dashboard() {
 		echo '<li><a href="' . esc_url( qldn_url( 'care' ) ) . '">' . ( $bdays ? qldn_badge( $bdays, 'orange' ) : qldn_badge( 0, 'gray' ) ) . ' khách có sinh nhật hôm nay</a></li>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '</ul><p><a class="button button-primary" href="' . esc_url( qldn_url( 'pos' ) ) . '">Bán hàng</a> <a class="button" href="' . esc_url( qldn_url( 'customers', array( 'edit' => 'new' ) ) ) . '">Thêm khách hàng</a></p></div>';
 	}
+	if ( current_user_can( 'qldn_docs' ) ) {
+		$exp = qldn_contracts_expiring( 8 );
+		echo '<div class="qldn-col"><h2>Hợp đồng sắp hết hạn</h2>';
+		if ( ! $exp ) {
+			echo '<p>Không có hợp đồng nào hết hạn trong ' . esc_html( (int) qldn_opt( 'contract_remind' ) ) . ' ngày tới.</p>';
+		} else {
+			echo '<table class="widefat striped"><tbody>';
+			foreach ( $exp as $c ) {
+				echo '<tr><td><a href="' . esc_url( qldn_url( 'contracts', array( 'view' => $c->id ) ) ) . '">' . esc_html( $c->code ) . '</a> ' . esc_html( qldn_contract_party( $c ) ) . '</td><td>' . qldn_contract_badge( $c ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			}
+			echo '</tbody></table>';
+		}
+		echo '<p><a class="button" href="' . esc_url( qldn_url( 'quotes', array( 'edit' => 'new' ) ) ) . '">Lập báo giá</a> <a class="button" href="' . esc_url( qldn_url( 'contracts' ) ) . '">Hợp đồng</a></p></div>';
+	}
 	if ( current_user_can( 'qldn_stock' ) ) {
 		$low = $wpdb->get_results( 'SELECT * FROM ' . qldn_t( 'products' ) . " WHERE status = 'active' AND stock <= min_stock ORDER BY stock LIMIT 10" );
 		echo '<div class="qldn-col"><h2>Hàng sắp hết</h2>';

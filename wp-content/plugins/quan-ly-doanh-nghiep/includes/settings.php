@@ -24,6 +24,13 @@ function qldn_default_settings() {
 		'company_address'     => '',
 		'company_phone'       => '',
 		'company_tax_code'    => '',
+		'company_rep'         => '',
+		'company_rep_title'   => 'Giám đốc',
+		'company_bank'        => '',
+		'company_email'       => '',
+		'quote_valid_days'    => 15,
+		'quote_terms'         => "Giá đã bao gồm chi phí vận chuyển trong nội thành.\nThanh toán: chuyển khoản 100% trong vòng 7 ngày kể từ ngày giao hàng / hoàn thành dịch vụ.\nBáo giá có hiệu lực đến ngày ghi ở trên.",
+		'contract_remind'     => 30,
 		'order_prefix'        => 'HD',
 		'invoice_footer'      => 'Cảm ơn quý khách. Hẹn gặp lại!',
 		'allow_negative'      => 0,
@@ -118,11 +125,11 @@ function qldn_save_settings() {
 			$new[ $k ] = $cur[ $k ];
 			continue;
 		}
-		if ( in_array( $k, array( 'customer_groups', 'customer_sources', 'tax_brackets', 'company_address', 'invoice_footer' ), true ) ) {
+		if ( in_array( $k, array( 'customer_groups', 'customer_sources', 'tax_brackets', 'company_address', 'invoice_footer', 'quote_terms' ), true ) ) {
 			$new[ $k ] = qldn_in( $k, 'textarea', $def );
 		} elseif ( in_array( $k, array( 'point_value', 'vip_threshold', 'base_wage', 'personal_deduction', 'dependent_deduction' ), true ) ) {
 			$new[ $k ] = max( 0, qldn_in( $k, 'money', $def ) );
-		} elseif ( in_array( $k, array( 'insurance_rate', 'standard_days', 'work_hours', 'ot_rate', 'insurance_cap', 'inactive_days', 'late_grace', 'ot_min' ), true ) ) {
+		} elseif ( in_array( $k, array( 'insurance_rate', 'standard_days', 'work_hours', 'ot_rate', 'insurance_cap', 'inactive_days', 'late_grace', 'ot_min', 'quote_valid_days', 'contract_remind' ), true ) ) {
 			$new[ $k ] = max( 0, qldn_in( $k, 'qty', $def ) );
 		} elseif ( in_array( $k, array( 'shift_start', 'shift_end' ), true ) ) {
 			$v         = qldn_in( $k, 'text', $def );
@@ -157,12 +164,22 @@ function qldn_page_settings() {
 	qldn_field( 'Địa chỉ', 'company_address', $o['company_address'] );
 	qldn_field( 'Điện thoại', 'company_phone', $o['company_phone'] );
 	qldn_field( 'Mã số thuế', 'company_tax_code', $o['company_tax_code'] );
+	qldn_field( 'Người đại diện theo pháp luật', 'company_rep', $o['company_rep'], array( 'help' => 'In ở phần "Bên A / Bên bán" của hợp đồng, báo giá.' ) );
+	qldn_field( 'Chức vụ người đại diện', 'company_rep_title', $o['company_rep_title'] );
+	qldn_field( 'Tài khoản ngân hàng', 'company_bank', $o['company_bank'], array( 'class' => 'large-text', 'help' => 'VD: 0123456789 tại Ngân hàng TMCP … – Chi nhánh …' ) );
+	qldn_field( 'Email', 'company_email', $o['company_email'], array( 'type' => 'email' ) );
 	echo '</table>';
 
 	echo '<h2>Bán hàng & kho</h2><table class="form-table">';
 	qldn_field( 'Tiền tố mã đơn', 'order_prefix', $o['order_prefix'], array( 'class' => 'small-text' ) );
 	qldn_field( 'Lời chào cuối hoá đơn', 'invoice_footer', $o['invoice_footer'] );
 	qldn_field( 'Bán khi hết hàng', 'allow_negative', $o['allow_negative'], array( 'type' => 'select', 'options' => array( 0 => 'Không – chặn bán vượt tồn kho', 1 => 'Có – cho phép tồn kho âm' ) ) );
+	echo '</table>';
+
+	echo '<h2>Báo giá & hợp đồng</h2><table class="form-table">';
+	qldn_field( 'Báo giá có hiệu lực', 'quote_valid_days', $o['quote_valid_days'], array( 'type' => 'number', 'class' => 'small-text', 'help' => 'ngày kể từ ngày lập.' ) );
+	qldn_field( 'Điều khoản báo giá mặc định', 'quote_terms', $o['quote_terms'], array( 'type' => 'textarea' ) );
+	qldn_field( 'Nhắc hợp đồng sắp hết hạn trước', 'contract_remind', $o['contract_remind'], array( 'type' => 'number', 'class' => 'small-text', 'help' => 'ngày.' ) );
 	echo '</table>';
 
 	echo '<h2>Khách hàng & chăm sóc</h2><table class="form-table">';

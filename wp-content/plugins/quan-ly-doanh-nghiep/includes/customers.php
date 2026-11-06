@@ -62,6 +62,15 @@ function qldn_customer_save( $d, $id = 0 ) {
 		'staff_id' => isset( $d['staff_id'] ) ? (int) $d['staff_id'] : 0,
 		'note'     => isset( $d['note'] ) ? sanitize_textarea_field( $d['note'] ) : '',
 	);
+	// Thông tin doanh nghiệp (dùng khi lập hợp đồng, báo giá).
+	foreach ( array( 'tax_code', 'representative', 'rep_title', 'bank_account' ) as $k ) {
+		if ( isset( $d[ $k ] ) ) {
+			$row[ $k ] = sanitize_text_field( $d[ $k ] );
+		}
+	}
+	if ( isset( $d['ctype'] ) ) {
+		$row['ctype'] = 'company' === $d['ctype'] ? 'company' : 'person';
+	}
 	if ( '' === $row['name'] ) {
 		return new WP_Error( 'qldn_name', 'Chưa nhập tên khách hàng.' );
 	}
@@ -199,6 +208,11 @@ function qldn_handle_customer() {
 			'phone'    => qldn_in( 'phone' ),
 			'email'    => qldn_in( 'email', 'email' ),
 			'address'  => qldn_in( 'address' ),
+			'ctype'    => qldn_in( 'ctype', 'key', 'person' ),
+			'tax_code' => qldn_in( 'tax_code' ),
+			'representative' => qldn_in( 'representative' ),
+			'rep_title'      => qldn_in( 'rep_title' ),
+			'bank_account'   => qldn_in( 'bank_account' ),
 			'grp'      => qldn_in( 'grp' ),
 			'birthday' => qldn_in( 'birthday', 'date' ),
 			'source'   => qldn_in( 'source' ),
@@ -346,12 +360,17 @@ function qldn_customer_form( $c ) {
 	qldn_print_notices();
 	qldn_form_open( 'customer' );
 	echo '<input type="hidden" name="id" value="' . esc_attr( $c ? $c->id : 0 ) . '"><table class="form-table">';
-	qldn_field( 'Tên khách hàng', 'name', $c ? $c->name : '', array( 'required' => true ) );
+	qldn_field( 'Loại khách', 'ctype', $c ? $c->ctype : 'person', array( 'type' => 'select', 'options' => array( 'person' => 'Cá nhân', 'company' => 'Doanh nghiệp / tổ chức' ) ) );
+	qldn_field( 'Tên khách hàng', 'name', $c ? $c->name : '', array( 'required' => true, 'help' => 'Doanh nghiệp: ghi đúng tên trên Giấy chứng nhận đăng ký doanh nghiệp.' ) );
 	qldn_field( 'Điện thoại', 'phone', $c ? $c->phone : '', array( 'type' => 'tel' ) );
 	qldn_field( 'Email', 'email', $c ? $c->email : '', array( 'type' => 'email' ) );
 	qldn_field( 'Địa chỉ', 'address', $c ? $c->address : '', array( 'class' => 'large-text' ) );
 	qldn_field( 'Nhóm', 'grp', $c ? $c->grp : '', array( 'type' => 'select', 'options' => $groups ) );
 	qldn_field( 'Ngày sinh', 'birthday', $c ? $c->birthday : '', array( 'type' => 'date', 'class' => '' ) );
+	qldn_field( 'Mã số thuế', 'tax_code', $c ? $c->tax_code : '' );
+	qldn_field( 'Người đại diện', 'representative', $c ? $c->representative : '', array( 'help' => 'Doanh nghiệp: người ký hợp đồng.' ) );
+	qldn_field( 'Chức vụ', 'rep_title', $c ? $c->rep_title : '' );
+	qldn_field( 'Tài khoản ngân hàng', 'bank_account', $c ? $c->bank_account : '', array( 'class' => 'large-text' ) );
 	qldn_field( 'Nguồn', 'source', $c ? $c->source : '', array( 'type' => 'select', 'options' => $sources ) );
 	qldn_field( 'Nhân viên phụ trách', 'staff_id', $c ? $c->staff_id : 0, array( 'type' => 'select', 'options' => array( 0 => '—' ) + qldn_employee_options() ) );
 	qldn_field( 'Ghi chú', 'note', $c ? $c->note : '', array( 'type' => 'textarea' ) );
@@ -430,7 +449,14 @@ function qldn_customer_view( $c ) {
 		}
 		echo '</li>';
 	}
-	echo '</ul></div></div></div>';
+	echo '</ul></div></div>';
+	echo '<div class="qldn-cols"><div class="qldn-col">';
+	qldn_party_contracts_box( 'customer', $c->id );
+	echo '</div><div class="qldn-col">';
+	if ( current_user_can( 'qldn_docs' ) ) {
+		qldn_documents_box( 'customer', $c->id );
+	}
+	echo '</div></div></div>';
 }
 
 /**

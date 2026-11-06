@@ -44,6 +44,11 @@ function qldn_employee_save( $d, $id = 0 ) {
 		'commission_rate'  => isset( $d['commission_rate'] ) ? min( 100, max( 0, (float) $d['commission_rate'] ) ) : 0,
 		'dependents'       => isset( $d['dependents'] ) ? min( 20, max( 0, (int) $d['dependents'] ) ) : 0,
 		'id_number'        => isset( $d['id_number'] ) ? sanitize_text_field( $d['id_number'] ) : '',
+		'id_issue_date'    => ! empty( $d['id_issue_date'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $d['id_issue_date'] ) ? $d['id_issue_date'] : null,
+		'id_issue_place'   => isset( $d['id_issue_place'] ) ? sanitize_text_field( $d['id_issue_place'] ) : '',
+		'birthday'         => ! empty( $d['birthday'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $d['birthday'] ) ? $d['birthday'] : null,
+		'gender'           => isset( $d['gender'] ) && in_array( $d['gender'], array( 'Nam', 'Nữ' ), true ) ? $d['gender'] : '',
+		'address'          => isset( $d['address'] ) ? sanitize_text_field( $d['address'] ) : '',
 		'tax_code'         => isset( $d['tax_code'] ) ? sanitize_text_field( $d['tax_code'] ) : '',
 		'bank_account'     => isset( $d['bank_account'] ) ? sanitize_text_field( $d['bank_account'] ) : '',
 		'start_date'       => ! empty( $d['start_date'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $d['start_date'] ) ? $d['start_date'] : null,
@@ -102,6 +107,11 @@ function qldn_handle_employee() {
 			'commission_rate'  => qldn_in( 'commission_rate', 'qty', 0 ),
 			'dependents'       => qldn_in( 'dependents', 'int', 0 ),
 			'id_number'        => qldn_in( 'id_number' ),
+			'id_issue_date'    => qldn_in( 'id_issue_date', 'date' ),
+			'id_issue_place'   => qldn_in( 'id_issue_place' ),
+			'birthday'         => qldn_in( 'birthday', 'date' ),
+			'gender'           => qldn_in( 'gender' ),
+			'address'          => qldn_in( 'address' ),
 			'tax_code'         => qldn_in( 'tax_code' ),
 			'bank_account'     => qldn_in( 'bank_account' ),
 			'start_date'       => qldn_in( 'start_date', 'date' ),
@@ -190,7 +200,12 @@ function qldn_employee_form( $e ) {
 	qldn_field( 'Bộ phận', 'department', $e ? $e->department : '' );
 	qldn_field( 'Chức vụ', 'position', $e ? $e->position : '' );
 	qldn_field( 'Ngày vào làm', 'start_date', $e ? $e->start_date : '', array( 'type' => 'date', 'class' => '' ) );
+	qldn_field( 'Ngày sinh', 'birthday', $e ? $e->birthday : '', array( 'type' => 'date', 'class' => '' ) );
+	qldn_field( 'Giới tính', 'gender', $e ? $e->gender : '', array( 'type' => 'select', 'options' => array( '' => '—', 'Nam' => 'Nam', 'Nữ' => 'Nữ' ) ) );
+	qldn_field( 'Nơi cư trú', 'address', $e ? $e->address : '', array( 'class' => 'large-text' ) );
 	qldn_field( 'Số CCCD', 'id_number', $e ? $e->id_number : '' );
+	qldn_field( 'Ngày cấp CCCD', 'id_issue_date', $e ? $e->id_issue_date : '', array( 'type' => 'date', 'class' => '' ) );
+	qldn_field( 'Nơi cấp CCCD', 'id_issue_place', $e ? $e->id_issue_place : '', array( 'help' => 'VD: Cục Cảnh sát quản lý hành chính về trật tự xã hội.' ) );
 	qldn_field( 'Mã số thuế cá nhân', 'tax_code', $e ? $e->tax_code : '' );
 	qldn_field( 'Tài khoản ngân hàng', 'bank_account', $e ? $e->bank_account : '', array( 'help' => 'Số tài khoản – ngân hàng (dùng khi chuyển lương).' ) );
 	qldn_field( 'Mã chấm công', 'device_pin', $e ? $e->device_pin : '', array( 'class' => 'small-text', 'help' => 'Số ID (User ID / Mã NV) của người này trên máy chấm công vân tay, thẻ, khuôn mặt.' ) );
@@ -206,5 +221,12 @@ function qldn_employee_form( $e ) {
 	qldn_field( 'Ghi chú', 'note', $e ? $e->note : '', array( 'type' => 'textarea' ) );
 	echo '</table>';
 	submit_button( $e ? 'Cập nhật' : 'Thêm nhân viên' );
-	echo '</form></div>';
+	echo '</form>';
+	if ( $e ) {
+		qldn_party_contracts_box( 'employee', $e->id );
+		if ( current_user_can( 'qldn_docs' ) ) {
+			qldn_documents_box( 'employee', $e->id );
+		}
+	}
+	echo '</div>';
 }

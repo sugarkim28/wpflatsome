@@ -16,6 +16,7 @@ function qldn_caps() {
 	return array(
 		'qldn_access'   => 'Vào phần mềm (xem tổng quan, tự chấm công)',
 		'qldn_sales'    => 'Bán hàng, khách hàng, chăm sóc khách hàng',
+		'qldn_docs'     => 'Báo giá, hợp đồng, soạn hồ sơ (hợp đồng lao động cần thêm quyền nhân sự)',
 		'qldn_stock'    => 'Sản phẩm, nhập/xuất/kiểm kho',
 		'qldn_hr'       => 'Nhân viên, chấm công, tính lương',
 		'qldn_reports'  => 'Báo cáo doanh thu, lợi nhuận',
@@ -31,9 +32,9 @@ function qldn_caps() {
 function qldn_roles() {
 	return array(
 		'qldn_manager'    => array( 'Quản lý cửa hàng', array_keys( qldn_caps() ) ),
-		'qldn_cashier'    => array( 'Nhân viên bán hàng', array( 'qldn_access', 'qldn_sales' ) ),
+		'qldn_cashier'    => array( 'Nhân viên bán hàng', array( 'qldn_access', 'qldn_sales', 'qldn_docs' ) ),
 		'qldn_storekeeper' => array( 'Thủ kho', array( 'qldn_access', 'qldn_stock' ) ),
-		'qldn_accountant' => array( 'Kế toán - nhân sự', array( 'qldn_access', 'qldn_hr', 'qldn_reports' ) ),
+		'qldn_accountant' => array( 'Kế toán - nhân sự', array( 'qldn_access', 'qldn_hr', 'qldn_reports', 'qldn_docs' ) ),
 		'qldn_staff'      => array( 'Nhân viên (chỉ chấm công)', array( 'qldn_access' ) ),
 	);
 }
@@ -93,6 +94,11 @@ function qldn_install_tables() {
 		email varchar(100) NOT NULL DEFAULT '',
 		address varchar(255) NOT NULL DEFAULT '',
 		grp varchar(30) NOT NULL DEFAULT '',
+		ctype varchar(10) NOT NULL DEFAULT 'person',
+		tax_code varchar(20) NOT NULL DEFAULT '',
+		representative varchar(100) NOT NULL DEFAULT '',
+		rep_title varchar(100) NOT NULL DEFAULT '',
+		bank_account varchar(150) NOT NULL DEFAULT '',
 		birthday date NULL,
 		source varchar(100) NOT NULL DEFAULT '',
 		staff_id bigint(20) unsigned NOT NULL DEFAULT 0,
@@ -176,6 +182,11 @@ function qldn_install_tables() {
 		commission_rate decimal(5,2) NOT NULL DEFAULT 0,
 		dependents tinyint(3) unsigned NOT NULL DEFAULT 0,
 		id_number varchar(20) NOT NULL DEFAULT '',
+		id_issue_date date NULL,
+		id_issue_place varchar(150) NOT NULL DEFAULT '',
+		birthday date NULL,
+		gender varchar(10) NOT NULL DEFAULT '',
+		address varchar(255) NOT NULL DEFAULT '',
 		tax_code varchar(20) NOT NULL DEFAULT '',
 		bank_account varchar(100) NOT NULL DEFAULT '',
 		start_date date NULL,
@@ -250,6 +261,93 @@ function qldn_install_tables() {
 		KEY punch_time (punch_time)
 	) $c;";
 
+	$sql[] = "CREATE TABLE {$p}quotes (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		code varchar(32) NOT NULL DEFAULT '',
+		customer_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		staff_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		title varchar(255) NOT NULL DEFAULT '',
+		subtotal bigint(20) NOT NULL DEFAULT 0,
+		discount bigint(20) NOT NULL DEFAULT 0,
+		vat_rate decimal(5,2) NOT NULL DEFAULT 0,
+		vat bigint(20) NOT NULL DEFAULT 0,
+		total bigint(20) NOT NULL DEFAULT 0,
+		valid_until date NULL,
+		status varchar(20) NOT NULL DEFAULT 'draft',
+		terms text NULL,
+		note text NULL,
+		order_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+		PRIMARY KEY  (id),
+		KEY customer_id (customer_id),
+		KEY status (status)
+	) $c;";
+
+	$sql[] = "CREATE TABLE {$p}quote_items (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		quote_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		product_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		name varchar(255) NOT NULL DEFAULT '',
+		unit varchar(30) NOT NULL DEFAULT '',
+		qty decimal(14,2) NOT NULL DEFAULT 0,
+		price bigint(20) NOT NULL DEFAULT 0,
+		line_total bigint(20) NOT NULL DEFAULT 0,
+		PRIMARY KEY  (id),
+		KEY quote_id (quote_id)
+	) $c;";
+
+	$sql[] = "CREATE TABLE {$p}contracts (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		code varchar(50) NOT NULL DEFAULT '',
+		type varchar(20) NOT NULL DEFAULT 'service',
+		party_type varchar(10) NOT NULL DEFAULT 'customer',
+		party_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		title varchar(255) NOT NULL DEFAULT '',
+		value bigint(20) NOT NULL DEFAULT 0,
+		paid bigint(20) NOT NULL DEFAULT 0,
+		sign_date date NULL,
+		start_date date NULL,
+		end_date date NULL,
+		status varchar(20) NOT NULL DEFAULT 'draft',
+		quote_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		scope text NULL,
+		note text NULL,
+		user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+		PRIMARY KEY  (id),
+		KEY party (party_type,party_id),
+		KEY status (status),
+		KEY end_date (end_date)
+	) $c;";
+
+	$sql[] = "CREATE TABLE {$p}templates (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		name varchar(255) NOT NULL DEFAULT '',
+		context varchar(20) NOT NULL DEFAULT 'customer',
+		kind varchar(20) NOT NULL DEFAULT '',
+		content longtext NULL,
+		slug varchar(50) NOT NULL DEFAULT '',
+		created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+		PRIMARY KEY  (id),
+		KEY context (context)
+	) $c;";
+
+	$sql[] = "CREATE TABLE {$p}documents (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		code varchar(32) NOT NULL DEFAULT '',
+		title varchar(255) NOT NULL DEFAULT '',
+		template_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		context varchar(20) NOT NULL DEFAULT '',
+		object_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		content longtext NULL,
+		user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+		updated_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+		PRIMARY KEY  (id),
+		KEY object (context,object_id)
+	) $c;";
+
 	foreach ( $sql as $q ) {
 		dbDelta( $q );
 	}
@@ -279,6 +377,9 @@ function qldn_activate() {
 	qldn_install_roles();
 	update_option( 'qldn_db_version', QLDN_DB_VERSION );
 	update_option( 'qldn_flush_rewrite', 1 ); // Đường dẫn /iclock/ cho máy chấm công.
+	if ( function_exists( 'qldn_seed_templates' ) ) {
+		qldn_seed_templates();
+	}
 }
 
 /**

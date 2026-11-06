@@ -10,13 +10,16 @@ Gồm các phân hệ: **Bán hàng – Quản lý kho – Khách hàng & chăm 
 3. Vào **Quản lý DN → Cài đặt**: nhập tên, địa chỉ, điện thoại doanh nghiệp (in trên hoá đơn), kiểm tra tham số lương.
 4. Thêm **Nhân viên**, **Sản phẩm** (có thể nhập tồn đầu kỳ), rồi bắt đầu bán hàng.
 
-Yêu cầu: WordPress 6.0+, PHP 7.4+ (có `mbstring`), MySQL/MariaDB. Dữ liệu lưu ở 10 bảng riêng `wp_qldn_*`, không làm nặng bảng bài viết.
+Yêu cầu: WordPress 6.0+, PHP 7.4+ (có `mbstring`), MySQL/MariaDB. Dữ liệu lưu ở 15 bảng riêng `wp_qldn_*`, không làm nặng bảng bài viết.
 
 ## Các phân hệ
 
 | Phân hệ | Chức năng |
 |---|---|
 | **Bán hàng** | Màn hình bán hàng: quét mã vạch / gõ tên để thêm hàng, sửa số lượng, giá, giảm giá; chọn khách hoặc nhập SĐT để tự tạo khách mới; tính tiền thừa / ghi công nợ; tiền mặt, chuyển khoản, thẻ; phím **F9** thanh toán; in hoá đơn khổ 80mm. Danh sách đơn lọc theo ngày, nhân viên, trạng thái, còn nợ; **thu nợ**; **huỷ đơn** (hàng tự nhập lại kho, trừ doanh số khách); xuất CSV. |
+| **Báo giá** | Lập báo giá từ hàng trong kho hoặc dịch vụ tự nhập, giảm giá, thuế GTGT (0/5/8/10%), hiệu lực, điều khoản; trạng thái nháp / đã gửi / đồng ý / từ chối / hết hiệu lực; in, tải Word; chuyển thành **đơn bán hàng** (trừ kho, ghi công nợ) hoặc **hợp đồng**. |
+| **Hợp đồng** | Mua bán hàng hoá, cung cấp dịch vụ (với khách hàng), lao động (với nhân viên – cần quyền nhân sự). Số hợp đồng tự đánh dạng `01/2026/HĐDV`, giá trị, đã thanh toán / còn phải thu, ngày ký, hiệu lực; **nhắc hợp đồng sắp hết hạn** ở Tổng quan; kiểm tra hợp đồng lao động xác định thời hạn không quá 36 tháng; lập hợp đồng là có sẵn văn bản từ mẫu. |
+| **Soạn hồ sơ** | Thư viện mẫu với trường trộn `{{kh_ten}}`, `{{hd_gia_tri_chu}}`, `{{bang_hang}}`… tự điền thông tin công ty, khách hàng (mã số thuế, người đại diện), nhân viên (ngày sinh, CCCD, lương), **số tiền bằng chữ**; trường thiếu dữ liệu để "……" cho điền tay; sửa văn bản trước khi **in / lưu PDF / tải Word**. Có sẵn 5 mẫu: thư báo giá, HĐ mua bán hàng hoá, HĐ dịch vụ, HĐ lao động, biên bản thanh lý. |
 | **Kho** | Sản phẩm (mã tự sinh hoặc mã vạch, nhóm hàng, đơn vị, giá vốn, giá bán, tồn tối thiểu); **phiếu nhập** (giá vốn tính lại theo bình quân gia quyền), **phiếu xuất** (hỏng, dùng nội bộ…), **kiểm kê** (nhập số đếm thực tế, hệ thống tự điều chỉnh); **thẻ kho** – lịch sử mọi biến động theo từng mặt hàng; cảnh báo sắp hết hàng; giá trị tồn kho; xuất CSV. Mặc định chặn bán vượt tồn (đổi được trong Cài đặt). |
 | **Khách hàng** | Hồ sơ (mã KH, SĐT, nhóm, sinh nhật, nguồn, nhân viên phụ trách), tổng mua, số đơn, **điểm tích luỹ**, **công nợ**, lịch sử mua; tự lên nhóm VIP khi tổng mua đạt ngưỡng; xuất CSV. |
 | **Chăm sóc KH** | Ghi nhật ký chăm sóc (gọi điện, Zalo, gặp, email, khiếu nại) kèm kết quả và **lịch hẹn chăm sóc tiếp**; trang việc cần làm: lịch hẹn quá hạn / hôm nay / 7 ngày tới, **sinh nhật trong tháng**, **khách lâu không quay lại**, khách đang nợ. |
@@ -97,6 +100,10 @@ Các hàm nghiệp vụ dùng lại được: `qldn_order_create()`, `qldn_stock
 | Nhập file 1 năm (2,7 MB) | ~40 giây, tự chia nhiều bước dưới 15 giây, không bị hết thời gian |
 
 Đề xuất máy chủ cho 100–300 nhân viên: VPS hoặc hosting WordPress 2 GB RAM, PHP 8.1+, MySQL / MariaDB, bật sao lưu hằng ngày, `upload_max_filesize` ≥ 8 MB.
+
+## Mẫu văn bản
+
+Mẫu gốc (Bộ luật Dân sự 2015, Luật Thương mại 2005, Bộ luật Lao động 2019, Nghị định 145/2020/NĐ-CP) là **bản tham khảo** – cần luật sư / pháp chế rà soát, bổ sung các chỗ "……" (tỷ lệ phạt, thời hạn thanh toán, bảo hành…) cho từng giao dịch. Sửa hoặc thêm mẫu ở **Soạn hồ sơ → Mẫu văn bản** (quyền Cài đặt); nút *Thêm lại các mẫu gốc đã xoá* khôi phục mẫu gốc. File Word tải về là định dạng `.doc` (HTML) – Word, WPS, LibreOffice mở và sửa được, lưu lại thành `.docx` nếu cần.
 
 ## Lưu ý
 

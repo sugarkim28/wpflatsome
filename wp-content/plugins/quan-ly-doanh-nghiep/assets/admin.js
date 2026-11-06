@@ -5,7 +5,7 @@
 	'use strict';
 
 	var cfg = window.QLDN || {};
-	var seq = 0;
+	var seq = 1000; // Lớn hơn số dòng có sẵn khi sửa báo giá.
 
 	function num( v ) {
 		return parseInt( String( v || '' ).replace( /[^\d-]/g, '' ), 10 ) || 0;
@@ -154,11 +154,18 @@
 				if ( lt ) {
 					lt.textContent = money( line );
 				}
-				tr.classList.toggle( 'qldn-over', mode !== 'in' && ! cfg.allowNegative && q > stock );
+				tr.classList.toggle( 'qldn-over', ( mode === 'sale' || mode === 'out' ) && ! cfg.allowNegative && q > stock );
 			} );
 			var s = form.querySelector( '.qldn-sum' );
 			if ( s ) {
 				s.textContent = money( sum );
+			}
+			if ( mode === 'quote' ) {
+				var qd = Math.min( num( form.querySelector( '.qldn-discount' ).value ), sum );
+				var vat = Math.round( ( sum - qd ) * ( parseFloat( form.querySelector( '.qldn-vat-rate' ).value ) || 0 ) / 100 );
+				form.querySelector( '.qldn-subtotal' ).textContent = money( sum );
+				form.querySelector( '.qldn-vat' ).textContent = money( vat );
+				form.querySelector( '.qldn-total' ).textContent = money( sum - qd + vat );
 			}
 			if ( mode === 'sale' ) {
 				var discount = Math.min( num( form.querySelector( '.qldn-discount' ).value ), sum );
@@ -174,7 +181,32 @@
 			}
 		}
 
+		// Báo giá: dòng có tên / đơn vị sửa được, thêm được dòng dịch vụ tự nhập (không có trong kho).
+		function addQuote( p ) {
+			var i = seq++;
+			var tr = document.createElement( 'tr' );
+			tr.setAttribute( 'data-id', p ? p.id : 'f' + i );
+			tr.innerHTML = '<td><input type="hidden" name="items[' + i + '][product_id]" value="' + ( p ? esc( p.id ) : 0 ) + '"><input type="text" class="regular-text" name="items[' + i + '][name]" placeholder="Tên hàng hoá / dịch vụ" value="' + ( p ? esc( p.name ) : '' ) + '"></td>' +
+				'<td><input type="text" class="small-text" name="items[' + i + '][unit]" placeholder="gói" value="' + ( p ? esc( p.unit ) : '' ) + '"></td>' +
+				'<td class="num"><input type="text" inputmode="decimal" class="small-text qldn-q" name="items[' + i + '][qty]" value="1"></td>' +
+				'<td class="num"><input type="text" inputmode="numeric" class="qldn-money qldn-p" name="items[' + i + '][price]" value="' + ( p ? money( p.sale_price ) : '' ) + '"></td><td class="num qldn-lt"></td>' +
+				'<td><button type="button" class="button-link qldn-del" aria-label="Xoá dòng">✕</button></td>';
+			tbody.appendChild( tr );
+			recalc();
+			if ( ! p ) {
+				tr.querySelector( 'input[type=text]' ).focus();
+			}
+		}
+		var addLine = form.querySelector( '.qldn-add-line' );
+		if ( addLine ) {
+			addLine.addEventListener( 'click', function () { addQuote( null ); } );
+		}
+
 		function add( p ) {
+			if ( mode === 'quote' ) {
+				addQuote( p );
+				return;
+			}
 			var exist = tbody.querySelector( 'tr[data-id="' + p.id + '"]' );
 			if ( exist ) {
 				var q = exist.querySelector( '.qldn-q' );
@@ -206,7 +238,7 @@
 		if ( search ) {
 			picker( search, 'qldn_products', function ( p ) {
 				return '<strong>' + esc( p.name ) + '</strong> <small>' + esc( p.sku ) + '</small><span>' +
-					( mode === 'in' ? 'Tồn ' + esc( fmtQty( p.stock ) ) : money( p.sale_price ) + ' · tồn ' + esc( fmtQty( p.stock ) ) ) + '</span>';
+					( mode === 'in' || mode === 'quote' ? 'Tồn ' + esc( fmtQty( p.stock ) ) + ( mode === 'quote' ? ' · ' + money( p.sale_price ) : '' ) : money( p.sale_price ) + ' · tồn ' + esc( fmtQty( p.stock ) ) ) + '</span>';
 			}, add );
 		}
 
@@ -315,3 +347,13 @@
 		} );
 	} );
 }() );
+
+// Bấm vào trường trộn {{...}} để chép.
+document.addEventListener( 'click', function ( e ) {
+	var el = e.target.closest ? e.target.closest( '.qldn-fields code' ) : null;
+	if ( el && navigator.clipboard ) {
+		navigator.clipboard.writeText( el.textContent );
+		el.style.background = '#edfaef';
+		setTimeout( function () { el.style.background = ''; }, 600 );
+	}
+} );
