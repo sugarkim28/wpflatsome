@@ -105,3 +105,9 @@ Sau khi đăng: kiểm tra bằng [Rich Results Test](https://search.google.com/
   }, 10, 2 );
   ```
 - Theme cha Flatsome là theme thương mại nên không đưa vào repo (xem `.gitignore`).
+
+---
+
+## Tin Học 119 (tinhoc119.com)
+
+Plugin `wp-content/plugins/tinhoc119-core` + theme con `wp-content/themes/flatsome-tinhoc119`. Tài liệu: [docs/tinhoc119/README.md](docs/tinhoc119/README.md). Kiểm thử: `php tests/run.php`.
