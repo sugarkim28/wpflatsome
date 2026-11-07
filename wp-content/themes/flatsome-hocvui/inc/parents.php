@@ -137,6 +137,7 @@ function hv_progress_clean( $p ) {
 		'lastDay' => $day( isset( $p['lastDay'] ) ? $p['lastDay'] : '' ),
 		'today'   => array(),
 		'done'    => array(),
+		'exam'    => array(),
 	);
 	$t = isset( $p['today'] ) && is_array( $p['today'] ) ? $p['today'] : array();
 	$out['today'] = array(
@@ -150,6 +151,15 @@ function hv_progress_clean( $p ) {
 			$k = sanitize_title( (string) $k );
 			if ( '' !== $k ) {
 				$out['done'][ $k ] = $num( $v, 3 );
+			}
+		}
+	}
+	// Luyện thi: điểm cao nhất (%) của từng vòng, khoá dạng g3-toan-r2.
+	if ( isset( $p['exam'] ) && is_array( $p['exam'] ) ) {
+		foreach ( array_slice( $p['exam'], 0, 150, true ) as $k => $v ) {
+			$k = sanitize_key( (string) $k );
+			if ( '' !== $k ) {
+				$out['exam'][ $k ] = $num( $v, 100 );
 			}
 		}
 	}
@@ -173,6 +183,9 @@ function hv_progress_merge( $old, $new ) {
 	}
 	foreach ( $old['done'] as $k => $v ) {
 		$out['done'][ $k ] = max( $v, isset( $new['done'][ $k ] ) ? $new['done'][ $k ] : 0 );
+	}
+	foreach ( $old['exam'] as $k => $v ) {
+		$out['exam'][ $k ] = max( $v, isset( $new['exam'][ $k ] ) ? $new['exam'][ $k ] : 0 );
 	}
 	// Ngày học gần nhất và chuỗi ngày: lấy bên mới hơn.
 	if ( strtotime( $old['lastDay'] ) > strtotime( $new['lastDay'] ) ) {
@@ -198,6 +211,7 @@ function hv_progress_merge( $old, $new ) {
 function hv_kid_public( $kid ) {
 	$p         = hv_progress_clean( isset( $kid['p'] ) ? $kid['p'] : array() );
 	$p['done'] = (object) $p['done'];
+	$p['exam'] = (object) $p['exam'];
 	return array(
 		'id'     => $kid['id'],
 		'name'   => $kid['name'],
@@ -690,6 +704,21 @@ function hv_parent_kid_card( $kid ) {
 		$h .= implode( ', ', $links ) . '</p>';
 	}
 	$h .= '</details>';
+	if ( $r['p']['exam'] ) {
+		$subj   = array( 'toan' => 'Toán', 'tieng-viet' => 'Tiếng Việt', 'tieng-anh' => 'Tiếng Anh', 'tong-hop' => 'Tổng hợp' );
+		$rounds = array( 'Khởi động', 'Cấp trường', 'Cấp huyện', 'Cấp tỉnh', 'Cấp quốc gia' );
+		$h     .= '<details class="hv-kid-more"><summary>Kết quả luyện thi</summary><ul class="hv-kid-exam">';
+		$list   = $r['p']['exam'];
+		ksort( $list );
+		foreach ( $list as $k => $pct ) {
+			if ( ! preg_match( '/^g(\d)-([a-z-]+)-r(\d)$/', $k, $m ) || ! isset( $subj[ $m[2] ], $rounds[ $m[3] ] ) ) {
+				continue;
+			}
+			$medal = $pct >= 90 ? '🥇' : ( $pct >= 75 ? '🥈' : ( $pct >= 60 ? '🥉' : '' ) );
+			$h    .= '<li><span>' . esc_html( $subj[ $m[2] ] . ' ' . $m[1] . ' · ' . $rounds[ $m[3] ] ) . '</span><b>' . esc_html( $medal . ' ' . $pct . '%' ) . '</b></li>';
+		}
+		$h .= '</ul></details>';
+	}
 	$h .= '<details class="hv-kid-edit"><summary>Sửa thông tin</summary><form class="hv-form" method="post">' . $nonce
 		. '<input type="hidden" name="hv_action" value="kid_edit"><input type="hidden" name="kid" value="' . esc_attr( $kid['id'] ) . '">'
 		. '<div class="hv-form-row"><label>Tên bé<input type="text" name="name" value="' . esc_attr( $kid['name'] ) . '" maxlength="24" required></label><label>Lớp' . hv_grade_select( $kid['grade'] ) . '</label></div>'

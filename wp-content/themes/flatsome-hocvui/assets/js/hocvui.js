@@ -1613,6 +1613,7 @@
 			}
 			ruleHits = 0;
 			var rb = self.body.querySelector('.hv-rule');
+			if (!rb) { return; } // Hết giờ ngay sau cú đập thứ 3: màn kết quả đã thay khung chơi.
 			rb.textContent = rule.text;
 			rb.classList.remove('is-new');
 			void rb.offsetWidth;
@@ -2368,9 +2369,372 @@
 		}
 	};
 
+	/* ---------- Phòng luyện thi: 5 vòng, đồng hồ tổng, chuyển câu, đánh dấu, nộp bài, xem lại, giấy chứng nhận ---------- */
+	var ROUNDS = [
+		{ name: 'Khởi động', n: 10, min: 10, hard: 0, ico: 'flag' },
+		{ name: 'Cấp trường', n: 15, min: 15, hard: 0.1, ico: 'house' },
+		{ name: 'Cấp huyện', n: 20, min: 20, hard: 0.2, ico: 'map' },
+		{ name: 'Cấp tỉnh', n: 25, min: 25, hard: 0.3, ico: 'medal' },
+		{ name: 'Cấp quốc gia', n: 30, min: 30, hard: 0.4, ico: 'crown' }
+	];
+	var EX_SUBJ = {
+		'toan': { name: 'Toán', ico: 'abacus', grades: [1, 2, 3, 4, 5], c: '#ff5d73' },
+		'tieng-viet': { name: 'Tiếng Việt', ico: 'book', grades: [1, 2, 3, 4, 5], c: '#ff9f1c' },
+		'tieng-anh': { name: 'Tiếng Anh', ico: 'abc', grades: [3, 4, 5], c: '#2ea3f2' },
+		'tong-hop': { name: 'Kiến thức tổng hợp', ico: 'globe', grades: [1, 2, 3, 4, 5], c: '#58b847' }
+	};
+	// Môn của bài học được gộp vào "Kiến thức tổng hợp".
+	var EX_MIX = ['tu-nhien-xa-hoi', 'khoa-hoc', 'lich-su-dia-li', 'dao-duc', 'tin-hoc-cong-nghe', 'tin-hoc', 'may-tinh'];
+	var EX_PASS = 70;
+	var MEDALS = [[90, 'Huy chương Vàng', 'trophy', 3], [75, 'Huy chương Bạc', 'medal', 2], [60, 'Huy chương Đồng', 'medal', 1]];
+	function exKey(g, s, r) { return 'g' + g + '-' + s + '-r' + r; }
+	function exBest() { var e = store.get('exam', {}); return e && !Array.isArray(e) ? e : {}; }
+	function exUnlocked(g, s, r) { return r === 0 || (exBest()[exKey(g, s, r - 1)] || 0) >= EX_PASS; }
+	function medalOf(pct) { for (var i = 0; i < MEDALS.length; i++) { if (pct >= MEDALS[i][0]) { return MEDALS[i]; } } return null; }
+	function normAns(v) { return String(v === null || v === undefined ? '' : v).replace(/\s+/g, '').replace(/\./g, '').toLowerCase(); }
+	function mmss(s) { s = Math.max(0, Math.ceil(s)); return (s >= 600 ? '' : '0') + Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+	// Dạng câu riêng cho đề thi: so sánh, tìm x, dãy số.
+	function cmpQ(g) {
+		var top = [0, 10, 100, 1000, 100000, 1000000][g] || 100;
+		var a = rnd(0, top), b = Math.random() < 0.2 ? a : rnd(0, top);
+		var A = num(a), B = num(b);
+		if (g >= 2 && Math.random() < 0.5) { var x = rnd(0, Math.floor(a / 2)); A = num(a - x) + ' + ' + num(x); }
+		return { q: A + ' … ' + B, say: 'Điền dấu thích hợp vào chỗ chấm: ' + A + ' chấm chấm ' + B, note: 'Chọn dấu thích hợp điền vào chỗ chấm', o: { choices: ['>', '<', '='], a: a > b ? '>' : a < b ? '<' : '=' }, big: true };
+	}
+	function xQ(g) {
+		var a, b, t = rnd(0, 1);
+		if (g <= 2) { b = rnd(2, 40); a = rnd(5, 50); return t ? { q: 'Tìm x: x + ' + b + ' = ' + (a + b), a: a } : { q: 'Tìm x: x − ' + b + ' = ' + a, a: a + b }; }
+		if (g === 3) { b = rnd(2, 9); a = rnd(2, 10); return t ? { q: 'Tìm x: x × ' + b + ' = ' + (a * b), a: a } : { q: 'Tìm x: x : ' + b + ' = ' + a, a: a * b }; }
+		b = rnd(12, 99) * (g === 5 ? 10 : 1); a = rnd(100, 999) * (g === 5 ? 10 : 1);
+		return t ? { q: 'Tìm x: x + ' + num(b) + ' = ' + num(a + b), a: a } : { q: 'Tìm x: x × ' + (b % 9 + 2) + ' = ' + num(a * (b % 9 + 2)), a: a };
+	}
+	function seqQ(g) {
+		var st = pick([[1, 2, 5, 10], [2, 3, 5, 10, 11], [3, 4, 6, 7, 9, 25], [5, 9, 12, 15, 25, 50], [11, 15, 25, 99, 125, 250]][g - 1] || [2]);
+		var a = rnd(0, g * 10), n = 4, arr = [];
+		for (var i = 0; i < n; i++) { arr.push(a + i * st); }
+		return { q: 'Viết số tiếp theo của dãy: ' + arr.map(num).join(', ') + ', …', a: a + n * st };
+	}
+	function enQ(g) {
+		var pool = [];
+		(EN_TOPICS[g] || EN_TOPICS[3]).forEach(function (t) { pool = pool.concat(EN[t]); });
+		var w = pick(pool);
+		var others = shuffle(pool.filter(function (o) { return o[1] !== w[1] && o[0] !== w[0]; })).slice(0, 3);
+		if (Math.random() < 0.5) {
+			return { q: 'What is this?', say: 'What is this?', visual: '<div class="hv-ex-pic">' + esc(w[0]) + '</div>', o: { choices: shuffle([w[1]].concat(others.map(function (o) { return o[1]; }))), a: w[1] }, word: w[1] };
+		}
+		return { q: 'Chọn hình đúng với từ: “' + w[1] + '”', say: w[1], lang: 'en', o: { choices: shuffle([w[0]].concat(others.map(function (o) { return o[0]; }))), a: w[0] }, pic: true };
+	}
+	function Exam(root) {
+		this.root = root;
+		var data = {};
+		try { data = JSON.parse((root.querySelector('.hv-exam-data') || {}).textContent || '{}'); } catch (e) { data = {}; }
+		this.L = data.L || [];
+		this.B = data.B || {};
+		var g = parseInt(store.get('grade', 1), 10) || 1;
+		this.g = Math.min(5, Math.max(1, g));
+		this.s = store.get('exam_subj', 'toan');
+		if (!EX_SUBJ[this.s] || EX_SUBJ[this.s].grades.indexOf(this.g) < 0) { this.s = 'toan'; }
+		this.box = el('div', 'hv-ex');
+		root.appendChild(this.box);
+		var self = this;
+		this.box.addEventListener('click', function (e) { self.onClick(e); });
+		document.addEventListener('keydown', function (e) { self.onKey(e); });
+		window.addEventListener('beforeunload', function (e) { if (self.running) { e.preventDefault(); e.returnValue = ''; } });
+		this.lobby();
+	}
+	Exam.prototype.bank = function (g, slugs) {
+		var self = this;
+		var out = [];
+		slugs.forEach(function (s) {
+			((self.B[g] || {})[s] || []).forEach(function (r) {
+				var les = self.L[r[4]];
+				out.push({ q: r[0], say: r[0], choices: shuffle([r[1]].concat(r[2] || [])), a: r[1], why: r[3] || '', lesson: les ? { t: les[0], u: les[1] } : null });
+			});
+		});
+		return shuffle(out);
+	};
+	// Ghép đề: nhiều nguồn có trọng số; vòng cao có thêm câu lớp trên; câu số có thể là dạng "điền đáp án".
+	Exam.prototype.build = function () {
+		var g = this.g, s = this.s, R = ROUNDS[this.r];
+		var out = [], seen = {};
+		var hardG = function () { return g < 5 && Math.random() < R.hard ? g + 1 : g; };
+		var gen = function (q, fillOk) {
+			if (!q) { return null; }
+			var it = { q: q.q, say: q.say || q.q, visual: q.visual || '', note: q.note || '', choices: q.o ? q.o.choices : null, a: q.o ? q.o.a : num(q.a), frac: q.frac, lang: q.lang, pic: q.pic };
+			if (!it.choices || (fillOk && /^[0-9\s]+(,[0-9]+)?$/.test(String(it.a)) && Math.random() < 0.3 + R.hard)) { it.type = 'fill'; it.choices = null; }
+			return it;
+		};
+		var main = this.bank(g, s === 'tong-hop' ? EX_MIX : [s]);
+		var lower = g > 1 ? this.bank(g - 1, s === 'tong-hop' ? EX_MIX : [s]) : [];
+		var quiz = shuffle((QUIZ[g] || QUIZ[1]).slice());
+		var used = {};
+		var fromBank = function () { return main.pop() || (Math.random() < 0.5 ? lower.pop() : null); };
+		var src;
+		if (s === 'toan') {
+			src = [[0.32, function () { return gen(mathQ(hardG()), true); }], [0.12, function () { return gen(cmpQ(hardG())); }], [0.12, function () { return g >= 2 ? gen(xQ(hardG())) : gen(countQ(1)); }],
+				[0.1, function () { return gen(seqQ(hardG())); }], [0.1, function () { return g <= 2 ? gen(countQ(g)) : (g === 3 ? gen(clockQ(3)) : gen(mathQ(hardG()), true)); }], [0.24, fromBank]];
+		} else if (s === 'tieng-viet') {
+			src = [[0.45, function () { return gen(wordQ(Math.min(g, 3), used)); }], [0.55, fromBank]];
+		} else if (s === 'tieng-anh') {
+			src = [[0.7, function () { return gen(enQ(hardG())); }], [0.3, fromBank]];
+		} else {
+			src = [[0.3, function () { var r = quiz.pop(); return r ? { q: r[0], say: r[0], choices: shuffle(r.slice(1, r.length - 1)), a: r[1] } : null; }],
+				[0.15, function () { var t = tfStatement(g); return t.math ? null : { q: 'Đúng hay sai? ' + t.text, say: t.text + '. Đúng hay sai?', choices: ['Đúng', 'Sai'], a: t.truth ? 'Đúng' : 'Sai' }; }], [0.55, fromBank]];
+		}
+		var fallback = s === 'toan' ? src[0][1] : s === 'tieng-viet' ? src[0][1] : s === 'tieng-anh' ? src[0][1] : function () { return gen(mathQ(g), true); };
+		var guard = 0;
+		while (out.length < R.n && guard++ < 600) {
+			var x = Math.random(), acc = 0, fn = src[src.length - 1][1];
+			for (var i = 0; i < src.length; i++) { acc += src[i][0]; if (x < acc) { fn = src[i][1]; break; } }
+			var it = fn() || (guard > 300 ? fallback() : null);
+			if (!it) { continue; }
+			var k = it.q + '|' + it.visual + '|' + it.a;
+			if (seen[k]) { continue; }
+			seen[k] = 1;
+			out.push(it);
+		}
+		return out;
+	};
+	Exam.prototype.lobby = function () {
+		var self = this;
+		this.stop();
+		this.view = 'lobby';
+		var best = exBest();
+		var h = '<div class="hv-ex-lobby"><div class="hv-ex-pick"><div class="hv-ex-field"><b>Lớp</b><div class="hv-ex-chips" role="group" aria-label="Chọn lớp">';
+		[1, 2, 3, 4, 5].forEach(function (g) { h += '<button type="button" class="hv-chip' + (g === self.g ? ' is-on' : '') + '" data-ex-g="' + g + '" aria-pressed="' + (g === self.g) + '">Lớp ' + g + '</button>'; });
+		h += '</div></div><div class="hv-ex-field"><b>Môn thi</b><div class="hv-ex-subjs" role="group" aria-label="Chọn môn">';
+		Object.keys(EX_SUBJ).forEach(function (k) {
+			var S = EX_SUBJ[k], ok = S.grades.indexOf(self.g) > -1;
+			h += '<button type="button" class="hv-ex-subj' + (k === self.s ? ' is-on' : '') + '" style="--c:' + S.c + '" data-ex-s="' + k + '"' + (ok ? '' : ' disabled title="Từ lớp 3"') + ' aria-pressed="' + (k === self.s) + '">' + (ico(S.ico, 40) || '') + '<span>' + esc(S.name) + '</span>' + (ok ? '' : '<small>Từ lớp 3</small>') + '</button>';
+		});
+		h += '</div></div></div><h3 class="hv-ex-h">Chọn vòng thi · ' + esc(EX_SUBJ[this.s].name) + ' lớp ' + this.g + '</h3><ol class="hv-ex-rounds">';
+		ROUNDS.forEach(function (R, r) {
+			var open = exUnlocked(self.g, self.s, r);
+			var b = best[exKey(self.g, self.s, r)];
+			var md = b !== undefined ? medalOf(b) : null;
+			h += '<li><button type="button" class="hv-ex-round' + (open ? '' : ' is-locked') + (b >= EX_PASS ? ' is-passed' : '') + '" data-ex-r="' + r + '"' + (open ? '' : ' aria-disabled="true"') + '>' +
+				'<span class="hv-ex-rno">Vòng ' + (r + 1) + '</span>' + (ico(open ? R.ico : 'lock', 52) || '') + '<b>' + esc(R.name) + '</b><span class="hv-ex-rmeta">' + R.n + ' câu · ' + R.min + ' phút · ' + (R.n * 10) + ' điểm</span>' +
+				(b !== undefined ? '<span class="hv-ex-rbest">' + (md ? (ico(md[2], 20) || '🏅') + ' ' : '') + 'Cao nhất ' + b + '%</span>' : (open ? '<span class="hv-ex-rbest is-new">Chưa thi</span>' : '<span class="hv-ex-rbest">🔒 Đạt ' + EX_PASS + '% vòng ' + r + ' để mở</span>')) +
+				'</button></li>';
+		});
+		h += '</ol><p class="hv-ex-note">💡 Đây là phòng <b>luyện thi</b> giúp bé quen dạng đề, cách làm bài có giới hạn thời gian. Đạt từ ' + EX_PASS + '% để mở vòng tiếp theo. Kết quả tự lưu (và vào tài khoản phụ huynh nếu đã đăng nhập).</p></div>';
+		this.box.innerHTML = h;
+	};
+	Exam.prototype.rules = function (r) {
+		this.r = r;
+		this.view = 'rules';
+		var R = ROUNDS[r], S = EX_SUBJ[this.s];
+		this.box.innerHTML = '<div class="hv-ex-rules hv-box">' + (ico(R.ico, 72) || '') + '<p class="hv-ex-rno">Vòng ' + (r + 1) + ' · ' + esc(R.name) + '</p><h3>' + esc(S.name) + ' lớp ' + this.g + '</h3>' +
+			'<ul class="hv-ex-facts"><li><b>' + R.n + '</b> câu hỏi</li><li><b>' + R.min + '</b> phút</li><li><b>' + (R.n * 10) + '</b> điểm</li></ul>' +
+			'<ol class="hv-ex-rulelist"><li>Mỗi câu đúng được 10 điểm, câu sai hoặc bỏ trống không bị trừ điểm.</li><li>Em được chuyển qua lại giữa các câu, sửa đáp án và <b>🚩 đánh dấu</b> câu cần xem lại.</li><li>Trong lúc thi <b>không có gợi ý</b>. Làm xong bấm <b>Nộp bài</b>; hết giờ bài tự nộp.</li><li>Nộp bài xong em xem được điểm, đáp án và lời giải từng câu.</li></ol>' +
+			'<div class="hv-actions"><button type="button" class="hv-btn hv-btn-white" data-ex="lobby">‹ Chọn vòng khác</button><button type="button" class="hv-btn hv-btn-accent hv-btn-big" data-ex="start">Bắt đầu thi ▶</button></div></div>';
+	};
+	Exam.prototype.start = function () {
+		var self = this;
+		this.qs = this.build();
+		if (!this.qs.length) { this.box.innerHTML = '<p class="hv-box">Chưa đủ câu hỏi cho đề này.</p>'; return; }
+		this.ans = this.qs.map(function () { return null; });
+		this.flags = this.qs.map(function () { return false; });
+		this.i = 0;
+		this.view = 'run';
+		this.running = true;
+		this.total = Math.round(ROUNDS[this.r].min * 60 * this.qs.length / ROUNDS[this.r].n);
+		this.end = Date.now() + this.total * 1000;
+		this.t0 = Date.now();
+		this.warned = 0;
+		var S = EX_SUBJ[this.s];
+		this.box.innerHTML = '<div class="hv-ex-run" style="--c:' + S.c + '"><div class="hv-ex-top"><span class="hv-ex-title">' + (ico(S.ico, 28) || '') + esc(S.name) + ' lớp ' + this.g + ' · ' + esc(ROUNDS[this.r].name) + '</span>' +
+			'<span class="hv-ex-timer" role="timer" aria-label="Thời gian còn lại">⏱️ <b></b></span><span class="hv-ex-count"></span><button type="button" class="hv-btn hv-ex-submit" data-ex="submit">Nộp bài</button></div>' +
+			'<div class="hv-ex-body"><div class="hv-ex-q" aria-live="polite"></div><nav class="hv-ex-pal" aria-label="Danh sách câu hỏi"></nav></div></div>';
+		this.timerEl = this.box.querySelector('.hv-ex-timer');
+		this.tick();
+		this.clock = setInterval(function () { self.tick(); }, 500);
+		tone([523, 659, 784], 0.12);
+		this.show(0);
+	};
+	Exam.prototype.tick = function () {
+		var left = (this.end - Date.now()) / 1000;
+		this.timerEl.querySelector('b').textContent = mmss(left);
+		this.timerEl.classList.toggle('is-warn', left <= 300 && left > 60);
+		this.timerEl.classList.toggle('is-danger', left <= 60);
+		if (left <= 300 && this.warned < 1 && this.total > 400) { this.warned = 1; tone([700, 560], 0.15); this.toast('Còn 5 phút – em kiểm tra lại các câu chưa làm nhé!'); }
+		if (left <= 60 && this.warned < 2) { this.warned = 2; tone([880, 700, 880], 0.12); this.toast('Còn 1 phút!'); }
+		if (left <= 10 && left > 0) { tone([990], 0.04); }
+		if (left <= 0) { this.toast('Hết giờ! Bài làm đã được nộp.'); this.submit(true); }
+	};
+	Exam.prototype.toast = function (msg) {
+		var t = el('div', 'hv-ex-toast', esc(msg));
+		this.box.appendChild(t);
+		setTimeout(function () { t.remove(); }, 3200);
+	};
+	Exam.prototype.saveFill = function () {
+		var inp = this.box.querySelector('.hv-ex-fill input');
+		if (inp && this.view === 'run') { var v = inp.value.trim(); this.ans[this.i] = v === '' ? null : v; }
+	};
+	Exam.prototype.show = function (i) {
+		var self = this;
+		this.saveFill();
+		this.i = Math.max(0, Math.min(this.qs.length - 1, i));
+		var q = this.qs[this.i], a = this.ans[this.i];
+		var h = '<div class="hv-ex-qno">Câu ' + (this.i + 1) + '<small>/' + this.qs.length + '</small>' + (this.flags[this.i] ? ' <span class="hv-ex-flagged">🚩 Đã đánh dấu</span>' : '') + '</div>' +
+			'<div class="hv-q-text' + (q.visual ? '' : ' is-big') + '">' + esc(q.q) + ' <button type="button" class="hv-icon-btn" data-ex="read" aria-label="Đọc to câu hỏi">🔈</button></div>' +
+			(q.note ? '<div class="hv-note">' + esc(q.note) + '</div>' : '') + (q.visual ? '<div class="hv-visual">' + q.visual + '</div>' : '');
+		if (q.type === 'fill') {
+			h += '<form class="hv-ex-fill" data-ex-fill><label>Điền đáp án: <input type="text" inputmode="' + (/^[0-9\s]+$/.test(String(q.a)) ? 'numeric' : 'decimal') + '" autocomplete="off" value="' + esc(a || '') + '" aria-label="Đáp án"></label><button type="submit" class="hv-btn">Lưu ✓</button></form>';
+		} else {
+			h += '<div class="hv-ex-choices n' + q.choices.length + '">';
+			q.choices.forEach(function (c, k) {
+				h += '<button type="button" class="hv-ex-choice' + (a === c ? ' is-picked' : '') + (q.pic ? ' is-pic' : '') + '" data-ex-c="' + k + '" aria-pressed="' + (a === c) + '"><span class="hv-ex-letter">' + 'ABCD'.charAt(k) + '</span>' + fracHtml(c, q.frac) + '</button>';
+			});
+			h += '</div>';
+		}
+		h += '<div class="hv-ex-nav"><button type="button" class="hv-btn hv-btn-white" data-ex="prev"' + (this.i ? '' : ' disabled') + '>‹ Câu trước</button>' +
+			'<button type="button" class="hv-btn hv-btn-white hv-ex-flag' + (this.flags[this.i] ? ' is-on' : '') + '" data-ex="flag">🚩 ' + (this.flags[this.i] ? 'Bỏ đánh dấu' : 'Đánh dấu') + '</button>' +
+			(this.i < this.qs.length - 1 ? '<button type="button" class="hv-btn" data-ex="next">Câu sau ›</button>' : '<button type="button" class="hv-btn hv-btn-accent" data-ex="submit">Nộp bài ✓</button>') + '</div>';
+		this.box.querySelector('.hv-ex-q').innerHTML = h;
+		this.palette();
+		var inp = this.box.querySelector('.hv-ex-fill input');
+		if (inp) { try { inp.focus({ preventScroll: true }); } catch (e) { inp.focus(); } }
+		if (autoRead(this.g)) { speak(q.say || q.q, q.lang); }
+	};
+	Exam.prototype.palette = function () {
+		var self = this, done = 0;
+		var h = '<p class="hv-ex-pal-h">Bảng câu hỏi</p><div class="hv-ex-pal-grid">';
+		this.qs.forEach(function (q, k) {
+			var ok = self.ans[k] !== null;
+			if (ok) { done++; }
+			h += '<button type="button" class="' + (ok ? 'is-done' : '') + (self.flags[k] ? ' is-flag' : '') + (k === self.i ? ' is-cur' : '') + '" data-ex-go="' + k + '" aria-label="Câu ' + (k + 1) + (ok ? ', đã làm' : ', chưa làm') + (self.flags[k] ? ', đã đánh dấu' : '') + '">' + (k + 1) + '</button>';
+		});
+		h += '</div><p class="hv-ex-legend"><span class="is-done"></span>Đã làm <span class="is-flag"></span>Đánh dấu <span></span>Chưa làm</p>';
+		this.box.querySelector('.hv-ex-pal').innerHTML = h;
+		this.box.querySelector('.hv-ex-count').textContent = 'Đã làm ' + done + '/' + this.qs.length;
+	};
+	Exam.prototype.choose = function (k) {
+		var self = this, q = this.qs[this.i];
+		this.ans[this.i] = q.choices[k];
+		sfx.flip();
+		this.box.querySelectorAll('.hv-ex-choice').forEach(function (b, j) { b.classList.toggle('is-picked', j === k); b.setAttribute('aria-pressed', j === k); });
+		this.palette();
+		// Tự sang câu chưa làm tiếp theo.
+		clearTimeout(this.adv);
+		var at = this.i;
+		this.adv = setTimeout(function () { if (self.view === 'run' && self.i === at && at < self.qs.length - 1) { self.show(at + 1); } }, 450);
+	};
+	Exam.prototype.stop = function () {
+		clearInterval(this.clock);
+		clearTimeout(this.adv);
+		this.running = false;
+	};
+	Exam.prototype.submit = function (auto) {
+		this.saveFill();
+		if (!auto) {
+			var left = this.ans.filter(function (a) { return a === null; }).length;
+			if (!window.confirm(left ? 'Còn ' + left + ' câu chưa làm. Em vẫn muốn nộp bài?' : 'Em chắc chắn nộp bài chứ?')) { return; }
+		}
+		this.stop();
+		stopSpeech();
+		var self = this, right = 0;
+		this.marks = this.qs.map(function (q, k) { var ok = self.ans[k] !== null && normAns(self.ans[k]) === normAns(q.a); if (ok) { right++; } return ok; });
+		this.right = right;
+		this.secs = Math.min(this.total, Math.round((Date.now() - this.t0) / 1000));
+		var pct = Math.round(right / this.qs.length * 100);
+		this.pct = pct;
+		var key = exKey(this.g, this.s, this.r);
+		var best = exBest();
+		var prev = best[key];
+		best[key] = Math.max(prev || 0, pct);
+		store.set('exam', best);
+		var log = store.get('exam_log', []);
+		log.unshift({ k: key, p: pct, s: right * 10, m: this.qs.length * 10, t: this.secs, d: todayKey() });
+		store.set('exam_log', log.slice(0, 30));
+		var md = medalOf(pct);
+		var st = md ? md[3] : 0;
+		if (st) { addStars(st); }
+		var lvUp = addXp(right * 3 + st * 10, st, false);
+		this.result(md, prev, lvUp);
+		renderProgress();
+	};
+	Exam.prototype.result = function (md, prev, lvUp) {
+		this.view = 'result';
+		var R = ROUNDS[this.r], S = EX_SUBJ[this.s], pct = this.pct;
+		var unlock = pct >= EX_PASS && this.r < ROUNDS.length - 1 && (prev === undefined || prev < EX_PASS);
+		var msg = md ? 'Chúc mừng em đạt ' + md[1] + '!' : pct >= 40 ? 'Em đã cố gắng rồi! Luyện thêm chút nữa nhé.' : 'Mình ôn lại bài rồi thi lại nhé!';
+		this.box.innerHTML = '<div class="hv-ex-result hv-box">' + (md ? '<div class="hv-ex-medal m' + md[3] + '">' + (ico(md[2], 96) || '🏅') + '</div>' : (ico('owl', 96) || '')) +
+			'<p class="hv-ex-rno">' + esc(S.name) + ' lớp ' + this.g + ' · Vòng ' + (this.r + 1) + ' – ' + esc(R.name) + '</p><h3>' + esc(msg) + '</h3>' +
+			'<div class="hv-ex-score"><b>' + (this.right * 10) + '</b><span>/' + (this.qs.length * 10) + ' điểm</span></div>' +
+			'<div class="hv-ex-bar"><i style="width:' + pct + '%"></i><span>' + pct + '%</span></div>' +
+			'<ul class="hv-ex-facts"><li>✅ Đúng <b>' + this.right + '/' + this.qs.length + '</b></li><li>⏱️ <b>' + mmss(this.secs) + '</b> phút</li>' + (prev !== undefined ? '<li>🏆 Cao nhất <b>' + Math.max(prev, pct) + '%</b></li>' : '') + '</ul>' +
+			(unlock ? '<p class="hv-ex-unlock">🔓 Em đã mở <b>Vòng ' + (this.r + 2) + ' – ' + esc(ROUNDS[this.r + 1].name) + '</b>!</p>' : (pct < EX_PASS && this.r < ROUNDS.length - 1 ? '<p class="hv-ex-tip">Đạt từ ' + EX_PASS + '% để mở vòng tiếp theo. Em xem lại lời giải các câu sai rồi thi lại nhé!</p>' : '')) +
+			(lvUp ? '<div class="hv-levelup">' + (ico('party', 36) || '🎉') + ' Lên <b>cấp ' + lvUp + '</b> – ' + esc(titleOf(lvUp)) + '!</div>' : '') +
+			'<div class="hv-actions"><button type="button" class="hv-btn hv-btn-big" data-ex="review">📖 Xem lại bài làm</button>' +
+			(unlock || (pct >= EX_PASS && this.r < ROUNDS.length - 1) ? '<button type="button" class="hv-btn hv-btn-accent" data-ex="nextround">Vòng tiếp theo ▶</button>' : '') +
+			'<button type="button" class="hv-btn hv-btn-white" data-ex="again">Thi lại ↻</button>' + (md ? '<button type="button" class="hv-btn hv-btn-white" data-ex="cert">🖨️ Giấy chứng nhận</button>' : '') +
+			'<button type="button" class="hv-btn hv-btn-white" data-ex="lobby">Chọn vòng khác</button></div></div>';
+		speak(msg + ' Em được ' + (this.right * 10) + ' điểm.');
+		if (md) { sfx.win(); confetti(this.root); }
+		try { this.root.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* bỏ qua */ }
+	};
+	Exam.prototype.review = function () {
+		var self = this;
+		this.view = 'review';
+		var h = '<div class="hv-ex-review"><div class="hv-ex-review-top"><h3>Xem lại bài làm · ' + (this.right * 10) + '/' + (this.qs.length * 10) + ' điểm</h3><button type="button" class="hv-btn hv-btn-white" data-ex="back">‹ Kết quả</button></div><ol>';
+		this.qs.forEach(function (q, k) {
+			var a = self.ans[k], ok = self.marks[k];
+			h += '<li class="hv-box ' + (ok ? 'is-ok' : 'is-no') + '"><div class="hv-ex-rv-q"><span class="hv-ex-rv-badge">' + (ok ? '✓' : a === null ? '–' : '✗') + '</span><b>Câu ' + (k + 1) + '.</b> ' + esc(q.q) + '</div>' + (q.visual ? '<div class="hv-visual is-small">' + q.visual + '</div>' : '') +
+				'<p>Em ' + (a === null ? '<b>chưa làm</b>' : 'chọn: <b class="' + (ok ? 'ok' : 'no') + '">' + esc(a) + '</b>') + (ok ? '' : ' · Đáp án đúng: <b class="ok">' + esc(q.a) + '</b>') + '</p>' +
+				(q.why ? '<p class="hv-ex-why">💡 ' + esc(q.why) + '</p>' : '') + (!ok && q.lesson ? '<p class="hv-ex-les">📘 Ôn lại bài: <a href="' + esc(q.lesson.u) + '">' + esc(q.lesson.t) + '</a></p>' : '') + '</li>';
+		});
+		this.box.innerHTML = h + '</ol><div class="hv-actions"><button type="button" class="hv-btn" data-ex="again">Thi lại ↻</button><button type="button" class="hv-btn hv-btn-white" data-ex="lobby">Chọn vòng khác</button></div></div>';
+		try { this.root.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* bỏ qua */ }
+	};
+	Exam.prototype.cert = function () {
+		var md = medalOf(this.pct);
+		var name = store.get('name', '') || 'Bạn nhỏ';
+		var d = new Date();
+		var c = document.querySelector('.hv-cert') || document.body.appendChild(el('div', 'hv-cert'));
+		c.innerHTML = '<div class="hv-cert-in"><p class="hv-cert-org">HỌC VUI · PHÒNG LUYỆN THI</p><h2>GIẤY CHỨNG NHẬN</h2><p>Chứng nhận bé</p><p class="hv-cert-name">' + esc(name) + '</p>' +
+			'<p>đã hoàn thành <b>Vòng ' + (this.r + 1) + ' – ' + esc(ROUNDS[this.r].name) + '</b> môn <b>' + esc(EX_SUBJ[this.s].name) + '</b> lớp ' + this.g + '</p>' +
+			'<p class="hv-cert-score">' + (this.right * 10) + '/' + (this.qs.length * 10) + ' điểm' + (md ? ' · ' + esc(md[1]) : '') + '</p>' +
+			'<p class="hv-cert-date">Ngày ' + d.getDate() + ' tháng ' + (d.getMonth() + 1) + ' năm ' + d.getFullYear() + '</p><p class="hv-cert-note">Kết quả luyện tập trên Học Vui, không phải giấy chứng nhận của cuộc thi chính thức.</p></div>';
+		document.body.classList.add('hv-print-cert');
+		var off = function () { document.body.classList.remove('hv-print-cert'); window.removeEventListener('afterprint', off); };
+		window.addEventListener('afterprint', off);
+		window.print();
+		setTimeout(off, 1500);
+	};
+	Exam.prototype.onClick = function (e) {
+		var t = e.target.closest ? e.target.closest('button') : null;
+		if (!t || t.disabled) { return; }
+		var a = t.getAttribute('data-ex');
+		if (t.hasAttribute('data-ex-g')) { this.g = +t.getAttribute('data-ex-g'); store.set('grade', this.g); if (EX_SUBJ[this.s].grades.indexOf(this.g) < 0) { this.s = 'toan'; } this.lobby(); return; }
+		if (t.hasAttribute('data-ex-s')) { this.s = t.getAttribute('data-ex-s'); store.set('exam_subj', this.s); this.lobby(); return; }
+		if (t.hasAttribute('data-ex-r')) {
+			var r = +t.getAttribute('data-ex-r');
+			if (!exUnlocked(this.g, this.s, r)) { this.toast('Em cần đạt ' + EX_PASS + '% ở vòng ' + r + ' để mở vòng này nhé!'); sfx.bad(); return; }
+			this.rules(r);
+			return;
+		}
+		if (t.hasAttribute('data-ex-c')) { this.choose(+t.getAttribute('data-ex-c')); return; }
+		if (t.hasAttribute('data-ex-go')) { this.show(+t.getAttribute('data-ex-go')); return; }
+		if (a === 'lobby') { this.lobby(); } else if (a === 'start' || a === 'again') { this.start(); } else if (a === 'prev') { this.show(this.i - 1); } else if (a === 'next') { this.show(this.i + 1); }
+		else if (a === 'flag') { this.flags[this.i] = !this.flags[this.i]; this.show(this.i); }
+		else if (a === 'submit') { this.submit(false); } else if (a === 'review') { this.review(); } else if (a === 'back') { this.result(medalOf(this.pct), exBest()[exKey(this.g, this.s, this.r)], 0); }
+		else if (a === 'nextround') { this.rules(this.r + 1); } else if (a === 'cert') { this.cert(); } else if (a === 'read') { var q = this.qs[this.i]; speak(q.say || q.q, q.lang); }
+	};
+	Exam.prototype.onKey = function (e) {
+		if (this.view !== 'run' || e.ctrlKey || e.metaKey || e.altKey) { return; }
+		var tag = (e.target.tagName || '').toLowerCase();
+		if (tag === 'input') { if (e.key === 'Enter') { e.preventDefault(); this.saveFill(); this.palette(); if (this.i < this.qs.length - 1) { this.show(this.i + 1); } } return; }
+		var k = 'abcd'.indexOf(String(e.key).toLowerCase());
+		var q = this.qs[this.i];
+		if (k < 0 && /^[1-4]$/.test(e.key)) { k = +e.key - 1; }
+		if (k > -1 && q.choices && k < q.choices.length) { e.preventDefault(); this.choose(k); }
+		else if (e.key === 'ArrowRight') { this.show(this.i + 1); } else if (e.key === 'ArrowLeft') { this.show(this.i - 1); }
+	};
+
 	/* ---------- Tài khoản phụ huynh: một phụ huynh nhiều bé, tiến độ của bé lưu trên máy chủ ---------- */
 	var USER = CFG.user || {};
-	var PKEYS = ['stars', 'played', 'xp', 'done', 'streak', 'lastDay', 'today'];
+	var PKEYS = ['stars', 'played', 'xp', 'done', 'streak', 'lastDay', 'today', 'exam'];
 	var rawSet = store.set;
 	var pushT = null;
 	// Mọi thay đổi tiến độ, tên, nhân vật của bé đang học sẽ được gửi lên tài khoản (gom lại 1,5 giây một lần).
@@ -2385,17 +2749,19 @@
 		var done = store.get('done', {});
 		return {
 			stars: store.get('stars', 0), played: store.get('played', 0), xp: store.get('xp', 0), streak: store.get('streak', 0),
-			lastDay: store.get('lastDay', ''), today: store.get('today', {}), done: done && !Array.isArray(done) ? done : {}
+			lastDay: store.get('lastDay', ''), today: store.get('today', {}), done: done && !Array.isArray(done) ? done : {}, exam: exBest()
 		};
 	}
 	function clearLocal() {
-		PKEYS.concat(['name', 'avatar', 'kidR']).forEach(function (k) { try { window.localStorage.removeItem('hv_' + k); } catch (e) { /* bỏ qua */ } });
+		PKEYS.concat(['name', 'avatar', 'kidR', 'exam_log']).forEach(function (k) { try { window.localStorage.removeItem('hv_' + k); } catch (e) { /* bỏ qua */ } });
 	}
 	function dayNum(d) { var m = String(d || '').split('-'); return m.length === 3 ? new Date(+m[0], m[1] - 1, +m[2]).getTime() : 0; }
 	// Gộp như máy chủ: không bao giờ mất sao, XP, bài đã học.
 	function mergeP(a, b) {
 		var o = { stars: Math.max(a.stars || 0, b.stars || 0), played: Math.max(a.played || 0, b.played || 0), xp: Math.max(a.xp || 0, b.xp || 0), done: {} };
 		[a.done, b.done].forEach(function (d) { Object.keys(d && !Array.isArray(d) ? d : {}).forEach(function (k) { o.done[k] = Math.max(o.done[k] || 0, d[k] || 0); }); });
+		o.exam = {};
+		[a.exam, b.exam].forEach(function (d) { Object.keys(d && !Array.isArray(d) ? d : {}).forEach(function (k) { o.exam[k] = Math.max(o.exam[k] || 0, d[k] || 0); }); });
 		var newer = dayNum(a.lastDay) >= dayNum(b.lastDay) ? a : b;
 		o.lastDay = newer.lastDay || ''; o.streak = newer.streak || 0;
 		var ta = a.today || {}, tb = b.today || {};
@@ -2406,7 +2772,7 @@
 		var p = merge ? mergeP(localProgress(), k.p || {}) : (k.p || {});
 		PKEYS.forEach(function (key) {
 			var v = p[key];
-			if (key === 'done' && (!v || Array.isArray(v))) { v = {}; }
+			if ((key === 'done' || key === 'exam') && (!v || Array.isArray(v))) { v = {}; }
 			if (v !== undefined && v !== null) { rawSet(key, v); }
 		});
 		rawSet('name', k.name); rawSet('avatar', k.avatar); rawSet('kid', k.id); rawSet('kidR', k.r || 0);
@@ -2528,6 +2894,9 @@
 		});
 		document.querySelectorAll('[data-hv-stepper]').forEach(function (n) {
 			if (!n.__hv) { n.__hv = new Stepper(n); }
+		});
+		document.querySelectorAll('[data-hv-exam]').forEach(function (n) {
+			if (!n.__hv) { n.__hv = new Exam(n); }
 		});
 		renderProgress();
 		renderAlbums();

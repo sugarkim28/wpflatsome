@@ -2,6 +2,17 @@
 
 Theme con của **Flatsome**: bài học theo Chương trình GDPT 2018, bám bộ sách dùng chung toàn quốc từ năm học 2026–2027 (**Kết nối tri thức với cuộc sống**, **Tiếng Anh Global Success** – QĐ 3588/QĐ-BGDĐT), kèm luyện tập và trò chơi học tập.
 
+## Bản 0.10: Phòng luyện thi
+
+- Trang **Luyện thi** (`luyen-thi`, shortcode `[hv_exam]`) – bé luyện đề như thi thật trước các cuộc thi trực tuyến:
+  - Chọn lớp 1–5, môn **Toán · Tiếng Việt · Tiếng Anh (lớp 3–5) · Kiến thức tổng hợp**, và **5 vòng**: Khởi động (10 câu/10 phút) → Cấp trường (15/15) → Cấp huyện (20/20) → Cấp tỉnh (25/25) → Cấp quốc gia (30/30). Đạt từ 70% để mở vòng tiếp theo; vòng càng cao càng nhiều câu lớp trên.
+  - Đề trộn câu tự sinh (tính nhẩm, **điền đáp án**, so sánh >, <, =, tìm x, dãy số, đếm hình, xem giờ, chính tả, từ vựng tiếng Anh, đúng/sai…) với **câu hỏi luyện tập của các bài học** – mỗi lần thi một đề mới.
+  - Màn thi: đồng hồ tổng (cảnh báo khi còn 5 phút, 1 phút), bảng câu hỏi để chuyển nhanh, **đánh dấu câu**, phím tắt A–D/1–4 và mũi tên, hết giờ tự nộp bài.
+  - Nộp bài: điểm (10 điểm/câu), phần trăm, thời gian, **huy chương Vàng/Bạc/Đồng**, sao và XP; **xem lại bài làm** với đáp án, lời giải và link "Ôn lại bài"; **in giấy chứng nhận** luyện thi.
+  - Điểm cao nhất từng vòng lưu vào tài khoản phụ huynh và hiện trong báo cáo của bé ("Kết quả luyện thi").
+- Trang chủ có khối giới thiệu `[hv_exam_teaser]`; menu thêm mục **Luyện thi** (Sổ tay kiến thức chuyển vào menu Môn học).
+- Sửa lỗi hiếm ở trò Đập chuột chũi khi hết giờ ngay sau cú đập thứ 3.
+
 ## Bản 0.9: độ khó và đồng hồ đếm ngược, giáo án cho thầy cô, giọng đọc liền mạch hơn
 
 - **Trò chơi có 3 mức độ khó** chọn ngay ở màn chào: 🐣 Dễ · 🐯 Vừa · 🐲 Khó (nhớ theo từng trò chơi).

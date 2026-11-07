@@ -244,6 +244,7 @@ function hv_demo_pages_build() {
 			'post_content' => hv_demo_block( '[hv_hero]' )
 				. hv_demo_block( '[hv_section title="Chọn lớp của em" sub="Mỗi lớp là một hòn đảo kiến thức. Học lần lượt từng bài theo đúng thứ tự trong sách, cuối mỗi môn có bài ôn tập tổng hợp." class="hv-sea"][hv_world][/hv_section]' )
 				. hv_demo_block( '[hv_section title="Bài học theo lớp" sub="Bài học sắp xếp theo đúng chủ đề của sách Kết nối tri thức với cuộc sống."][hv_lesson_tabs so="8"][/hv_section]' )
+				. hv_demo_block( '[hv_section][hv_exam_teaser][/hv_section]' )
 				. hv_demo_block( '[hv_section title="Các môn học" sub="8 môn theo Chương trình giáo dục phổ thông 2018 và môn ngoại khoá Làm quen máy tính."][hv_subjects][/hv_section]' )
 				. hv_demo_block( '[hv_section title="Một bài học có gì?" sub="Mỗi bài 10–15 phút, đi từ dễ đến khó, giúp bé hiểu bài chứ không học vẹt."][hv_parent_steps][/hv_section]' )
 				. hv_demo_block( '[hv_section title="Học xong, chơi một chút!" sub="Trò chơi giúp bé luyện tập lại kiến thức vừa học – câu hỏi mới mỗi lượt, đúng chương trình từng lớp."][hv_games player="0" show="tinh-nham,cau-ca,hai-tao,leo-nui"][hv_button text="Xem tất cả 16 trò chơi ›" page="games" style="white"][/hv_section]' )
@@ -291,6 +292,7 @@ function hv_demo_pages_build() {
 	$heads = array(
 		'gioi-thieu'          => array( 'Giới thiệu', 'Học Vui là sân chơi học tập miễn phí cho học sinh tiểu học, do Tin Học 119 phát triển.', 'owl', '#7c4dff' ),
 		'lien-he'             => array( 'Liên hệ', 'Bố mẹ, thầy cô có góp ý hay cần hỗ trợ? Cú Bông luôn sẵn sàng lắng nghe!', 'speech', '#2ea3f2' ),
+		'luyen-thi'           => array( 'Phòng luyện thi', 'Luyện đề như thi thật: 5 vòng từ Khởi động đến Cấp quốc gia, có đồng hồ, nộp bài, chấm điểm và lời giải.', 'trophy', '#7c4dff' ),
 		'giao-an'             => array( 'Giáo án cho thầy cô', 'Kế hoạch bài dạy theo Công văn 2345 cho từng bài học – xem, in, lưu PDF hoặc tải Word. Học liệu điện tử: hoclieu.vn.', 'scroll', '#7c4dff' ),
 		'tai-khoan'           => array( 'Tài khoản phụ huynh', 'Một tài khoản cho cả nhà: mỗi bé một hồ sơ riêng, học tiếp trên mọi thiết bị, bố mẹ xem bé học đến đâu.', 'house', '#2ec27e' ),
 		'so-tay-kien-thuc'    => array( 'Sổ tay kiến thức', 'Tất cả phần Ghi nhớ của các bài học, theo lớp và môn – xem nhanh, ôn tập, in ra giấy.', 'scroll', '#ff9f1c' ),
@@ -354,7 +356,8 @@ function hv_demo_pages_build() {
 			$add( array( 'menu-item-title' => $s[0], 'menu-item-object' => 'mon_hoc', 'menu-item-object-id' => $t->term_id, 'menu-item-type' => 'taxonomy' ), $mon, $s[4], 'Lớp ' . min( $s[3] ) . ( min( $s[3] ) === max( $s[3] ) ? '' : '–' . max( $s[3] ) ) );
 		}
 	}
-	$add( $page( 'Sổ tay', $info['so-tay-kien-thuc'] ), 0, 'scroll' );
+	$add( $page( 'Sổ tay kiến thức', $info['so-tay-kien-thuc'] ), $mon, 'scroll', 'Ghi nhớ của mọi bài, in được' );
+	$add( $page( 'Luyện thi', $info['luyen-thi'] ), 0, 'medal' );
 	$add( $page( 'Góc của em', $kid ), 0, 'trophy' );
 	$ph = $add( $page( 'Phụ huynh', $parent ), 0, 'heart' );
 	$add( $page( 'Tài khoản phụ huynh', $info['tai-khoan'] ), $ph, 'house', 'Đăng nhập, quản lý các bé, xem tiến độ' );
@@ -443,6 +446,8 @@ function hv_demo_info_content( $slug ) {
 			return '[hv_parent]';
 		case 'giao-an':
 			return '[hv_lesson_plans]';
+		case 'luyen-thi':
+			return '[hv_exam]';
 		case 'chinh-sach-bao-mat':
 			return '<div class="hv-box hv-content"><h2>1. Thông tin chúng tôi thu thập</h2><p>Bé có thể học mà không cần tài khoản: khi đó tên bé tự nhập, số sao, cấp độ, nhãn dán chỉ lưu trong bộ nhớ trình duyệt (localStorage) trên thiết bị đang dùng và không gửi về máy chủ.</p><p>Nếu bố mẹ tạo <strong>tài khoản phụ huynh</strong>, chúng tôi lưu: họ tên và email của phụ huynh, mật khẩu (đã mã hoá); với mỗi bé: tên gọi do bố mẹ đặt (có thể là tên ở nhà), lớp, nhân vật và tiến độ học (sao, XP, bài đã học). Chúng tôi không thu thập ngày sinh, địa chỉ, ảnh hay giọng nói của trẻ, và không chia sẻ dữ liệu cho bên thứ ba.</p><h2>2. Cookie và thống kê</h2><p>Website có thể dùng cookie kỹ thuật cần thiết để vận hành. Nếu bật công cụ thống kê truy cập, dữ liệu được tổng hợp ẩn danh, không dùng để quảng cáo nhắm vào trẻ em.</p>'
 				. '<h2>3. Quảng cáo</h2><p>Học Vui không hiển thị quảng cáo và không có liên kết mua hàng trong trò chơi.</p>'

@@ -98,6 +98,7 @@ function hv_sc_footer() {
 		array( 'Khu trò chơi', hv_games_url(), 'game' ),
 		array( 'Góc của em', hv_page_url( 'goc-cua-em' ), 'trophy' ),
 		array( 'Tài khoản phụ huynh', hv_page_url( 'tai-khoan' ), 'house' ),
+		array( 'Phòng luyện thi', hv_page_url( 'luyen-thi' ), 'trophy' ),
 		array( 'Góc phụ huynh', hv_page_url( 'goc-phu-huynh' ), 'heart' ),
 		array( 'Giáo án cho thầy cô', hv_page_url( 'giao-an' ), 'scroll' ),
 		array( 'Tất cả bài học', get_post_type_archive_link( 'bai_hoc' ), 'book' ),
