@@ -405,6 +405,11 @@ function qldn_customer_view( $c ) {
 	echo '<div class="qldn-card"><span>Mua gần nhất</span><strong>' . esc_html( $c->last_order_at ? qldn_date( $c->last_order_at ) : '—' ) . '</strong></div>';
 	echo '</div>';
 
+	if ( $c->debt > 0 && current_user_can( 'qldn_sales' ) ) {
+		echo '<h2>Thu nợ</h2>';
+		qldn_form_open( 'customer_collect', array( 'class' => 'qldn-filter' ) );
+		echo '<input type="hidden" name="id" value="' . esc_attr( $c->id ) . '"><input type="text" inputmode="numeric" class="qldn-money" name="amount" value="' . esc_attr( qldn_money( $c->debt, false ) ) . '"> <select name="fund">' . qldn_options_html( qldn_funds(), 'cash' ) . '</select> <button class="button button-primary">Thu tiền</button> <span class="description">Trừ vào các đơn còn nợ, cũ trước; tự lập phiếu thu.</span></form>'; // phpcs:ignore WordPress.Security.EscapeOutput
+	}
 	echo '<div class="qldn-cols"><div class="qldn-col">';
 	echo '<h2>Thông tin</h2><table class="widefat qldn-info"><tbody>';
 	$info = array(

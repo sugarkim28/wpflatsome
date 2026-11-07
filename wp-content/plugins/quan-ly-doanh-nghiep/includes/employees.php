@@ -54,6 +54,9 @@ function qldn_employee_save( $d, $id = 0 ) {
 		'start_date'       => ! empty( $d['start_date'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $d['start_date'] ) ? $d['start_date'] : null,
 		'user_id'          => isset( $d['user_id'] ) ? (int) $d['user_id'] : 0,
 		'device_pin'       => isset( $d['device_pin'] ) ? qldn_pin( $d['device_pin'] ) : '',
+		'shift_id'         => isset( $d['shift_id'] ) ? (int) $d['shift_id'] : 0,
+		'manager_id'       => isset( $d['manager_id'] ) && (int) $d['manager_id'] !== (int) $id ? (int) $d['manager_id'] : 0,
+		'leave_adjust'     => isset( $d['leave_adjust'] ) ? round( (float) $d['leave_adjust'], 1 ) : 0,
 		'status'           => ( isset( $d['status'] ) && 'inactive' === $d['status'] ) ? 'inactive' : 'active',
 		'note'             => isset( $d['note'] ) ? sanitize_textarea_field( $d['note'] ) : '',
 	);
@@ -117,6 +120,9 @@ function qldn_handle_employee() {
 			'start_date'       => qldn_in( 'start_date', 'date' ),
 			'user_id'          => qldn_in( 'user_id', 'int', 0 ),
 			'device_pin'       => qldn_in( 'device_pin' ),
+			'shift_id'         => qldn_in( 'shift_id', 'int', 0 ),
+			'manager_id'       => qldn_in( 'manager_id', 'int', 0 ),
+			'leave_adjust'     => qldn_in( 'leave_adjust', 'qty', 0 ),
 			'status'           => qldn_in( 'status', 'key' ),
 			'note'             => qldn_in( 'note', 'textarea' ),
 		),
@@ -126,6 +132,7 @@ function qldn_handle_employee() {
 		qldn_notice( $r->get_error_message(), 'error' );
 		qldn_go( 'employees', array( 'edit' => $id ? $id : 'new' ) );
 	}
+	qldn_log( 'employee_save', 'employee', $r, qldn_get( 'employees', $r )->name . ' – lương ' . qldn_money( qldn_get( 'employees', $r )->base_salary ) );
 	qldn_notice( $id ? 'Đã cập nhật nhân viên.' : 'Đã thêm nhân viên.' );
 	qldn_go( 'employees' );
 }
@@ -208,6 +215,16 @@ function qldn_employee_form( $e ) {
 	qldn_field( 'Nơi cấp CCCD', 'id_issue_place', $e ? $e->id_issue_place : '', array( 'help' => 'VD: Cục Cảnh sát quản lý hành chính về trật tự xã hội.' ) );
 	qldn_field( 'Mã số thuế cá nhân', 'tax_code', $e ? $e->tax_code : '' );
 	qldn_field( 'Tài khoản ngân hàng', 'bank_account', $e ? $e->bank_account : '', array( 'help' => 'Số tài khoản – ngân hàng (dùng khi chuyển lương).' ) );
+	$shift_opts = array();
+	foreach ( qldn_shifts() as $s ) {
+		$shift_opts[ $s->id ] = $s->name . ' (' . substr( $s->start_time, 0, 5 ) . '–' . substr( $s->end_time, 0, 5 ) . ')';
+	}
+	qldn_field( 'Ca làm việc', 'shift_id', $e ? $e->shift_id : 0, array( 'type' => 'select', 'options' => $shift_opts ) );
+	$mgr = array( 0 => '— Bộ phận nhân sự duyệt —' ) + qldn_employee_options();
+	if ( $e ) {
+		unset( $mgr[ $e->id ] );
+	}
+	qldn_field( 'Quản lý trực tiếp', 'manager_id', $e ? $e->manager_id : 0, array( 'type' => 'select', 'options' => $mgr, 'help' => 'Người duyệt đơn nghỉ phép, đi muộn, làm thêm của nhân viên này (quản lý cần có tài khoản đăng nhập liên kết). Bộ phận nhân sự luôn duyệt được.' ) );
 	qldn_field( 'Mã chấm công', 'device_pin', $e ? $e->device_pin : '', array( 'class' => 'small-text', 'help' => 'Số ID (User ID / Mã NV) của người này trên máy chấm công vân tay, thẻ, khuôn mặt.' ) );
 	qldn_field( 'Tài khoản đăng nhập', 'user_id', $e ? $e->user_id : 0, array( 'type' => 'select', 'options' => $users, 'help' => 'Liên kết để nhân viên tự chấm công vào/ra ca ở trang Tổng quan và tự điền tên khi bán hàng.' ) );
 	qldn_field( 'Trạng thái', 'status', $e ? $e->status : 'active', array( 'type' => 'select', 'options' => array( 'active' => 'Đang làm', 'inactive' => 'Đã nghỉ việc' ) ) );
@@ -217,6 +234,7 @@ function qldn_employee_form( $e ) {
 	qldn_field( 'Phụ cấp / tháng', 'allowance', $e ? $e->allowance : '', array( 'type' => 'money', 'help' => 'Ăn trưa, xăng xe, điện thoại… (tính đủ, không chia theo ngày công).' ) );
 	qldn_field( 'Lương đóng bảo hiểm', 'insurance_salary', $e ? $e->insurance_salary : '', array( 'type' => 'money', 'help' => 'Để 0 nếu không đóng BHXH (thử việc, cộng tác viên…).' ) );
 	qldn_field( 'Hoa hồng bán hàng', 'commission_rate', $e ? (float) $e->commission_rate : '', array( 'class' => 'small-text', 'help' => '% trên doanh thu các đơn hoàn thành do nhân viên này bán trong tháng.' ) );
+	qldn_field( 'Điều chỉnh phép năm', 'leave_adjust', $e ? (float) $e->leave_adjust : 0, array( 'class' => 'small-text', 'help' => 'Cộng / trừ ngày phép năm nay (phép tồn năm trước chuyển sang, thưởng phép, lao động nặng nhọc…). VD 2 hoặc -1.' ) );
 	qldn_field( 'Số người phụ thuộc', 'dependents', $e ? $e->dependents : 0, array( 'type' => 'number', 'class' => 'small-text', 'help' => 'Đã đăng ký giảm trừ gia cảnh (tính thuế TNCN).' ) );
 	qldn_field( 'Ghi chú', 'note', $e ? $e->note : '', array( 'type' => 'textarea' ) );
 	echo '</table>';

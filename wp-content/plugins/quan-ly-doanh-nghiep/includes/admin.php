@@ -15,10 +15,13 @@ defined( 'ABSPATH' ) || exit;
 function qldn_pages() {
 	return array(
 		''           => array( 'Tổng quan', 'qldn_access', 'qldn_page_dashboard' ),
+		'me'         => array( 'Của tôi', 'qldn_access', 'qldn_page_me' ),
 		'pos'        => array( 'Bán hàng', 'qldn_sales', 'qldn_page_pos' ),
 		'orders'     => array( 'Đơn hàng', 'qldn_sales', 'qldn_page_orders' ),
 		'customers'  => array( 'Khách hàng', 'qldn_sales', 'qldn_page_customers' ),
 		'care'       => array( 'Chăm sóc KH', 'qldn_sales', 'qldn_page_care' ),
+		'cash'       => array( 'Sổ quỹ', 'qldn_cash', 'qldn_page_cash' ),
+		'suppliers'  => array( 'Nhà cung cấp', 'qldn_access', 'qldn_page_suppliers' ),
 		'quotes'     => array( 'Báo giá', 'qldn_docs', 'qldn_page_quotes' ),
 		'contracts'  => array( 'Hợp đồng', 'qldn_docs', 'qldn_page_contracts' ),
 		'docs'       => array( 'Soạn hồ sơ', 'qldn_docs', 'qldn_page_docs' ),
@@ -26,9 +29,12 @@ function qldn_pages() {
 		'stock'      => array( 'Nhập / xuất kho', 'qldn_stock', 'qldn_page_stock' ),
 		'employees'  => array( 'Nhân viên', 'qldn_hr', 'qldn_page_employees' ),
 		'attendance' => array( 'Chấm công', 'qldn_hr', 'qldn_page_attendance' ),
+		'requests'   => array( 'Đơn từ & nghỉ phép', 'qldn_access', 'qldn_page_requests' ),
+		'shifts'     => array( 'Ca làm việc', 'qldn_hr', 'qldn_page_shifts' ),
 		'devices'    => array( 'Máy chấm công', 'qldn_hr', 'qldn_page_devices' ),
 		'payroll'    => array( 'Tính lương', 'qldn_hr', 'qldn_page_payroll' ),
 		'reports'    => array( 'Báo cáo', 'qldn_reports', 'qldn_page_reports' ),
+		'logs'       => array( 'Nhật ký hoạt động', 'qldn_settings', 'qldn_page_logs' ),
 		'settings'   => array( 'Cài đặt', 'qldn_settings', 'qldn_page_settings' ),
 	);
 }
@@ -54,7 +60,9 @@ add_action( 'admin_menu', 'qldn_admin_menu' );
  */
 function qldn_login_redirect( $url, $req, $user ) {
 	if ( $user instanceof WP_User && $user->has_cap( 'qldn_access' ) && ! $user->has_cap( 'edit_posts' ) && ( ! $req || admin_url() === $req || false !== strpos( $req, 'wp-admin/profile.php' ) ) ) {
-		return qldn_url();
+		// Nhân viên chỉ chấm công / gửi đơn: vào thẳng trang "Của tôi".
+		$work = $user->has_cap( 'qldn_sales' ) || $user->has_cap( 'qldn_stock' ) || $user->has_cap( 'qldn_hr' ) || $user->has_cap( 'qldn_cash' ) || $user->has_cap( 'qldn_docs' );
+		return $work ? qldn_url() : qldn_url( 'me' );
 	}
 	return $url;
 }

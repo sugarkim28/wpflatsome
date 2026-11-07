@@ -2,7 +2,7 @@
 
 Child theme `wp-content/themes/flatsome-child` biến Flatsome 3.20.x thành landing page dự án bất động sản.
 
-> **Mới:** plugin [`wp-content/plugins/quan-ly-doanh-nghiep`](wp-content/plugins/quan-ly-doanh-nghiep/README.md) – phần mềm quản lý doanh nghiệp trong trang quản trị WordPress: bán hàng, quản lý kho, khách hàng & chăm sóc khách hàng, nhân viên, chấm công, tính lương, báo cáo.
+> **Mới:** plugin [`wp-content/plugins/quan-ly-doanh-nghiep`](wp-content/plugins/quan-ly-doanh-nghiep/README.md) (bản 2.0) – phần mềm quản lý doanh nghiệp trong trang quản trị WordPress: bán hàng, sổ quỹ, nhà cung cấp, báo giá, hợp đồng, soạn hồ sơ, kho, khách hàng & chăm sóc, ca làm, chấm công (kết nối máy), đơn từ & nghỉ phép, tính lương, cổng nhân viên, báo cáo, nhật ký.
 
 ## Có gì
 

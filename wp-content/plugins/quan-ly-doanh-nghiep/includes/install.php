@@ -16,6 +16,7 @@ function qldn_caps() {
 	return array(
 		'qldn_access'   => 'Vào phần mềm (xem tổng quan, tự chấm công)',
 		'qldn_sales'    => 'Bán hàng, khách hàng, chăm sóc khách hàng',
+		'qldn_cash'     => 'Sổ quỹ (thu chi), nhà cung cấp, công nợ',
 		'qldn_docs'     => 'Báo giá, hợp đồng, soạn hồ sơ (hợp đồng lao động cần thêm quyền nhân sự)',
 		'qldn_stock'    => 'Sản phẩm, nhập/xuất/kiểm kho',
 		'qldn_hr'       => 'Nhân viên, chấm công, tính lương',
@@ -34,7 +35,7 @@ function qldn_roles() {
 		'qldn_manager'    => array( 'Quản lý cửa hàng', array_keys( qldn_caps() ) ),
 		'qldn_cashier'    => array( 'Nhân viên bán hàng', array( 'qldn_access', 'qldn_sales', 'qldn_docs' ) ),
 		'qldn_storekeeper' => array( 'Thủ kho', array( 'qldn_access', 'qldn_stock' ) ),
-		'qldn_accountant' => array( 'Kế toán - nhân sự', array( 'qldn_access', 'qldn_hr', 'qldn_reports', 'qldn_docs' ) ),
+		'qldn_accountant' => array( 'Kế toán - nhân sự', array( 'qldn_access', 'qldn_hr', 'qldn_reports', 'qldn_docs', 'qldn_cash' ) ),
 		'qldn_staff'      => array( 'Nhân viên (chỉ chấm công)', array( 'qldn_access' ) ),
 	);
 }
@@ -192,6 +193,9 @@ function qldn_install_tables() {
 		start_date date NULL,
 		user_id bigint(20) unsigned NOT NULL DEFAULT 0,
 		device_pin varchar(20) NOT NULL DEFAULT '',
+		shift_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		manager_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		leave_adjust decimal(5,1) NOT NULL DEFAULT 0,
 		status varchar(20) NOT NULL DEFAULT 'active',
 		note text NULL,
 		created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
@@ -209,6 +213,8 @@ function qldn_install_tables() {
 		check_in time NULL,
 		check_out time NULL,
 		ot_hours decimal(5,2) NOT NULL DEFAULT 0,
+		late_min smallint(5) unsigned NOT NULL DEFAULT 0,
+		early_min smallint(5) unsigned NOT NULL DEFAULT 0,
 		note varchar(255) NOT NULL DEFAULT '',
 		PRIMARY KEY  (id),
 		UNIQUE KEY emp_date (employee_id,work_date),
@@ -235,6 +241,8 @@ function qldn_install_tables() {
 		taxable bigint(20) NOT NULL DEFAULT 0,
 		pit bigint(20) NOT NULL DEFAULT 0,
 		advance bigint(20) NOT NULL DEFAULT 0,
+		late_min int(11) NOT NULL DEFAULT 0,
+		late_deduct bigint(20) NOT NULL DEFAULT 0,
 		deduction bigint(20) NOT NULL DEFAULT 0,
 		net bigint(20) NOT NULL DEFAULT 0,
 		status varchar(20) NOT NULL DEFAULT 'draft',
@@ -346,6 +354,104 @@ function qldn_install_tables() {
 		updated_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 		PRIMARY KEY  (id),
 		KEY object (context,object_id)
+	) $c;";
+
+	$sql[] = "CREATE TABLE {$p}cashbook (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		code varchar(32) NOT NULL DEFAULT '',
+		direction varchar(3) NOT NULL DEFAULT 'in',
+		fund varchar(10) NOT NULL DEFAULT 'cash',
+		category varchar(50) NOT NULL DEFAULT '',
+		amount bigint(20) NOT NULL DEFAULT 0,
+		entry_date date NOT NULL DEFAULT '0000-00-00',
+		partner_type varchar(10) NOT NULL DEFAULT '',
+		partner_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		partner_name varchar(255) NOT NULL DEFAULT '',
+		ref_type varchar(20) NOT NULL DEFAULT '',
+		ref_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		note text NULL,
+		user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+		PRIMARY KEY  (id),
+		KEY entry_date (entry_date),
+		KEY ref (ref_type,ref_id),
+		KEY partner (partner_type,partner_id)
+	) $c;";
+
+	$sql[] = "CREATE TABLE {$p}suppliers (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		code varchar(32) NOT NULL DEFAULT '',
+		name varchar(255) NOT NULL DEFAULT '',
+		phone varchar(20) NOT NULL DEFAULT '',
+		email varchar(100) NOT NULL DEFAULT '',
+		address varchar(255) NOT NULL DEFAULT '',
+		tax_code varchar(20) NOT NULL DEFAULT '',
+		bank_account varchar(150) NOT NULL DEFAULT '',
+		total_purchase bigint(20) NOT NULL DEFAULT 0,
+		debt bigint(20) NOT NULL DEFAULT 0,
+		note text NULL,
+		created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+		PRIMARY KEY  (id),
+		KEY phone (phone)
+	) $c;";
+
+	$sql[] = "CREATE TABLE {$p}purchases (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		code varchar(64) NOT NULL DEFAULT '',
+		supplier_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		total bigint(20) NOT NULL DEFAULT 0,
+		paid bigint(20) NOT NULL DEFAULT 0,
+		note text NULL,
+		user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+		PRIMARY KEY  (id),
+		KEY supplier_id (supplier_id),
+		KEY code (code)
+	) $c;";
+
+	$sql[] = "CREATE TABLE {$p}shifts (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		name varchar(100) NOT NULL DEFAULT '',
+		start_time time NOT NULL DEFAULT '08:00:00',
+		end_time time NOT NULL DEFAULT '17:00:00',
+		break_min smallint(5) unsigned NOT NULL DEFAULT 60,
+		PRIMARY KEY  (id)
+	) $c;";
+
+	$sql[] = "CREATE TABLE {$p}requests (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		employee_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		type varchar(20) NOT NULL DEFAULT '',
+		from_date date NOT NULL DEFAULT '0000-00-00',
+		to_date date NOT NULL DEFAULT '0000-00-00',
+		half_day tinyint(1) NOT NULL DEFAULT 0,
+		days decimal(5,1) NOT NULL DEFAULT 0,
+		hours decimal(5,2) NOT NULL DEFAULT 0,
+		reason text NULL,
+		status varchar(20) NOT NULL DEFAULT 'pending',
+		approver_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		decided_at datetime NULL,
+		decision_note varchar(255) NOT NULL DEFAULT '',
+		user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+		PRIMARY KEY  (id),
+		KEY employee_id (employee_id),
+		KEY status (status),
+		KEY from_date (from_date)
+	) $c;";
+
+	$sql[] = "CREATE TABLE {$p}logs (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		action varchar(50) NOT NULL DEFAULT '',
+		object_type varchar(20) NOT NULL DEFAULT '',
+		object_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		detail text NULL,
+		ip varchar(45) NOT NULL DEFAULT '',
+		created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+		PRIMARY KEY  (id),
+		KEY created_at (created_at),
+		KEY object (object_type,object_id)
 	) $c;";
 
 	foreach ( $sql as $q ) {

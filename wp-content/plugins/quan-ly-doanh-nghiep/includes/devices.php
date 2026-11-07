@@ -146,7 +146,7 @@ function qldn_punches_save( $punches, $source, $sn = '' ) {
 		foreach ( $chunk as $r ) {
 			++$stat['new'];
 			if ( $r[2] ) {
-				$touch[ $r[2] ][ substr( $r[1], 0, 10 ) ] = true;
+				$touch[ $r[2] ][ qldn_punch_work_date( qldn_employee_shift( $r[2] ), $r[1] ) ] = true;
 			} else {
 				++$stat['unknown'];
 			}
@@ -160,44 +160,69 @@ function qldn_punches_save( $punches, $source, $sn = '' ) {
 }
 
 /**
- * Giờ vào / ra, ký hiệu, tăng ca của 1 ngày từ các lần chấm.
+ * Giờ vào / ra, ký hiệu, đi muộn / về sớm, tăng ca của 1 ngày công từ các lần chấm, theo ca của nhân viên.
  *
- * Ký hiệu P, L, K, O đã chấm tay được giữ nguyên; ô trống hoặc X/N được tính lại theo số giờ làm.
+ * Ký hiệu P, L, K, O đã chấm tay / duyệt đơn được giữ nguyên; ô trống hoặc X/N tính lại theo số giờ làm.
  *
- * @param string      $date  Y-m-d.
+ * @param string      $date  Ngày công Y-m-d.
  * @param array       $times Các thời điểm chấm (Y-m-d H:i:s), đã sắp xếp.
  * @param object|null $row   Dòng bảng công hiện có.
  * @param array       $o     Cài đặt.
+ * @param object|null $shift Ca (null = ca mặc định).
  * @return array|null Dữ liệu cần ghi, null nếu không đổi gì.
  */
-function qldn_punch_compute( $date, $times, $row, $o ) {
+function qldn_punch_compute( $date, $times, $row, $o, $shift = null ) {
 	if ( ! $times ) {
 		// Lần chấm bị gỡ (đổi mã chấm công): chỉ xoá giờ, giữ ký hiệu chấm tay.
-		return ( $row && $row->check_in ) ? array( 'check_in' => null, 'check_out' => null ) : null;
+		return ( $row && $row->check_in ) ? array( 'check_in' => null, 'check_out' => null, 'late_min' => 0, 'early_min' => 0 ) : null;
 	}
+	$shift = $shift ? $shift : qldn_shifts()[0];
+	list( $s_start, $s_end ) = qldn_shift_bounds( $shift, $date );
 	$first = strtotime( $times[0] );
 	$last  = strtotime( end( $times ) );
 	// Quẹt lại trong vòng 5 phút coi như cùng 1 lần (chưa có giờ ra).
-	$out  = ( $last - $first ) >= 300 ? $last : 0;
-	$data = array(
+	$out   = ( $last - $first ) >= 300 ? $last : 0;
+	$grace = (int) $o['late_grace'];
+	$late  = (int) floor( ( $first - $s_start ) / 60 );
+	$early = $out ? (int) floor( ( $s_end - $out ) / 60 ) : 0;
+	$data  = array(
 		'check_in'  => gmdate( 'H:i:s', $first ),
 		'check_out' => $out ? gmdate( 'H:i:s', $out ) : null,
+		'late_min'  => $late > $grace ? min( 600, $late ) : 0,
+		'early_min' => $early > $grace ? min( 600, $early ) : 0,
 	);
 	$mark = $row ? $row->mark : '';
 	if ( '' === $mark || 'X' === $mark || 'N' === $mark ) {
-		$data['mark'] = ( $out && ( $out - $first ) / 3600 < (float) $o['work_hours'] / 2 ) ? 'N' : 'X';
+		// Giờ làm thực tế trong ca (trừ nghỉ giữa ca khi làm qua giờ nghỉ).
+		$worked = 0;
+		if ( $out ) {
+			$worked = ( min( $out, $s_end ) - max( $first, $s_start ) ) / 3600;
+			if ( $worked > ( $s_end - $s_start ) / 7200 ) {
+				$worked -= (int) $shift->break_min / 60;
+			}
+		}
+		$data['mark'] = ( $out && $worked < (float) $o['work_hours'] / 2 ) ? 'N' : 'X';
+		if ( 'N' === $data['mark'] ) {
+			// Làm nửa ngày theo đăng ký: không tính về sớm / đi muộn cho nửa còn lại.
+			$data['late_min']  = $first - $s_start > ( $s_end - $s_start ) / 2 ? 0 : $data['late_min'];
+			$data['early_min'] = $s_end - $out > ( $s_end - $s_start ) / 2 ? 0 : $data['early_min'];
+		}
+	} else {
+		// Ngày nghỉ có đơn (P, L, K, O): không tính đi muộn / về sớm.
+		$data['late_min']  = 0;
+		$data['early_min'] = 0;
 	}
 	if ( $o['auto_ot'] && $out ) {
-		$extra            = ( $out - strtotime( $date . ' ' . $o['shift_end'] . ':00' ) ) / 60;
+		$extra            = ( $out - $s_end ) / 60;
 		$data['ot_hours'] = $extra >= max( 1, (int) $o['ot_min'] ) ? floor( $extra / 30 ) / 2 : 0;
 	}
 	return $data;
 }
 
 /**
- * Cập nhật bảng công cho nhiều nhân viên / ngày (mỗi nhân viên 2 câu đọc).
+ * Cập nhật bảng công cho nhiều nhân viên / ngày công (mỗi nhân viên 2 câu đọc).
  *
- * @param array $touch employee_id => [ Y-m-d => true ].
+ * @param array $touch employee_id => [ Y-m-d => true ] (ngày công).
  * @return int Số ngày bỏ qua vì tháng đã chốt lương.
  */
 function qldn_punch_apply_many( $touch ) {
@@ -210,11 +235,14 @@ function qldn_punch_apply_many( $touch ) {
 	$wpdb->query( 'START TRANSACTION' );
 	foreach ( $touch as $eid => $dates ) {
 		$dates = array_keys( $dates );
+		$shift = qldn_employee_shift( (int) $eid );
 		$from  = min( $dates );
 		$to    = max( $dates );
 		$by    = array();
-		foreach ( $wpdb->get_col( $wpdb->prepare( "SELECT punch_time FROM $tp WHERE employee_id = %d AND punch_time BETWEEN %s AND %s ORDER BY punch_time", $eid, $from . ' 00:00:00', $to . ' 23:59:59' ) ) as $pt ) { // phpcs:ignore WordPress.DB.PreparedSQL
-			$by[ substr( $pt, 0, 10 ) ][] = $pt;
+		// Lấy rộng thêm 1 ngày để gom lần chấm sáng hôm sau của ca đêm.
+		$q = $wpdb->prepare( "SELECT punch_time FROM $tp WHERE employee_id = %d AND punch_time BETWEEN %s AND %s ORDER BY punch_time", $eid, $from . ' 00:00:00', gmdate( 'Y-m-d', strtotime( $to . ' +1 day' ) ) . ' 23:59:59' ); // phpcs:ignore WordPress.DB.PreparedSQL
+		foreach ( $wpdb->get_col( $q ) as $pt ) { // phpcs:ignore WordPress.DB.PreparedSQL
+			$by[ qldn_punch_work_date( $shift, $pt ) ][] = $pt;
 		}
 		$att = array();
 		foreach ( $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $ta WHERE employee_id = %d AND work_date BETWEEN %s AND %s", $eid, $from, $to ) ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL
@@ -230,7 +258,7 @@ function qldn_punch_apply_many( $touch ) {
 				continue;
 			}
 			$row  = isset( $att[ $d ] ) ? $att[ $d ] : null;
-			$data = qldn_punch_compute( $d, isset( $by[ $d ] ) ? $by[ $d ] : array(), $row, $o );
+			$data = qldn_punch_compute( $d, isset( $by[ $d ] ) ? $by[ $d ] : array(), $row, $o, $shift );
 			if ( null === $data ) {
 				continue;
 			}
@@ -281,7 +309,11 @@ function qldn_punch_relink( $employee_id, $old_pin, $new_pin ) {
 		$dates = array_merge( $dates, $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT DATE(punch_time) FROM $t WHERE employee_id = %d AND pin = %s", $employee_id, $new ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL
 	}
 	if ( $dates ) {
-		qldn_punch_apply_many( array( (int) $employee_id => array_fill_keys( $dates, true ) ) );
+		// Ca đêm: lần chấm buổi sáng thuộc ngày công hôm trước.
+		foreach ( $dates as $d ) {
+			$dates[] = gmdate( 'Y-m-d', strtotime( $d . ' -1 day' ) );
+		}
+		qldn_punch_apply_many( array( (int) $employee_id => array_fill_keys( array_unique( $dates ), true ) ) );
 	}
 }
 
@@ -294,12 +326,19 @@ function qldn_punch_relink( $employee_id, $old_pin, $new_pin ) {
  */
 function qldn_punch_reapply( $from, $to ) {
 	global $wpdb;
-	$rows  = $wpdb->get_results( $wpdb->prepare( 'SELECT DISTINCT employee_id, DATE(punch_time) AS d FROM ' . qldn_t( 'punches' ) . ' WHERE employee_id > 0 AND punch_time BETWEEN %s AND %s', $from . ' 00:00:00', $to . ' 23:59:59' ) );
+	$rows  = $wpdb->get_results( $wpdb->prepare( 'SELECT employee_id, punch_time FROM ' . qldn_t( 'punches' ) . ' WHERE employee_id > 0 AND punch_time BETWEEN %s AND %s', $from . ' 00:00:00', gmdate( 'Y-m-d', strtotime( $to . ' +1 day' ) ) . ' 23:59:59' ) );
 	$touch = array();
 	foreach ( $rows as $r ) {
-		$touch[ (int) $r->employee_id ][ $r->d ] = true;
+		$d = qldn_punch_work_date( qldn_employee_shift( (int) $r->employee_id ), $r->punch_time );
+		if ( $d >= $from && $d <= $to ) {
+			$touch[ (int) $r->employee_id ][ $d ] = true;
+		}
 	}
-	return count( $rows ) - qldn_punch_apply_many( $touch );
+	$n = 0;
+	foreach ( $touch as $dates ) {
+		$n += count( $dates );
+	}
+	return $n - qldn_punch_apply_many( $touch );
 }
 
 /**
@@ -921,23 +960,26 @@ function qldn_devices_tab_log() {
 	qldn_options( qldn_employee_options( true ), $emp );
 	echo '</select> <button class="button">Xem</button></form>';
 
-	$sql  = 'SELECT p.employee_id, e.name, e.code, DATE(p.punch_time) AS d, MIN(p.punch_time) AS tin, MAX(p.punch_time) AS tout, COUNT(*) AS n FROM ' . $t . ' p JOIN ' . qldn_t( 'employees' ) . ' e ON e.id = p.employee_id WHERE p.punch_time BETWEEN %s AND %s';
-	$sql .= $emp ? $wpdb->prepare( ' AND p.employee_id = %d', $emp ) : '';
-	$rows = $wpdb->get_results( $wpdb->prepare( $sql . ' GROUP BY p.employee_id, e.name, e.code, DATE(p.punch_time) ORDER BY d DESC, e.name LIMIT 1000', $args ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+	// Đọc từ bảng công: giờ vào / ra, đi muộn / về sớm đã tính theo ca của từng người (kể cả ca đêm).
+	$sql  = 'SELECT a.employee_id, e.name, e.code, a.work_date AS d, a.check_in, a.check_out, a.late_min, a.early_min, a.mark FROM ' . qldn_t( 'attendance' ) . ' a JOIN ' . qldn_t( 'employees' ) . ' e ON e.id = a.employee_id WHERE a.check_in IS NOT NULL AND a.work_date BETWEEN %s AND %s';
+	$sql .= $emp ? $wpdb->prepare( ' AND a.employee_id = %d', $emp ) : '';
+	$rows = $wpdb->get_results( $wpdb->prepare( $sql . ' ORDER BY a.work_date DESC, e.name LIMIT 1000', $from, $to ) ); // phpcs:ignore WordPress.DB.PreparedSQL
 
 	$grace    = (int) $o['late_grace'];
 	$late_sum = array();
-	echo '<table class="widefat striped qldn-table"><thead><tr><th>Ngày</th><th>Nhân viên</th><th>Giờ vào</th><th>Giờ ra</th><th class="num">Số giờ</th><th>Đi muộn</th><th>Về sớm</th><th class="num">Lần chấm</th></tr></thead><tbody>';
+	echo '<table class="widefat striped qldn-table"><thead><tr><th>Ngày công</th><th>Nhân viên</th><th>Ca</th><th>Giờ vào</th><th>Giờ ra</th><th class="num">Số giờ</th><th>Đi muộn</th><th>Về sớm</th><th>Công</th></tr></thead><tbody>';
 	if ( ! $rows ) {
-		echo '<tr><td colspan="8">Chưa có dữ liệu chấm công trong khoảng này.</td></tr>';
+		echo '<tr><td colspan="9">Chưa có dữ liệu chấm công trong khoảng này.</td></tr>';
 	}
 	foreach ( $rows as $r ) {
-		$in    = strtotime( $r->tin );
-		$out   = strtotime( $r->tout ) - $in >= 300 ? strtotime( $r->tout ) : 0;
-		$late  = (int) floor( ( $in - strtotime( $r->d . ' ' . $o['shift_start'] . ':00' ) ) / 60 );
-		$early = $out ? (int) floor( ( strtotime( $r->d . ' ' . $o['shift_end'] . ':00' ) - $out ) / 60 ) : 0;
-		$late  = $late > $grace ? $late : 0;
-		$early = $early > $grace ? $early : 0;
+		$shift = qldn_employee_shift( (int) $r->employee_id );
+		$in    = strtotime( $r->d . ' ' . $r->check_in );
+		$out   = $r->check_out ? strtotime( $r->d . ' ' . $r->check_out ) : 0;
+		if ( $out && $out < $in ) {
+			$out += DAY_IN_SECONDS; // Ra ca sáng hôm sau.
+		}
+		$late  = (int) $r->late_min;
+		$early = (int) $r->early_min;
 		if ( ! isset( $late_sum[ $r->employee_id ] ) ) {
 			$late_sum[ $r->employee_id ] = array( $r->name, 0, 0, 0, 0 );
 		}
@@ -945,8 +987,8 @@ function qldn_devices_tab_log() {
 		$late_sum[ $r->employee_id ][2] += $late;
 		$late_sum[ $r->employee_id ][3] += $early ? 1 : 0;
 		$late_sum[ $r->employee_id ][4] += $early;
-		echo '<tr><td>' . esc_html( qldn_date( $r->d ) ) . '</td><td>' . esc_html( $r->name ) . ' <small>' . esc_html( $r->code ) . '</small></td><td>' . esc_html( gmdate( 'H:i', $in ) ) . '</td><td>' . ( $out ? esc_html( gmdate( 'H:i', $out ) ) : qldn_badge( 'Thiếu giờ ra', 'orange' ) ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
-		echo '<td class="num">' . esc_html( $out ? qldn_qty( ( $out - $in ) / 3600 ) : '' ) . '</td><td>' . ( $late ? qldn_badge( $late . ' phút', 'red' ) : '' ) . '</td><td>' . ( $early ? qldn_badge( $early . ' phút', 'red' ) : '' ) . '</td><td class="num">' . esc_html( $r->n ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput
+		echo '<tr><td>' . esc_html( qldn_date( $r->d ) ) . '</td><td>' . esc_html( $r->name ) . ' <small>' . esc_html( $r->code ) . '</small></td><td>' . esc_html( $shift->name ) . '</td><td>' . esc_html( substr( $r->check_in, 0, 5 ) ) . '</td><td>' . ( $out ? esc_html( substr( $r->check_out, 0, 5 ) ) : qldn_badge( 'Thiếu giờ ra', 'orange' ) ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
+		echo '<td class="num">' . esc_html( $out ? qldn_qty( ( $out - $in ) / 3600 ) : '' ) . '</td><td>' . ( $late ? qldn_badge( $late . ' phút', 'red' ) : '' ) . '</td><td>' . ( $early ? qldn_badge( $early . ' phút', 'red' ) : '' ) . '</td><td>' . esc_html( $r->mark ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput
 	}
 	echo '</tbody></table>';
 
@@ -957,7 +999,7 @@ function qldn_devices_tab_log() {
 		}
 		echo '</tbody></table>';
 	}
-	echo '<p class="description">Ca làm: ' . esc_html( $o['shift_start'] . ' – ' . $o['shift_end'] ) . ', cho phép lệch ' . esc_html( $grace ) . ' phút (sửa ở <a href="' . esc_url( qldn_url( 'settings' ) ) . '">Cài đặt</a>). Giờ vào = lần chấm đầu, giờ ra = lần chấm cuối trong ngày; quẹt lại trong 5 phút tính là 1 lần.</p>';
+	echo '<p class="description">Tính theo <a href="' . esc_url( qldn_url( 'shifts' ) ) . '">ca của từng nhân viên</a>, cho phép lệch ' . esc_html( $grace ) . ' phút (sửa ở <a href="' . esc_url( qldn_url( 'settings' ) ) . '">Cài đặt</a>). Giờ vào = lần chấm đầu, giờ ra = lần chấm cuối của ngày công; quẹt lại trong 5 phút tính là 1 lần; ca qua đêm tính cho ngày bắt đầu ca.</p>';
 	echo '<p>';
 	qldn_device_button( array( 'do' => 'reapply', 'from' => $from, 'to' => $to ), 'Cập nhật lại bảng công từ ' . qldn_date( $from ) . ' đến ' . qldn_date( $to ), 'Ghi lại giờ vào / ra từ dữ liệu máy vào bảng công (không đụng tháng đã chốt lương)?' );
 	echo '</p>';

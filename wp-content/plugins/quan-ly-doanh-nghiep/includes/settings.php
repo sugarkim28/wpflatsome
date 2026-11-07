@@ -45,6 +45,12 @@ function qldn_default_settings() {
 		'shift_start'         => '08:00',
 		'shift_end'           => '17:00',
 		'late_grace'          => 5,
+		'break_min'           => 60,
+		'weekly_off'          => '0',
+		'holidays'            => '',
+		'late_deduct'         => 0,
+		'annual_leave'        => 12,
+		'delete_on_uninstall' => 0,
 		'auto_ot'             => 0,
 		'ot_min'              => 30,
 		'device_ips'          => '',
@@ -125,15 +131,20 @@ function qldn_save_settings() {
 			$new[ $k ] = $cur[ $k ];
 			continue;
 		}
-		if ( in_array( $k, array( 'customer_groups', 'customer_sources', 'tax_brackets', 'company_address', 'invoice_footer', 'quote_terms' ), true ) ) {
+		if ( in_array( $k, array( 'customer_groups', 'customer_sources', 'tax_brackets', 'company_address', 'invoice_footer', 'quote_terms', 'holidays' ), true ) ) {
 			$new[ $k ] = qldn_in( $k, 'textarea', $def );
 		} elseif ( in_array( $k, array( 'point_value', 'vip_threshold', 'base_wage', 'personal_deduction', 'dependent_deduction' ), true ) ) {
 			$new[ $k ] = max( 0, qldn_in( $k, 'money', $def ) );
-		} elseif ( in_array( $k, array( 'insurance_rate', 'standard_days', 'work_hours', 'ot_rate', 'insurance_cap', 'inactive_days', 'late_grace', 'ot_min', 'quote_valid_days', 'contract_remind' ), true ) ) {
+		} elseif ( in_array( $k, array( 'insurance_rate', 'standard_days', 'work_hours', 'ot_rate', 'insurance_cap', 'inactive_days', 'late_grace', 'ot_min', 'break_min', 'annual_leave', 'quote_valid_days', 'contract_remind' ), true ) ) {
 			$new[ $k ] = max( 0, qldn_in( $k, 'qty', $def ) );
 		} elseif ( in_array( $k, array( 'shift_start', 'shift_end' ), true ) ) {
 			$v         = qldn_in( $k, 'text', $def );
 			$new[ $k ] = preg_match( '/^([01]?\d|2[0-3]):[0-5]\d$/', $v ) ? substr( '0' . $v, -5 ) : $def;
+		} elseif ( 'weekly_off' === $k ) {
+			$days      = array_filter( array_map( 'trim', (array) qldn_in( $k, 'array', array() ) ), 'strlen' );
+			$new[ $k ] = implode( ',', array_unique( array_map( 'absint', array_filter( $days, 'is_numeric' ) ) ) );
+		} elseif ( in_array( $k, array( 'late_deduct', 'delete_on_uninstall' ), true ) ) {
+			$new[ $k ] = qldn_in( $k, 'int', 0 ) ? 1 : 0;
 		} elseif ( 'auto_ot' === $k ) {
 			$new[ $k ] = qldn_in( $k, 'int', 0 ) ? 1 : 0;
 		} elseif ( 'allow_negative' === $k ) {
@@ -145,6 +156,7 @@ function qldn_save_settings() {
 	$new['standard_days'] = $new['standard_days'] > 0 ? $new['standard_days'] : 26;
 	$new['work_hours']    = $new['work_hours'] > 0 ? $new['work_hours'] : 8;
 	update_option( 'qldn_settings', $new, false );
+	qldn_log( 'settings_save', 'settings' );
 	qldn_notice( 'Đã lưu cài đặt.' );
 	qldn_go( 'settings' );
 }
@@ -195,7 +207,17 @@ function qldn_page_settings() {
 	qldn_field( 'Số giờ / ngày công', 'work_hours', $o['work_hours'], array( 'type' => 'number', 'class' => 'small-text', 'attrs' => array( 'step' => '0.5' ) ) );
 	qldn_field( 'Giờ vào ca', 'shift_start', $o['shift_start'], array( 'type' => 'time', 'class' => '', 'help' => 'Dùng tính đi muộn từ dữ liệu máy chấm công.' ) );
 	qldn_field( 'Giờ tan ca', 'shift_end', $o['shift_end'], array( 'type' => 'time', 'class' => '' ) );
+	qldn_field( 'Nghỉ giữa ca', 'break_min', $o['break_min'], array( 'type' => 'number', 'class' => 'small-text', 'help' => 'phút (ca mặc định). Các ca khác đặt ở trang <a href="' . esc_url( qldn_url( 'shifts' ) ) . '">Ca làm việc</a>.' ) );
+	echo '<tr><th scope="row">Ngày nghỉ hằng tuần</th><td><input type="hidden" name="weekly_off[]" value="">';
+	$off = array_map( 'intval', array_filter( explode( ',', (string) $o['weekly_off'] ), 'strlen' ) );
+	foreach ( array( 1 => 'T2', 2 => 'T3', 3 => 'T4', 4 => 'T5', 5 => 'T6', 6 => 'T7', 0 => 'CN' ) as $k => $label ) {
+		echo '<label style="margin-right:10px"><input type="checkbox" name="weekly_off[]" value="' . esc_attr( $k ) . '"' . checked( in_array( $k, $off, true ), true, false ) . '> ' . esc_html( $label ) . '</label>';
+	}
+	echo '<p class="description">Dùng khi điền công nhanh, tính số ngày phép của đơn nghỉ. Nghỉ chiều thứ Bảy: không tick T7, nhân viên chấm nửa công (N).</p></td></tr>';
+	qldn_field( 'Ngày lễ, tết', 'holidays', $o['holidays'], array( 'type' => 'textarea', 'help' => 'Mỗi dòng: <code>2027-01-01 | Tết Dương lịch</code>. Nhập theo thông báo nghỉ lễ hằng năm của Nhà nước (Tết Âm lịch, Giỗ Tổ Hùng Vương thay đổi theo năm). Ngày lễ tự điền <code>L</code> khi bấm +X ở bảng công và không trừ phép.' ) );
 	qldn_field( 'Cho phép muộn / về sớm', 'late_grace', $o['late_grace'], array( 'type' => 'number', 'class' => 'small-text', 'help' => 'phút – trong khoảng này không tính đi muộn / về sớm.' ) );
+	qldn_field( 'Trừ lương đi muộn / về sớm', 'late_deduct', $o['late_deduct'], array( 'type' => 'select', 'options' => array( 0 => 'Không trừ (chỉ theo dõi)', 1 => 'Trừ lương theo đúng số phút thực tế không làm việc' ), 'help' => 'Điều 127 Bộ luật Lao động 2019 cấm phạt tiền, cắt lương thay cho xử lý kỷ luật. Phần mềm chỉ trừ tiền lương của đúng thời gian không làm việc (lương giờ ÷ 60 × số phút), không có mức phạt cố định.' ) );
+	qldn_field( 'Phép năm cơ bản', 'annual_leave', $o['annual_leave'], array( 'type' => 'number', 'class' => 'small-text', 'help' => 'ngày/năm cho người làm đủ 12 tháng (Điều 113: 12 ngày điều kiện bình thường; 14, 16 ngày với lao động chưa thành niên, khuyết tật, nặng nhọc độc hại…). Tự cộng 1 ngày mỗi 5 năm làm việc (Điều 114); chưa đủ 12 tháng tính theo tỷ lệ tháng làm việc.' ) );
 	qldn_field( 'Tự tính tăng ca từ máy chấm công', 'auto_ot', $o['auto_ot'], array( 'type' => 'select', 'options' => array( 0 => 'Không – nhập tăng ca bằng tay', 1 => 'Có – giờ ra sau giờ tan ca' ) ) );
 	qldn_field( 'Tăng ca tối thiểu', 'ot_min', $o['ot_min'], array( 'type' => 'number', 'class' => 'small-text', 'help' => 'phút. Ra muộn hơn giờ tan ca từ mức này mới tính, làm tròn xuống từng 30 phút.' ) );
 	qldn_field( 'Hệ số làm thêm giờ', 'ot_rate', $o['ot_rate'], array( 'type' => 'number', 'class' => 'small-text', 'help' => '% lương giờ (ngày thường tối thiểu 150%, ngày nghỉ tuần 200%, lễ tết 300% – Điều 98 Bộ luật Lao động 2019).' ) );
@@ -208,6 +230,9 @@ function qldn_page_settings() {
 	echo '</table>';
 	echo '<p class="description">Tham số lương mặc định theo quy định áp dụng năm 2026. Hãy đối chiếu văn bản mới nhất trước khi chốt lương.</p>';
 
+	echo '<h2>Gỡ cài đặt</h2><table class="form-table">';
+	qldn_field( 'Khi xoá plugin', 'delete_on_uninstall', $o['delete_on_uninstall'], array( 'type' => 'select', 'options' => array( 0 => 'Giữ nguyên dữ liệu (khuyên dùng)', 1 => 'Xoá toàn bộ dữ liệu phần mềm' ), 'help' => 'Chỉ áp dụng khi bấm Xoá plugin ở trang Plugin. Tắt plugin không bao giờ xoá dữ liệu.' ) );
+	echo '</table>';
 	submit_button( 'Lưu cài đặt' );
 	echo '</form>';
 

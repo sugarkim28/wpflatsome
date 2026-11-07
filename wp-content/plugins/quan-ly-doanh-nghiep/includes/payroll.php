@@ -79,7 +79,10 @@ function qldn_payroll_calc( $e, $period, $manual = array() ) {
 	$sales      = qldn_employee_sales( $e->id, $period );
 	$commission = (int) round( $sales * (float) $e->commission_rate / 100 );
 	$bonus      = max( 0, (int) $manual['bonus'] );
-	$gross      = $time_pay + $ot_pay + $allowance + $commission + $bonus;
+	// Trừ đúng thời gian không làm việc (đi muộn / về sớm) – không phạt tiền (Điều 127 BLLĐ 2019).
+	$late_min    = (int) $att['late_min'];
+	$late_deduct = $o['late_deduct'] ? min( $time_pay, (int) round( $hourly / 60 * $late_min ) ) : 0;
+	$gross       = $time_pay - $late_deduct + $ot_pay + $allowance + $commission + $bonus;
 
 	// Bảo hiểm: lương đóng BH (tối đa N lần lương cơ sở) × tỷ lệ; không đi làm ngày nào thì không đóng.
 	$ins_base  = min( (int) $e->insurance_salary, (int) round( (float) $o['insurance_cap'] * (int) $o['base_wage'] ) );
@@ -112,6 +115,8 @@ function qldn_payroll_calc( $e, $period, $manual = array() ) {
 		'taxable'       => $taxable,
 		'pit'           => $pit,
 		'advance'       => $advance,
+		'late_min'      => $late_min,
+		'late_deduct'   => $late_deduct,
 		'deduction'     => $deduct,
 		'net'           => $gross - $insurance - $pit - $advance - $deduct,
 		'note'          => sanitize_text_field( $manual['note'] ),
@@ -199,18 +204,24 @@ function qldn_handle_payroll() {
 			}
 		}
 		$r = qldn_payroll_build( $period, $manual );
+		if ( ! is_wp_error( $r ) ) {
+			qldn_log( 'payroll_build', 'payroll', 0, 'Tháng ' . $period );
+		}
 		qldn_notice( is_wp_error( $r ) ? $r->get_error_message() : sprintf( 'Đã tính lương %d nhân viên.', $r ), is_wp_error( $r ) ? 'error' : 'success' );
 	} elseif ( 'lock' === $do ) {
 		qldn_payroll_set_status( $period, 'locked' );
+		qldn_log( 'payroll_lock', 'payroll', 0, 'Tháng ' . $period );
 		qldn_notice( 'Đã chốt bảng lương. Bảng công tháng này bị khoá.' );
 	} elseif ( 'paid' === $do ) {
 		qldn_payroll_set_status( $period, 'paid' );
+		do_action( 'qldn_payroll_paid', $period ); // Ghi phiếu chi lương vào sổ quỹ.
 		qldn_notice( 'Đã đánh dấu đã trả lương.' );
 	} elseif ( 'unlock' === $do ) {
 		if ( ! current_user_can( 'qldn_settings' ) ) {
 			wp_die( 'Chỉ quản lý mới mở khoá được bảng lương.', 403 );
 		}
 		qldn_payroll_set_status( $period, 'draft' );
+		qldn_log( 'payroll_unlock', 'payroll', 0, 'Tháng ' . $period );
 		qldn_notice( 'Đã mở khoá bảng lương.' );
 	}
 	qldn_go( 'payroll', array( 'period' => $period ) );
@@ -241,9 +252,9 @@ function qldn_export_payroll() {
 	$period = qldn_period();
 	$out    = array();
 	foreach ( qldn_payroll_rows( $period ) as $r ) {
-		$out[] = array( $r->code, $r->name, $r->department, (float) $r->work_days, (float) $r->paid_days, (float) $r->ot_hours, $r->base_salary, $r->time_pay, $r->ot_pay, $r->allowance, $r->sales, $r->commission, $r->bonus, $r->gross, $r->insurance, $r->taxable, $r->pit, $r->advance, $r->deduction, $r->net, $r->bank_account, $r->note );
+		$out[] = array( $r->code, $r->name, $r->department, (float) $r->work_days, (float) $r->paid_days, (float) $r->ot_hours, $r->base_salary, $r->time_pay, (int) $r->late_min, $r->late_deduct, $r->ot_pay, $r->allowance, $r->sales, $r->commission, $r->bonus, $r->gross, $r->insurance, $r->taxable, $r->pit, $r->advance, $r->deduction, $r->net, $r->bank_account, $r->note );
 	}
-	qldn_csv( 'bang-luong-' . $period . '.csv', array( 'Mã NV', 'Họ tên', 'Bộ phận', 'Ngày công', 'Phép/lễ', 'Giờ tăng ca', 'Lương cơ bản', 'Lương thời gian', 'Tiền tăng ca', 'Phụ cấp', 'Doanh số', 'Hoa hồng', 'Thưởng', 'Tổng thu nhập', 'BHXH-BHYT-BHTN', 'Thu nhập tính thuế', 'Thuế TNCN', 'Tạm ứng', 'Khấu trừ khác', 'Thực lĩnh', 'Tài khoản ngân hàng', 'Ghi chú' ), $out );
+	qldn_csv( 'bang-luong-' . $period . '.csv', array( 'Mã NV', 'Họ tên', 'Bộ phận', 'Ngày công', 'Phép/lễ', 'Giờ tăng ca', 'Lương cơ bản', 'Lương thời gian', 'Phút đi muộn/về sớm', 'Trừ giờ không làm', 'Tiền tăng ca', 'Phụ cấp', 'Doanh số', 'Hoa hồng', 'Thưởng', 'Tổng thu nhập', 'BHXH-BHYT-BHTN', 'Thu nhập tính thuế', 'Thuế TNCN', 'Tạm ứng', 'Khấu trừ khác', 'Thực lĩnh', 'Tài khoản ngân hàng', 'Ghi chú' ), $out );
 }
 add_action( 'admin_post_qldn_export_payroll', 'qldn_export_payroll' );
 
@@ -252,8 +263,18 @@ add_action( 'admin_post_qldn_export_payroll', 'qldn_export_payroll' );
  */
 function qldn_print_payslip() {
 	qldn_check( 'print_payslip', 'qldn_hr' );
-	$period = qldn_period();
-	$rows   = qldn_payroll_rows( $period, qldn_in( 'employee', 'int', 0 ) );
+	qldn_payslip_output( qldn_period(), qldn_in( 'employee', 'int', 0 ) );
+}
+add_action( 'admin_post_qldn_print_payslip', 'qldn_print_payslip' );
+
+/**
+ * Trang in phiếu lương.
+ *
+ * @param string $period      Y-m.
+ * @param int    $employee_id 0 = cả bảng.
+ */
+function qldn_payslip_output( $period, $employee_id = 0 ) {
+	$rows   = qldn_payroll_rows( $period, $employee_id );
 	$opt    = qldn_opt();
 	$label  = substr( $period, 5 ) . '/' . substr( $period, 0, 4 );
 	echo '<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Phiếu lương ' . esc_html( $label ) . '</title><style>body{font-family:Arial,sans-serif;font-size:13px;margin:0 auto;max-width:720px}.slip{border:1px solid #999;padding:14px 18px;margin:12px 0;page-break-inside:avoid}h2{text-align:center;margin:4px 0 10px;font-size:17px}table{width:100%;border-collapse:collapse}td{padding:4px 6px;border-bottom:1px dotted #bbb}td.r{text-align:right;white-space:nowrap}.t td{font-weight:bold;border-top:1px solid #000}.muted{color:#555}.sig{display:flex;justify-content:space-around;margin-top:16px;text-align:center}@media print{.noprint{display:none}.slip{page-break-after:always}}</style></head><body onload="window.print()">';
@@ -266,6 +287,7 @@ function qldn_print_payslip() {
 			array( 'Nghỉ phép, lễ hưởng lương', qldn_qty( $r->paid_days ) . ' ngày' ),
 			array( 'Lương cơ bản', qldn_money( $r->base_salary ) ),
 			array( 'Lương theo ngày công', qldn_money( $r->time_pay ) ),
+			array( 'Trừ thời gian không làm việc (' . (int) $r->late_min . ' phút đi muộn / về sớm)', ( $r->late_deduct ? '-' : '' ) . qldn_money( $r->late_deduct ) ),
 			array( 'Tăng ca (' . qldn_qty( $r->ot_hours ) . ' giờ)', qldn_money( $r->ot_pay ) ),
 			array( 'Phụ cấp', qldn_money( $r->allowance ) ),
 			array( 'Hoa hồng (doanh số ' . qldn_money( $r->sales, false ) . ')', qldn_money( $r->commission ) ),
@@ -293,7 +315,6 @@ function qldn_print_payslip() {
 	echo '<p class="noprint" style="text-align:center"><button onclick="window.print()">In</button></p></body></html>';
 	exit;
 }
-add_action( 'admin_post_qldn_print_payslip', 'qldn_print_payslip' );
 
 /**
  * Trang bảng lương.
@@ -344,8 +365,8 @@ function qldn_page_payroll() {
 		qldn_form_open( 'payroll', array( 'data-pack' => 'pr' ) );
 		echo '<input type="hidden" name="period" value="' . esc_attr( $period ) . '"><input type="hidden" name="do" value="save">';
 	}
-	echo '<div class="qldn-att-wrap"><table class="widefat striped qldn-table qldn-payroll"><thead><tr><th>Nhân viên</th><th class="num">Công</th><th class="num">Phép/lễ</th><th class="num">Giờ TC</th><th class="num">Lương thời gian</th><th class="num">Tăng ca</th><th class="num">Phụ cấp</th><th class="num">Hoa hồng</th><th class="num">Thưởng</th><th class="num">Tổng thu nhập</th><th class="num">Bảo hiểm</th><th class="num">Thuế TNCN</th><th class="num">Tạm ứng</th><th class="num">Khấu trừ</th><th class="num">Thực lĩnh</th><th>Ghi chú</th><th></th></tr></thead><tbody>';
-	$tot = array_fill_keys( array( 'time_pay', 'ot_pay', 'allowance', 'commission', 'bonus', 'gross', 'insurance', 'pit', 'advance', 'deduction', 'net' ), 0 );
+	echo '<div class="qldn-att-wrap"><table class="widefat striped qldn-table qldn-payroll"><thead><tr><th>Nhân viên</th><th class="num">Công</th><th class="num">Phép/lễ</th><th class="num">Giờ TC</th><th class="num">Lương thời gian</th><th class="num">Trừ đi muộn / về sớm</th><th class="num">Tăng ca</th><th class="num">Phụ cấp</th><th class="num">Hoa hồng</th><th class="num">Thưởng</th><th class="num">Tổng thu nhập</th><th class="num">Bảo hiểm</th><th class="num">Thuế TNCN</th><th class="num">Tạm ứng</th><th class="num">Khấu trừ</th><th class="num">Thực lĩnh</th><th>Ghi chú</th><th></th></tr></thead><tbody>';
+	$tot = array_fill_keys( array( 'time_pay', 'late_deduct', 'ot_pay', 'allowance', 'commission', 'bonus', 'gross', 'insurance', 'pit', 'advance', 'deduction', 'net' ), 0 );
 	foreach ( $rows as $r ) {
 		foreach ( $tot as $k => $v ) {
 			$tot[ $k ] += (int) $r->$k;
@@ -354,7 +375,7 @@ function qldn_page_payroll() {
 		echo '<tr><td><strong>' . esc_html( $r->name ) . '</strong><br><small>' . esc_html( $r->code . ( $r->department ? ' · ' . $r->department : '' ) ) . '</small></td>';
 		echo '<td class="num">' . esc_html( qldn_qty( $r->work_days ) ) . '</td><td class="num">' . esc_html( qldn_qty( $r->paid_days ) ) . '</td>';
 		echo '<td class="num">' . ( $edit ? '<input type="text" inputmode="decimal" class="qldn-cell qldn-cell-s" name="pr[' . esc_attr( $eid ) . '][ot_hours]" value="' . esc_attr( qldn_qty( $r->ot_hours ) ) . '">' : esc_html( qldn_qty( $r->ot_hours ) ) ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
-		echo '<td class="num">' . esc_html( qldn_money( $r->time_pay, false ) ) . '</td><td class="num">' . esc_html( qldn_money( $r->ot_pay, false ) ) . '</td><td class="num">' . esc_html( qldn_money( $r->allowance, false ) ) . '</td>';
+		echo '<td class="num">' . esc_html( qldn_money( $r->time_pay, false ) ) . '</td><td class="num" title="' . esc_attr( (int) $r->late_min . ' phút' ) . '">' . ( $r->late_deduct ? '-' . esc_html( qldn_money( $r->late_deduct, false ) ) : ( $r->late_min ? '<small>' . esc_html( (int) $r->late_min ) . ' ph</small>' : '' ) ) . '</td><td class="num">' . esc_html( qldn_money( $r->ot_pay, false ) ) . '</td><td class="num">' . esc_html( qldn_money( $r->allowance, false ) ) . '</td>';
 		echo '<td class="num" title="Doanh số ' . esc_attr( qldn_money( $r->sales ) ) . '">' . esc_html( qldn_money( $r->commission, false ) ) . '</td>';
 		echo '<td class="num">' . $money( 'bonus', $r->bonus, $eid ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<td class="num"><strong>' . esc_html( qldn_money( $r->gross, false ) ) . '</strong></td><td class="num">' . esc_html( qldn_money( $r->insurance, false ) ) . '</td><td class="num" title="Thu nhập tính thuế ' . esc_attr( qldn_money( $r->taxable ) ) . '">' . esc_html( qldn_money( $r->pit, false ) ) . '</td>';

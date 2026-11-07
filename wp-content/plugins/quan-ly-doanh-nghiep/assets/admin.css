@@ -85,6 +85,7 @@ a.qldn-card:hover { border-color: #2271b1; }
 .qldn-att .qldn-att-name { text-align: left; min-width: 150px; position: sticky; left: 0; background: #fff; z-index: 1; padding: 4px 8px; }
 .qldn-att td input { width: 38px; padding: 0 2px; text-align: center; font-size: 12px; min-height: 26px; }
 .qldn-att .qldn-sun { background: #fcf0f1; }
+.qldn-att .qldn-hol { background: #fcf9e8; }
 .qldn-att input[title]:not([title=""]) { border-color: #2271b1; }
 .qldn-fill { font-size: 11px; text-decoration: none; }
 .qldn-checkin { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; background: #fff; border: 1px solid #dcdcde; border-left: 4px solid #2271b1; border-radius: 8px; padding: 12px 16px; margin: 16px 0; }
@@ -123,3 +124,15 @@ a.qldn-card:hover { border-color: #2271b1; }
 .qldn-fields li { font-size: 12px; margin-bottom: 3px; }
 .qldn-fields code { cursor: copy; }
 @media (max-width: 960px) { .qldn-tpl-grid { grid-template-columns: 1fr; } .qldn-fields { position: static; } }
+
+/* Của tôi: lịch công */
+.qldn-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; max-width: 900px; }
+.qldn-cal-h { text-align: center; font-weight: 600; color: #646970; }
+.qldn-cal-d { background: #fff; border: 1px solid #dcdcde; border-radius: 6px; min-height: 64px; padding: 4px 6px; font-size: 12px; display: flex; flex-direction: column; gap: 1px; }
+.qldn-cal-d.qldn-sun { background: #fcf0f1; }
+.qldn-cal-d.qldn-hol { background: #fcf9e8; }
+.qldn-cal-empty { background: transparent; border: 0; }
+.qldn-cal-today { border-color: #2271b1; box-shadow: inset 0 0 0 1px #2271b1; }
+.qldn-cal-mark { font-weight: 700; color: #2271b1; font-size: 14px; }
+@media (max-width: 600px) { .qldn-cal-d { min-height: 52px; padding: 2px 3px; font-size: 10px; } .qldn-checkin .button-hero { width: 100%; } }
+.qldn-welcome { background: #fff; border: 1px solid #dcdcde; border-left: 4px solid #00a32a; border-radius: 8px; padding: 4px 18px 8px; margin: 16px 0; }

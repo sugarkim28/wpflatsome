@@ -238,6 +238,7 @@ function qldn_handle_contract() {
 			$wpdb->update( qldn_t( 'quotes' ), array( 'status' => 'accepted' ), array( 'id' => $q ) );
 		}
 	}
+	qldn_log( 'contract_save', 'contract', $r, qldn_get( 'contracts', $r )->code . ' – ' . qldn_money( qldn_get( 'contracts', $r )->value ) );
 	qldn_notice( $id ? 'Đã cập nhật hợp đồng.' : 'Đã lập hợp đồng và soạn sẵn văn bản từ mẫu – mở văn bản bên dưới để kiểm tra.' );
 	qldn_go( 'contracts', array( 'view' => $r ) );
 }
@@ -261,6 +262,8 @@ function qldn_handle_contract_action() {
 		if ( $amount > 0 ) {
 			$note = trim( $c->note . "\n" . current_time( 'd/m/Y' ) . ': thanh toán ' . qldn_money( $amount ) . ( qldn_in( 'memo' ) ? ' – ' . qldn_in( 'memo' ) : '' ) );
 			$wpdb->query( $wpdb->prepare( "UPDATE $t SET paid = paid + %d, note = %s WHERE id = %d", $amount, $note, $c->id ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+			do_action( 'qldn_contract_paid', $c->id, $amount, qldn_in( 'fund', 'key', 'bank' ) );
+			qldn_log( 'contract_pay', 'contract', $c->id, $c->code . ' – ' . qldn_money( $amount ) );
 			qldn_notice( 'Đã ghi nhận thanh toán ' . qldn_money( $amount ) . '.' );
 		}
 	} elseif ( 'delete' === $do ) {
@@ -274,6 +277,7 @@ function qldn_handle_contract_action() {
 			$data['sign_date'] = qldn_today();
 		}
 		$wpdb->update( $t, $data, array( 'id' => $c->id ) );
+		qldn_log( 'contract_status', 'contract', $c->id, $c->code . ' → ' . qldn_contract_statuses()[ $do ] );
 		qldn_notice( 'Đã chuyển trạng thái: ' . qldn_contract_statuses()[ $do ] . '.' . ( 'liquidated' === $do ? ' Soạn biên bản thanh lý ở mục Văn bản bên dưới.' : '' ) );
 	}
 	qldn_go( 'contracts', array( 'view' => $c->id ) );
@@ -500,7 +504,7 @@ function qldn_contract_view( $c ) {
 	if ( ! $labor && $c->paid < $c->value && 'cancelled' !== $c->status ) {
 		echo '<h2>Ghi nhận thanh toán</h2>';
 		qldn_form_open( 'contract_action', array( 'class' => 'qldn-filter' ) );
-		echo '<input type="hidden" name="id" value="' . esc_attr( $c->id ) . '"><input type="hidden" name="do" value="pay"><input type="text" inputmode="numeric" class="qldn-money" name="amount" value="' . esc_attr( qldn_money( $c->value - $c->paid, false ) ) . '"> <input type="text" name="memo" placeholder="Đợt / hình thức (VD: Đợt 1 – chuyển khoản)"> <button class="button button-primary">Ghi nhận</button></form>';
+		echo '<input type="hidden" name="id" value="' . esc_attr( $c->id ) . '"><input type="hidden" name="do" value="pay"><input type="text" inputmode="numeric" class="qldn-money" name="amount" value="' . esc_attr( qldn_money( $c->value - $c->paid, false ) ) . '"> <select name="fund">' . qldn_options_html( qldn_funds(), 'bank' ) . '</select> <input type="text" name="memo" placeholder="Đợt (VD: Đợt 1)"> <button class="button button-primary">Ghi nhận</button></form>';
 	}
 	qldn_documents_box( 'contract', $c->id, $c->type );
 	if ( in_array( $c->status, array( 'draft', 'cancelled' ), true ) ) {

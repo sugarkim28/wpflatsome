@@ -69,23 +69,19 @@ function qldn_page_dashboard() {
 	echo '<div class="wrap qldn"><h1>Tổng quan – ' . esc_html( qldn_opt( 'company_name' ) ) . '</h1>';
 	qldn_print_notices();
 
-	// Chấm công của chính mình.
-	$me = qldn_current_employee();
-	if ( $me ) {
-		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . qldn_t( 'attendance' ) . ' WHERE employee_id = %d AND work_date = %s', $me->id, $today ) );
-		echo '<div class="qldn-checkin"><div><strong>Xin chào ' . esc_html( $me->name ) . '</strong><br>';
-		if ( $row && $row->check_in ) {
-			echo 'Vào ca: ' . esc_html( substr( $row->check_in, 0, 5 ) ) . ( $row->check_out ? ' · Ra ca: ' . esc_html( substr( $row->check_out, 0, 5 ) ) : '' );
-		} else {
-			echo 'Hôm nay bạn chưa chấm công.';
-		}
-		echo '</div>';
-		if ( ! $row || ! $row->check_in || ! $row->check_out ) {
-			qldn_form_open( 'checkin' );
-			echo '<button class="button button-primary button-hero">' . ( $row && $row->check_in ? 'Chấm công ra ca' : 'Chấm công vào ca' ) . '</button></form>';
-		}
-		echo '</div>';
+	// Mới cài: hướng dẫn bắt đầu + dữ liệu mẫu.
+	if ( current_user_can( 'qldn_settings' ) && qldn_is_empty() ) {
+		echo '<div class="qldn-welcome"><h2>Bắt đầu sử dụng</h2><ol>';
+		echo '<li><a href="' . esc_url( qldn_url( 'settings' ) ) . '">Cài đặt</a>: tên doanh nghiệp, người đại diện, ngày nghỉ tuần, ngày lễ, tham số lương.</li>';
+		echo '<li><a href="' . esc_url( qldn_url( 'employees', array( 'edit' => 'new' ) ) ) . '">Nhân viên</a> (kèm ca làm, quản lý trực tiếp, mã chấm công) và <a href="' . esc_url( qldn_url( 'shifts' ) ) . '">ca làm việc</a>.</li>';
+		echo '<li><a href="' . esc_url( qldn_url( 'products', array( 'edit' => 'new' ) ) ) . '">Sản phẩm</a>, <a href="' . esc_url( qldn_url( 'suppliers', array( 'edit' => 'new' ) ) ) . '">nhà cung cấp</a>, phiếu nhập kho; số dư đầu kỳ ở <a href="' . esc_url( qldn_url( 'cash', array( 'tab' => 'in', 'cat' => 'Số dư đầu kỳ' ) ) ) . '">Sổ quỹ</a>.</li>';
+		echo '<li>Phân quyền: Người dùng → Thêm mới → chọn vai trò (Quản lý cửa hàng, Nhân viên bán hàng, Thủ kho, Kế toán – nhân sự, Nhân viên).</li></ol>';
+		qldn_form_open( 'demo', array( 'onsubmit' => "return confirm('Tạo dữ liệu mẫu để dùng thử? Có thể xoá bằng cách gỡ plugin với tuỳ chọn xoá dữ liệu.')" ) );
+		echo '<p><button class="button button-primary">Tạo dữ liệu mẫu để dùng thử</button> <span class="description">8 nhân viên, hàng hoá, khách hàng, 30 đơn hàng, chấm công, đơn từ, hợp đồng, sổ quỹ.</span></p></form></div>';
 	}
+
+	// Chấm công của chính mình.
+	qldn_checkin_box();
 
 	if ( current_user_can( 'qldn_sales' ) || current_user_can( 'qldn_reports' ) ) {
 		$t = qldn_sales_stats( $today, $today );
@@ -146,7 +142,9 @@ function qldn_page_dashboard() {
 		$te      = qldn_t( 'employees' );
 		$total   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $te WHERE status = 'active'" ); // phpcs:ignore WordPress.DB.PreparedSQL
 		$present = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . qldn_t( 'attendance' ) . " a JOIN $te e ON e.id = a.employee_id WHERE e.status = 'active' AND a.work_date = %s AND a.mark IN ('X','N')", $today ) ); // phpcs:ignore WordPress.DB.PreparedSQL
-		echo '<div class="qldn-col"><h2>Nhân sự hôm nay</h2><p><strong>' . esc_html( $present ) . '</strong> / ' . esc_html( $total ) . ' nhân viên đã chấm công.</p><p><a class="button" href="' . esc_url( qldn_url( 'attendance' ) ) . '">Bảng chấm công</a> <a class="button" href="' . esc_url( qldn_url( 'payroll' ) ) . '">Bảng lương</a></p></div>';
+		$pending = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . qldn_t( 'requests' ) . " WHERE status = 'pending'" );
+		$off     = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . qldn_t( 'requests' ) . " WHERE status = 'approved' AND type IN ('annual','personal','unpaid','sick') AND from_date <= %s AND to_date >= %s", $today, $today ) );
+		echo '<div class="qldn-col"><h2>Nhân sự hôm nay</h2><p><strong>' . esc_html( $present ) . '</strong> / ' . esc_html( $total ) . ' nhân viên đã chấm công' . ( $off ? ', ' . esc_html( $off ) . ' người nghỉ có đơn' : '' ) . '.</p><p><a href="' . esc_url( qldn_url( 'requests' ) ) . '">' . ( $pending ? qldn_badge( $pending, 'orange' ) : qldn_badge( 0, 'gray' ) ) . ' đơn từ chờ duyệt</a></p><p><a class="button" href="' . esc_url( qldn_url( 'attendance' ) ) . '">Bảng chấm công</a> <a class="button" href="' . esc_url( qldn_url( 'payroll' ) ) . '">Bảng lương</a></p></div>';
 	}
 	echo '</div></div>';
 }

@@ -155,6 +155,7 @@ function qldn_handle_product() {
 		qldn_notice( $r->get_error_message(), 'error' );
 		qldn_go( 'products', array( 'edit' => $id ? $id : 'new' ) );
 	}
+	qldn_log( 'product_save', 'product', $r, qldn_get( 'products', $r )->name . ' – giá bán ' . qldn_money( qldn_get( 'products', $r )->sale_price ) );
 	qldn_notice( $id ? 'Đã cập nhật sản phẩm.' : 'Đã thêm sản phẩm.' );
 	qldn_go( 'products' );
 }
@@ -250,7 +251,7 @@ function qldn_handle_voucher() {
 		$type,
 		qldn_posted_lines(),
 		array(
-			'partner' => qldn_in( 'partner' ),
+			'partner' => 'nhap' === $type && qldn_in( 'supplier_id', 'int', 0 ) ? ( qldn_supplier_options()[ qldn_in( 'supplier_id', 'int', 0 ) ] ?? '' ) : qldn_in( 'partner' ),
 			'note'    => qldn_in( 'note', 'textarea' ),
 			'ref'     => qldn_in( 'ref' ),
 		)
@@ -259,6 +260,11 @@ function qldn_handle_voucher() {
 		qldn_notice( $r->get_error_message(), 'error' );
 		qldn_go( 'stock', array( 'tab' => $type ) );
 	}
+	if ( 'nhap' === $type ) {
+		// Công nợ nhà cung cấp + phiếu chi phần trả ngay.
+		qldn_purchase_record( $r, qldn_in( 'supplier_id', 'int', 0 ), qldn_posted_lines(), qldn_in( 'paid', 'money', 0 ), qldn_in( 'fund', 'key', 'cash' ) );
+	}
+	qldn_log( 'stock_voucher', 'stock', 0, ( 'nhap' === $type ? 'Phiếu nhập ' : 'Phiếu xuất ' ) . $r );
 	qldn_notice( sprintf( 'Đã lưu phiếu %s <strong>%s</strong>.', 'nhap' === $type ? 'nhập' : 'xuất', esc_html( $r ) ) );
 	qldn_go( 'stock', array( 'tab' => 'history', 'ref' => $r ) );
 }
@@ -285,6 +291,9 @@ function qldn_handle_stocktake() {
 			qldn_stock_move( $p->id, 'kiemke', $diff, array( 'ref' => $ref, 'note' => $note, 'force' => true ) );
 			++$changed;
 		}
+	}
+	if ( $changed ) {
+		qldn_log( 'stocktake', 'stock', 0, $ref . ': ' . $changed . ' mặt hàng' );
 	}
 	qldn_notice( $changed ? sprintf( 'Đã điều chỉnh %d mặt hàng theo kiểm kê (phiếu %s).', $changed, $ref ) : 'Số đếm khớp với hệ thống, không có điều chỉnh.' );
 	qldn_go( 'stock', array( 'tab' => $changed ? 'history' : 'stocktake', 'ref' => $changed ? $ref : '' ) );
@@ -521,7 +530,13 @@ function qldn_voucher_form( $type ) {
 	qldn_form_open( 'voucher', array( 'class' => 'qldn-lines-form' ) );
 	echo '<input type="hidden" name="type" value="' . esc_attr( $type ) . '">';
 	echo '<table class="form-table">';
-	qldn_field( $in ? 'Nhà cung cấp' : 'Người nhận / lý do', 'partner', '' );
+	if ( $in ) {
+		qldn_field( 'Nhà cung cấp', 'supplier_id', qldn_in( 'supplier', 'int', 0 ), array( 'type' => 'select', 'options' => array( 0 => '— Không chọn —' ) + qldn_supplier_options(), 'help' => '<a href="' . esc_url( qldn_url( 'suppliers', array( 'edit' => 'new' ) ) ) . '">Thêm nhà cung cấp mới</a>. Phần chưa trả ghi vào công nợ phải trả.' ) );
+		qldn_field( 'Trả ngay', 'paid', '', array( 'type' => 'money', 'class' => 'regular-text', 'help' => 'Để trống = ghi nợ toàn bộ. Số tiền trả ngay được lập phiếu chi trong sổ quỹ.' ) );
+		qldn_field( 'Trả từ quỹ', 'fund', 'cash', array( 'type' => 'select', 'options' => qldn_funds() ) );
+	} else {
+		qldn_field( 'Người nhận / lý do', 'partner', '' );
+	}
 	qldn_field( 'Số chứng từ', 'ref', '', array( 'class' => 'regular-text', 'help' => 'Để trống để tự đánh số (' . ( $in ? 'PN' : 'PX' ) . ' + ngày giờ).' ) );
 	qldn_field( 'Ghi chú', 'note', '', array( 'type' => 'textarea' ) );
 	echo '</table>';

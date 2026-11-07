@@ -53,7 +53,7 @@
 	 */
 	function picker( input, action, render, onPick ) {
 		var box = input.parentNode.querySelector( '.qldn-results' );
-		var timer, items = [], active = 0;
+		var timer, items = [], active = 0, token = 0;
 
 		function show( list ) {
 			items = list;
@@ -78,7 +78,11 @@
 			}
 		}
 		function search( then ) {
+			var mine = ++token;
 			ajax( action, input.value.trim(), function ( list ) {
+				if ( mine !== token ) {
+					return; // Kết quả của lần gõ cũ về muộn: bỏ qua.
+				}
 				show( list );
 				if ( then ) {
 					then( list );
@@ -87,6 +91,11 @@
 		}
 		input.addEventListener( 'input', function () {
 			clearTimeout( timer );
+			// Ẩn danh sách cũ ngay khi gõ để không bấm nhầm kết quả của từ khoá trước.
+			items = [];
+			box.classList.remove( 'open' );
+			box.innerHTML = '';
+			token++;
 			timer = setTimeout( search, 200 );
 		} );
 		input.addEventListener( 'focus', function () {
@@ -342,7 +351,7 @@
 		e.preventDefault();
 		e.target.closest( 'tr' ).querySelectorAll( 'td:not(.qldn-sun) input' ).forEach( function ( el ) {
 			if ( el.value.trim() === '' ) {
-				el.value = 'X';
+				el.value = el.parentNode.classList.contains( 'qldn-hol' ) ? 'L' : 'X';
 			}
 		} );
 	} );

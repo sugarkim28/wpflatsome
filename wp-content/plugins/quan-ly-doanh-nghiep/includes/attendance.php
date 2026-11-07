@@ -17,6 +17,7 @@ function qldn_marks() {
 	return array(
 		'X' => array( 'Đi làm cả ngày', 1, 0 ),
 		'N' => array( 'Làm nửa ngày', 0.5, 0 ),
+		'H' => array( 'Nửa ngày làm + nửa ngày phép', 0.5, 0.5 ),
 		'P' => array( 'Nghỉ phép có lương', 0, 1 ),
 		'L' => array( 'Nghỉ lễ, tết có lương', 0, 1 ),
 		'K' => array( 'Nghỉ không lương', 0, 0 ),
@@ -139,62 +140,11 @@ function qldn_handle_attendance() {
 	if ( $bad ) {
 		qldn_notice( 'Ô không hợp lệ (đã bỏ qua): ' . esc_html( implode( ', ', array_unique( $bad ) ) ) . '. Dùng X, N, P, L, K, O, có thể thêm "+giờ tăng ca" (vd X+2).', 'warning' );
 	}
+	qldn_log( 'attendance_save', 'attendance', 0, 'Tháng ' . $period . ', ' . $saved . ' ô' );
 	qldn_notice( 'Đã lưu bảng công tháng ' . esc_html( substr( $period, 5 ) . '/' . substr( $period, 0, 4 ) ) . '.' );
 	qldn_go( 'attendance', array( 'period' => $period ) );
 }
 add_action( 'admin_post_qldn_attendance', 'qldn_handle_attendance' );
-
-/**
- * Nhân viên tự chấm công vào / ra ca.
- *
- * @param int $user_id Người dùng.
- * @return string|WP_Error 'in' | 'out'.
- */
-function qldn_self_checkin( $user_id ) {
-	global $wpdb;
-	$e = qldn_current_employee( $user_id );
-	if ( ! $e ) {
-		return new WP_Error( 'qldn_emp', 'Tài khoản chưa liên kết với nhân viên nào.' );
-	}
-	$today = qldn_today();
-	if ( qldn_period_locked( substr( $today, 0, 7 ) ) ) {
-		return new WP_Error( 'qldn_locked', 'Tháng này đã chốt lương.' );
-	}
-	$t   = qldn_t( 'attendance' );
-	$now = current_time( 'H:i:s' );
-	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t WHERE employee_id = %d AND work_date = %s", $e->id, $today ) ); // phpcs:ignore WordPress.DB.PreparedSQL
-	if ( ! $row ) {
-		$wpdb->insert( $t, array( 'employee_id' => $e->id, 'work_date' => $today, 'mark' => 'X', 'check_in' => $now ) );
-		return 'in';
-	}
-	if ( ! $row->check_in ) {
-		$wpdb->update( $t, array( 'check_in' => $now, 'mark' => $row->mark ? $row->mark : 'X' ), array( 'id' => $row->id ) );
-		return 'in';
-	}
-	$data = array( 'check_out' => $now );
-	// Làm dưới nửa số giờ chuẩn thì tính nửa công.
-	$hours = ( strtotime( $today . ' ' . $now ) - strtotime( $today . ' ' . $row->check_in ) ) / 3600;
-	if ( 'X' === $row->mark && $hours < (float) qldn_opt( 'work_hours' ) / 2 ) {
-		$data['mark'] = 'N';
-	}
-	$wpdb->update( $t, $data, array( 'id' => $row->id ) );
-	return 'out';
-}
-
-/**
- * Xử lý nút chấm công ở trang Tổng quan.
- */
-function qldn_handle_checkin() {
-	qldn_check( 'checkin', 'qldn_access' );
-	$r = qldn_self_checkin( get_current_user_id() );
-	if ( is_wp_error( $r ) ) {
-		qldn_notice( $r->get_error_message(), 'error' );
-	} else {
-		qldn_notice( ( 'in' === $r ? 'Đã chấm công vào ca lúc ' : 'Đã chấm công ra ca lúc ' ) . current_time( 'H:i' ) . '.' );
-	}
-	qldn_go();
-}
-add_action( 'admin_post_qldn_checkin', 'qldn_handle_checkin' );
 
 /**
  * Tổng hợp công tháng của 1 nhân viên.
@@ -209,9 +159,10 @@ function qldn_attendance_summary( $employee_id, $period ) {
 	$rows  = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . qldn_t( 'attendance' ) . ' WHERE employee_id = %d AND work_date BETWEEN %s AND %s', $employee_id, $period . '-01', $period . '-' . $days ) );
 	$marks = qldn_marks();
 	$wh    = (float) qldn_opt( 'work_hours' );
-	$out   = array( 'work_days' => 0, 'paid_days' => 0, 'ot_hours' => 0, 'hours' => 0, 'marks' => array_fill_keys( array_keys( $marks ), 0 ) );
+	$out   = array( 'work_days' => 0, 'paid_days' => 0, 'ot_hours' => 0, 'hours' => 0, 'late_min' => 0, 'marks' => array_fill_keys( array_keys( $marks ), 0 ) );
 	foreach ( $rows as $r ) {
 		$out['ot_hours'] += (float) $r->ot_hours;
+		$out['late_min'] += (int) ( $r->late_min ?? 0 ) + (int) ( $r->early_min ?? 0 );
 		if ( ! isset( $marks[ $r->mark ] ) ) {
 			continue;
 		}
@@ -271,17 +222,22 @@ function qldn_page_attendance() {
 	echo '<div class="qldn-att-wrap"><table class="widefat qldn-att"><thead><tr><th class="qldn-att-name">Nhân viên</th>';
 	for ( $d = 1; $d <= $days; $d++ ) {
 		$w = (int) gmdate( 'w', strtotime( $period . '-' . $d ) );
-		echo '<th class="' . ( 0 === $w ? 'qldn-sun' : '' ) . '">' . esc_html( $d ) . '<br><small>' . esc_html( $dow[ $w ] ) . '</small></th>';
+		$ds  = sprintf( '%s-%02d', $period, $d );
+		$hol = qldn_holidays()[ $ds ] ?? '';
+		echo '<th class="' . ( $hol ? 'qldn-hol' : ( in_array( $w, qldn_weekly_off(), true ) ? 'qldn-sun' : '' ) ) . '"' . ( $hol ? ' title="' . esc_attr( $hol ) . '"' : '' ) . '>' . esc_html( $d ) . '<br><small>' . esc_html( $hol ? 'Lễ' : $dow[ $w ] ) . '</small></th>';
 	}
 	echo '<th>Công</th><th>Phép/Lễ</th><th>Tăng ca</th></tr></thead><tbody>';
 	foreach ( $emps as $e ) {
 		$sum = qldn_attendance_summary( $e->id, $period );
-		echo '<tr><th class="qldn-att-name">' . esc_html( $e->name ) . '<br><small>' . esc_html( $e->code ) . '</small>' . ( $locked ? '' : ' <a href="#" class="qldn-fill" title="Điền X các ngày trống trừ Chủ nhật">+X</a>' ) . '</th>';
+		echo '<tr><th class="qldn-att-name">' . esc_html( $e->name ) . '<br><small>' . esc_html( $e->code ) . '</small>' . ( $locked ? '' : ' <a href="#" class="qldn-fill" title="Điền X các ngày làm việc còn trống, L cho ngày lễ">+X</a>' ) . '</th>';
 		for ( $d = 1; $d <= $days; $d++ ) {
 			$r     = isset( $grid[ $e->id ][ $d ] ) ? $grid[ $e->id ][ $d ] : null;
 			$w     = (int) gmdate( 'w', strtotime( $period . '-' . $d ) );
 			$title = $r && $r->check_in ? 'Vào ' . substr( $r->check_in, 0, 5 ) . ( $r->check_out ? ' – Ra ' . substr( $r->check_out, 0, 5 ) : '' ) : '';
-			echo '<td class="' . ( 0 === $w ? 'qldn-sun' : '' ) . '"><input type="text" maxlength="6" name="att[' . esc_attr( $e->id ) . '][' . esc_attr( $d ) . ']" value="' . esc_attr( $r ? qldn_mark_text( $r ) : '' ) . '" title="' . esc_attr( $title ) . '"' . ( $locked ? ' readonly' : '' ) . '></td>';
+			$ds    = sprintf( '%s-%02d', $period, $d );
+			$cls   = isset( qldn_holidays()[ $ds ] ) ? 'qldn-hol' : ( in_array( $w, qldn_weekly_off(), true ) ? 'qldn-sun' : '' );
+			$title = $r && ( $r->late_min || $r->early_min ) ? trim( $title . ' · muộn ' . $r->late_min . ' / sớm ' . $r->early_min . ' phút' ) : $title;
+			echo '<td class="' . $cls . '"><input type="text" maxlength="6" name="att[' . esc_attr( $e->id ) . '][' . esc_attr( $d ) . ']" value="' . esc_attr( $r ? qldn_mark_text( $r ) : '' ) . '" title="' . esc_attr( $title ) . '"' . ( $locked ? ' readonly' : '' ) . '></td>';
 		}
 		echo '<td class="num"><strong>' . esc_html( qldn_qty( $sum['work_days'] ) ) . '</strong></td><td class="num">' . esc_html( qldn_qty( $sum['paid_days'] ) ) . '</td><td class="num">' . esc_html( qldn_qty( $sum['ot_hours'] ) ) . 'h</td></tr>';
 	}

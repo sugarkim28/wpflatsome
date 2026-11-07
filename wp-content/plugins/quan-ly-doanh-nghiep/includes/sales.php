@@ -182,11 +182,12 @@ function qldn_order_cancel( $id, $reason = '' ) {
 /**
  * Thu thêm tiền của đơn còn nợ.
  *
- * @param int $id     Đơn.
- * @param int $amount Số tiền.
+ * @param int    $id     Đơn.
+ * @param int    $amount Số tiền.
+ * @param string $fund   Quỹ nhận tiền (cash|bank, rỗng = theo hình thức thanh toán của đơn).
  * @return int|WP_Error Số tiền thực thu.
  */
-function qldn_order_pay( $id, $amount ) {
+function qldn_order_pay( $id, $amount, $fund = '' ) {
 	global $wpdb;
 	$o = qldn_get( 'orders', $id );
 	if ( ! $o || 'done' !== $o->status ) {
@@ -200,6 +201,7 @@ function qldn_order_pay( $id, $amount ) {
 	if ( $o->customer_id ) {
 		$wpdb->query( $wpdb->prepare( 'UPDATE ' . qldn_t( 'customers' ) . ' SET debt = debt - %d WHERE id = %d', $amount, $o->customer_id ) );
 	}
+	do_action( 'qldn_order_paid', $id, $amount, $fund );
 	return $amount;
 }
 
@@ -251,7 +253,10 @@ add_action( 'admin_post_qldn_cancel_order', 'qldn_handle_cancel_order' );
 function qldn_handle_pay_order() {
 	qldn_check( 'pay_order', 'qldn_sales' );
 	$id = qldn_in( 'id', 'int', 0 );
-	$r  = qldn_order_pay( $id, qldn_in( 'amount', 'money', 0 ) );
+	$r  = qldn_order_pay( $id, qldn_in( 'amount', 'money', 0 ), qldn_in( 'fund', 'key' ) );
+	if ( ! is_wp_error( $r ) ) {
+		qldn_log( 'order_pay', 'order', $id, qldn_get( 'orders', $id )->code . ' – ' . qldn_money( $r ) );
+	}
 	qldn_notice( is_wp_error( $r ) ? $r->get_error_message() : 'Đã thu ' . qldn_money( $r ) . '.', is_wp_error( $r ) ? 'error' : 'success' );
 	qldn_go( 'orders', array( 'view' => $id ) );
 }
@@ -483,7 +488,7 @@ function qldn_order_view( $o ) {
 		if ( $debt ) {
 			echo '<div class="qldn-col"><h2>Thu nợ – còn ' . esc_html( qldn_money( $debt ) ) . '</h2>';
 			qldn_form_open( 'pay_order' );
-			echo '<input type="hidden" name="id" value="' . esc_attr( $o->id ) . '"><input type="text" inputmode="numeric" class="qldn-money" name="amount" value="' . esc_attr( qldn_money( $debt, false ) ) . '"> <button class="button button-primary">Thu tiền</button></form></div>';
+			echo '<input type="hidden" name="id" value="' . esc_attr( $o->id ) . '"><input type="text" inputmode="numeric" class="qldn-money" name="amount" value="' . esc_attr( qldn_money( $debt, false ) ) . '"> <select name="fund">' . qldn_options_html( qldn_funds(), qldn_fund_of( $o->payment ) ) . '</select> <button class="button button-primary">Thu tiền</button></form></div>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		}
 		echo '<div class="qldn-col"><h2>Huỷ đơn</h2><p class="description">Hàng được nhập lại kho; doanh số, điểm và công nợ của khách được trừ lại.</p>';
 		qldn_form_open( 'cancel_order', array( 'onsubmit' => "return confirm('Huỷ đơn " . esc_js( $o->code ) . "?')" ) );
