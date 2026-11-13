@@ -83,7 +83,7 @@ function hv_sc_hero() {
 				<h1><?php echo wp_kses( $title, array( 'em' => array() ) ); ?></h1>
 				<p class="hv-hero-lead"><?php echo esc_html( hv_opt( 'hero_lead' ) ); ?></p>
 				<div class="hv-hero-btns">
-					<a class="hv-btn hv-btn-big" href="#ban-do">Bắt đầu học <span aria-hidden="true">›</span></a>
+					<a class="hv-btn hv-btn-big" href="<?php echo esc_url( hv_learn_url() ? hv_learn_url() : '#ban-do' ); ?>">Bắt đầu học <span aria-hidden="true">›</span></a>
 					<a class="hv-play-link" href="<?php echo esc_url( hv_page_url( 'so-tay-kien-thuc' ) ? hv_page_url( 'so-tay-kien-thuc' ) : get_post_type_archive_link( 'bai_hoc' ) ); ?>"><span aria-hidden="true">📒</span> Sổ tay kiến thức</a>
 				</div>
 			</div>

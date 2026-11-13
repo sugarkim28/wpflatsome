@@ -180,6 +180,13 @@ while ( have_posts() ) :
 					</ol>
 				</div>
 			<?php endif; ?>
+			<?php if ( hv_learn_url() ) : ?>
+				<div class="hv-box hv-practice-cta">
+					<h3><?php echo hv_icon3d( 'target', 32 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> Thực hành chủ điểm</h3>
+					<p>Luyện câu hỏi mới mỗi lượt, tích điểm từ 0 đến 100 để <b>thành thạo</b> bài này.</p>
+					<a class="hv-btn hv-btn-accent" href="<?php echo esc_url( hv_learn_url( get_post_field( 'post_name', $hv_id ) ) ); ?>">✏️ Thực hành ngay</a>
+				</div>
+			<?php endif; ?>
 			<div class="hv-box hv-teacher">
 				<h3><?php echo hv_icon3d( 'scroll', 32 ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> Dành cho thầy cô</h3>
 				<p>Giáo án bài này theo khung Công văn 2345, kèm đáp án và lời giải.</p>

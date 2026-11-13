@@ -138,6 +138,7 @@ function hv_progress_clean( $p ) {
 		'today'   => array(),
 		'done'    => array(),
 		'exam'    => array(),
+		'skill'   => array(),
 	);
 	$t = isset( $p['today'] ) && is_array( $p['today'] ) ? $p['today'] : array();
 	$out['today'] = array(
@@ -151,6 +152,15 @@ function hv_progress_clean( $p ) {
 			$k = sanitize_title( (string) $k );
 			if ( '' !== $k ) {
 				$out['done'][ $k ] = $num( $v, 3 );
+			}
+		}
+	}
+	// Thực hành: điểm thành thạo 0–100 của từng chủ điểm (slug bài học).
+	if ( isset( $p['skill'] ) && is_array( $p['skill'] ) ) {
+		foreach ( array_slice( $p['skill'], 0, 800, true ) as $k => $v ) {
+			$k = sanitize_title( (string) $k );
+			if ( '' !== $k ) {
+				$out['skill'][ $k ] = $num( $v, 100 );
 			}
 		}
 	}
@@ -184,8 +194,10 @@ function hv_progress_merge( $old, $new ) {
 	foreach ( $old['done'] as $k => $v ) {
 		$out['done'][ $k ] = max( $v, isset( $new['done'][ $k ] ) ? $new['done'][ $k ] : 0 );
 	}
-	foreach ( $old['exam'] as $k => $v ) {
-		$out['exam'][ $k ] = max( $v, isset( $new['exam'][ $k ] ) ? $new['exam'][ $k ] : 0 );
+	foreach ( array( 'exam', 'skill' ) as $f ) {
+		foreach ( $old[ $f ] as $k => $v ) {
+			$out[ $f ][ $k ] = max( $v, isset( $new[ $f ][ $k ] ) ? $new[ $f ][ $k ] : 0 );
+		}
 	}
 	// Ngày học gần nhất và chuỗi ngày: lấy bên mới hơn.
 	if ( strtotime( $old['lastDay'] ) > strtotime( $new['lastDay'] ) ) {
@@ -212,6 +224,7 @@ function hv_kid_public( $kid ) {
 	$p         = hv_progress_clean( isset( $kid['p'] ) ? $kid['p'] : array() );
 	$p['done'] = (object) $p['done'];
 	$p['exam'] = (object) $p['exam'];
+	$p['skill'] = (object) $p['skill'];
 	return array(
 		'id'     => $kid['id'],
 		'name'   => $kid['name'],

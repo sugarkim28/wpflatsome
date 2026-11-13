@@ -7,7 +7,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'HV_VERSION', '0.10.0' );
+define( 'HV_VERSION', '0.11.0' );
 define( 'HV_DIR', get_stylesheet_directory() );
 define( 'HV_URI', get_stylesheet_directory_uri() );
 
@@ -21,6 +21,7 @@ require_once HV_DIR . '/inc/parents.php';
 require_once HV_DIR . '/inc/tts.php';
 require_once HV_DIR . '/inc/lesson-plan.php';
 require_once HV_DIR . '/inc/exam.php';
+require_once HV_DIR . '/inc/learn.php';
 require_once HV_DIR . '/inc/demo.php';
 
 /**
@@ -40,7 +41,7 @@ function hv_enqueue_assets() {
 		)
 	);
 	wp_enqueue_script( 'hv-main', HV_URI . '/assets/js/hocvui.js', array(), HV_VERSION . '.' . filemtime( HV_DIR . '/assets/js/hocvui.js' ), array( 'in_footer' => true, 'strategy' => 'defer' ) );
-	wp_add_inline_script( 'hv-main', 'window.hvConfig=' . wp_json_encode( array( 'img' => HV_URI . '/assets/img/3d/', 'gamesUrl' => hv_games_url(), 'profileUrl' => hv_page_url( 'goc-cua-em' ), 'user' => hv_user_config(), 'tts' => hv_tts_config() ) ) . ';', 'before' );
+	wp_add_inline_script( 'hv-main', 'window.hvConfig=' . wp_json_encode( array( 'img' => HV_URI . '/assets/img/3d/', 'gamesUrl' => hv_games_url(), 'profileUrl' => hv_page_url( 'goc-cua-em' ), 'user' => hv_user_config(), 'tts' => hv_tts_config(), 'examUrl' => hv_page_url( 'luyen-thi' ), 'learnUrl' => hv_page_url( 'hoc-tap' ) ) ) . ';', 'before' );
 }
 add_action( 'wp_enqueue_scripts', 'hv_enqueue_assets', 120 );
 

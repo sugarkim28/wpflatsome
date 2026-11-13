@@ -2,6 +2,18 @@
 
 Theme con của **Flatsome**: bài học theo Chương trình GDPT 2018, bám bộ sách dùng chung toàn quốc từ năm học 2026–2027 (**Kết nối tri thức với cuộc sống**, **Tiếng Anh Global Success** – QĐ 3588/QĐ-BGDĐT), kèm luyện tập và trò chơi học tập.
 
+## Bản 0.11: học theo chủ đề, thực hành đến 100 điểm (theo cách các trường đang dùng)
+
+Tổ chức kiến thức và cách luyện tập theo mô hình của các hệ thống tự học trực tuyến nhà trường đang dùng (như VioEdu), với nội dung của Học Vui:
+
+- Trang **Học tập** (`hoc-tap`, shortcode `[hv_learn]`) – "Hôm nay em muốn học gì?": chọn **lớp** và **môn** → **Học kỳ 1 / Học kỳ 2** → danh sách **chủ đề** (n chủ điểm • 1 bài kiểm tra) → các **chủ điểm** có mã kiểu `I.1.1.`, mỗi chủ điểm có **📖 Xem lý thuyết** (trang bài học) và **✏️ Thực hành**.
+  - Học kỳ: môn Toán xếp theo sách Kết nối tri thức (ví dụ Toán 1: chủ đề 1–4 học kỳ 1, 6–9 học kỳ 2); môn khác chia nửa đầu/nửa sau. Ô **Học kỳ** mới trong trang sửa bài để chỉnh tay.
+  - **Gợi ý cho em** (chủ điểm nên học tiếp, ưu tiên phần cần luyện tập), **Báo cáo học tập** (thành thạo, đang học, cần luyện tập), thống kê từng chủ đề (CHỦ ĐIỂM x/y · KIỂM TRA x/1 · CẦN LUYỆN TẬP).
+- **Thực hành tích điểm 0 → 100**: màn toàn trang nền trời xanh, thanh điểm 10 nấc có 💎 ở mốc 30/60/90 (mỗi mốc +1 ⭐) và 🏆 ở 100; chọn đáp án rồi bấm **Trả lời**; đúng cộng điểm (chuỗi đúng cộng thêm), sai trừ nhẹ và hiện đáp án + lời giải; đồng hồ đếm lên; nút đọc to, phóng to/thu nhỏ chữ; phím tắt A–D, Enter. Câu hỏi = câu của bài + câu tự sinh **đúng dạng của chủ điểm** (so sánh, cộng trừ trong phạm vi, bảng nhân, phân số, số thập phân, giờ, chính tả, từ vựng…). Đạt 100 = **thành thạo** (+3 ⭐, đảo cũng tính 3 sao).
+- **Bài kiểm tra chủ đề** (10 câu/15 phút) và **Kiểm tra cuối học kỳ** (20 câu/30 phút) dùng chung giao diện phòng thi (đồng hồ, đánh dấu, nộp bài, xem lời giải).
+- **Đánh giá năng lực** đầu vào (2 câu mỗi chủ đề): kết quả Giỏi / Khá / Cần cố gắng theo từng chủ đề; lần đầu vào môn có lời mời "Đánh giá năng lực (+20 XP) / Để lúc khác làm".
+- Điểm thành thạo từng chủ điểm đồng bộ vào tài khoản phụ huynh. Trang bài học có nút **Thực hành ngay**; nút "Bắt đầu học" trên trang chủ và mục menu **Học tập** dẫn tới trang mới.
+
 ## Bản 0.10: Phòng luyện thi
 
 - Trang **Luyện thi** (`luyen-thi`, shortcode `[hv_exam]`) – bé luyện đề như thi thật trước các cuộc thi trực tuyến:

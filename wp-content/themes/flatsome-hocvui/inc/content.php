@@ -227,7 +227,8 @@ function hv_grade_link( $grade ) {
  */
 function hv_lesson_fields() {
 	return array(
-		'chu_de'   => array( 'Chủ đề / mạch kiến thức trong chương trình', 'text', 'Phép cộng, phép trừ trong phạm vi 100' ),
+		'chu_de'   => array( 'Chủ đề / mạch kiến thức trong chương trình (các bài cùng chủ đề được gom thành một chủ đề ở trang Học tập)', 'text', 'Phép cộng, phép trừ trong phạm vi 100' ),
+		'hoc_ky'   => array( 'Học kỳ', 'sem', '' ),
 		'icon'     => array( 'Biểu tượng (emoji, để trống = theo môn)', 'text', '➕' ),
 		'mo_man'   => array( 'Mở màn – Cú Bông kể tình huống gợi tò mò (được đọc to)', 'textarea', 'Đội bóng của Cú Bông có 38 quả bóng, vừa được tặng thêm 25 quả…' ),
 		'nhiem_vu' => array( 'Nhiệm vụ ngoài đời – việc nhỏ em làm cùng gia đình', 'text', 'Đặt tính và cộng tuổi của bố với tuổi của mẹ.' ),
@@ -339,6 +340,13 @@ function hv_lesson_metabox_html( $post ) {
 				echo '<option value="' . esc_attr( $gid ) . '"' . selected( $cur, $gid, false ) . '>' . esc_html( $g[1] . ' ' . $g[0] ) . '</option>';
 			}
 			echo '</select>';
+		} elseif ( 'sem' === $f[1] ) {
+			$cur = hv_lesson_meta( $key, $post->ID );
+			echo '<select id="' . esc_attr( $name ) . '" name="' . esc_attr( $name ) . '">';
+			foreach ( array( '' => 'Tự động (theo sách Kết nối tri thức / thứ tự bài)', '1' => 'Học kỳ 1', '2' => 'Học kỳ 2' ) as $v => $label ) {
+				echo '<option value="' . esc_attr( $v ) . '"' . selected( $cur, (string) $v, false ) . '>' . esc_html( $label ) . '</option>';
+			}
+			echo '</select>';
 		} elseif ( 'books' === $f[1] ) {
 			$cur = hv_lesson_meta( $key, $post->ID );
 			foreach ( hv_books() as $bid => $bname ) {
@@ -377,6 +385,8 @@ function hv_lesson_save( $post_id ) {
 			$val = esc_url_raw( $raw );
 		} elseif ( 'game' === $f[1] ) {
 			$val = array_key_exists( $raw, hv_games() ) ? $raw : '';
+		} elseif ( 'sem' === $f[1] ) {
+			$val = in_array( $raw, array( '1', '2' ), true ) ? $raw : '';
 		} else {
 			$val = sanitize_text_field( $raw );
 		}
