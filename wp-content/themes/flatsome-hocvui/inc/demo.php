@@ -181,6 +181,7 @@ function hv_demo_lessons_build() {
 				'_hv_ghi_nho'  => implode( "\n", $l['notes'] ),
 				'_hv_cau_hoi'  => implode( "\n", $l['quiz'] ),
 				'_hv_tro_choi' => $l['game'],
+				'_hv_hoc_ky'   => isset( $l['sem'] ) ? $l['sem'] : '',
 				'_hv_bo_sach'  => hv_default_books( $l['subject'] ),
 				'_hv_demo'     => 1,
 			)

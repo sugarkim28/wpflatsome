@@ -2395,12 +2395,49 @@
 	function normAns(v) { return String(v === null || v === undefined ? '' : v).replace(/\s+/g, '').replace(/\./g, '').toLowerCase(); }
 	function mmss(s) { s = Math.max(0, Math.ceil(s)); return (s >= 600 ? '' : '0') + Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
 	// Dạng câu riêng cho đề thi: so sánh, tìm x, dãy số.
-	function cmpQ(g) {
-		var top = [0, 10, 100, 1000, 100000, 1000000][g] || 100;
+	function cmpQ(g, maxN) {
+		var top = maxN || [0, 10, 100, 1000, 100000, 1000000][g] || 100;
 		var a = rnd(0, top), b = Math.random() < 0.2 ? a : rnd(0, top);
 		var A = num(a), B = num(b);
-		if (g >= 2 && Math.random() < 0.5) { var x = rnd(0, Math.floor(a / 2)); A = num(a - x) + ' + ' + num(x); }
+		if (g >= 2 && !maxN && Math.random() < 0.5) { var x = rnd(0, Math.floor(a / 2)); A = num(a - x) + ' + ' + num(x); }
 		return { q: A + ' … ' + B, say: 'Điền dấu thích hợp vào chỗ chấm: ' + A + ' chấm chấm ' + B, note: 'Chọn dấu thích hợp điền vào chỗ chấm', o: { choices: ['>', '<', '='], a: a > b ? '>' : a < b ? '<' : '=' }, big: true };
+	}
+	// Lớp 1: số liền trước/liền sau, tách – gộp số, xăng-ti-mét, các ngày trong tuần.
+	function nbrQ(top) {
+		var n = rnd(1, top - 1), after = Math.random() < 0.5;
+		var a = after ? n + 1 : n - 1;
+		// Lựa chọn nhiễu trong phạm vi: số liền bên kia, và số cách 2 (phạm vi 10) hoặc cách 10 (phạm vi 100).
+		var far = top <= 10 ? (after ? n + 2 : n - 2) : (after ? n + 10 : n - 10);
+		if (far < 0 || far > top) { far = after ? n - 2 : n + 2; }
+		var opts = [a, after ? n - 1 : n + 1, far].filter(function (v, i, arr) { return v >= 0 && arr.indexOf(v) === i; });
+		if (opts.length < 3) { opts.push(a + 2); }
+		return { q: 'Số liền ' + (after ? 'sau' : 'trước') + ' của ' + n + ' là số nào?', o: { choices: shuffle(opts).map(num), a: num(a) } };
+	}
+	function splitQ() {
+		var n = rnd(3, 10), a = rnd(1, n - 1), b = n - a;
+		var wrong = [b + 1, b - 1 >= 0 && b - 1 !== b ? b - 1 : b + 2, n].filter(function (v) { return v !== b; });
+		var opts = [b];
+		wrong.forEach(function (v) { if (opts.length < 3 && opts.indexOf(v) < 0) { opts.push(v); } });
+		return Math.random() < 0.5
+			? { q: n + ' gồm ' + a + ' và mấy?', o: { choices: shuffle(opts).map(String), a: String(b) } }
+			: { q: 'Gộp ' + a + ' và ' + b + ' được mấy?', o: { choices: shuffle([n, n + 1, Math.abs(a - b) === n ? n - 1 : Math.abs(a - b)].filter(function (v, i, arr) { return arr.indexOf(v) === i; })).map(String), a: String(n) } };
+	}
+	function lenQ() {
+		var a = rnd(2, 15), b = rnd(1, Math.min(a - 1, 9)), t = rnd(0, 2);
+		if (t === 0) { return { q: a + ' cm + ' + b + ' cm = ?', o: { choices: shuffle([a + b, a + b + 1, a + b - 1]).map(function (v) { return v + ' cm'; }), a: (a + b) + ' cm' } }; }
+		if (t === 1) { return { q: a + ' cm − ' + b + ' cm = ?', o: { choices: shuffle([a - b, a - b + 1, a + b]).map(function (v) { return v + ' cm'; }), a: (a - b) + ' cm' } }; }
+		var x = rnd(5, 20), y = x + rnd(1, 6);
+		return { q: 'Bút chì dài ' + x + ' cm, thước kẻ dài ' + y + ' cm. Vật nào dài hơn?', o: { choices: shuffle(['Thước kẻ', 'Bút chì', 'Dài bằng nhau']), a: 'Thước kẻ' } };
+	}
+	var DAYS = ['thứ Hai', 'thứ Ba', 'thứ Tư', 'thứ Năm', 'thứ Sáu', 'thứ Bảy', 'Chủ nhật'];
+	function dayQ() {
+		var i = rnd(0, 6), t = rnd(0, 2);
+		var cap = function (x) { return x.charAt(0).toUpperCase() + x.slice(1); };
+		if (t === 2) { return { q: 'Một tuần lễ có mấy ngày?', o: { choices: shuffle(['7 ngày', '5 ngày', '10 ngày']), a: '7 ngày' } }; }
+		var ans = DAYS[(i + (t ? 1 : 6)) % 7];
+		var opts = [ans, DAYS[(i + (t ? 6 : 1)) % 7], DAYS[(i + 2) % 7]].filter(function (v, k, arr) { return arr.indexOf(v) === k; });
+		if (opts.length < 3) { opts.push(DAYS[(i + 3) % 7]); }
+		return { q: 'Hôm nay là ' + DAYS[i] + '. ' + (t ? 'Ngày mai' : 'Hôm qua') + ' là thứ mấy?', o: { choices: shuffle(opts).map(cap), a: cap(ans) } };
 	}
 	function xQ(g) {
 		var a, b, t = rnd(0, 1);
@@ -2770,6 +2807,29 @@
 	function skillGen(L) {
 		var t = (L.t + ' ' + L.topic).toLowerCase(), g = L.g;
 		var M = function (type) { return function () { return mathQ(g, type); }; };
+		if (L.s === 'toan' && g === 1) {
+			// Lớp 1 theo sách Kết nối tri thức: mỗi chủ điểm một dạng câu riêng.
+			if (/cuối năm/.test(t)) { return pickFn([M('noCarry'), M('tens'), function () { return cmpQ(1, 100); }, function () { return clockQ(1); }, function () { return nbrQ(100); }, lenQ]); }
+			if (/ôn tập/.test(t)) { return pickFn([M('add10'), M('sub10'), function () { return cmpQ(1); }, splitQ, function () { return countQ(1); }]); }
+			if (/vị trí|định hướng/.test(t)) { return null; }
+			if (/độ dài/.test(t)) { return lenQ; }
+			if (/khối/.test(L.t.toLowerCase())) { return null; }
+			if (/hình/.test(t)) { return function () { var q, k = 0; do { q = countQ(1); } while (!/hình/i.test(q.q) && k++ < 40); return q; }; }
+			if (/ngày trong tuần/.test(t)) { return dayQ; }
+			if (/xăng-ti-mét/.test(t)) { return lenQ; }
+			if (/mấy và mấy|tách|gộp/.test(t)) { return splitQ; }
+			if (/nhiều hơn|ít hơn/.test(t)) { return function () { return countQ(1); }; }
+			if (/bảng các số/.test(t)) { return function () { return nbrQ(100); }; }
+			if (/hai chữ số|đến 100/.test(L.t.toLowerCase())) {
+				if (/một chữ số/.test(L.t.toLowerCase())) { return M('noCarry'); }
+				if (/cộng|trừ/.test(L.t.toLowerCase())) { return pickFn([M('noCarry'), M('tens')]); }
+				if (/so sánh/.test(L.t.toLowerCase())) { return function () { return cmpQ(1, 100); }; }
+				return pickFn([function () { return cmpQ(1, 100); }, function () { return nbrQ(100); }]);
+			}
+			if (/phạm vi 100|một chữ số/.test(L.t.toLowerCase())) { return pickFn([M('noCarry'), M('tens')]); }
+			if (/các số từ 0 đến 10|so sánh số/.test(t)) { return pickFn([function () { return cmpQ(1); }, function () { return nbrQ(10); }]); }
+			if (/bảng cộng|cộng|trừ/.test(t)) { return pickFn([M('add10'), M('sub10')]); }
+		}
 		if (L.s === 'toan') {
 			if (/la mã|độ dài|góc|biểu đồ|thống kê|thể tích|diện tích|chu vi|hình tròn|ki-lô-gam|lít/.test(t)) { return null; }
 			if (/so sánh|lớn hơn|bé hơn/.test(t)) { return function () { return cmpQ(g); }; }
@@ -2830,6 +2890,7 @@
 		o.remove();
 		if (!document.querySelector('.hv-pr')) { document.body.classList.remove('hv-pr-open'); }
 	}
+	function topicLabel(name) { return /^Chủ đề/i.test(name) ? name : 'Chủ đề “' + name + '”'; }
 	function hms(s) { s = Math.max(0, Math.floor(s)); return ('0' + Math.floor(s / 3600)).slice(-2) + ':' + ('0' + Math.floor(s % 3600 / 60)).slice(-2) + ':' + ('0' + s % 60).slice(-2); }
 
 	/* Thực hành một chủ điểm: điểm thành thạo 0 → 100 (đúng cộng, sai trừ nhẹ), mốc 30/60/90 thưởng kim cương ⭐, 100 = cúp. */
@@ -3140,7 +3201,7 @@
 				'<div class="hv-ln-btns"><a class="hv-ln-btn" href="' + esc(L.u) + '">📖 Xem lý thuyết</a><button type="button" class="hv-ln-btn is-main" data-ln-p="' + esc(L.id) + '">✏️ Thực hành</button></div></div>' +
 				'<span class="hv-ln-ring" style="--p:' + v + '" title="Điểm thành thạo"><b>' + (v >= 100 ? '🏆' : v + '%') + '</b></span></li>';
 		});
-		h += '<li class="hv-ln-skill is-test"><span class="hv-ln-art">📝</span><div class="hv-ln-sk"><small>BÀI KIỂM TRA</small><b>Chủ đề “' + esc(tp.name) + '”</b><span class="hv-ln-st">10 câu · 15 phút' + (tb !== undefined ? ' · cao nhất ' + tb + '%' : '') + '</span><div class="hv-ln-btns"><button type="button" class="hv-ln-btn is-main" data-ln="test">Làm bài kiểm tra</button></div></div>' +
+		h += '<li class="hv-ln-skill is-test"><span class="hv-ln-art">📝</span><div class="hv-ln-sk"><small>BÀI KIỂM TRA</small><b>' + esc(topicLabel(tp.name)) + '</b><span class="hv-ln-st">10 câu · 15 phút' + (tb !== undefined ? ' · cao nhất ' + tb + '%' : '') + '</span><div class="hv-ln-btns"><button type="button" class="hv-ln-btn is-main" data-ln="test">Làm bài kiểm tra</button></div></div>' +
 			'<span class="hv-ln-ring" style="--p:' + (tb || 0) + '"><b>' + (tb !== undefined ? tb + '%' : '–') + '</b></span></li></ul>';
 		return h;
 	};
@@ -3192,7 +3253,7 @@
 		if (a === 'test') {
 			var tp = tps.filter(function (x) { return x.key === self.topicKey; })[0];
 			if (!tp) { return; }
-			this.exam({ title: 'Kiểm tra chủ đề “' + tp.name + '”', sub: sub, g: this.g, min: 15, n: 10, key: tp.key, ico: 'scroll', build: function () { return buildPool(tp.items, 10); } });
+			this.exam({ title: 'Kiểm tra · ' + topicLabel(tp.name), sub: sub, g: this.g, min: 15, n: 10, key: tp.key, ico: 'scroll', build: function () { return buildPool(tp.items, 10); } });
 		} else if (a === 'hk') {
 			var list = [];
 			tps.filter(function (x) { return x.sem === self.sem; }).forEach(function (x) { list = list.concat(x.items); });
@@ -3432,5 +3493,5 @@
 	}
 	if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); } else { init(); }
 
-	window.HocVui = { games: GAMES, init: init, _practice: function () { return Practice.cur; }, _test: { mathQ: mathQ, countQ: countQ, clockQ: clockQ, wordQ: wordQ, num: num, dec: dec } };
+	window.HocVui = { games: GAMES, init: init, _practice: function () { return Practice.cur; }, _test: { skillGen: skillGen, genItem: genItem, bankItems: bankItems, mathQ: mathQ, countQ: countQ, clockQ: clockQ, wordQ: wordQ, num: num, dec: dec } };
 })();

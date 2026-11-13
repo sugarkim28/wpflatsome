@@ -2,6 +2,16 @@
 
 Theme con của **Flatsome**: bài học theo Chương trình GDPT 2018, bám bộ sách dùng chung toàn quốc từ năm học 2026–2027 (**Kết nối tri thức với cuộc sống**, **Tiếng Anh Global Success** – QĐ 3588/QĐ-BGDĐT), kèm luyện tập và trò chơi học tập.
 
+## Bản 0.12: Lớp 1 đầy đủ chủ điểm theo sách Kết nối tri thức
+
+- **40 chủ điểm mới cho Lớp 1** (tổng 54 + 2 chủ điểm Làm quen máy tính), xếp đúng thứ tự chủ đề, bài của sách; nội dung, câu hỏi tự biên soạn, mỗi câu có lời giải:
+  - **Toán 1 (21):** 10 chủ đề – Các số từ 0 đến 10 (nhiều hơn/ít hơn, so sánh số, mấy và mấy), hình phẳng (lắp ghép, xếp hình), cộng trừ trong phạm vi 10 (bảng cộng, bảng trừ), hình khối (vị trí, định hướng), Ôn tập học kì 1; các số đến 100 (so sánh số có hai chữ số, bảng các số từ 1 đến 100), xăng-ti-mét, cộng trừ số có hai chữ số với số có một chữ số, các ngày trong tuần, Ôn tập cuối năm.
+  - **Tiếng Việt 1 (14):** HK1 chữ ghép, chính tả c/k – g/gh – ng/ngh, các nhóm vần (âm cuối n/m, ng/nh, c/ch/t/p, vần oa/oe/uê/uy); HK2 5 chủ đề đọc: Tôi và các bạn, Mái ấm gia đình, Mái trường mến yêu, Thiên nhiên kì thú, Đất nước và con người.
+  - **Tự nhiên và Xã hội 1 (12):** đủ 6 chủ đề – Gia đình, Trường học, Cộng đồng địa phương (HK1); Thực vật và động vật, Con người và sức khoẻ, Trái Đất và bầu trời (HK2).
+  - **Đạo đức 1 (7):** Thói quen tốt, Yêu thương gia đình, Quan tâm chăm sóc người thân, Thật thà, Sinh hoạt nền nếp, Tự giác, Phòng tránh tai nạn thương tích.
+- Cột thứ 8 (tuỳ chọn) trong `curriculum.txt` = học kỳ (1/2); "Tạo site mẫu" lưu vào ô Học kỳ của bài.
+- Thực hành Toán 1 có câu tự sinh đúng dạng từng chủ điểm: tách – gộp số, số liền trước/liền sau, so sánh trong phạm vi 10 và 100, nhận biết hình, cộng trừ không nhớ, xăng-ti-mét, các ngày trong tuần, ôn tập tổng hợp.
+
 ## Bản 0.11: học theo chủ đề, thực hành đến 100 điểm (theo cách các trường đang dùng)
 
 Tổ chức kiến thức và cách luyện tập theo mô hình của các hệ thống tự học trực tuyến nhà trường đang dùng (như VioEdu), với nội dung của Học Vui:

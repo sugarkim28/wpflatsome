@@ -468,6 +468,7 @@ function hv_curriculum() {
 				'topic'   => isset( $p[4] ) ? $p[4] : '',
 				'icon'    => isset( $p[5] ) ? $p[5] : '',
 				'game'    => isset( $p[6] ) ? $p[6] : '',
+				'sem'     => isset( $p[7] ) && in_array( $p[7], array( '1', '2' ), true ) ? $p[7] : '',
 				'excerpt' => '',
 				'hook'    => '',
 				'fact'    => '',

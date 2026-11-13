@@ -4,7 +4,7 @@
 # Không sao chép nội dung sách giáo khoa.
 #
 # Cú pháp mỗi bài:
-# === slug | lớp | môn | Tên bài | Chủ đề / mạch kiến thức | biểu tượng | trò chơi gợi ý
+# === slug | lớp | môn | Tên bài | Chủ đề / mạch kiến thức | biểu tượng | trò chơi gợi ý | học kỳ (1/2, tuỳ chọn)
 # > Tóm tắt 1 dòng
 # ~ Mở màn: Cú Bông kể tình huống, gợi tò mò (đọc to bằng giọng tiếng Việt)
 # @ Em có biết?: điều thú vị mở rộng kiến thức
@@ -36,6 +36,71 @@
 ? Chọn dấu đúng: 6 … 4 | &gt; | &lt; | = => 6 lớn hơn 4 nên dùng dấu &gt;. Đầu nhọn của dấu luôn chỉ về số bé hơn (số 4).
 ? Một bàn tay có mấy ngón? | 5 | 4 | 10 => Một bàn tay có 5 ngón: cái, trỏ, giữa, áp út, út. Hai bàn tay có 10 ngón.
 
+=== toan-1-nhieu-hon-it-hon | 1 | toan | Nhiều hơn, ít hơn, bằng nhau | Chủ đề 1: Các số từ 0 đến 10 | ⚖️ | dem-hinh
+> So sánh số lượng hai nhóm đồ vật bằng cách ghép đôi từng cái.
+~ Cú Bông có 5 chiếc bánh và 4 bạn nhỏ. Mỗi bạn một chiếc, liệu có bạn nào bị thiếu bánh không? Mình cùng ghép đôi thử xem nhé!
+@ Từ rất lâu, khi chưa biết đếm, người chăn cừu xếp mỗi con cừu với một hòn sỏi. Chiều về, nếu sỏi còn thừa là biết có cừu bị lạc. Đó chính là cách ghép đôi “một – một” em đang học!
+! Khi dọn mâm cơm, em đặt mỗi cái bát với một đôi đũa rồi xem bát hay đũa nhiều hơn.
++ Ghép đôi từng đồ vật của hai nhóm.
++ Nói được nhóm nào nhiều hơn, ít hơn, hay bằng nhau.
+<p>Muốn biết nhóm nào nhiều hơn mà chưa cần đếm, em <strong>ghép đôi</strong>: mỗi đồ vật ở nhóm này nối với một đồ vật ở nhóm kia.</p>
+<div class="hv-example"><strong>Ví dụ:</strong> 🐰🐰🐰🐰 và 🥕🥕🥕. Mỗi chú thỏ nhận một củ cà rốt thì còn thừa 1 chú thỏ. Vậy <strong>số thỏ nhiều hơn số cà rốt</strong>, <strong>số cà rốt ít hơn số thỏ</strong>.</div>
+<h2>Bằng nhau</h2>
+<p>Nếu ghép đôi vừa hết, không thừa cái nào, ta nói hai nhóm có số lượng <strong>bằng nhau</strong>. Ví dụ: 3 cái cốc và 3 cái thìa.</p>
+<div class="hv-tip"><strong>Mẹo nhỏ:</strong> nhóm nào còn thừa ra sau khi ghép đôi là nhóm <strong>nhiều hơn</strong>.</div>
+* Ghép đôi mỗi đồ vật với một đồ vật.
+* Nhóm còn thừa là nhóm nhiều hơn, nhóm thiếu là nhóm ít hơn.
+* Ghép vừa hết thì hai nhóm bằng nhau.
+? Có 4 chú thỏ và 3 củ cà rốt. Nhóm nào nhiều hơn? | Nhóm thỏ | Nhóm cà rốt | Bằng nhau => Ghép mỗi thỏ với một củ cà rốt thì thừa 1 chú thỏ, nên số thỏ nhiều hơn.
+? Có 5 cái cốc và 5 cái thìa. Số cốc và số thìa thế nào? | Bằng nhau | Cốc nhiều hơn | Thìa nhiều hơn => Ghép đôi vừa hết, không thừa cái nào nên hai nhóm bằng nhau.
+? Có 2 con mèo và 6 con cá. Nhóm nào ít hơn? | Nhóm mèo | Nhóm cá | Bằng nhau => Ghép đôi xong còn thừa 4 con cá, nên số mèo ít hơn số cá.
+? Ghép đôi xong, nhóm còn thừa ra là nhóm thế nào? | Nhiều hơn | Ít hơn | Bằng nhau => Nhóm còn thừa đồ vật chưa được ghép là nhóm có nhiều đồ vật hơn.
+? Có 3 bạn và 4 cái ghế. Mỗi bạn ngồi một ghế thì sao? | Thừa 1 cái ghế | Thiếu 1 cái ghế | Vừa đủ ghế => Ghép mỗi bạn với một ghế thì còn 1 ghế trống, tức là thừa 1 cái ghế.
+
+=== toan-1-so-sanh-so | 1 | toan | So sánh số – dấu lớn hơn, bé hơn, bằng | Chủ đề 1: Các số từ 0 đến 10 | 🐊 | bong-bay
+> Dùng dấu &gt;, &lt;, = để so sánh các số trong phạm vi 10.
+~ Chú cá sấu nhỏ của Cú Bông rất háu ăn: lúc nào cũng há miệng về phía có nhiều cá hơn! Miệng cá sấu chính là dấu so sánh mà hôm nay mình học đấy.
+@ Dấu = do một nhà toán học người xứ Wales nghĩ ra cách đây hơn 450 năm. Ông chọn hai đoạn thẳng song song dài bằng nhau vì “không có hai thứ gì bằng nhau hơn thế”.
+! Em lấy hai nắm hạt đậu, đếm từng nắm rồi nói với bố mẹ: nắm nào nhiều hơn, dùng dấu gì?
++ Đọc, viết các dấu &gt;, &lt;, =.
++ So sánh hai số trong phạm vi 10.
++ Xếp các số theo thứ tự từ bé đến lớn.
+<p>Khi so sánh hai số, ta dùng một trong ba dấu:</p>
+<ul><li><strong>&gt;</strong> đọc là “lớn hơn”: 7 &gt; 3</li><li><strong>&lt;</strong> đọc là “bé hơn”: 2 &lt; 8</li><li><strong>=</strong> đọc là “bằng”: 6 = 6</li></ul>
+<div class="hv-example"><strong>Ví dụ:</strong> 9 &gt; 5 vì khi đếm, số 9 đứng sau số 5. Số đứng sau khi đếm thì lớn hơn.</div>
+<h2>Xếp thứ tự</h2>
+<p>Các số 4, 1, 7 xếp từ bé đến lớn là: <strong>1, 4, 7</strong>; từ lớn đến bé là: <strong>7, 4, 1</strong>.</p>
+<div class="hv-tip"><strong>Mẹo cá sấu:</strong> miệng dấu luôn há về phía số lớn hơn, đầu nhọn chỉ về số bé hơn.</div>
+* Số đứng sau khi đếm thì lớn hơn số đứng trước.
+* Miệng dấu &gt;, &lt; há về phía số lớn hơn.
+* Hai số giống nhau thì dùng dấu =.
+? Chọn dấu đúng: 3 … 8 | &lt; | &gt; | = => 3 bé hơn 8 nên dùng dấu &lt;. Miệng dấu há về phía số 8 lớn hơn.
+? Chọn dấu đúng: 9 … 6 | &gt; | &lt; | = => 9 lớn hơn 6 nên dùng dấu &gt;. Đầu nhọn chỉ về số 6 bé hơn.
+? Số nào lớn nhất trong các số 4, 10, 7? | 10 | 7 | 4 => Đếm từ 1 đến 10, số 10 đứng sau cùng nên lớn nhất.
+? Các số 5, 2, 8 xếp từ bé đến lớn là: | 2, 5, 8 | 8, 5, 2 | 5, 2, 8 => Bé nhất là 2, rồi đến 5, lớn nhất là 8.
+? Dấu “&lt;” đọc là gì? | Bé hơn | Lớn hơn | Bằng => Dấu &lt; đọc là “bé hơn”, ví dụ 2 &lt; 5 đọc là “hai bé hơn năm”.
+
+=== toan-1-may-va-may | 1 | toan | Mấy và mấy – tách, gộp số | Chủ đề 1: Các số từ 0 đến 10 | 🧩 | dem-hinh
+> Tách một số thành hai phần và gộp hai phần thành một số trong phạm vi 10.
+~ Cú Bông có 6 quả bóng bay, muốn chia vào hai tay. Tay phải cầm 4 quả thì tay trái cầm mấy quả? Cùng học “mấy và mấy” để trả lời nhé!
+@ Có rất nhiều cách tách số 10: 1 và 9, 2 và 8, 3 và 7, 4 và 6, 5 và 5… Nhớ các cặp “làm bạn với 10” giúp em tính nhẩm rất nhanh ở các lớp sau.
+! Em lấy 7 que tính, chia thành hai nhóm theo nhiều cách khác nhau và đọc to: “7 gồm 3 và 4”…
++ Tách một số thành hai phần.
++ Biết “6 gồm 4 và 2”, “gộp 4 và 2 được 6”.
+<p>Một nhóm đồ vật có thể <strong>tách</strong> thành hai phần. Ví dụ: 5 bông hoa gồm 3 bông đỏ và 2 bông vàng. Ta nói: <strong>5 gồm 3 và 2</strong>.</p>
+<div class="hv-example"><strong>Ví dụ:</strong> 🔴🔴🔴🔴 🔵🔵 → 6 gồm 4 và 2. <strong>Gộp</strong> 4 và 2 được 6.</div>
+<h2>Nhiều cách tách</h2>
+<p>4 có thể tách thành: 1 và 3, 2 và 2, 3 và 1. Đổi chỗ hai phần thì số vẫn như cũ.</p>
+<div class="hv-tip"><strong>Mẹo nhỏ:</strong> muốn tìm phần còn lại, em đếm thêm từ phần đã biết đến số cần có. Ví dụ 8 gồm 5 và mấy? Đếm 6, 7, 8 – thêm 3 lần, vậy 8 gồm 5 và 3.</div>
+* “6 gồm 4 và 2” nghĩa là gộp 4 và 2 được 6.
+* Một số có thể tách theo nhiều cách.
+* Đổi chỗ hai phần, kết quả gộp không đổi.
+? 7 gồm 4 và mấy? | 3 | 2 | 4 => Đếm thêm từ 4 đến 7: 5, 6, 7 là 3 lần. Vậy 7 gồm 4 và 3.
+? Gộp 5 và 5 được mấy? | 10 | 9 | 55 => 5 và 5 gộp lại là 10, giống hai bàn tay, mỗi tay 5 ngón.
+? 9 gồm 6 và mấy? | 3 | 2 | 4 => Đếm thêm từ 6: 7, 8, 9 là 3 lần. Vậy 9 gồm 6 và 3.
+? Cách tách nào của số 5 là đúng? | 2 và 3 | 2 và 4 | 1 và 3 => 2 và 3 gộp lại được 5. Còn 2 và 4 được 6, 1 và 3 được 4.
+? Có 8 cái kẹo, em cho bạn 2 cái. Em còn mấy cái? | 6 | 10 | 5 => 8 gồm 2 và 6, cho bạn 2 cái thì em còn 6 cái.
+
 === toan-1-hinh-phang | 1 | toan | Hình vuông, hình tròn, hình tam giác, hình chữ nhật | Chủ đề 2: Làm quen với một số hình phẳng | 🔺 | dem-hinh
 > Nhận biết 4 hình phẳng quen thuộc qua đồ vật quanh em.
 ~ Ôi không! Cây cầu sang Đảo Hạt Mầm được ghép từ các mảnh hình, mà gió thổi làm chúng rơi lung tung cả rồi. Em hãy làm thám tử hình học, nhận ra từng hình để sửa cầu giúp Cú Bông nhé!
@@ -58,6 +123,27 @@
 ? Bánh xe đạp có dạng hình gì? | Hình tròn | Hình vuông | Hình tam giác => Bánh xe tròn để lăn êm. Hình tròn không có cạnh, không có góc.
 ? Bìa quyển vở có dạng hình gì? | Hình chữ nhật | Hình tròn | Hình tam giác => Bìa vở có 4 cạnh: 2 cạnh dài và 2 cạnh ngắn – đó là hình chữ nhật.
 ? Hình nào có 4 cạnh dài bằng nhau? | Hình vuông | Hình chữ nhật | Hình tròn => Hình vuông có 4 cạnh dài bằng nhau. Hình chữ nhật có 2 cạnh dài, 2 cạnh ngắn.
+
+=== toan-1-lap-ghep-xep-hinh | 1 | toan | Thực hành lắp ghép, xếp hình | Chủ đề 2: Làm quen với một số hình phẳng | 🧩 | dem-hinh
+> Ghép các hình vuông, hình tam giác, hình tròn, hình chữ nhật thành hình mới.
+~ Cú Bông có mấy miếng bìa hình tam giác và hình vuông. Chỉ cần xếp khéo một chút là thành ngôi nhà, con thuyền, cây thông! Em có muốn thử không?
+@ Trò chơi xếp hình Tangram của Trung Quốc chỉ có 7 miếng bìa, vậy mà có thể ghép thành hơn một nghìn hình khác nhau: con mèo, con cá, người chạy…
+! Cắt giấy màu thành vài hình tam giác, hình vuông rồi cùng bố mẹ ghép thành một ngôi nhà và dán vào vở.
++ Nhận ra các hình trong một hình ghép.
++ Ghép hình đơn giản theo mẫu.
+<p>Từ các hình đã học, em có thể <strong>ghép</strong> thành nhiều hình mới:</p>
+<div class="hv-example"><strong>Ngôi nhà:</strong> 1 hình tam giác làm mái + 1 hình vuông làm thân nhà 🏠.<br><strong>Cây thông:</strong> 2–3 hình tam giác chồng lên nhau + 1 hình chữ nhật làm thân 🌲.</div>
+<h2>Ghép hai hình thành hình mới</h2>
+<p>Hai hình tam giác giống nhau ghép lại có thể thành <strong>một hình vuông</strong>. Hai hình vuông đặt cạnh nhau thành <strong>một hình chữ nhật</strong>.</p>
+<div class="hv-tip"><strong>Mẹo:</strong> trước khi ghép, em đếm xem hình mẫu có mấy miếng và mỗi miếng là hình gì.</div>
+* Ngôi nhà: tam giác làm mái, hình vuông làm thân.
+* Hai hình vuông đặt cạnh nhau thành hình chữ nhật.
+* Hai tam giác giống nhau có thể ghép thành hình vuông.
+? Mái của ngôi nhà 🏠 thường giống hình gì? | Hình tam giác | Hình tròn | Hình vuông => Mái nhà nhọn ở trên, có 3 cạnh nên giống hình tam giác.
+? Đặt hai hình vuông bằng nhau cạnh nhau ta được hình gì? | Hình chữ nhật | Hình tròn | Hình tam giác => Hai hình vuông cạnh nhau tạo thành hình dài hơn, có 4 góc vuông: hình chữ nhật.
+? Bánh xe của chiếc ô tô vẽ bằng hình gì? | Hình tròn | Hình vuông | Hình tam giác => Bánh xe tròn để lăn được, nên vẽ bằng hình tròn.
+? Hình nào không có góc? | Hình tròn | Hình vuông | Hình tam giác => Hình tròn không có cạnh thẳng và không có góc.
+? Ghép 2 hình tam giác giống nhau có thể được hình gì? | Hình vuông | Hình tròn | Ba hình tam giác => Hai hình tam giác vuông giống nhau úp vào nhau tạo thành một hình vuông.
 
 === toan-1-cong-tru-pham-vi-10 | 1 | toan | Phép cộng, phép trừ trong phạm vi 10 | Chủ đề 3: Phép cộng, phép trừ trong phạm vi 10 | ➕ | bong-bay
 > Làm quen với phép cộng (gộp lại) và phép trừ (bớt đi) trong phạm vi 10.
@@ -82,6 +168,27 @@
 ? 5 + 5 = ? | 10 | 9 | 0 => 5 và 5 là cặp “bạn thân” của số 10: 5 + 5 = 10.
 ? Có 6 quả cam, mẹ cho bé 2 quả. Trên đĩa còn lại mấy quả cam? | 4 quả | 8 quả | 3 quả => Mẹ cho bé 2 quả nghĩa là bớt đi 2: 6 − 2 = 4 quả.
 
+=== toan-1-bang-cong-tru-10 | 1 | toan | Bảng cộng, bảng trừ trong phạm vi 10 | Chủ đề 3: Phép cộng, phép trừ trong phạm vi 10 | 📋 | tinh-nham
+> Thuộc bảng cộng, bảng trừ trong phạm vi 10 và tính nhẩm nhanh.
+~ Cú Bông thi tính nhẩm với các bạn chim sẻ. Ai thuộc bảng cộng, bảng trừ sẽ trả lời nhanh như chớp! Mình cùng luyện để thắng nhé!
+@ Người Việt xưa dùng bàn tính có những hạt gỗ để cộng trừ thật nhanh. Bây giờ em chỉ cần thuộc bảng cộng, bảng trừ là đã có một “bàn tính” trong đầu rồi!
+! Mỗi tối trước khi ngủ, em đọc cho bố mẹ nghe 5 phép cộng trong bảng cộng 10.
++ Thuộc bảng cộng, bảng trừ trong phạm vi 10.
++ Biết mối liên hệ giữa phép cộng và phép trừ.
+<p>Bảng cộng giúp em nhớ nhanh kết quả, ví dụ với số 10:</p>
+<div class="hv-example"><strong>Làm bạn với 10:</strong> 1 + 9 = 10 · 2 + 8 = 10 · 3 + 7 = 10 · 4 + 6 = 10 · 5 + 5 = 10.</div>
+<h2>Cộng và trừ là đôi bạn</h2>
+<p>Từ một phép cộng, em viết được hai phép trừ: <strong>4 + 3 = 7</strong> nên <strong>7 − 3 = 4</strong> và <strong>7 − 4 = 3</strong>.</p>
+<div class="hv-tip"><strong>Mẹo nhỏ:</strong> số nào cộng với 0 cũng bằng chính nó; số nào trừ đi chính nó thì bằng 0.</div>
+* Đổi chỗ các số trong phép cộng, kết quả không đổi: 2 + 5 = 5 + 2.
+* Từ 4 + 3 = 7 suy ra 7 − 3 = 4 và 7 − 4 = 3.
+* a + 0 = a; a − a = 0.
+? 6 + 4 = ? | 10 | 9 | 2 => 6 và 4 là đôi “làm bạn với 10”: 6 + 4 = 10.
+? 9 − 5 = ? | 4 | 5 | 14 => 5 + 4 = 9 nên 9 − 5 = 4.
+? Biết 3 + 5 = 8. Vậy 8 − 5 = ? | 3 | 5 | 13 => Cộng và trừ là đôi bạn: 3 + 5 = 8 thì 8 − 5 = 3.
+? 7 + 0 = ? | 7 | 0 | 70 => Số nào cộng với 0 cũng bằng chính số đó: 7 + 0 = 7.
+? 2 + 6 bằng phép tính nào? | 6 + 2 | 6 − 2 | 2 + 2 => Đổi chỗ các số trong phép cộng, kết quả không đổi: 2 + 6 = 6 + 2 = 8.
+
 === toan-1-khoi-lap-phuong-khoi-hop-chu-nhat | 1 | toan | Khối lập phương, khối hộp chữ nhật | Chủ đề 4: Làm quen với một số hình khối | 🧊 | dem-hinh
 > Nhận biết khối lập phương, khối hộp chữ nhật và vị trí trên – dưới, trước – sau, phải – trái.
 ~ Cú Bông đang xếp đồ chơi vào thùng: con xúc xắc, hộp sữa, khối rubik… Nhưng chúng không phẳng như tờ giấy đâu, chúng là các khối! Em giúp Cú Bông gọi tên nhé.
@@ -105,6 +212,52 @@
 ? Bạn Nam đứng trước em, vậy em đứng ở đâu so với bạn Nam? | Phía sau bạn Nam | Phía trước bạn Nam | Bên trên bạn Nam => Bạn Nam ở phía trước thì em ở phía sau bạn. Trước – sau luôn đi thành cặp.
 ? Quyển sách đặt trên bàn, vậy cái bàn ở đâu so với quyển sách? | Ở dưới quyển sách | Ở trên quyển sách | Ở trước quyển sách => Sách ở trên bàn thì bàn ở dưới sách. Trên – dưới là cặp vị trí ngược nhau.
 
+=== toan-1-vi-tri-dinh-huong | 1 | toan | Vị trí, định hướng trong không gian | Chủ đề 4: Làm quen với một số hình khối | 🧭 | do-vui
+> Nói đúng trên – dưới, trước – sau, trong – ngoài, bên phải – bên trái.
+~ Cú Bông làm rơi chiếc chìa khoá: “Nó ở dưới cái bàn, bên trái chiếc ghế!” Em có tìm giúp được không? Phải hiểu trên, dưới, trái, phải mới tìm ra đó!
+@ Phi công và thuyền trưởng phải nói hướng thật chính xác. Vì thế họ có cách nói riêng như “hướng 3 giờ” – nghĩa là bên phải, giống kim đồng hồ chỉ số 3.
+! Em chơi trò “đi tìm kho báu” ở nhà: giấu một món đồ rồi hướng dẫn bố mẹ tìm bằng các từ trên, dưới, trái, phải.
++ Dùng đúng các từ chỉ vị trí: trên, dưới, trước, sau, trong, ngoài.
++ Phân biệt bên phải, bên trái của em.
+<p>Để nói một đồ vật ở đâu, ta dùng các từ chỉ vị trí:</p>
+<ul><li><strong>Trên – dưới:</strong> quyển sách ở trên bàn, quả bóng ở dưới gầm bàn.</li><li><strong>Trước – sau:</strong> bạn Lan đứng trước bạn Minh.</li><li><strong>Trong – ngoài:</strong> con cá ở trong bể, con mèo ở ngoài bể.</li></ul>
+<h2>Bên phải, bên trái</h2>
+<p>Tay em cầm bút viết thường là <strong>tay phải</strong>. Đồ vật ở phía tay phải là ở <strong>bên phải</strong> em.</p>
+<div class="hv-tip"><strong>Chú ý:</strong> hai bạn đứng đối mặt nhau thì bên phải của bạn này là bên trái của bạn kia.</div>
+* Trên – dưới, trước – sau, trong – ngoài là các cặp từ ngược nhau.
+* Bên phải là phía tay em cầm bút (với bạn viết tay phải).
+* Nói vị trí phải nói so với một đồ vật khác.
+? Quả bóng nằm dưới gầm bàn. Vậy cái bàn ở đâu so với quả bóng? | Ở trên quả bóng | Ở dưới quả bóng | Ở trong quả bóng => Bóng ở dưới bàn thì bàn ở trên bóng – “trên” và “dưới” là cặp từ ngược nhau.
+? Con cá bơi trong bể. Từ chỉ vị trí của con cá là gì? | Trong | Ngoài | Sau => Con cá ở bên trong bể nước.
+? Lan đứng trước Minh. Vậy Minh đứng ở đâu so với Lan? | Sau Lan | Trước Lan | Trên Lan => Lan ở trước thì Minh ở sau Lan.
+? Bạn nhỏ cầm bút bằng tay phải. Chiếc tẩy ở phía tay cầm bút, vậy tẩy ở bên nào? | Bên phải | Bên trái | Phía sau => Đồ vật ở phía tay phải là ở bên phải của bạn.
+? Từ nào ngược nghĩa với “trong”? | Ngoài | Trên | Trước => Trong – ngoài là một cặp từ chỉ vị trí ngược nhau.
+
+=== toan-1-on-tap-hoc-ki-1 | 1 | toan | Ôn tập học kì 1 | Chủ đề 5: Ôn tập học kì 1 | 📚 | leo-nui
+> Ôn các số đến 10, cộng trừ trong phạm vi 10, hình phẳng và hình khối.
+~ Sắp đến bài kiểm tra cuối học kì 1 rồi! Cú Bông soạn một chuyến “leo núi ôn tập”: mỗi nấc là một phần kiến thức em đã học. Mình cùng leo lên đỉnh nào!
+@ Các nhà khoa học thấy rằng ôn bài nhiều lần, mỗi lần một chút, giúp nhớ lâu hơn rất nhiều so với học dồn một lúc. Mỗi ngày 10 phút ôn tập là đủ đấy!
+! Em làm “thầy giáo nhỏ”: đố bố mẹ 3 phép tính cộng, trừ trong phạm vi 10 rồi tự chấm bài.
++ Đếm, đọc, viết, so sánh các số đến 10.
++ Cộng, trừ trong phạm vi 10.
++ Nhận biết hình phẳng, hình khối và vị trí.
+<h2>Các số đến 10</h2>
+<p>Đếm từ 0 đến 10; so sánh bằng dấu &gt;, &lt;, =; tách và gộp số: 8 gồm 5 và 3.</p>
+<h2>Cộng, trừ trong phạm vi 10</h2>
+<div class="hv-example">5 + 4 = 9 · 9 − 4 = 5 · 10 − 3 = 7 · 6 + 0 = 6</div>
+<h2>Hình và vị trí</h2>
+<p>Hình vuông, hình tròn, hình tam giác, hình chữ nhật; khối lập phương, khối hộp chữ nhật; trên – dưới, trước – sau, phải – trái.</p>
+<div class="hv-tip"><strong>Mẹo ôn bài:</strong> làm lại các câu em từng làm sai trong phần Thực hành – đó là phần em cần ôn nhất!</div>
+* Số đứng sau khi đếm thì lớn hơn.
+* Thuộc bảng cộng, bảng trừ trong phạm vi 10.
+* Nhận ra hình qua số cạnh, số góc.
+? 4 + 5 = ? | 9 | 8 | 1 => Đếm thêm 5 từ số 4: 5, 6, 7, 8, 9. Vậy 4 + 5 = 9.
+? 10 − 6 = ? | 4 | 3 | 16 => 6 + 4 = 10 nên 10 − 6 = 4.
+? Chọn dấu đúng: 7 … 7 | = | &gt; | &lt; => Hai số giống nhau nên dùng dấu bằng: 7 = 7.
+? Hình nào có 3 cạnh? | Hình tam giác | Hình vuông | Hình tròn => Hình tam giác có 3 cạnh và 3 góc.
+? Con xúc xắc có dạng khối gì? | Khối lập phương | Khối hộp chữ nhật | Hình tròn => Xúc xắc có 6 mặt đều là hình vuông bằng nhau nên là khối lập phương.
+? 6 gồm 2 và mấy? | 4 | 3 | 8 => Đếm thêm từ 2: 3, 4, 5, 6 là 4 lần. Vậy 6 gồm 2 và 4.
+
 === toan-1-cac-so-den-100 | 1 | toan | Các số đến 100 | Chủ đề 6: Các số đến 100 | 💯 | bong-bay
 > Đọc, viết số có hai chữ số; biết chục và đơn vị; so sánh các số đến 100.
 ~ Cú Bông xếp que tính thành từng bó 10 que, gọi là 1 chục. Có 3 bó và 5 que lẻ thì có bao nhiêu que nhỉ? Cùng đếm đến 100 nào!
@@ -126,6 +279,49 @@
 ? Chọn dấu đúng: 58 … 85 | &lt; | &gt; | = => So sánh số chục trước: 5 chục bé hơn 8 chục, nên 58 &lt; 85.
 ? Số lớn nhất có hai chữ số là: | 99 | 90 | 100 => 99 là số lớn nhất có hai chữ số. Thêm 1 nữa là 100 – số có ba chữ số.
 
+=== toan-1-so-sanh-so-hai-chu-so | 1 | toan | So sánh số có hai chữ số | Chủ đề 6: Các số đến 100 | 🔍 | bong-bay
+> So sánh hai số có hai chữ số bằng cách so sánh hàng chục rồi hàng đơn vị.
+~ Đội Thỏ hái được 47 quả nấm, đội Sóc hái được 52 quả. Đội nào thắng? Không cần đếm lại từng quả, chỉ cần nhìn hàng chục là biết ngay!
+@ Trong số 47, chữ số 4 chỉ 4 chục (40), chữ số 7 chỉ 7 đơn vị. Cùng là chữ số nhưng đứng ở vị trí khác nhau thì có giá trị khác nhau – thật thú vị!
+! Em xem giá hai món đồ ở siêu thị hoặc trên tờ quảng cáo (số có hai chữ số) và nói món nào đắt hơn.
++ So sánh hai số có hai chữ số.
++ Xếp các số có hai chữ số theo thứ tự.
+<p>Muốn so sánh hai số có hai chữ số, em làm theo hai bước:</p>
+<div class="hv-example"><strong>Bước 1 – so sánh hàng chục:</strong> số nào có chữ số hàng chục lớn hơn thì lớn hơn. 52 &gt; 47 vì 5 chục &gt; 4 chục.<br><strong>Bước 2 – nếu hàng chục bằng nhau</strong> thì so sánh hàng đơn vị: 36 &lt; 39 vì 6 &lt; 9.</div>
+<h2>Xếp thứ tự</h2>
+<p>Các số 61, 16, 60 xếp từ bé đến lớn là: <strong>16, 60, 61</strong>.</p>
+<div class="hv-tip"><strong>Chú ý:</strong> 16 và 61 có cùng hai chữ số nhưng khác nhau rất xa: 16 là 1 chục 6 đơn vị, 61 là 6 chục 1 đơn vị.</div>
+* So sánh hàng chục trước.
+* Hàng chục bằng nhau thì so sánh hàng đơn vị.
+* Hai số có cùng chục và cùng đơn vị thì bằng nhau.
+? Chọn dấu đúng: 47 … 52 | &lt; | &gt; | = => Hàng chục: 4 &lt; 5 nên 47 &lt; 52.
+? Chọn dấu đúng: 39 … 36 | &gt; | &lt; | = => Hàng chục đều là 3, so sánh hàng đơn vị: 9 &gt; 6 nên 39 &gt; 36.
+? Số nào lớn nhất: 28, 82, 80? | 82 | 80 | 28 => 82 và 80 đều có 8 chục; 2 đơn vị &gt; 0 đơn vị nên 82 lớn nhất.
+? Các số 61, 16, 60 xếp từ bé đến lớn là: | 16, 60, 61 | 61, 60, 16 | 60, 16, 61 => 16 có 1 chục là bé nhất; 60 &lt; 61 vì 0 &lt; 1.
+? Số 74 gồm mấy chục và mấy đơn vị? | 7 chục và 4 đơn vị | 4 chục và 7 đơn vị | 74 chục => Chữ số bên trái chỉ hàng chục, chữ số bên phải chỉ hàng đơn vị: 74 = 7 chục và 4 đơn vị.
+
+=== toan-1-bang-cac-so-1-100 | 1 | toan | Bảng các số từ 1 đến 100 | Chủ đề 6: Các số đến 100 | 🔟 | tinh-nham
+> Đọc bảng các số từ 1 đến 100, tìm số liền trước, số liền sau, số tròn chục.
+~ Cú Bông treo một tấm bảng to có 100 ô số. Ô nào bị che mất số? Em nhìn hàng, nhìn cột là đoán ra ngay. Bí mật nằm ở quy luật của bảng số đấy!
+@ Số 100 là số đầu tiên có ba chữ số. 100 = 10 chục. Một trăm bước chân của em dài khoảng bằng chiều dài một sân bóng nhỏ!
+! Em cùng bố mẹ đếm từ 1 đến 100 theo kiểu “đếm cách 10”: 10, 20, 30… 100 và vỗ tay mỗi lần đếm.
++ Đọc, viết các số trong bảng từ 1 đến 100.
++ Tìm số liền trước, số liền sau.
++ Nhận biết các số tròn chục.
+<p>Trong bảng các số từ 1 đến 100, mỗi hàng có 10 số. Đi sang phải một ô, số <strong>tăng thêm 1</strong>; đi xuống một hàng, số <strong>tăng thêm 10</strong>.</p>
+<div class="hv-example"><strong>Ví dụ:</strong> số liền trước của 40 là <strong>39</strong>, số liền sau của 40 là <strong>41</strong>. Ô ngay dưới số 25 là số <strong>35</strong>.</div>
+<h2>Số tròn chục</h2>
+<p>10, 20, 30, 40, 50, 60, 70, 80, 90 là các số tròn chục – có chữ số hàng đơn vị là 0.</p>
+<div class="hv-tip"><strong>Mẹo:</strong> số liền sau = thêm 1; số liền trước = bớt 1.</div>
+* Số liền sau lớn hơn 1, số liền trước bé hơn 1.
+* Số tròn chục có hàng đơn vị là 0.
+* Số 100 = 10 chục.
+? Số liền sau của 59 là: | 60 | 58 | 50 => Thêm 1 vào 59: 9 đơn vị thêm 1 thành 1 chục, nên 59 + 1 = 60.
+? Số liền trước của 80 là: | 79 | 81 | 70 => Bớt 1 từ 80 được 79.
+? Số nào là số tròn chục? | 70 | 77 | 17 => Số tròn chục có chữ số hàng đơn vị là 0: 70.
+? Trong bảng số, ô ngay dưới số 34 là số mấy? | 44 | 35 | 33 => Đi xuống một hàng thì số tăng thêm 10: 34 + 10 = 44.
+? 10 chục bằng bao nhiêu? | 100 | 10 | 1000 => 10 chục là 100 – số đầu tiên có ba chữ số.
+
 === toan-1-do-dai | 1 | toan | Độ dài và đo độ dài | Chủ đề 7: Độ dài và đo độ dài | 📏 | dung-sai
 > So sánh dài hơn – ngắn hơn, đo bằng gang tay và bằng thước xăng-ti-mét.
 ~ Bút chì của Cú Bông và que kem, cái nào dài hơn? Đặt cạnh nhau là biết ngay! Còn muốn biết dài bao nhiêu thì mình cần… cây thước!
@@ -145,6 +341,48 @@
 ? Khi đo bằng thước, đầu của vật đặt trùng với vạch số mấy? | Vạch 0 | Vạch 1 | Vạch 10 => Phải đặt đầu vật ở vạch 0 thì số ở đầu kia mới đúng độ dài của vật.
 ? Bút chì dài 12 cm, que tính dài 10 cm. Vật nào dài hơn? | Bút chì | Que tính | Dài bằng nhau => 12 cm lớn hơn 10 cm nên bút chì dài hơn que tính 2 cm.
 ? Vì sao đo bằng thước chính xác hơn đo bằng gang tay? | Vì 1 cm trên mọi thước đều bằng nhau | Vì thước đẹp hơn | Vì gang tay dài hơn => Gang tay mỗi người dài ngắn khác nhau, còn 1 cm trên mọi cây thước đều bằng nhau.
+
+=== toan-1-xang-ti-met | 1 | toan | Đơn vị đo độ dài xăng-ti-mét | Chủ đề 7: Độ dài và đo độ dài | 📐 | dung-sai
+> Đo độ dài bằng thước, cộng trừ số đo xăng-ti-mét, ước lượng độ dài.
+~ Cú Bông muốn may khăn cho búp bê: cần dải ruy băng dài 8 cm. Trong hộp có dải 5 cm và dải 3 cm. Nối lại có đủ không nhỉ?
+@ Một xăng-ti-mét chỉ dài bằng chiều ngang móng tay út của em. Còn chú ốc sên chăm chỉ bò mỗi phút được khoảng vài xăng-ti-mét thôi!
+! Em dùng thước đo chiếc bút chì, cục tẩy và quyển vở của mình, ghi số đo vào giấy rồi xem vật nào dài nhất.
++ Đọc, viết số đo độ dài có đơn vị cm.
++ Cộng, trừ các số đo xăng-ti-mét.
++ Ước lượng độ dài đồ vật quen thuộc.
+<p>Khi cộng hoặc trừ số đo độ dài, em tính như cộng trừ số rồi <strong>viết thêm cm</strong> vào kết quả.</p>
+<div class="hv-example"><strong>Ví dụ:</strong> 5 cm + 3 cm = 8 cm · 12 cm − 4 cm = 8 cm.</div>
+<h2>Ước lượng</h2>
+<p>Một gang tay của em dài khoảng 12–15 cm; chiếc bút chì mới dài khoảng 18 cm; cục tẩy dài khoảng 4 cm.</p>
+<div class="hv-tip"><strong>Nhớ:</strong> đặt vạch 0 của thước trùng với một đầu đồ vật.</div>
+* Kết quả phép tính số đo phải viết kèm đơn vị cm.
+* Đo bằng thước: đầu vật đặt ở vạch 0.
+* 1 cm dài khoảng bằng chiều ngang móng tay út.
+? 5 cm + 3 cm = ? | 8 cm | 8 | 53 cm => Cộng 5 + 3 = 8 rồi viết thêm đơn vị: 8 cm.
+? 15 cm − 5 cm = ? | 10 cm | 20 cm | 10 => 15 − 5 = 10, viết kèm đơn vị: 10 cm.
+? Chiếc bút chì mới dài khoảng bao nhiêu? | 18 cm | 2 cm | 90 cm => Bút chì dài hơn gang tay một chút, khoảng 18 cm. 2 cm quá ngắn, 90 cm quá dài.
+? Thước kẻ dài 20 cm, bút dài 15 cm. Thước dài hơn bút bao nhiêu? | 5 cm | 35 cm | 15 cm => Lấy 20 cm − 15 cm = 5 cm.
+? Ruy băng 6 cm nối với ruy băng 4 cm được dải dài bao nhiêu? | 10 cm | 2 cm | 64 cm => Nối hai dải thì cộng độ dài: 6 cm + 4 cm = 10 cm.
+
+=== toan-1-cong-tru-so-mot-chu-so | 1 | toan | Cộng, trừ số có hai chữ số với số có một chữ số | Chủ đề 8: Phép cộng, phép trừ (không nhớ) trong phạm vi 100 | ➕ | dua-xe
+> Cộng, trừ số có hai chữ số với số có một chữ số (không nhớ).
+~ Lớp em có 34 bạn, hôm nay có thêm 2 bạn mới chuyển đến. Lớp em có bao nhiêu bạn nhỉ? Chỉ cần cộng hàng đơn vị là xong!
+@ Khi cộng một số có một chữ số, chữ số hàng chục không thay đổi (nếu không nhớ). Vì vậy người lớn tính nhẩm những phép này rất nhanh: 34 + 2 = 36.
+! Đi chợ cùng mẹ, em tính nhẩm: mẹ mua 21 quả trứng, thêm 5 quả nữa là bao nhiêu quả?
++ Cộng, trừ số có hai chữ số với số có một chữ số (không nhớ).
++ Giải bài toán có lời văn đơn giản.
+<div class="hv-example"><strong>Tính 34 + 2:</strong> hàng đơn vị 4 + 2 = 6; hàng chục giữ nguyên 3. Vậy <strong>34 + 2 = 36</strong>.</div>
+<div class="hv-example"><strong>Tính 58 − 5:</strong> hàng đơn vị 8 − 5 = 3; hàng chục giữ nguyên 5. Vậy <strong>58 − 5 = 53</strong>.</div>
+<h2>Bài toán có lời văn</h2>
+<p>“Có 23 quả cam, mua thêm 4 quả. Hỏi có tất cả bao nhiêu quả?” → Phép tính: 23 + 4 = 27. Trả lời: <strong>27 quả cam</strong>.</p>
+<div class="hv-tip"><strong>Mẹo:</strong> “thêm, tất cả, gộp” thường là cộng; “bớt, cho đi, còn lại” thường là trừ.</div>
+* Chỉ tính hàng đơn vị, hàng chục giữ nguyên (khi không nhớ).
+* “Thêm, tất cả” → cộng; “bớt, còn lại” → trừ.
+? 34 + 2 = ? | 36 | 54 | 32 => Đơn vị: 4 + 2 = 6, chục giữ nguyên 3. Vậy 36.
+? 58 − 5 = ? | 53 | 8 | 63 => Đơn vị: 8 − 5 = 3, chục giữ nguyên 5. Vậy 53.
+? 70 + 6 = ? | 76 | 13 | 77 => 7 chục và 6 đơn vị là 76.
+? Có 26 con gà, bán đi 4 con. Còn lại bao nhiêu con? | 22 con | 30 con | 24 con => “Bán đi, còn lại” là phép trừ: 26 − 4 = 22 con.
+? Tổ em có 41 bông hoa, cắm thêm 7 bông. Có tất cả bao nhiêu bông? | 48 bông | 34 bông | 47 bông => “Thêm, tất cả” là phép cộng: 41 + 7 = 48 bông.
 
 === toan-1-cong-tru-pham-vi-100 | 1 | toan | Phép cộng, phép trừ (không nhớ) trong phạm vi 100 | Chủ đề 8: Phép cộng, phép trừ (không nhớ) trong phạm vi 100 | ➕ | dua-xe
 > Đặt tính rồi tính cộng, trừ số có hai chữ số không nhớ.
@@ -182,7 +420,52 @@
 ? Kim nào là kim giờ? | Kim ngắn | Kim dài => Kim ngắn là kim giờ, kim dài là kim phút.
 ? Kim dài chỉ số 12, kim ngắn chỉ số 9. Đồng hồ chỉ mấy giờ? | 9 giờ | 12 giờ | 10 giờ => Kim dài chỉ 12, kim ngắn chỉ 9 nên đồng hồ chỉ 9 giờ.
 
-=== tieng-viet-1-am-va-chu | 1 | tieng-viet | Âm và chữ cái tiếng Việt | Làm quen với âm, chữ | 🔤 | cau-ca
+=== toan-1-cac-ngay-trong-tuan | 1 | toan | Các ngày trong tuần | Chủ đề 9: Thời gian, giờ và lịch | 📅 | do-vui
+> Biết một tuần có 7 ngày, thứ tự các ngày và xem lịch tờ.
+~ Hôm nay là thứ Hai, Cú Bông hẹn bạn đi picnic vào ngày Chủ nhật. Còn mấy ngày nữa nhỉ? Biết các ngày trong tuần là đếm được ngay!
+@ Tuần lễ 7 ngày đã có từ hàng nghìn năm trước. Ở nhiều nước, tên các ngày đặt theo Mặt Trời, Mặt Trăng và các hành tinh, còn tiếng Việt gọi là thứ Hai, thứ Ba…
+! Em xem tờ lịch ở nhà và nói với bố mẹ: hôm nay là thứ mấy, ngày bao nhiêu.
++ Biết một tuần lễ có 7 ngày.
++ Nhớ thứ tự các ngày trong tuần.
++ Xem lịch tờ hằng ngày.
+<p>Một tuần lễ có <strong>7 ngày</strong>: thứ Hai, thứ Ba, thứ Tư, thứ Năm, thứ Sáu, thứ Bảy, Chủ nhật.</p>
+<div class="hv-example"><strong>Ví dụ:</strong> hôm nay là thứ Tư thì hôm qua là <strong>thứ Ba</strong>, ngày mai là <strong>thứ Năm</strong>.</div>
+<h2>Xem lịch tờ</h2>
+<p>Tờ lịch ghi <strong>thứ</strong>, <strong>ngày</strong> và <strong>tháng</strong>. Ví dụ: “Thứ Sáu, ngày 20, tháng 11”.</p>
+<div class="hv-tip"><strong>Nhớ:</strong> sau Chủ nhật lại đến thứ Hai của tuần mới.</div>
+* Một tuần có 7 ngày.
+* Sau Chủ nhật là thứ Hai.
+* Tờ lịch cho biết thứ, ngày, tháng.
+? Một tuần lễ có mấy ngày? | 7 ngày | 5 ngày | 10 ngày => Thứ Hai, Ba, Tư, Năm, Sáu, Bảy và Chủ nhật: 7 ngày.
+? Hôm nay là thứ Ba, ngày mai là thứ mấy? | Thứ Tư | Thứ Hai | Thứ Năm => Ngày mai là ngày liền sau thứ Ba: thứ Tư.
+? Hôm nay là thứ Hai, hôm qua là thứ mấy? | Chủ nhật | Thứ Ba | Thứ Bảy => Ngày liền trước thứ Hai là Chủ nhật của tuần trước.
+? Ngày nào đứng sau thứ Sáu? | Thứ Bảy | Thứ Năm | Chủ nhật => Thứ tự: thứ Năm, thứ Sáu, thứ Bảy. Sau thứ Sáu là thứ Bảy.
+? Em đi học từ thứ Hai đến thứ Sáu. Mỗi tuần em đi học mấy ngày? | 5 ngày | 7 ngày | 6 ngày => Đếm: thứ Hai, Ba, Tư, Năm, Sáu là 5 ngày.
+
+=== toan-1-on-tap-cuoi-nam | 1 | toan | Ôn tập cuối năm | Chủ đề 10: Ôn tập cuối năm | 🏆 | leo-nui
+> Ôn tập các số đến 100, cộng trừ không nhớ, đo độ dài, xem giờ và lịch.
+~ Một năm học sắp kết thúc! Cú Bông mời em tham gia “Đại hội ôn tập” để chứng tỏ mình đã sẵn sàng lên lớp 2. Cùng xem lại tất cả bí kíp nào!
+@ Hết lớp 1, em đã biết đếm đến 100, cộng trừ số có hai chữ số, đo độ dài và xem giờ. Đó là nền móng cho mọi bài toán ở các lớp trên đấy!
+! Em lập một tờ “thời gian biểu ngày hè” ghi giờ ngủ dậy, giờ đọc sách, giờ chơi – dùng giờ đúng trên đồng hồ.
++ Đọc, viết, so sánh các số đến 100.
++ Cộng, trừ không nhớ trong phạm vi 100.
++ Đo độ dài, xem giờ đúng, xem lịch.
+<h2>Số và phép tính</h2>
+<div class="hv-example">65 &gt; 56 · 40 + 30 = 70 · 87 − 25 = 62 · số liền sau của 99 là 100</div>
+<h2>Đo lường, thời gian</h2>
+<p>Độ dài đo bằng cm; giờ đúng khi kim dài chỉ số 12; một tuần có 7 ngày.</p>
+<div class="hv-tip"><strong>Mẹo:</strong> làm bài kiểm tra cuối học kỳ 2 ở trang Học tập để biết phần nào em còn cần ôn.</div>
+* So sánh hàng chục trước, hàng đơn vị sau.
+* Đặt tính thẳng cột, tính từ phải sang trái.
+* Giờ đúng: kim dài chỉ số 12.
+? 87 − 25 = ? | 62 | 52 | 63 => Đơn vị: 7 − 5 = 2; chục: 8 − 2 = 6. Vậy 62.
+? Chọn dấu đúng: 65 … 56 | &gt; | &lt; | = => Hàng chục 6 &gt; 5 nên 65 &gt; 56.
+? Số liền sau của 99 là: | 100 | 98 | 990 => 99 thêm 1 là 100.
+? Kim ngắn chỉ số 8, kim dài chỉ số 12. Đồng hồ chỉ mấy giờ? | 8 giờ | 12 giờ | 20 giờ => Giờ đúng: kim dài chỉ 12, kim ngắn chỉ số giờ – 8 giờ.
+? 40 cm + 30 cm = ? | 70 cm | 70 | 10 cm => 4 chục + 3 chục = 7 chục, viết kèm đơn vị: 70 cm.
+? Hôm nay là thứ Bảy, ngày mai là: | Chủ nhật | Thứ Hai | Thứ Sáu => Sau thứ Bảy là Chủ nhật.
+
+=== tieng-viet-1-am-va-chu | 1 | tieng-viet | Âm và chữ cái tiếng Việt | Làm quen với âm, chữ | 🔤 | cau-ca | 1
 > Làm quen với bảng chữ cái, âm ghép và quy tắc viết k, gh, ngh.
 ~ Trong rương báu của Cú Bông có 29 viên ngọc chữ cái. Ghép các viên ngọc lại sẽ thành tiếng, thành từ, thành cả một câu chuyện! Mình cùng mở rương nhé!
 @ Chữ Quốc ngữ em đang học được hình thành từ thế kỉ 17 và trở nên phổ biến khắp nước ta vào đầu thế kỉ 20.
@@ -205,7 +488,7 @@
 ? Tiếng “cá” bắt đầu bằng âm nào? | c | a | g => Tiếng “cá” = âm đầu c + vần a + thanh sắc.
 ? Từ nào viết đúng chính tả? | ghế | gế | ngế => Trước e, ê, i phải viết gh: ghế, ghi, ghé. Viết “gế” là sai chính tả.
 
-=== tieng-viet-1-van-va-thanh | 1 | tieng-viet | Vần và dấu thanh | Làm quen với âm, chữ | 🎵 | ghep-chu
+=== tieng-viet-1-van-va-thanh | 1 | tieng-viet | Vần và dấu thanh | Làm quen với âm, chữ | 🎵 | ghep-chu | 1
 > Biết một tiếng gồm âm đầu, vần và thanh; nhận biết 6 thanh của tiếng Việt.
 ~ Cùng là tiếng “ma”, nhưng thêm một dấu nhỏ xíu là thành “má”, “mà”, “mạ”… Dấu thanh có phép thuật biến hoá đấy! Em cùng Cú Bông khám phá nhé.
 @ Cùng tiếng “ma”, đổi dấu thanh lại thành 6 tiếng khác nghĩa: ma, mà, má, mả, mã, mạ. Vì vậy tiếng Việt nghe như đang hát!
@@ -232,7 +515,54 @@
 ? Tiếng “hoa” có vần gì? | oa | ho | a => Bỏ âm đầu h, phần còn lại “oa” là vần.
 ? Tiếng “bé” gồm những phần nào? | b + e + thanh sắc | b + é + thanh ngang | be + thanh huyền => “bé” = âm đầu b + vần e + thanh sắc.
 
-=== tieng-viet-1-van-an-an-an | 1 | tieng-viet | Vần an, ăn, ân | Học vần | 🧣 | cau-ca
+=== tieng-viet-1-chu-ghep | 1 | tieng-viet | Chữ ghép: ch, nh, ng, ph, th, tr, kh, gi, qu | Làm quen với âm, chữ | 🧷 | ghep-chu | 1
+> Nhận biết và đọc đúng các âm được ghi bằng hai chữ cái.
+~ Cú Bông thấy lạ: chữ “c” và chữ “h” đứng riêng thì đọc khác, đứng cạnh nhau lại thành âm “chờ” như trong “con chó”! Mình cùng khám phá các chữ ghép nhé!
+@ Tiếng Việt có những âm phải dùng hai, thậm chí ba chữ cái để viết, như “ngh” trong “nghé”. Chữ “ngh” là chữ ghép dài nhất – có tới ba chữ cái!
+! Em tìm trong nhà 3 đồ vật có tên chứa chữ ghép (ví dụ: chảo, nhà, phích) và đọc to cho bố mẹ nghe.
++ Nhận biết các chữ ghép ch, nh, ng, ph, th, tr, kh, gi, qu.
++ Đọc đúng tiếng, từ có chữ ghép.
+<p>Có những âm được viết bằng <strong>hai chữ cái ghép lại</strong>. Ta gọi đó là chữ ghép.</p>
+<div class="hv-example"><strong>Ví dụ:</strong> <strong>ch</strong> – chó, chim · <strong>nh</strong> – nhà, nho · <strong>ng</strong> – ngựa, ngô · <strong>ph</strong> – phở, phố · <strong>th</strong> – thỏ, thư · <strong>tr</strong> – trâu, tre · <strong>kh</strong> – khế, khỉ · <strong>gi</strong> – gió, giỏ · <strong>qu</strong> – quả, quê.</div>
+<h2>Đọc liền, không tách</h2>
+<p>Khi đọc chữ ghép, em đọc thành <strong>một âm</strong>: “ph” đọc là “phờ”, không đọc “p” rồi “h”.</p>
+<div class="hv-tip"><strong>Chú ý:</strong> chữ “q” luôn đi cùng chữ “u” thành “qu”: quả, quạ, quê.</div>
+* Chữ ghép gồm hai chữ cái nhưng đọc là một âm.
+* Chữ q luôn đi với u: qu.
+* Ngh là chữ ghép có ba chữ cái.
+? Tiếng nào có chữ ghép “ch”? | chó | cò | hồ => “Chó” bắt đầu bằng chữ ghép ch (chờ). “Cò” chỉ có chữ c.
+? Tiếng “nhà” bắt đầu bằng chữ ghép nào? | nh | ng | ch => Nhà = nh + a + dấu huyền.
+? Chữ “q” luôn đi cùng chữ nào? | u | a | o => Chữ q luôn đứng trước chữ u để thành “qu”: quả, quê.
+? Tiếng nào có chữ ghép “ph”? | phố | bố | hổ => Phố = ph + ô + dấu sắc.
+? Con vật nào có tên bắt đầu bằng “tr”? | Con trâu | Con bò | Con dê => “Trâu” bắt đầu bằng chữ ghép tr.
+? Quả nào có tên bắt đầu bằng “kh”? | Quả khế | Quả na | Quả cam => “Khế” bắt đầu bằng chữ ghép kh.
+? Chữ ghép “th” có trong tiếng nào? | thỏ | tổ | hổ => Thỏ = th + o + dấu hỏi.
+? Tiếng “gió” bắt đầu bằng chữ ghép nào? | gi | g | gh => Gió = gi + o + dấu sắc.
+
+=== tieng-viet-1-chinh-ta-c-k | 1 | tieng-viet | Chính tả c/k, g/gh, ng/ngh | Làm quen với âm, chữ | ✍️ | ghep-chu | 1
+> Viết đúng c hay k, g hay gh, ng hay ngh theo quy tắc chính tả.
+~ Cú Bông viết “cẹo” và “gế” rồi ngẩn người: sao trông lạ thế nhỉ? Hoá ra tiếng Việt có một quy tắc nhỏ rất dễ nhớ. Em học cùng Cú Bông nhé!
+@ Âm “cờ” có ba cách viết: c, k và q (đi với u). Cùng một âm mà viết khác nhau tuỳ chữ đứng sau – đó là luật chính tả giúp chữ Việt dễ đọc hơn.
+! Em đọc cho bố mẹ viết 3 từ: “kẹo”, “ghế”, “nghé” – rồi em kiểm tra xem bố mẹ viết đúng chưa!
++ Nhớ quy tắc viết k, gh, ngh trước e, ê, i.
++ Viết đúng các tiếng có c/k, g/gh, ng/ngh.
+<p>Ba cặp chữ này đọc giống nhau nhưng viết khác nhau:</p>
+<div class="hv-example"><strong>Quy tắc vàng:</strong> trước <strong>e, ê, i</strong> ta viết <strong>k, gh, ngh</strong>.<br>• k: kẹo, kê, kim · c: cá, cò, cú<br>• gh: ghế, ghi · g: gà, gỗ<br>• ngh: nghé, nghỉ · ng: ngõ, ngựa</div>
+<h2>Mẹo nhớ</h2>
+<p>Ba chữ cái e, ê, i được gọi vui là “ba bạn nhỏ e – ê – i”. Gặp ba bạn này thì “k”, “gh”, “ngh” ra đón!</p>
+<div class="hv-tip"><strong>Thử nhé:</strong> “con …iến” – sau là i nên viết k: con kiến.</div>
+* Trước e, ê, i viết k, gh, ngh.
+* Trước các chữ còn lại viết c, g, ng.
+? Từ nào viết đúng? | cái kẹo | cái cẹo | kái kẹo => Trước e viết k: kẹo. Trước a viết c: cái.
+? Từ nào viết đúng? | cái ghế | cái gế | cái ghê => Trước ê viết gh: ghế (cái ghế để ngồi).
+? Điền chữ: con …é (con trâu nhỏ) | nghé | ngé | gé => Trước e viết ngh: con nghé.
+? Từ nào viết đúng? | con gà | con ghà | con kà => Trước a viết g: con gà.
+? Điền chữ: con …iến | k | c | q => Trước i viết k: con kiến.
+? Từ nào viết đúng? | ngõ nhỏ | nghõ nhỏ | gõ nhỏ => Trước o viết ng: ngõ.
+? Trước những chữ nào thì viết k, gh, ngh? | e, ê, i | a, o, u | ô, ơ, ư => Quy tắc: trước e, ê, i viết k, gh, ngh.
+? Từ nào viết đúng? | nghỉ ngơi | ngỉ ngơi | nghỉ nghơi => Trước i viết ngh (nghỉ); trước ơ viết ng (ngơi).
+
+=== tieng-viet-1-van-an-an-an | 1 | tieng-viet | Vần an, ăn, ân | Học vần | 🧣 | cau-ca | 1
 > Đọc, viết các tiếng có vần an, ăn, ân và đọc câu ứng dụng.
 ~ Ba chị em nhà vần đến chơi: chị “an”, anh “ăn” và em “ân”. Trông ba bạn gần giống nhau lắm, chỉ khác cái mũ nhỏ trên đầu thôi. Em nhận ra từng bạn không?
 @ Vần “an” có trong rất nhiều từ đẹp: bình an, bạn bè, an toàn, bàn tay… Em thử tìm thêm nhé!
@@ -255,7 +585,383 @@
 ? Từ nào có vần ân? | cái cân | cái bàn | khăn mặt => “cân” = c + ân. “bàn” có vần an, “khăn” có vần ăn.
 ? Tiếng “sân” có âm đầu là: | s | x | ân => “sân” bắt đầu bằng âm s (sờ), phần “ân” là vần.
 
-=== tnxh-1-giu-ve-sinh-co-the | 1 | tu-nhien-xa-hoi | Giữ vệ sinh cơ thể | Con người và sức khoẻ | 🧼 | do-vui
+=== tieng-viet-1-van-am-n-m | 1 | tieng-viet | Vần có âm cuối n, m: an, on, en, in, am, om, em, im | Học vần | 🎶 | cau-ca | 1
+> Đọc, viết các vần kết thúc bằng n và m; phân biệt vần -n và vần -m.
+~ Hôm nay Cú Bông mang đến giỏ cam và bó hoa sen. “Cam” có vần am, “sen” có vần en. Em đọc thử xem miệng mình khép lại hay để mở khi đọc nhé!
+@ Khi đọc vần có âm cuối “m”, hai môi khép lại: cam, tôm. Còn khi đọc âm cuối “n”, môi không khép mà đầu lưỡi chạm lợi trên: lan, sen. Em đặt tay lên môi để cảm nhận nhé!
+! Em tìm 2 từ có vần “an” và 2 từ có vần “am” trong truyện tranh hoặc sách của em.
++ Đọc đúng các vần an, on, en, in, un và am, om, em, im, um.
++ Phân biệt vần có âm cuối n và m.
+<p>Vần được tạo bởi <strong>âm chính</strong> và <strong>âm cuối</strong>. Hôm nay em học âm cuối <strong>n</strong> và <strong>m</strong>.</p>
+<div class="hv-example"><strong>Âm cuối n:</strong> an – bàn · on – con · en – sen · in – pin · un – giun<br><strong>Âm cuối m:</strong> am – cam · om – đom đóm · em – tem · im – chim · um – chùm</div>
+<h2>n hay m?</h2>
+<p>Đọc chậm và để ý môi: <strong>m</strong> thì hai môi khép lại, <strong>n</strong> thì môi vẫn mở.</p>
+<div class="hv-tip"><strong>Thử nhé:</strong> “quả c…” (quả có vỏ màu cam): môi khép lại cuối tiếng → vần am: quả cam.</div>
+* Vần gồm âm chính và âm cuối.
+* Âm cuối m: môi khép; âm cuối n: môi mở.
+? Tiếng nào có vần “am”? | cam | can | căn => Cam = c + am. Môi khép lại khi đọc hết tiếng.
+? Tiếng “sen” có vần gì? | en | em | ên => Sen = s + en.
+? Con vật nào có tên chứa vần “im”? | Con chim | Con gà | Con cá => Chim = ch + im.
+? Tiếng nào có vần “on”? | con | com | cơn => Con = c + on.
+? Điền vần: cái b… (đồ để ngồi học, viết) | àn | àm | ìm => Cái bàn = b + an + dấu huyền.
+? Tiếng “tôm” có âm cuối là gì? | m | n | t => Tôm kết thúc bằng m nên khi đọc hai môi khép lại.
+? Tiếng nào có vần “in”? | pin | phim | bim => Pin = p + in. Còn “phim” có vần im.
+? Đọc vần có âm cuối m thì môi thế nào? | Khép lại | Mở to | Chu ra => Âm cuối m: hai môi khép lại ở cuối tiếng.
+
+=== tieng-viet-1-van-ang-anh | 1 | tieng-viet | Vần có âm cuối ng, nh: ang, ông, ung, anh, inh | Học vần | 🔔 | cau-ca | 1
+> Đọc, viết các vần kết thúc bằng ng và nh.
+~ Leng keng, leng keng! Tiếng chuông của Cú Bông có vần “eng”. Còn “cành chanh” có vần “anh”. Mình cùng nghe và đọc những vần vang như tiếng chuông nhé!
+@ Âm cuối “ng” và “nh” đều được đọc ở phía trong miệng nên tiếng nghe vang, ngân dài. Vì vậy các bài hát, câu đồng dao hay dùng những vần này: “Cái bống là cái bống bang…”
+! Em đọc câu đồng dao “Cái bống” cùng bố mẹ và đếm xem có bao nhiêu tiếng có vần “ang” hoặc “ông”.
++ Đọc đúng các vần ang, ăng, âng, ong, ông, ung, ưng.
++ Đọc đúng các vần anh, ênh, inh.
+<div class="hv-example"><strong>Âm cuối ng:</strong> ang – bàng · ăng – măng · âng – tầng · ong – ong · ông – bông · ung – sung · ưng – bánh chưng<br><strong>Âm cuối nh:</strong> anh – chanh · ênh – kênh · inh – kính</div>
+<h2>ang hay anh?</h2>
+<p>Hai vần này dễ nhầm. Em nhớ: <strong>cây bàng</strong> (ang), <strong>quả chanh</strong> (anh), <strong>bánh</strong> (anh).</p>
+<div class="hv-tip"><strong>Mẹo:</strong> đọc thật chậm, kéo dài âm cuối để nghe rõ “ng” hay “nh”.</div>
+* Âm cuối ng: ang, ăng, âng, ong, ông, ung, ưng.
+* Âm cuối nh: anh, ênh, inh.
+? Tiếng nào có vần “ang”? | bàng | bành | bàn => Bàng = b + ang + dấu huyền (cây bàng).
+? Quả gì có tên chứa vần “anh”? | Quả chanh | Quả na | Quả táo => Chanh = ch + anh.
+? Tiếng “bông” có vần gì? | ông | ong | ôn => Bông = b + ông.
+? Con vật nào có tên chứa vần “ong”? | Con ong | Con bò | Con gà => Ong chính là vần ong.
+? Điền vần: đôi k… (đeo ở mắt) | ính | inh | ím => Kính = k + inh + dấu sắc.
+? Tiếng nào có vần “ung”? | sung | song | sang => Sung = s + ung (quả sung).
+? Điền vần: bánh ch… (bánh ngày Tết) | ưng | ung | ăng => Bánh chưng: ch + ưng.
+? Tiếng nào có âm cuối là “nh”? | xanh | xang | xan => Xanh = x + anh, kết thúc bằng nh.
+
+=== tieng-viet-1-van-ac-at-ap | 1 | tieng-viet | Vần có âm cuối c, ch, t, p: ac, at, ap, ach, ich | Học vần | 🥁 | cau-ca | 1
+> Đọc, viết các vần kết thúc bằng c, ch, t, p – những vần đọc ngắn và dứt khoát.
+~ Tách! Tách! Hạt mưa rơi trên mái nhà của Cú Bông. Tiếng “tách” có vần “ach”. Những vần hôm nay đọc ngắn và gọn như tiếng trống nhỏ: cốc, hát, đạp!
+@ Các tiếng có âm cuối c, ch, t, p chỉ mang dấu sắc hoặc dấu nặng thôi: hát, học, đạp, sách. Em thử tìm xem có tiếng nào mang dấu huyền không nhé!
+! Em kể tên 3 đồ vật trong cặp sách có vần ach, ap, at hoặc ôc (ví dụ: sách, …) cho bố mẹ nghe.
++ Đọc đúng các vần ac, ăc, oc, ôc, uc, ach, ich, at, ăt, ot, ut, ap, ăp, op, up.
++ Biết các tiếng này chỉ mang dấu sắc hoặc dấu nặng.
+<div class="hv-example"><strong>Âm cuối c:</strong> ac – bác · oc – học · ôc – cốc · uc – cúc<br><strong>Âm cuối ch:</strong> ach – sách · ich – lịch<br><strong>Âm cuối t:</strong> at – hát · ot – rót · ut – bút<br><strong>Âm cuối p:</strong> ap – đạp · op – họp · up – búp</div>
+<h2>Chỉ có dấu sắc và dấu nặng</h2>
+<p>Tiếng có âm cuối c, ch, t, p chỉ đi với <strong>dấu sắc</strong> (hát, sách) hoặc <strong>dấu nặng</strong> (học, đạp).</p>
+<div class="hv-tip"><strong>Mẹo:</strong> âm cuối p thì môi khép lại như âm m: đạp, búp.</div>
+* Âm cuối c, ch, t, p đọc ngắn, dứt khoát.
+* Những tiếng này chỉ có dấu sắc hoặc dấu nặng.
+? Tiếng nào có vần “ach”? | sách | sắc | sát => Sách = s + ach + dấu sắc.
+? Đồ dùng để viết có vần “ut” là gì? | Cái bút | Cái thước | Cái cặp => Bút = b + ut + dấu sắc.
+? Tiếng “học” có vần gì? | oc | ôc | op => Học = h + oc + dấu nặng.
+? Điền vần: xe đ… (xe hai bánh em hay đi) | ạp | ạt | ạc => Xe đạp: đ + ap + dấu nặng.
+? Tiếng “cốc” có âm cuối là gì? | c | t | p => Cốc = c + ôc + dấu sắc, âm cuối là c.
+? Tiếng có âm cuối c, ch, t, p chỉ mang những dấu nào? | Dấu sắc và dấu nặng | Dấu huyền và dấu hỏi | Mọi dấu thanh => Tiếng có âm cuối c, ch, t, p chỉ đi với dấu sắc hoặc dấu nặng.
+? Tiếng nào có vần “at”? | hát | hác | háp => Hát = h + at + dấu sắc.
+? Điền vần: tờ l… (để xem ngày tháng) | ịch | ịt | ịp => Tờ lịch: l + ich + dấu nặng.
+
+=== tieng-viet-1-van-oa-oe-uy | 1 | tieng-viet | Vần oa, oe, uê, uy | Học vần | 🌺 | cau-ca | 1
+> Đọc, viết các vần có âm đệm o, u: oa, oe, uê, uy và các vần mở rộng oai, oan, uân.
+~ Bông hoa trong vườn Cú Bông nở xoè cánh khoe sắc. “Hoa” có vần oa, “xoè” có vần oe. Đọc những vần này, miệng em phải tròn lại trước đấy!
+@ Chữ “o” và “u” trong oa, oe, uê, uy gọi là âm đệm. Khi đọc, em tròn môi ở đầu vần, nhờ vậy tiếng nghe mềm mại: hoa, khoẻ, thuỷ.
+! Em đọc to tên 3 loài hoa hoặc 3 từ có vần oa, oe, uy mà em biết cho bố mẹ nghe.
++ Đọc đúng các vần oa, oe, uê, uy.
++ Đọc được một số vần mở rộng: oai, oan, uân.
+<div class="hv-example"><strong>oa</strong> – hoa, quả xoài (oai) · <strong>oe</strong> – xoè, khoẻ · <strong>uê</strong> – thuê, huệ · <strong>uy</strong> – thuỷ, luỹ tre</div>
+<h2>Tròn môi khi đọc</h2>
+<p>Với các vần này, em <strong>tròn môi</strong> ở đầu vần rồi mới mở miệng: h – oa → hoa.</p>
+<div class="hv-tip"><strong>Chú ý:</strong> “hoa” khác “ha”: “hoa” phải tròn môi.</div>
+* Oa, oe, uê, uy có âm đệm o hoặc u.
+* Đọc tròn môi ở đầu vần.
+? Tiếng “hoa” có vần gì? | oa | oe | uy => Hoa = h + oa.
+? Tiếng nào có vần “oe”? | khoẻ | khỏi | khế => Khoẻ = kh + oe + dấu hỏi.
+? Quả gì có tên chứa vần “oai”? | Quả xoài | Quả na | Quả mít => Xoài = x + oai + dấu huyền.
+? Tiếng “thuỷ” có vần gì? | uy | ui | uê => Thuỷ = th + uy + dấu hỏi.
+? Hoa gì có tên chứa vần “uê”? | Hoa huệ | Hoa hồng | Hoa cúc => Huệ = h + uê + dấu nặng.
+? Đọc vần “oa” thì môi thế nào ở đầu vần? | Tròn môi | Khép chặt môi | Cười rộng => Âm đệm o, u: em tròn môi ở đầu vần.
+? Điền vần: múa x… (múa quạt) | oè | è | ê => Múa xoè: x + oe + dấu huyền.
+? Tiếng nào có vần “uy”? | luỹ | lũ | lửa => Luỹ (luỹ tre) = l + uy + dấu ngã.
+
+=== tieng-viet-1-toi-va-cac-ban | 1 | tieng-viet | Tôi và các bạn – đọc hiểu câu ngắn | Tôi và các bạn | 🤝 | sap-xep-cau | 2
+> Đọc câu ngắn về bạn bè, trả lời câu hỏi Ai? Làm gì? và viết câu có dấu chấm.
+~ Cú Bông có một người bạn mới tên là Sóc Nâu. Hai bạn cùng chơi, cùng học, cùng chia nhau hạt dẻ. Em đọc truyện về tình bạn của hai bạn nhé!
+@ Một câu thường trả lời được hai câu hỏi: “Ai?” và “Làm gì?”. Ví dụ: “Sóc Nâu (ai?) nhặt hạt dẻ (làm gì?).” Biết điều này, em sẽ viết câu thật đủ ý.
+! Em kể cho bố mẹ nghe về một người bạn trong lớp: bạn tên gì, hai bạn hay cùng làm gì.
++ Đọc trơn câu ngắn, hiểu nội dung.
++ Trả lời câu hỏi Ai? Làm gì?
++ Viết hoa chữ đầu câu, cuối câu có dấu chấm.
+<p>Em đọc đoạn sau:</p>
+<div class="hv-example"><em>Sóc Nâu và Cú Bông là đôi bạn thân. Sáng nào hai bạn cũng cùng đến lớp. Sóc Nâu cho Cú Bông hạt dẻ. Cú Bông dạy Sóc Nâu đọc chữ.</em></div>
+<h2>Ai? Làm gì?</h2>
+<p>“<strong>Sóc Nâu</strong> cho Cú Bông hạt dẻ.” → Ai cho hạt dẻ? <strong>Sóc Nâu</strong>. Sóc Nâu làm gì? <strong>Cho Cú Bông hạt dẻ</strong>.</p>
+<div class="hv-tip"><strong>Viết câu:</strong> chữ đầu câu viết hoa, cuối câu có dấu chấm.</div>
+* Câu trả lời câu hỏi Ai? và Làm gì?
+* Đầu câu viết hoa, cuối câu có dấu chấm.
+* Bạn bè cần biết chia sẻ, giúp đỡ nhau.
+? Đọc: “Sóc Nâu cho Cú Bông hạt dẻ.” Ai cho hạt dẻ? | Sóc Nâu | Cú Bông | Thỏ Trắng => Người cho hạt dẻ là Sóc Nâu.
+? Đọc: “Cú Bông dạy Sóc Nâu đọc chữ.” Cú Bông làm gì? | Dạy Sóc Nâu đọc chữ | Nhặt hạt dẻ | Đi ngủ => Câu cho biết Cú Bông dạy Sóc Nâu đọc chữ.
+? Câu nào viết đúng? | Em chơi với bạn. | em chơi với bạn | Em chơi với bạn => Đầu câu viết hoa chữ “Em”, cuối câu có dấu chấm.
+? Sắp xếp thành câu: bạn / em / giúp đỡ | Em giúp đỡ bạn. | Bạn em giúp đỡ | Giúp đỡ em bạn. => Câu đúng: “Em giúp đỡ bạn.” – Ai? Em. Làm gì? Giúp đỡ bạn.
+? Từ nào chỉ việc làm tốt của bạn bè? | Chia sẻ | Tranh giành | Trêu chọc => Bạn tốt biết chia sẻ với nhau.
+? Đọc: “Sóc Nâu và Cú Bông là đôi bạn thân.” Có mấy bạn được nói đến? | Hai bạn | Một bạn | Ba bạn => Câu nói về Sóc Nâu và Cú Bông – hai bạn.
+? Cuối câu kể thường có dấu gì? | Dấu chấm | Dấu phẩy | Không có dấu => Câu kể kết thúc bằng dấu chấm.
+? Khi bạn bị ngã, em nên làm gì? | Đỡ bạn dậy, hỏi han bạn | Cười bạn | Bỏ đi => Bạn tốt biết giúp đỡ khi bạn gặp khó khăn.
+
+=== tieng-viet-1-mai-am-gia-dinh | 1 | tieng-viet | Mái ấm gia đình – từ chỉ người thân | Mái ấm gia đình | 🏡 | lat-the | 2
+> Đọc bài về gia đình, tìm từ chỉ người thân và từ chỉ việc làm trong nhà.
+~ Tối nay nhà Cú Bông thật vui: bố nấu canh, mẹ rửa rau, em bày bát đũa. Ai cũng góp một tay. Em đọc xem nhà Cú Bông có những ai nhé!
+@ Tiếng Việt có rất nhiều từ để gọi người thân: ông, bà, bố, mẹ, anh, chị, em, cô, chú, dì, cậu… Ở mỗi vùng miền, cách gọi có thể khác: miền Nam gọi “ba, má”, miền Bắc gọi “bố, mẹ”.
+! Em vẽ “cây gia đình” có tên các thành viên trong nhà và dán lên tường.
++ Đọc bài ngắn về gia đình.
++ Tìm từ chỉ người thân, từ chỉ việc nhà.
++ Viết câu nói về người thân.
+<div class="hv-example"><em>Nhà Cú Bông có bốn người: bố, mẹ, chị và Cú Bông. Bố nấu canh. Mẹ rửa rau. Chị quét nhà. Cú Bông bày bát đũa. Bữa cơm thật ngon và ấm áp.</em></div>
+<h2>Từ chỉ người thân</h2>
+<p>ông, bà, bố, mẹ, anh, chị, em… là các từ chỉ <strong>người thân trong gia đình</strong>.</p>
+<h2>Từ chỉ việc nhà</h2>
+<p>nấu cơm, rửa rau, quét nhà, bày bát, gấp quần áo… là các từ chỉ <strong>việc làm trong nhà</strong>.</p>
+<div class="hv-tip"><strong>Viết câu:</strong> Mẹ em nấu cơm. Em giúp bà tưới cây.</div>
+* Ông, bà, bố, mẹ, anh, chị, em là từ chỉ người thân.
+* Mỗi người trong nhà góp một tay làm việc nhà.
+? Đọc: “Nhà Cú Bông có bốn người: bố, mẹ, chị và Cú Bông.” Nhà Cú Bông có mấy người? | Bốn người | Ba người | Năm người => Đếm: bố, mẹ, chị, Cú Bông – 4 người.
+? Theo bài đọc, ai nấu canh? | Bố | Mẹ | Chị => “Bố nấu canh.”
+? Theo bài đọc, Cú Bông làm việc gì? | Bày bát đũa | Quét nhà | Rửa rau => “Cú Bông bày bát đũa.”
+? Từ nào chỉ người thân trong gia đình? | bà | bàn | bát => “Bà” là người thân; bàn, bát là đồ vật.
+? Từ nào chỉ việc nhà? | quét nhà | cái chổi | cửa sổ => “Quét nhà” là việc làm; cái chổi, cửa sổ là đồ vật.
+? Mẹ của mẹ em, em gọi là gì? | Bà ngoại | Bà nội | Cô => Mẹ của mẹ là bà ngoại; mẹ của bố là bà nội.
+? Câu nào viết đúng? | Bố em đi làm. | bố em đi làm. | Bố em đi làm => Đầu câu viết hoa, cuối câu có dấu chấm.
+? Em có thể giúp bố mẹ việc gì vừa sức? | Gấp quần áo | Nấu bếp ga một mình | Sửa điện => Gấp quần áo vừa sức và an toàn; nấu bếp ga, sửa điện là việc của người lớn.
+
+=== tieng-viet-1-mai-truong | 1 | tieng-viet | Mái trường mến yêu – đồ dùng học tập | Mái trường mến yêu | 🏫 | ghep-chu | 2
+> Đọc bài về trường lớp, gọi tên đồ dùng học tập, viết hoa tên riêng của người.
+~ Chiếc cặp của Cú Bông biết nói đấy! Nó kể: “Trong tôi có sách, vở, bút chì, thước kẻ và hộp màu. Cô chủ Cú Bông giữ tôi rất cẩn thận!” Còn chiếc cặp của em có những gì?
+@ Ngôi trường tiểu học đầu tiên ở nước ta theo kiểu hiện đại đã có từ hơn một trăm năm trước. Ngày nay, cả nước có hàng chục nghìn trường tiểu học!
+! Em sắp xếp cặp sách cho ngày mai, kể tên từng đồ dùng khi bỏ vào cặp.
++ Gọi tên đồ dùng học tập.
++ Đọc bài ngắn về trường lớp.
++ Viết hoa tên riêng của người.
+<div class="hv-example"><em>Trường của Lan có sân rộng và nhiều cây xanh. Lớp 1A có cô giáo Hà dạy. Giờ ra chơi, các bạn nhảy dây, đá cầu. Lan rất yêu trường của mình.</em></div>
+<h2>Đồ dùng học tập</h2>
+<p>sách, vở, bút chì, thước kẻ, tẩy, hộp bút, bảng con, phấn, cặp sách…</p>
+<h2>Viết hoa tên riêng</h2>
+<p>Tên người phải viết hoa chữ cái đầu: <strong>Lan</strong>, cô <strong>Hà</strong>, <strong>Nguyễn Minh An</strong>.</p>
+<div class="hv-tip"><strong>Giữ gìn đồ dùng:</strong> bọc sách vở, không vẽ bậy, cất gọn vào cặp.</div>
+* Tên riêng của người viết hoa chữ cái đầu.
+* Biết gọi tên và giữ gìn đồ dùng học tập.
+? Theo bài đọc, cô giáo dạy lớp 1A tên là gì? | Hà | Lan | Mai => “Lớp 1A có cô giáo Hà dạy.”
+? Giờ ra chơi, các bạn làm gì? | Nhảy dây, đá cầu | Ngủ trưa | Làm bài => Bài đọc: “các bạn nhảy dây, đá cầu.”
+? Đồ vật nào là đồ dùng học tập? | Thước kẻ | Cái nồi | Cái chổi => Thước kẻ dùng để kẻ, đo khi học bài.
+? Tên riêng nào viết đúng? | Minh An | minh an | Minh an => Tên người viết hoa chữ cái đầu mỗi tiếng: Minh An.
+? Dùng gì để xoá vết bút chì? | Cái tẩy | Cái thước | Hộp màu => Tẩy dùng để xoá vết bút chì.
+? Từ nào viết đúng chính tả? | thước kẻ | thướt kẻ | thước cẻ => Viết đúng: thước kẻ (trước e viết k).
+? Việc làm nào giúp giữ gìn sách vở? | Bọc sách, không vẽ bậy | Gấp mép trang | Để sách dưới mưa => Bọc sách, không vẽ bậy giúp sách vở sạch đẹp, dùng được lâu.
+? Đọc: “Lan rất yêu trường của mình.” Ai yêu trường? | Lan | Cô Hà | Lớp 1A => Câu nói về bạn Lan.
+
+=== tieng-viet-1-thien-nhien | 1 | tieng-viet | Thiên nhiên kì thú – con vật, cây cối | Thiên nhiên kì thú | 🦋 | cau-ca | 2
+> Đọc bài về con vật, cây cối; tìm từ chỉ đặc điểm (màu sắc, hình dáng).
+~ Sáng nay, trong khu vườn của Cú Bông có chú bướm vàng bay lượn, chú ốc sên chậm chạp bò trên lá, và bông hoa hồng đỏ thắm. Thiên nhiên thật kì thú!
+@ Con tắc kè hoa có thể đổi màu da để lẩn vào lá cây. Còn cây hoa hướng dương luôn quay mặt về phía Mặt Trời khi còn nhỏ!
+! Em quan sát một con vật hoặc một cây trong vườn, nói với bố mẹ 2 từ tả màu sắc, hình dáng của nó.
++ Đọc bài ngắn về thiên nhiên.
++ Tìm từ chỉ màu sắc, hình dáng, hoạt động của con vật.
+<div class="hv-example"><em>Chú bướm vàng bay lượn trên vườn hoa. Chú ốc sên chậm chạp bò trên chiếc lá xanh. Bông hồng đỏ thắm đang toả hương thơm ngát.</em></div>
+<h2>Từ chỉ đặc điểm</h2>
+<p>vàng, xanh, đỏ thắm (màu sắc) · to, nhỏ, tròn (hình dáng) · chậm chạp, nhanh nhẹn (tính nết).</p>
+<h2>Từ chỉ hoạt động</h2>
+<p>bay, bò, bơi, nhảy, hót, toả hương…</p>
+<div class="hv-tip"><strong>Mẹo:</strong> hỏi “thế nào?” để tìm từ chỉ đặc điểm: Ốc sên thế nào? – chậm chạp.</div>
+* Từ chỉ màu sắc, hình dáng là từ chỉ đặc điểm.
+* Bay, bò, bơi, hót là từ chỉ hoạt động.
+? Theo bài đọc, chú bướm màu gì? | Vàng | Xanh | Đỏ => “Chú bướm vàng bay lượn…”
+? Ốc sên được tả thế nào? | Chậm chạp | Nhanh nhẹn | To lớn => “Chú ốc sên chậm chạp bò trên chiếc lá xanh.”
+? Từ nào chỉ màu sắc? | đỏ thắm | bay lượn | bò => “Đỏ thắm” chỉ màu đỏ đậm và đẹp.
+? Từ nào chỉ hoạt động của con chim? | hót | xanh | tròn => Chim hót – “hót” là từ chỉ hoạt động.
+? Con vật nào biết bơi dưới nước? | Con cá | Con mèo | Con gà => Cá sống và bơi dưới nước.
+? Con vật nào có thể đổi màu da? | Tắc kè hoa | Con thỏ | Con gà => Tắc kè hoa đổi màu da để lẩn trốn kẻ thù.
+? Bông hồng trong bài đang làm gì? | Toả hương thơm ngát | Bay lượn | Bò trên lá => “Bông hồng đỏ thắm đang toả hương thơm ngát.”
+? Từ nào viết đúng chính tả? | con nghé | con ngé | con ghé => Trước e viết ngh: con nghé.
+
+=== tieng-viet-1-dat-nuoc | 1 | tieng-viet | Đất nước và con người | Đất nước và con người | 🇻🇳 | do-vui | 2
+> Đọc bài về quê hương, đất nước; biết một số cảnh đẹp và người có công.
+~ Cú Bông được đi tham quan Thủ đô Hà Nội: có Hồ Gươm xanh biếc, có Lăng Bác uy nghiêm. Em có biết quê hương mình có cảnh đẹp nào không?
+@ Lá cờ Tổ quốc Việt Nam có nền đỏ và ngôi sao vàng năm cánh. Mỗi sáng thứ Hai, các bạn học sinh khắp cả nước đều chào cờ và hát Quốc ca.
+! Em hỏi bố mẹ quê nội, quê ngoại ở đâu và ở đó có cảnh đẹp hay món ăn ngon gì.
++ Đọc bài ngắn về quê hương, đất nước.
++ Biết lá cờ, Thủ đô, một số cảnh đẹp của Việt Nam.
+<div class="hv-example"><em>Việt Nam có nhiều cảnh đẹp: vịnh Hạ Long có hàng nghìn hòn đảo, Sa Pa có ruộng bậc thang, Huế có sông Hương thơ mộng. Thủ đô của nước ta là Hà Nội.</em></div>
+<h2>Viết hoa tên địa danh</h2>
+<p>Tên riêng của nơi chốn viết hoa: <strong>Hà Nội</strong>, <strong>Hạ Long</strong>, <strong>Sa Pa</strong>, sông <strong>Hương</strong>.</p>
+<div class="hv-tip"><strong>Em yêu quê hương:</strong> giữ gìn cảnh đẹp, không vứt rác ở nơi tham quan.</div>
+* Thủ đô của Việt Nam là Hà Nội.
+* Cờ Tổ quốc nền đỏ, sao vàng năm cánh.
+* Tên địa danh viết hoa.
+? Thủ đô của Việt Nam là: | Hà Nội | Huế | Đà Nẵng => Theo bài đọc: “Thủ đô của nước ta là Hà Nội.”
+? Lá cờ Tổ quốc Việt Nam có màu gì? | Nền đỏ, sao vàng | Nền xanh, sao trắng | Nền vàng, sao đỏ => Cờ Tổ quốc nền đỏ, ở giữa có ngôi sao vàng năm cánh.
+? Nơi nào có hàng nghìn hòn đảo? | Vịnh Hạ Long | Sa Pa | Huế => Bài đọc: “vịnh Hạ Long có hàng nghìn hòn đảo”.
+? Sa Pa nổi tiếng với cảnh gì? | Ruộng bậc thang | Biển xanh | Sông Hương => Bài đọc: “Sa Pa có ruộng bậc thang”.
+? Tên địa danh nào viết đúng? | Hà Nội | hà nội | Hà nội => Tên riêng của nơi chốn viết hoa chữ cái đầu mỗi tiếng: Hà Nội.
+? Ngôi sao trên lá cờ Tổ quốc có mấy cánh? | Năm cánh | Bốn cánh | Sáu cánh => Sao vàng năm cánh.
+? Khi đi tham quan cảnh đẹp, em nên làm gì? | Bỏ rác đúng nơi quy định | Vẽ lên tượng đá | Bẻ cành hoa => Giữ gìn cảnh đẹp là cách thể hiện tình yêu quê hương.
+? Sông Hương chảy qua thành phố nào? | Huế | Hà Nội | Sa Pa => Bài đọc: “Huế có sông Hương thơ mộng”.
+
+=== tnxh-1-gia-dinh-em | 1 | tu-nhien-xa-hoi | Gia đình em và ngôi nhà | Gia đình | 👨‍👩‍👧 | do-vui | 1
+> Giới thiệu các thành viên trong gia đình, các phòng và đồ dùng trong nhà.
+~ Cú Bông mời em về thăm nhà: có phòng khách, phòng ngủ, bếp và nhà tắm. Mỗi phòng có những đồ dùng riêng. Em đoán xem cái nồi ở phòng nào nhé!
+@ Có gia đình nhiều thế hệ cùng sống chung: ông bà, bố mẹ và các con. Người ta gọi đó là gia đình “tam đại đồng đường” – ba thế hệ dưới một mái nhà.
+! Em giới thiệu với bố mẹ (hoặc ông bà) về ngôi nhà mình: nhà có mấy phòng, em thích phòng nào nhất và vì sao.
++ Giới thiệu được các thành viên trong gia đình.
++ Kể tên các phòng và đồ dùng trong nhà.
++ Biết sắp xếp đồ dùng gọn gàng.
+<p>Mỗi gia đình có thể có <strong>ông bà, bố mẹ, anh chị em</strong>. Các thành viên yêu thương, chăm sóc nhau.</p>
+<h2>Các phòng trong nhà</h2>
+<div class="hv-example"><strong>Phòng khách:</strong> bàn ghế, ti vi · <strong>Phòng ngủ:</strong> giường, tủ quần áo · <strong>Bếp:</strong> nồi, chảo, bát đĩa · <strong>Nhà tắm:</strong> vòi nước, khăn mặt</div>
+<div class="hv-tip"><strong>Gọn gàng:</strong> dùng xong đồ vật nào, cất về đúng chỗ của nó.</div>
+* Gia đình gồm những người thân sống cùng nhau, yêu thương nhau.
+* Mỗi phòng trong nhà có đồ dùng phù hợp.
+* Dùng xong cất đồ đúng chỗ.
+? Cái nồi, cái chảo thường để ở phòng nào? | Nhà bếp | Phòng ngủ | Nhà tắm => Nồi, chảo dùng để nấu ăn nên để ở bếp.
+? Giường ngủ thường đặt ở phòng nào? | Phòng ngủ | Nhà bếp | Phòng khách => Giường dùng để ngủ nên đặt ở phòng ngủ.
+? Bố của bố em, em gọi là gì? | Ông nội | Ông ngoại | Chú => Bố của bố là ông nội; bố của mẹ là ông ngoại.
+? Dùng xong đồ chơi, em nên làm gì? | Cất về đúng chỗ | Để giữa nhà | Ném vào gầm giường => Cất đồ đúng chỗ giúp nhà gọn gàng và dễ tìm lại.
+? Vòi nước, khăn mặt thường có ở đâu? | Nhà tắm | Phòng khách | Phòng ngủ => Nhà tắm là nơi rửa mặt, tắm rửa.
+? Gia đình có ông bà, bố mẹ và các con cùng sống chung có mấy thế hệ? | Ba thế hệ | Hai thế hệ | Một thế hệ => Ông bà – bố mẹ – các con là ba thế hệ.
+? Các thành viên trong gia đình cần đối xử với nhau thế nào? | Yêu thương, chăm sóc nhau | Không nói chuyện với nhau | Tranh giành đồ => Gia đình hạnh phúc khi mọi người yêu thương, chăm sóc nhau.
+? Ti vi, bộ bàn ghế tiếp khách thường đặt ở phòng nào? | Phòng khách | Nhà tắm | Nhà bếp => Phòng khách là nơi cả nhà xem ti vi, tiếp khách.
+
+=== tnxh-1-an-toan-o-nha | 1 | tu-nhien-xa-hoi | An toàn khi ở nhà | Gia đình | ⚠️ | dung-sai | 1
+> Nhận biết đồ vật có thể gây nguy hiểm trong nhà và cách phòng tránh.
+~ Cú Bông suýt chạm tay vào ổ điện! May mà mẹ kịp nhắc. Trong nhà có những đồ vật “nguy hiểm thầm lặng”. Mình cùng tìm hiểu để luôn an toàn nhé!
+@ Nước sôi trong ấm có thể nóng tới 100 độ – nóng gấp nhiều lần nước tắm. Chỉ một chút nước sôi bắn vào tay cũng có thể làm bỏng da, nên em luôn tránh xa ấm nước đang sôi.
+! Em cùng bố mẹ đi một vòng quanh nhà, chỉ ra 3 chỗ có thể nguy hiểm (ổ điện, bếp, cầu thang…) và nói cách giữ an toàn.
++ Nhận biết đồ vật nguy hiểm: ổ điện, bếp, dao kéo, nước sôi, thuốc.
++ Biết cách phòng tránh bị đứt tay, bỏng, điện giật.
+<p>Trong nhà có những đồ vật cần <strong>cẩn thận</strong>:</p>
+<ul><li><strong>Ổ điện, dây điện:</strong> không chạm tay, không cắm vật lạ vào ổ điện.</li><li><strong>Bếp, nước sôi:</strong> không lại gần khi đang nấu.</li><li><strong>Dao, kéo:</strong> chỉ dùng kéo cho trẻ em khi có người lớn bên cạnh.</li><li><strong>Thuốc:</strong> không tự ý uống, chỉ uống khi bố mẹ cho.</li></ul>
+<div class="hv-tip"><strong>Khi bị đứt tay hay bỏng:</strong> báo ngay cho người lớn. Bị bỏng thì xả nước mát lên chỗ bỏng.</div>
+* Không chạm vào ổ điện, dây điện hở.
+* Tránh xa bếp đang đun, nước sôi.
+* Không tự ý uống thuốc.
+? Em có nên cắm que sắt vào ổ điện không? | Không, vì rất nguy hiểm | Có, để thử | Có, nếu không ai thấy => Cắm vật bằng kim loại vào ổ điện có thể bị điện giật rất nguy hiểm.
+? Khi mẹ đang đun nước sôi, em nên làm gì? | Tránh xa bếp | Đứng sát bếp xem | Chạm vào ấm => Nước sôi và bếp nóng có thể gây bỏng, em nên tránh xa.
+? Nếu bị bỏng nhẹ ở tay, việc đầu tiên nên làm là: | Xả nước mát và báo người lớn | Bôi kem đánh răng | Giấu đi không nói => Xả nước mát giúp làm dịu vết bỏng, và cần báo người lớn ngay.
+? Em thấy viên thuốc trên bàn, em nên làm gì? | Không uống, báo bố mẹ | Uống thử | Cho em bé uống => Chỉ uống thuốc khi bố mẹ, bác sĩ cho; tự ý uống rất nguy hiểm.
+? Đồ vật nào có thể làm đứt tay? | Con dao | Gối ôm | Quyển truyện => Dao sắc có thể làm đứt tay, chỉ người lớn mới dùng.
+? Khi thấy dây điện bị hở, em nên làm gì? | Không chạm và báo người lớn | Lấy tay kéo ra | Lấy nước dội vào => Dây điện hở có thể gây điện giật; không chạm và báo ngay người lớn.
+? Chơi ở đâu là an toàn hơn? | Trong phòng khách sạch sẽ | Cạnh bếp đang nấu | Trên lan can ban công => Chơi xa bếp, xa ban công giúp em an toàn.
+? Khi bị đứt tay chảy máu, em cần: | Báo ngay người lớn | Tự lấy dao cắt băng | Ngậm vết thương mãi => Người lớn sẽ rửa sạch và băng vết thương đúng cách.
+
+=== tnxh-1-truong-hoc | 1 | tu-nhien-xa-hoi | Trường học của em | Trường học | 🏫 | do-vui | 1
+> Giới thiệu lớp học, các khu vực trong trường, thầy cô và các hoạt động ở trường; giữ an toàn khi vui chơi.
+~ Ngày đầu tiên đến trường, Cú Bông lạc vào… thư viện! Ở đó có rất nhiều sách. Em có biết trường mình có những phòng nào, ai làm việc ở đó không?
+@ Ở trường không chỉ có thầy cô giáo mà còn có cô bác lao công, bác bảo vệ, cô nhân viên y tế… Ai cũng góp phần để em học tập an toàn, vui vẻ.
+! Em vẽ sơ đồ đơn giản đường từ cổng trường đến lớp học của em và kể cho bố mẹ nghe.
++ Giới thiệu lớp học và các khu vực trong trường.
++ Biết những người làm việc ở trường.
++ Vui chơi an toàn, giữ gìn trường lớp.
+<h2>Các khu vực trong trường</h2>
+<div class="hv-example">lớp học · thư viện (đọc sách) · sân trường (chơi, tập thể dục) · phòng y tế (khi bị ốm, bị thương) · nhà vệ sinh</div>
+<h2>Những người ở trường</h2>
+<p>Thầy cô giáo dạy học; bác bảo vệ trông cổng trường; cô lao công giữ trường sạch; cô y tế chăm sóc sức khoẻ.</p>
+<div class="hv-tip"><strong>Chơi an toàn:</strong> không leo trèo cây, lan can; không xô đẩy nhau; không chơi trò nguy hiểm.</div>
+* Biết tên và công việc của các khu vực trong trường.
+* Kính trọng thầy cô, cô bác làm việc ở trường.
+* Chơi an toàn, không xô đẩy, leo trèo.
+? Em muốn mượn sách đọc thì đến đâu? | Thư viện | Phòng y tế | Nhà vệ sinh => Thư viện là nơi cho mượn và đọc sách.
+? Khi bị đau bụng ở trường, em đến đâu? | Phòng y tế | Sân trường | Thư viện => Cô y tế sẽ chăm sóc khi em bị ốm hoặc bị thương.
+? Ai trông coi cổng trường? | Bác bảo vệ | Cô lao công | Bạn lớp trưởng => Bác bảo vệ trông cổng trường để giữ an toàn cho học sinh.
+? Trò chơi nào an toàn ở sân trường? | Nhảy dây | Leo lên cây cao | Xô đẩy bạn => Nhảy dây là trò chơi vận động an toàn.
+? Gặp thầy cô ở trường, em nên làm gì? | Lễ phép chào hỏi | Quay đi chỗ khác | Chạy trốn => Lễ phép chào hỏi thể hiện sự kính trọng thầy cô.
+? Em nên làm gì để giữ lớp học sạch đẹp? | Bỏ rác vào thùng | Vẽ lên bàn | Vứt giấy dưới ngăn bàn => Bỏ rác đúng nơi giúp lớp học sạch đẹp.
+? Ở sân trường, em chơi ở đâu là không an toàn? | Trên lan can cầu thang | Giữa sân rộng | Góc sân có ghế đá => Ngồi, leo lên lan can có thể bị ngã rất nguy hiểm.
+? Ai giúp giữ trường lớp sạch sẽ hằng ngày? | Cô bác lao công | Bác bảo vệ | Cô y tế => Cô bác lao công quét dọn, giữ trường sạch sẽ.
+
+=== tnxh-1-noi-em-song | 1 | tu-nhien-xa-hoi | Nơi em sống – công việc của mọi người | Cộng đồng địa phương | 🏘️ | do-vui | 1
+> Giới thiệu nơi em sống, một số công việc trong cộng đồng; lễ hội, ngày Tết.
+~ Cú Bông ra chợ cùng mẹ: có cô bán rau, chú bán cá, bác xe ôm, chú công an đứng ở ngã tư. Mỗi người một công việc. Em biết những ai trong khu phố của mình?
+@ Ngày Tết Nguyên đán là ngày Tết lớn nhất của người Việt. Mọi người dọn dẹp nhà cửa, gói bánh chưng, bánh tét và chúc nhau năm mới an lành.
+! Em hỏi bố mẹ làm nghề gì, công việc đó giúp ích gì cho mọi người, rồi kể lại ở lớp.
++ Giới thiệu nơi em sống: làng xóm, phố phường.
++ Kể tên một số nghề và lợi ích của chúng.
++ Biết một số lễ hội, ngày Tết.
+<p>Mỗi người có một <strong>công việc</strong> giúp ích cho cộng đồng:</p>
+<div class="hv-example">bác nông dân trồng lúa · bác sĩ chữa bệnh · cô giáo dạy học · chú công an giữ trật tự · cô lao công giữ đường phố sạch · chú bộ đội bảo vệ Tổ quốc</div>
+<h2>Nơi em sống</h2>
+<p>Có bạn sống ở <strong>làng quê</strong> với ruộng lúa, cánh đồng; có bạn sống ở <strong>thành phố</strong> với nhà cao tầng, nhiều xe cộ.</p>
+<div class="hv-tip"><strong>Em yêu nơi mình sống:</strong> chào hỏi hàng xóm, giữ gìn đường làng, ngõ phố sạch đẹp.</div>
+* Mỗi nghề đều có ích và đáng quý.
+* Tết Nguyên đán là Tết lớn nhất của người Việt.
+* Giữ gìn nơi em sống sạch đẹp.
+? Ai chữa bệnh cho mọi người? | Bác sĩ | Nông dân | Thợ may => Bác sĩ khám và chữa bệnh.
+? Bác nông dân làm công việc gì? | Trồng lúa, trồng rau | Dạy học | Lái máy bay => Nông dân trồng lúa, rau, nuôi gia súc làm ra lương thực.
+? Tết lớn nhất của người Việt là: | Tết Nguyên đán | Tết Trung thu | Ngày sinh nhật => Tết Nguyên đán (Tết âm lịch) là Tết lớn nhất trong năm.
+? Món bánh truyền thống ngày Tết là: | Bánh chưng | Bánh pizza | Bánh mì kẹp => Bánh chưng là món bánh truyền thống ngày Tết của người Việt.
+? Ai giữ cho đường phố sạch sẽ? | Cô bác lao công | Chú bộ đội | Bác sĩ => Cô bác lao công quét dọn, giữ đường phố sạch.
+? Ở làng quê thường có cảnh gì? | Cánh đồng lúa | Nhiều nhà cao tầng | Sân bay lớn => Làng quê có ruộng lúa, cánh đồng, vườn cây.
+? Gặp hàng xóm, em nên: | Chào hỏi lễ phép | Không nhìn | Trêu chọc => Chào hỏi hàng xóm thể hiện em ngoan, lễ phép.
+? Tết Trung thu, trẻ em thường làm gì? | Rước đèn, phá cỗ | Gói bánh chưng | Đi tắm biển => Tết Trung thu, các bạn nhỏ rước đèn ông sao, phá cỗ trông trăng.
+
+=== tnxh-1-an-toan-giao-thong | 1 | tu-nhien-xa-hoi | Đi đường an toàn | Cộng đồng địa phương | 🚦 | dung-sai | 1
+> Biết đèn tín hiệu giao thông, đi bộ đúng nơi, đội mũ bảo hiểm.
+~ Ngã tư có ba ngọn đèn đang nháy: đỏ, vàng, xanh. Cú Bông hỏi: “Đèn nào thì được đi?” Em biết câu trả lời không? Cùng học luật giao thông nhí nhé!
+@ Đèn giao thông đầu tiên trên thế giới ra đời hơn 150 năm trước ở nước Anh và… chạy bằng khí đốt! Ngày nay đèn giao thông dùng điện và đèn LED rất sáng.
+! Khi đi đường cùng bố mẹ, em chỉ cho bố mẹ thấy đèn tín hiệu, vạch kẻ đường cho người đi bộ và nói ý nghĩa của chúng.
++ Hiểu ý nghĩa đèn đỏ, đèn vàng, đèn xanh.
++ Đi bộ trên vỉa hè, qua đường ở vạch kẻ.
++ Đội mũ bảo hiểm khi ngồi xe máy.
+<div class="hv-example"><strong>Đèn đỏ:</strong> dừng lại · <strong>Đèn vàng:</strong> chậm lại, chuẩn bị dừng · <strong>Đèn xanh:</strong> được đi</div>
+<h2>Đi bộ an toàn</h2>
+<p>Đi trên <strong>vỉa hè</strong>; qua đường ở <strong>vạch kẻ đường</strong> dành cho người đi bộ và <strong>nắm tay người lớn</strong>; nhìn trái, nhìn phải trước khi qua đường.</p>
+<div class="hv-tip"><strong>Ngồi xe máy:</strong> luôn đội mũ bảo hiểm, cài quai cẩn thận, ngồi yên, không đứng lên.</div>
+* Đỏ dừng, vàng chậm, xanh đi.
+* Đi bộ trên vỉa hè, qua đường ở vạch kẻ, nắm tay người lớn.
+* Ngồi xe máy phải đội mũ bảo hiểm.
+? Đèn tín hiệu màu gì thì phải dừng lại? | Đỏ | Xanh | Vàng => Đèn đỏ: tất cả phải dừng lại.
+? Đèn xanh bật lên có nghĩa là gì? | Được đi | Phải dừng | Quay đầu => Đèn xanh: được phép đi.
+? Người đi bộ nên đi ở đâu? | Trên vỉa hè | Giữa lòng đường | Trên dải phân cách => Vỉa hè là phần đường dành cho người đi bộ.
+? Khi ngồi sau xe máy, em phải làm gì? | Đội mũ bảo hiểm | Đứng lên cho vui | Buông tay khỏi người lái => Mũ bảo hiểm bảo vệ đầu khi có va chạm.
+? Qua đường ở đâu là an toàn? | Vạch kẻ đường cho người đi bộ | Chỗ có nhiều xe | Giữa hai ô tô => Vạch kẻ đường là nơi dành cho người đi bộ qua đường.
+? Trước khi qua đường, em cần: | Nhìn trái, nhìn phải | Chạy thật nhanh | Nhắm mắt lại => Quan sát hai bên để chắc chắn không có xe đến gần.
+? Đèn vàng có nghĩa là gì? | Chậm lại, chuẩn bị dừng | Đi thật nhanh | Được quay đầu => Đèn vàng báo hiệu sắp chuyển sang đèn đỏ, cần chậm lại.
+? Chơi đá bóng ở đâu là an toàn? | Sân chơi, công viên | Lòng đường | Đường tàu => Chơi ở sân chơi, công viên; không chơi dưới lòng đường hay đường tàu.
+
+=== tnxh-1-cay-va-con-vat | 1 | tu-nhien-xa-hoi | Cây xanh và con vật quanh em | Thực vật và động vật | 🌳 | do-vui | 2
+> Nhận biết các bộ phận của cây và con vật; biết chăm sóc, bảo vệ chúng.
+~ Khu vườn của Cú Bông có rất nhiều bạn: cây cam, bông hoa, chú mèo, chú chim… Mỗi bạn có những bộ phận khác nhau. Mình cùng đi dạo vườn nào!
+@ Có những cây sống rất lâu: nhiều cây đa, cây đề ở nước ta đã sống hàng trăm năm và được công nhận là Cây Di sản Việt Nam.
+! Tưới nước cho một chậu cây và kể tên các bộ phận của cây đó cho bố mẹ nghe.
++ Kể tên các bộ phận chính của cây: rễ, thân, lá.
++ Nhận biết các bộ phận của con vật: đầu, mình, bộ phận di chuyển.
++ Biết chăm sóc cây và con vật.
+<p>Một cây thường có <strong>rễ, thân, lá</strong>; nhiều cây còn có <strong>hoa</strong> và <strong>quả</strong>.</p>
+<div class="hv-example"><strong>Ví dụ:</strong> cây cam có rễ nằm dưới đất, thân cứng, lá xanh, hoa trắng thơm và quả cam ngọt.</div>
+<p>Con vật thường có <strong>đầu, mình</strong> và <strong>bộ phận di chuyển</strong>: chân (con mèo), cánh (con chim), vây và đuôi (con cá).</p>
+<div class="hv-tip"><strong>Em làm được:</strong> tưới nước cho cây, không bẻ cành, ngắt lá; cho vật nuôi ăn, không trêu chọc con vật.</div>
+* Cây thường có rễ, thân, lá; nhiều cây có hoa, quả.
+* Con vật di chuyển bằng chân, cánh hoặc vây.
+* Em cần chăm sóc và bảo vệ cây xanh, con vật.
+? Bộ phận nào của cây thường nằm dưới đất? | Rễ | Lá | Hoa => Rễ nằm dưới đất để hút nước và giữ cho cây đứng vững.
+? Con vật nào có cánh và biết bay? | Con chim | Con chó | Con cá => Chim có cánh và lông vũ nên bay được.
+? Con cá bơi được nhờ bộ phận nào? | Vây và đuôi | Cánh | Chân => Cá dùng vây và đuôi để bơi trong nước.
+? Việc làm nào giúp chăm sóc cây? | Tưới nước cho cây | Bẻ cành | Giẫm lên cây non => Cây cần nước để sống; bẻ cành, giẫm lên làm cây bị đau, chết.
+
+=== tnxh-1-cham-soc-cay-vat-nuoi | 1 | tu-nhien-xa-hoi | Chăm sóc cây trồng và vật nuôi | Thực vật và động vật | 🪴 | do-vui | 2
+> Biết cây và con vật cần gì để sống; cách chăm sóc, bảo vệ chúng; tránh con vật nguy hiểm.
+~ Chậu cây của Cú Bông bị héo rũ! Hoá ra Cú Bông quên tưới nước cả tuần. Cây cối và con vật cũng cần được chăm sóc như chúng mình vậy!
+@ Cây xanh “uống” nước bằng rễ và “ăn” ánh sáng Mặt Trời bằng lá. Nhờ vậy cây tự làm ra thức ăn cho mình và nhả ra khí ô-xi giúp chúng ta thở.
+! Em nhận chăm sóc một chậu cây trong nhà trong một tuần: tưới nước, để chỗ có nắng và ghi lại cây thay đổi thế nào.
++ Biết cây cần nước, ánh sáng, không khí, đất.
++ Biết con vật cần thức ăn, nước uống, chỗ ở.
++ Biết cách chăm sóc và tránh con vật có thể gây nguy hiểm.
+<h2>Cây cần gì?</h2>
+<p>Cây cần <strong>nước, ánh sáng, không khí và đất</strong>. Em tưới cây, nhổ cỏ, không bẻ cành, ngắt lá.</p>
+<h2>Con vật cần gì?</h2>
+<p>Con vật cần <strong>thức ăn, nước uống và chỗ ở</strong>. Em cho vật nuôi ăn đúng bữa, giữ chuồng sạch sẽ.</p>
+<div class="hv-tip"><strong>An toàn:</strong> không trêu chó, mèo lạ; rửa tay sạch sau khi chơi với con vật.</div>
+* Cây cần nước, ánh sáng, không khí, đất.
+* Con vật cần thức ăn, nước uống, chỗ ở.
+* Không trêu chọc con vật, rửa tay sau khi chạm vào chúng.
+? Cây cần gì để sống? | Nước, ánh sáng, không khí | Chỉ cần bóng tối | Kẹo và bánh => Cây cần nước, ánh sáng, không khí và đất để lớn lên.
+? Chậu cây bị héo vì không được tưới, em nên làm gì? | Tưới nước cho cây | Cất cây vào tủ tối | Nhổ cây đi => Cây héo vì thiếu nước, em cần tưới nước.
+? Việc làm nào giúp bảo vệ cây xanh? | Tưới cây, nhổ cỏ | Bẻ cành | Ngắt lá chơi => Tưới cây, nhổ cỏ giúp cây khoẻ mạnh.
+? Sau khi chơi với chó, mèo, em cần: | Rửa tay bằng xà phòng | Ăn ngay | Dụi mắt => Rửa tay bằng xà phòng để tránh vi khuẩn từ lông, nước bọt con vật.
+? Gặp con chó lạ đang sủa, em nên: | Tránh xa, không trêu | Lại gần vuốt ve | Ném đá vào nó => Chó lạ có thể cắn, em nên tránh xa và không trêu chọc.
+? Con vật nuôi cần gì? | Thức ăn, nước uống, chỗ ở | Chỉ cần đồ chơi | Không cần gì => Vật nuôi cần thức ăn, nước uống và chuồng, ổ để ở.
+? Bộ phận nào giúp cây hút nước? | Rễ | Hoa | Quả => Rễ cây hút nước và chất dinh dưỡng từ đất.
+? Con vật nào được nuôi để lấy trứng? | Con gà | Con mèo | Con chó => Gà mái đẻ trứng, nhiều gia đình nuôi gà để lấy trứng.
+
+=== tnxh-1-giu-ve-sinh-co-the | 1 | tu-nhien-xa-hoi | Giữ vệ sinh cơ thể | Con người và sức khoẻ | 🧼 | do-vui | 2
 > Rửa tay, đánh răng, tắm gội đúng cách để luôn khoẻ mạnh.
 ~ Suỵt! Những chú vi khuẩn tí hon đang trốn trên đôi tay của mình. Chúng nhỏ đến mức mắt không nhìn thấy được. Vũ khí bí mật để đánh bại chúng là gì nhỉ? Đó là xà phòng và nước sạch!
 @ Trên đôi tay có thể có hàng triệu vi khuẩn. Rửa tay bằng xà phòng ít nhất 20 giây giúp loại bỏ phần lớn chúng.
@@ -276,27 +982,126 @@
 ? Sau khi rửa tay, em lau tay bằng gì? | Khăn sạch | Vạt áo | Không cần lau => Khăn sạch giữ tay sạch; lau vào áo bẩn lại dính vi khuẩn.
 ? Vì sao cần giữ vệ sinh cơ thể? | Để khoẻ mạnh, phòng bệnh | Để không phải đi học | Để được ăn kẹo => Giữ vệ sinh giúp em phòng bệnh và luôn khoẻ mạnh.
 
-=== tnxh-1-cay-va-con-vat | 1 | tu-nhien-xa-hoi | Cây xanh và con vật quanh em | Thực vật và động vật | 🌳 | do-vui
-> Nhận biết các bộ phận của cây và con vật; biết chăm sóc, bảo vệ chúng.
-~ Khu vườn của Cú Bông có rất nhiều bạn: cây cam, bông hoa, chú mèo, chú chim… Mỗi bạn có những bộ phận khác nhau. Mình cùng đi dạo vườn nào!
-@ Có những cây sống rất lâu: nhiều cây đa, cây đề ở nước ta đã sống hàng trăm năm và được công nhận là Cây Di sản Việt Nam.
-! Tưới nước cho một chậu cây và kể tên các bộ phận của cây đó cho bố mẹ nghe.
-+ Kể tên các bộ phận chính của cây: rễ, thân, lá.
-+ Nhận biết các bộ phận của con vật: đầu, mình, bộ phận di chuyển.
-+ Biết chăm sóc cây và con vật.
-<p>Một cây thường có <strong>rễ, thân, lá</strong>; nhiều cây còn có <strong>hoa</strong> và <strong>quả</strong>.</p>
-<div class="hv-example"><strong>Ví dụ:</strong> cây cam có rễ nằm dưới đất, thân cứng, lá xanh, hoa trắng thơm và quả cam ngọt.</div>
-<p>Con vật thường có <strong>đầu, mình</strong> và <strong>bộ phận di chuyển</strong>: chân (con mèo), cánh (con chim), vây và đuôi (con cá).</p>
-<div class="hv-tip"><strong>Em làm được:</strong> tưới nước cho cây, không bẻ cành, ngắt lá; cho vật nuôi ăn, không trêu chọc con vật.</div>
-* Cây thường có rễ, thân, lá; nhiều cây có hoa, quả.
-* Con vật di chuyển bằng chân, cánh hoặc vây.
-* Em cần chăm sóc và bảo vệ cây xanh, con vật.
-? Bộ phận nào của cây thường nằm dưới đất? | Rễ | Lá | Hoa => Rễ nằm dưới đất để hút nước và giữ cho cây đứng vững.
-? Con vật nào có cánh và biết bay? | Con chim | Con chó | Con cá => Chim có cánh và lông vũ nên bay được.
-? Con cá bơi được nhờ bộ phận nào? | Vây và đuôi | Cánh | Chân => Cá dùng vây và đuôi để bơi trong nước.
-? Việc làm nào giúp chăm sóc cây? | Tưới nước cho cây | Bẻ cành | Giẫm lên cây non => Cây cần nước để sống; bẻ cành, giẫm lên làm cây bị đau, chết.
+=== tnxh-1-cac-giac-quan | 1 | tu-nhien-xa-hoi | Các giác quan | Con người và sức khoẻ | 👀 | do-vui | 2
+> Biết năm giác quan: mắt, tai, mũi, lưỡi, da và cách bảo vệ chúng.
+~ Cú Bông bịt mắt, đoán đồ vật bằng tay: “Tròn tròn, nhẵn nhẵn… à, quả táo!” Rồi ngửi một bông hoa: “Thơm quá!” Chúng mình có năm “trợ thủ” giúp nhận biết thế giới đấy!
+@ Lưỡi của em có hàng nghìn nụ vị giác nhỏ xíu giúp nếm được vị ngọt, mặn, chua, đắng. Còn chiếc mũi có thể phân biệt rất nhiều mùi khác nhau.
+! Em chơi trò “bịt mắt đoán đồ” với bố mẹ: sờ, ngửi hoặc nếm để đoán 3 món đồ (an toàn).
++ Kể tên năm giác quan và việc mỗi giác quan làm.
++ Biết cách bảo vệ mắt, tai, mũi, lưỡi, da.
+<div class="hv-example"><strong>Mắt</strong> – nhìn · <strong>Tai</strong> – nghe · <strong>Mũi</strong> – ngửi · <strong>Lưỡi</strong> – nếm · <strong>Da</strong> – cảm nhận nóng, lạnh, mềm, cứng</div>
+<h2>Bảo vệ giác quan</h2>
+<ul><li>Đọc sách đủ ánh sáng, không xem ti vi, điện thoại quá lâu, ngồi xa màn hình.</li><li>Không ngoáy tai bằng vật nhọn, không nghe nhạc quá to.</li><li>Không cho vật lạ vào mũi, tai.</li></ul>
+<div class="hv-tip"><strong>Mẹo bảo vệ mắt:</strong> cứ học 20 phút thì nhìn ra xa một lúc cho mắt nghỉ.</div>
+* Mắt nhìn, tai nghe, mũi ngửi, lưỡi nếm, da cảm nhận.
+* Đọc sách đủ sáng, không xem màn hình quá lâu.
+* Không ngoáy tai, mũi bằng vật nhọn.
+? Bộ phận nào giúp em nghe? | Tai | Mắt | Mũi => Tai giúp em nghe âm thanh.
+? Em nhận biết mùi thơm của hoa nhờ: | Mũi | Lưỡi | Tai => Mũi giúp em ngửi được mùi.
+? Nếm thấy kẹo ngọt nhờ giác quan nào? | Lưỡi | Da | Mắt => Lưỡi giúp em nếm vị ngọt, mặn, chua, đắng.
+? Sờ tay vào đá lạnh, em biết lạnh nhờ: | Da | Tai | Mũi => Da giúp em cảm nhận nóng, lạnh, mềm, cứng.
+? Việc làm nào có hại cho mắt? | Xem điện thoại rất lâu, rất gần | Đọc sách đủ ánh sáng | Nhìn ra xa cho mắt nghỉ => Nhìn màn hình quá lâu và quá gần làm mắt mỏi, dễ cận thị.
+? Có mấy giác quan? | Năm | Ba | Mười => Mắt, tai, mũi, lưỡi, da – năm giác quan.
+? Em không nên làm gì để bảo vệ tai? | Ngoáy tai bằng que nhọn | Giữ tai sạch | Nghe nhạc vừa đủ nghe => Que nhọn có thể làm tổn thương tai.
+? Nhìn thấy cầu vồng nhiều màu nhờ: | Mắt | Lưỡi | Mũi => Mắt giúp em nhìn thấy màu sắc.
 
-=== dao-duc-1-yeu-thuong-gia-dinh | 1 | dao-duc | Yêu thương gia đình | Yêu thương gia đình | 💖 | do-vui
+=== tnxh-1-an-uong-van-dong | 1 | tu-nhien-xa-hoi | Ăn uống, vận động và nghỉ ngơi | Con người và sức khoẻ | 🥗 | do-vui | 2
+> Ăn uống đủ chất, sạch sẽ; vận động và nghỉ ngơi hợp lý để khoẻ mạnh.
+~ Cú Bông chỉ thích ăn kẹo và không chịu ăn rau. Thế là Cú Bông hay mệt, chơi một lúc đã thở hổn hển. Bí quyết để khoẻ mạnh là gì nhỉ?
+@ Cơ thể em có khoảng hai phần ba là nước. Vì vậy mỗi ngày em cần uống đủ nước, nhất là khi trời nóng hoặc sau khi chạy nhảy.
+! Em cùng bố mẹ lên thực đơn một bữa ăn có đủ cơm, thịt hoặc cá, rau và hoa quả.
++ Biết ăn đủ chất: cơm, thịt cá, trứng, sữa, rau, quả.
++ Ăn uống sạch sẽ: rửa tay, ăn chín uống sôi.
++ Vận động, ngủ nghỉ đúng giờ.
+<h2>Ăn đủ chất</h2>
+<p>Mỗi bữa nên có <strong>cơm</strong> (tinh bột), <strong>thịt, cá, trứng, đậu</strong>, <strong>rau xanh</strong> và <strong>hoa quả</strong>. Hạn chế bánh kẹo, nước ngọt.</p>
+<h2>Ăn sạch, uống sạch</h2>
+<p>Rửa tay trước khi ăn; ăn chín, uống nước đun sôi để nguội; rửa sạch hoa quả.</p>
+<div class="hv-tip"><strong>Vận động và nghỉ ngơi:</strong> chơi thể thao, chạy nhảy mỗi ngày; ngủ đủ giấc, ngủ trưa.</div>
+* Ăn đủ chất, nhiều rau quả, ít bánh kẹo.
+* Rửa tay trước khi ăn, ăn chín uống sôi.
+* Vận động mỗi ngày, ngủ đủ giấc.
+? Bữa ăn nào đủ chất hơn? | Cơm, cá, rau, quả | Chỉ có bánh kẹo | Chỉ có nước ngọt => Bữa ăn có cơm, cá, rau, quả cung cấp đủ chất cho cơ thể.
+? Trước khi ăn, em cần làm gì? | Rửa tay bằng xà phòng | Chơi đất cát | Xem điện thoại => Rửa tay sạch để không đưa vi khuẩn vào miệng.
+? Nước uống nào an toàn nhất? | Nước đun sôi để nguội | Nước ao hồ | Nước mưa đọng => Nước đun sôi đã diệt được vi khuẩn.
+? Vì sao cần ăn rau xanh? | Để cơ thể khoẻ, dễ tiêu hoá | Vì rau ngọt như kẹo | Vì rau làm béo => Rau xanh có nhiều chất xơ và vitamin, giúp cơ thể khoẻ mạnh.
+? Thói quen nào tốt cho sức khoẻ? | Tập thể dục mỗi ngày | Thức khuya xem ti vi | Ăn nhiều kẹo => Tập thể dục giúp cơ thể khoẻ, xương chắc.
+? Ăn quả xoài, em cần làm gì trước? | Rửa sạch, gọt vỏ | Ăn luôn cả vỏ bẩn | Để dưới đất => Rửa sạch, gọt vỏ để loại bỏ bụi bẩn và vi khuẩn.
+? Buổi trưa ở trường, em nên: | Ngủ trưa để nghỉ ngơi | Chạy nhảy cả trưa | Ăn kẹo thay cơm => Ngủ trưa giúp cơ thể nghỉ ngơi, chiều học tốt hơn.
+? Nên hạn chế đồ ăn nào? | Bánh kẹo, nước ngọt | Rau xanh | Hoa quả => Ăn nhiều đồ ngọt dễ sâu răng, béo phì.
+
+=== tnxh-1-bau-troi | 1 | tu-nhien-xa-hoi | Bầu trời ban ngày và ban đêm | Trái Đất và bầu trời | 🌙 | do-vui | 2
+> Quan sát Mặt Trời, Mặt Trăng, các vì sao; phân biệt ban ngày và ban đêm.
+~ Ban ngày, ông Mặt Trời chiếu sáng rực rỡ. Ban đêm, chị Hằng Nga – Mặt Trăng – cùng các ngôi sao lấp lánh. Vì sao bầu trời lại thay đổi như vậy nhỉ?
+@ Mặt Trời thực ra là một ngôi sao khổng lồ, ở gần chúng ta nhất. Các ngôi sao em thấy ban đêm cũng là những “mặt trời” nhưng ở rất, rất xa nên trông nhỏ xíu.
+! Tối nay em cùng bố mẹ ngắm bầu trời: Mặt Trăng hôm nay hình gì? Em đếm được mấy ngôi sao?
++ Nhận biết Mặt Trời, Mặt Trăng, các vì sao.
++ Phân biệt ban ngày, ban đêm.
++ Biết không nhìn thẳng vào Mặt Trời.
+<div class="hv-example"><strong>Ban ngày:</strong> có Mặt Trời, trời sáng, ấm. · <strong>Ban đêm:</strong> không thấy Mặt Trời, trời tối, có thể thấy Mặt Trăng và sao.</div>
+<h2>Mặt Trời giúp gì cho chúng ta?</h2>
+<p>Mặt Trời cho <strong>ánh sáng</strong> và <strong>sức nóng</strong>, giúp cây lớn, phơi khô quần áo, sưởi ấm Trái Đất.</p>
+<div class="hv-tip"><strong>Bảo vệ mắt:</strong> không nhìn thẳng vào Mặt Trời; ra nắng nhớ đội mũ.</div>
+* Ban ngày có Mặt Trời; ban đêm thấy Mặt Trăng và sao.
+* Mặt Trời cho ánh sáng và sức nóng.
+* Không nhìn thẳng vào Mặt Trời.
+? Ban ngày, vật gì chiếu sáng bầu trời? | Mặt Trời | Mặt Trăng | Ngôi sao => Ban ngày Mặt Trời chiếu sáng và sưởi ấm Trái Đất.
+? Ban đêm, em có thể nhìn thấy: | Mặt Trăng và các vì sao | Mặt Trời chói chang | Cầu vồng => Ban đêm trời tối, ta thấy Mặt Trăng và các vì sao.
+? Vì sao không nên nhìn thẳng vào Mặt Trời? | Vì có hại cho mắt | Vì Mặt Trời buồn | Vì Mặt Trời quá xa => Ánh sáng Mặt Trời rất mạnh, nhìn thẳng có thể làm hỏng mắt.
+? Mặt Trời giúp cây cối thế nào? | Cho ánh sáng để cây lớn | Làm cây ngủ | Không giúp gì => Cây cần ánh sáng Mặt Trời để làm ra thức ăn và lớn lên.
+? Mặt Trời thực ra là gì? | Một ngôi sao khổng lồ | Một quả bóng đèn | Một hành tinh nhỏ => Mặt Trời là ngôi sao gần Trái Đất nhất.
+? Khi ra nắng to, em nên: | Đội mũ, mặc áo dài tay | Đứng nắng thật lâu | Nhìn lên Mặt Trời => Đội mũ, che chắn giúp tránh say nắng, cháy nắng.
+? Buổi nào trời tối? | Ban đêm | Buổi trưa | Buổi sáng => Ban đêm không thấy Mặt Trời nên trời tối.
+? Phơi quần áo nhờ đâu mà khô? | Nắng và gió | Mặt Trăng | Bóng tối => Sức nóng của Mặt Trời và gió làm quần áo khô.
+
+=== tnxh-1-thoi-tiet | 1 | tu-nhien-xa-hoi | Thời tiết: nắng, mưa, gió, nóng, lạnh | Trái Đất và bầu trời | ⛅ | do-vui | 2
+> Nhận biết thời tiết nắng, mưa, gió, nóng, lạnh; ăn mặc phù hợp; giữ an toàn khi có sấm sét.
+~ Sáng nay trời nắng đẹp, Cú Bông mặc áo cộc đi chơi. Chiều về trời đổ mưa ào ào! Biết xem thời tiết, Cú Bông sẽ không bị ướt nữa. Em có biết hôm nay trời thế nào không?
+@ Mây đen thường báo hiệu trời sắp mưa. Sau cơn mưa, nếu có nắng chiếu, em có thể thấy cầu vồng bảy sắc: đỏ, cam, vàng, lục, lam, chàm, tím.
+! Mỗi sáng trong một tuần, em quan sát và vẽ biểu tượng thời tiết (☀️ 🌧️ ☁️) vào lịch của mình.
++ Nhận biết các hiện tượng thời tiết.
++ Ăn mặc phù hợp với thời tiết.
++ Giữ an toàn khi trời mưa giông, sấm sét.
+<div class="hv-example">☀️ <strong>Nắng nóng:</strong> mặc áo mỏng, đội mũ, uống đủ nước · 🌧️ <strong>Mưa:</strong> mặc áo mưa, mang ô · ❄️ <strong>Lạnh:</strong> mặc áo ấm, đội mũ len, đi tất</div>
+<h2>An toàn khi mưa giông</h2>
+<p>Khi có <strong>sấm sét</strong>: vào trong nhà, không đứng dưới gốc cây to, không tắm mưa, không chơi ngoài trời.</p>
+<div class="hv-tip"><strong>Dấu hiệu sắp mưa:</strong> mây đen kéo đến, gió thổi mạnh, trời tối lại.</div>
+* Nắng đội mũ, mưa mặc áo mưa, lạnh mặc áo ấm.
+* Có sấm sét thì vào nhà, không đứng dưới gốc cây.
+* Mây đen báo hiệu trời sắp mưa.
+? Trời mưa, em cần mang theo gì? | Áo mưa hoặc ô | Kính râm | Quạt => Áo mưa, ô giúp em không bị ướt.
+? Trời lạnh, em nên mặc thế nào? | Áo ấm, đi tất | Áo cộc tay | Đồ bơi => Áo ấm, tất giúp giữ ấm cơ thể.
+? Khi có sấm sét, em không nên làm gì? | Đứng dưới gốc cây to | Vào trong nhà | Tránh xa cửa sổ => Cây cao dễ bị sét đánh; em cần vào trong nhà an toàn.
+? Dấu hiệu nào cho biết trời sắp mưa? | Mây đen kéo đến | Trời trong xanh | Mặt Trời chiếu rực rỡ => Mây đen, gió mạnh thường báo hiệu sắp mưa.
+? Trời nắng nóng, em cần: | Đội mũ và uống đủ nước | Mặc áo bông dày | Đứng nắng lâu => Đội mũ che nắng, uống nước để không bị mất nước.
+? Cầu vồng thường xuất hiện khi nào? | Sau mưa, có nắng chiếu | Lúc nửa đêm | Khi trời có tuyết => Ánh nắng chiếu qua những giọt nước sau mưa tạo thành cầu vồng.
+? Gió mạnh làm cây cối thế nào? | Nghiêng ngả, lay động | Đứng im | Mọc nhanh hơn => Gió thổi làm cành lá lay động, gió mạnh làm cây nghiêng ngả.
+? Hôm nay trời nắng, chiều có thể mưa. Em nên chuẩn bị gì khi đi học? | Mũ và áo mưa | Chỉ mang kính râm | Không cần gì => Mang mũ che nắng và áo mưa phòng khi trời mưa.
+
+=== dao-duc-1-thoi-quen-tot | 1 | dao-duc | Thói quen tốt: sạch sẽ, gọn gàng | Thói quen tốt | 🪥 | dung-sai | 1
+> Rèn thói quen giữ vệ sinh cá nhân, ăn uống, ngủ nghỉ và sắp xếp đồ dùng gọn gàng.
+~ Buổi sáng, Cú Bông tự đánh răng, rửa mặt, gấp chăn rồi soạn sách vở vào cặp. Mẹ khen: “Con có thói quen thật tốt!” Em có những thói quen tốt nào?
+@ Để có một thói quen mới, mỗi ngày em làm đi làm lại cùng một việc. Sau vài tuần, việc đó trở nên tự nhiên, không cần ai nhắc nữa!
+! Em tự làm một bảng “Việc tốt mỗi ngày” với 3 việc: đánh răng, gấp chăn, soạn cặp. Làm xong việc nào, em tự tô một ngôi sao.
++ Biết các thói quen tốt: vệ sinh cá nhân, ăn uống, ngủ nghỉ, gọn gàng.
++ Tự giác thực hiện thói quen tốt hằng ngày.
+<div class="hv-example"><strong>Thói quen tốt:</strong> đánh răng sáng và tối · rửa tay trước khi ăn · ngủ đúng giờ · gấp quần áo, cất đồ chơi · soạn sách vở trước khi đi học</div>
+<h2>Vì sao cần thói quen tốt?</h2>
+<p>Thói quen tốt giúp em <strong>khoẻ mạnh</strong>, <strong>sạch sẽ</strong>, làm việc <strong>nhanh gọn</strong> và được mọi người yêu quý.</p>
+<div class="hv-tip"><strong>Thử thách 7 ngày:</strong> tự làm một việc tốt mỗi ngày mà không cần bố mẹ nhắc.</div>
+* Giữ vệ sinh cá nhân hằng ngày.
+* Ăn đúng bữa, ngủ đúng giờ.
+* Dùng xong đồ vật thì cất gọn gàng.
+? Mỗi ngày em nên đánh răng khi nào? | Buổi sáng và trước khi đi ngủ | Một tuần một lần | Chỉ khi đau răng => Đánh răng sáng và tối giúp răng sạch, không bị sâu.
+? Ngủ dậy, việc nào là thói quen tốt? | Tự gấp chăn | Để chăn bừa bộn | Ngủ tiếp mãi => Tự gấp chăn giúp giường gọn gàng.
+? Bạn Nam chơi xong để đồ chơi bừa bộn. Nam nên làm gì? | Cất đồ chơi vào hộp | Để đó cho mẹ dọn | Đá vào gầm giường => Tự cất đồ chơi là thói quen gọn gàng.
+? Soạn sách vở vào lúc nào là tốt nhất? | Buổi tối trước ngày đi học | Sáng sớm lúc vội đi | Không cần soạn => Soạn sách vở từ tối hôm trước giúp em không quên đồ.
+? Việc nào KHÔNG phải thói quen tốt? | Thức khuya xem ti vi | Rửa tay trước khi ăn | Ngủ đúng giờ => Thức khuya làm em mệt mỏi, học kém tập trung.
+? Thói quen tốt giúp em điều gì? | Khoẻ mạnh, gọn gàng | Bị ốm | Hay quên đồ => Thói quen tốt giúp em khoẻ mạnh, sạch sẽ và gọn gàng.
+? Sau khi đi vệ sinh, em cần: | Rửa tay bằng xà phòng | Đi chơi ngay | Lau tay vào áo => Rửa tay bằng xà phòng để diệt vi khuẩn.
+? Bạn Hoa tự giác làm việc tốt mỗi ngày không cần nhắc. Em thấy Hoa thế nào? | Đáng khen | Đáng chê | Không quan trọng => Tự giác giữ thói quen tốt là đức tính đáng khen.
+
+=== dao-duc-1-yeu-thuong-gia-dinh | 1 | dao-duc | Yêu thương gia đình | Yêu thương gia đình | 💖 | do-vui | 1
 > Thể hiện tình yêu thương với ông bà, bố mẹ, anh chị em bằng việc làm nhỏ.
 ~ Ngôi nhà ấm áp nhất là nơi mọi người yêu thương nhau. Hôm nay Cú Bông muốn hỏi em: em đã làm gì để cả nhà vui chưa?
 @ Ngày 28 tháng 6 hằng năm là Ngày Gia đình Việt Nam – ngày để mọi người thể hiện tình yêu thương với gia đình.
@@ -312,6 +1117,120 @@
 ? Bà bị ốm, em nên làm gì? | Hỏi thăm và lấy nước cho bà | Chơi ồn ào | Không quan tâm => Quan tâm, chăm sóc khi bà ốm làm bà vui và mau khoẻ.
 ? Em bé muốn chơi cùng đồ chơi của em, em nên: | Chia sẻ, chơi cùng em bé | Giành lại ngay | Khóc to => Biết chia sẻ, nhường nhịn em nhỏ là anh chị ngoan.
 ? Được bố mẹ tặng quà, em nói: | Con cảm ơn bố mẹ ạ! | Không nói gì | Con xin lỗi ạ! => Được tặng quà thì nói lời cảm ơn để thể hiện biết ơn.
+
+=== dao-duc-1-quan-tam-nguoi-than | 1 | dao-duc | Quan tâm, chăm sóc người thân | Quan tâm, chăm sóc người thân | 🫶 | do-vui | 1
+> Biết thể hiện sự quan tâm, chăm sóc ông bà, bố mẹ, anh chị em bằng việc làm phù hợp.
+~ Bà của Cú Bông bị đau lưng. Cú Bông rót cho bà cốc nước ấm, lấy gối kê cho bà và kể chuyện vui cho bà nghe. Bà cười: “Cháu bà ngoan quá!”
+@ Những việc nhỏ như rót nước, hỏi han, ôm bố mẹ khi đi làm về đều làm người thân rất vui. Yêu thương không cần việc lớn, chỉ cần thật lòng.
+! Hôm nay em làm một việc nhỏ để chăm sóc một người thân (rót nước cho ông, đấm lưng cho bà, giúp mẹ nhặt rau…).
++ Biết người thân cần được quan tâm, chăm sóc.
++ Làm việc phù hợp để chăm sóc người thân.
+<div class="hv-example"><strong>Việc em có thể làm:</strong> chào hỏi khi đi học về · rót nước mời ông bà · hỏi thăm khi người thân bị ốm · nhường đồ chơi cho em nhỏ · giúp mẹ nhặt rau</div>
+<h2>Khi người thân bị ốm</h2>
+<p>Em đi nhẹ, nói khẽ, hỏi thăm, giúp lấy nước, lấy khăn; không làm ồn.</p>
+<div class="hv-tip"><strong>Nói lời yêu thương:</strong> “Con yêu bố mẹ!”, “Bà ơi, bà có mệt không ạ?”</div>
+* Quan tâm người thân bằng việc làm và lời nói.
+* Khi người thân ốm: đi nhẹ, nói khẽ, hỏi han.
+? Bà bị mệt, em nên làm gì? | Rót nước, hỏi thăm bà | Bật ti vi thật to | Nhờ bà nấu cơm => Rót nước, hỏi thăm thể hiện em quan tâm bà.
+? Bố đi làm về mệt, em có thể: | Lấy nước mời bố | Đòi bố chơi cùng ngay | Khóc nhè => Lấy nước mời bố là việc làm quan tâm, chăm sóc.
+? Em bé đòi đồ chơi của em, anh chị nên: | Nhường hoặc cho em chơi cùng | Giật lại và mắng em | Giấu đồ chơi => Anh chị nhường nhịn, chơi cùng em nhỏ.
+? Khi ông đang ngủ trưa, em nên: | Đi nhẹ, nói khẽ | Hát thật to | Chạy nhảy trong phòng => Giữ yên lặng để ông được nghỉ ngơi.
+? Câu nói nào thể hiện sự quan tâm? | “Mẹ ơi, mẹ có mệt không ạ?” | “Mẹ nấu nhanh lên!” | “Con không thích!” => Hỏi han người thân là lời nói thể hiện quan tâm.
+? Việc nhà nào vừa sức em? | Nhặt rau giúp mẹ | Bê nồi canh nóng | Leo thang thay bóng đèn => Nhặt rau vừa sức và an toàn với em.
+? Đi học về, em nên làm gì đầu tiên? | Chào ông bà, bố mẹ | Đi thẳng vào phòng | Bật ti vi => Chào hỏi người thân là phép lịch sự, thể hiện tình cảm.
+? Vì sao cần quan tâm, chăm sóc người thân? | Vì người thân luôn yêu thương em | Vì để được thưởng | Không cần thiết => Người thân yêu thương, chăm sóc em nên em cũng quan tâm lại mọi người.
+
+=== dao-duc-1-that-tha | 1 | dao-duc | Thật thà | Thật thà | 🤍 | dung-sai | 2
+> Biết nói thật, nhận lỗi khi làm sai, trả lại đồ nhặt được.
+~ Cú Bông lỡ tay làm vỡ chiếc cốc của mẹ. Cú Bông sợ quá, định giấu đi… Nhưng rồi Cú Bông quyết định nói thật. Em đoán xem mẹ sẽ nói gì nhé?
+@ Câu chuyện “Cậu bé chăn cừu” kể về cậu bé hay nói dối “Sói đến!” để trêu mọi người. Đến khi sói đến thật, không ai tin cậu nữa. Nói dối làm mất lòng tin của người khác.
+! Em kể cho bố mẹ nghe một lần em đã nói thật hoặc nhận lỗi, và cảm giác của em lúc đó.
++ Biết thế nào là thật thà.
++ Nói thật, dũng cảm nhận lỗi.
++ Trả lại đồ nhặt được cho người đánh mất.
+<p><strong>Thật thà</strong> là nói đúng sự thật, không gian dối, không lấy đồ của người khác.</p>
+<div class="hv-example"><strong>Việc làm thật thà:</strong> làm vỡ đồ thì nhận lỗi · nhặt được bút của bạn thì trả lại · không xem bài của bạn khi kiểm tra</div>
+<div class="hv-tip"><strong>Nhận lỗi đúng cách:</strong> “Con xin lỗi, con làm vỡ cốc. Lần sau con sẽ cẩn thận hơn.”</div>
+* Thật thà là nói thật, không gian dối.
+* Làm sai thì dũng cảm nhận lỗi và sửa lỗi.
+* Nhặt được của rơi thì trả lại người mất.
+? Em lỡ làm vỡ cốc, em nên làm gì? | Nói thật và xin lỗi | Giấu mảnh vỡ đi | Đổ lỗi cho em bé => Dũng cảm nói thật, xin lỗi và cẩn thận hơn lần sau.
+? Em nhặt được chiếc bút của bạn rơi, em nên: | Trả lại cho bạn | Giữ làm của mình | Vứt đi => Trả lại đồ nhặt được là thật thà.
+? Trong giờ kiểm tra, việc nào là thật thà? | Tự làm bài của mình | Nhìn bài của bạn | Hỏi đáp án của bạn => Tự làm bài là trung thực, thật thà.
+? Câu chuyện “Cậu bé chăn cừu” khuyên em điều gì? | Không nói dối | Nên trêu mọi người | Nên chăn nhiều cừu => Nói dối làm mất lòng tin, khi cần giúp sẽ không ai tin.
+? Bạn Bi nói dối mẹ là đã làm bài xong. Bi nên làm gì? | Nói thật với mẹ và làm bài | Tiếp tục nói dối | Trốn đi chơi => Nói thật và sửa lỗi mới là bạn nhỏ thật thà.
+? Lời nhận lỗi nào đúng? | “Con xin lỗi, lần sau con sẽ cẩn thận.” | “Không phải tại con!” | “Tại cái cốc dễ vỡ!” => Nhận lỗi chân thành và hứa sửa lỗi.
+? Người thật thà được mọi người: | Tin yêu | Xa lánh | Ghét bỏ => Người thật thà được mọi người tin tưởng, yêu quý.
+? Mẹ đưa tiền mua bánh, người bán trả lại thừa tiền. Em nên: | Trả lại tiền thừa | Giữ lấy tiêu | Không nói gì => Trả lại tiền thừa là thật thà.
+
+=== dao-duc-1-sinh-hoat-nen-nep | 1 | dao-duc | Sinh hoạt nền nếp, đúng giờ | Sinh hoạt nền nếp | ⏰ | xem-gio | 2
+> Biết sinh hoạt đúng giờ, giữ trật tự, thực hiện nội quy lớp học.
+~ Sáng nào Cú Bông cũng dậy đúng 6 giờ, ăn sáng rồi đến lớp trước giờ vào học. Nhờ vậy Cú Bông không bao giờ bị muộn. Bí quyết là… một tờ thời gian biểu!
+@ Thời gian biểu là bảng ghi giờ làm từng việc trong ngày. Nhiều bạn nhỏ dán thời gian biểu cạnh bàn học để tự nhắc mình, không cần bố mẹ gọi.
+! Em cùng bố mẹ lập thời gian biểu buổi sáng: giờ dậy, giờ vệ sinh cá nhân, giờ ăn sáng, giờ đi học.
++ Biết sinh hoạt đúng giờ.
++ Giữ trật tự, thực hiện nội quy lớp học.
+<div class="hv-example"><strong>Nền nếp ở lớp:</strong> đi học đúng giờ · xếp hàng ngay ngắn · giơ tay khi muốn phát biểu · giữ trật tự khi cô giảng bài</div>
+<h2>Thời gian biểu</h2>
+<p>6 giờ: thức dậy · 6 giờ 30: ăn sáng · 7 giờ: đến trường · 9 giờ tối: đi ngủ.</p>
+<div class="hv-tip"><strong>Đúng giờ là tôn trọng người khác:</strong> đến muộn làm cả lớp phải chờ.</div>
+* Đi học đúng giờ, ngủ dậy đúng giờ.
+* Giơ tay khi muốn phát biểu, giữ trật tự trong lớp.
+* Lập và làm theo thời gian biểu.
+? Muốn phát biểu trong giờ học, em nên: | Giơ tay xin phép | Nói to ngay | Đứng lên chạy tới cô => Giơ tay xin phép là đúng nội quy lớp học.
+? Để không đi học muộn, em nên: | Dậy đúng giờ | Thức khuya | Ăn sáng thật lâu => Dậy đúng giờ giúp em có đủ thời gian chuẩn bị.
+? Khi cô giáo đang giảng bài, em cần: | Giữ trật tự, chú ý nghe | Nói chuyện riêng | Chơi đồ chơi => Giữ trật tự giúp em và các bạn học tốt.
+? Thời gian biểu dùng để làm gì? | Ghi giờ làm từng việc trong ngày | Vẽ tranh | Ghi tên bạn bè => Thời gian biểu giúp em sinh hoạt đúng giờ, nền nếp.
+? Ra chơi xong, khi trống vào lớp, em nên: | Vào lớp ngay | Chơi thêm một lúc | Trốn ở sân => Nghe trống vào lớp thì vào ngay để không bị muộn.
+? Khi xếp hàng, em nên: | Đứng ngay ngắn, không chen lấn | Chen lên đầu hàng | Đẩy bạn => Xếp hàng ngay ngắn thể hiện em có nền nếp.
+? Vì sao cần đi học đúng giờ? | Để không làm lớp phải chờ, không lỡ bài | Để được về sớm | Không cần thiết => Đúng giờ là tôn trọng thầy cô, bạn bè và giúp em không bỏ lỡ bài học.
+? Buổi tối nên đi ngủ lúc nào? | Đúng giờ, khoảng 9 giờ tối | Nửa đêm | Không cần ngủ => Học sinh lớp 1 nên đi ngủ sớm để ngủ đủ giấc.
+
+=== dao-duc-1-tu-giac | 1 | dao-duc | Tự giác làm việc của mình | Tự giác làm việc của mình | 💪 | dung-sai | 2
+> Biết tự làm những việc vừa sức của mình mà không cần nhắc nhở.
+~ Cú Bông tự xúc cơm ăn, tự mặc áo, tự soạn cặp sách. Mẹ không cần nhắc lần nào. Mẹ bảo: “Con đã lớn rồi đấy!” Em đã tự làm được những việc gì?
+@ Các nhà giáo dục nói rằng trẻ tự làm việc của mình sẽ tự tin hơn và giỏi giải quyết vấn đề hơn. Mỗi việc nhỏ em tự làm là một bước để lớn lên!
+! Hôm nay em tự làm 3 việc của mình mà không cần nhắc: tự mặc quần áo, tự cất cặp, tự rửa bát của mình.
++ Biết những việc của mình mà em có thể tự làm.
++ Tự giác làm việc, không ỷ lại.
+<div class="hv-example"><strong>Việc em tự làm được:</strong> tự đánh răng, rửa mặt · tự mặc quần áo, đi giày · tự soạn cặp sách · tự làm bài tập · tự cất đồ chơi</div>
+<h2>Tự giác là gì?</h2>
+<p><strong>Tự giác</strong> là tự mình làm việc cần làm mà <strong>không cần người khác nhắc nhở</strong>.</p>
+<div class="hv-tip"><strong>Gặp việc khó:</strong> em cố gắng thử trước, nếu chưa làm được thì nhờ người lớn giúp.</div>
+* Tự giác là tự làm việc của mình, không cần nhắc.
+* Việc khó thì cố gắng trước, sau đó mới nhờ giúp.
+? Bài tập về nhà là việc của ai? | Của em | Của bố mẹ | Của bạn bên cạnh => Bài tập là việc của em, em cần tự giác làm.
+? Bạn Tôm luôn đợi mẹ mặc áo hộ dù đã lớn. Tôm nên: | Tự mặc áo | Tiếp tục đợi mẹ | Không mặc áo => Tôm đã lớn, có thể tự mặc áo.
+? Tự giác nghĩa là gì? | Tự làm việc không cần nhắc | Chỉ làm khi bị mắng | Nhờ người khác làm hộ => Tự giác là tự làm việc cần làm mà không cần ai nhắc.
+? Gặp bài tập khó, em nên: | Cố gắng suy nghĩ, rồi hỏi người lớn | Bỏ luôn không làm | Chép bài của bạn => Cố gắng tự làm trước, chưa được thì hỏi.
+? Việc nào em có thể tự làm? | Tự soạn cặp sách | Tự lái xe máy | Tự nấu bếp ga => Soạn cặp vừa sức và an toàn với em.
+? Tự làm việc của mình giúp em: | Tự tin, lớn lên | Lười hơn | Hay quên => Tự làm việc giúp em tự tin và trưởng thành.
+? Ăn cơm xong, em có thể tự làm gì? | Mang bát của mình ra chỗ rửa | Để bát lại bàn | Đi chơi ngay => Tự dọn bát của mình là việc làm tự giác.
+? Bạn Lan tự đánh răng, rửa mặt mỗi sáng. Lan là bạn: | Tự giác | Lười biếng | Nghịch ngợm => Lan tự làm việc của mình không cần nhắc – rất tự giác.
+
+=== dao-duc-1-phong-tranh-tai-nan | 1 | dao-duc | Phòng, tránh tai nạn thương tích | Phòng, tránh tai nạn thương tích | 🩹 | dung-sai | 2
+> Nhận biết tình huống nguy hiểm: đuối nước, ngã, bỏng, điện giật; biết cách phòng tránh và nhờ giúp đỡ.
+~ Hè này Cú Bông được đi tắm biển. Trước khi xuống nước, bố dặn: “Luôn ở cạnh người lớn và mặc áo phao nhé!” Vì sao bố lại dặn kỹ thế nhỉ?
+@ Bơi là kỹ năng giúp em an toàn khi ở gần nước. Nhiều trường học có lớp dạy bơi cho học sinh tiểu học. Nhưng dù biết bơi, em vẫn không được xuống nước khi không có người lớn.
+! Em cùng bố mẹ học thuộc số điện thoại của bố mẹ và số khẩn cấp: 113 (công an), 114 (cứu hoả), 115 (cấp cứu).
++ Nhận biết tình huống có thể gây tai nạn.
++ Biết cách phòng tránh đuối nước, ngã, bỏng, điện giật.
++ Biết kêu cứu, nhờ người lớn giúp.
+<div class="hv-example"><strong>Đuối nước:</strong> không chơi gần ao, hồ, sông; chỉ bơi khi có người lớn và mặc áo phao.<br><strong>Ngã:</strong> không leo trèo cây, ban công; không chạy nhảy ở cầu thang.<br><strong>Bỏng, điện giật:</strong> tránh xa bếp, nước sôi, ổ điện.</div>
+<h2>Số điện thoại khẩn cấp</h2>
+<p><strong>113</strong> – công an · <strong>114</strong> – cứu hoả · <strong>115</strong> – cấp cứu y tế.</p>
+<div class="hv-tip"><strong>Khi gặp nguy hiểm:</strong> bình tĩnh, kêu to để người lớn đến giúp.</div>
+* Không chơi gần ao hồ, sông; bơi phải có người lớn và áo phao.
+* Không leo trèo nơi cao, không chạy ở cầu thang.
+* Nhớ số 113, 114, 115.
+? Em có được tự đi bơi ở sông khi không có người lớn không? | Không, rất nguy hiểm | Có, nếu trời nắng | Có, nếu đi cùng bạn nhỏ => Sông có thể sâu, nước chảy mạnh; chỉ bơi khi có người lớn trông.
+? Khi đi thuyền hoặc tắm biển, em cần: | Mặc áo phao | Mặc áo len | Không cần gì => Áo phao giúp em nổi trên mặt nước.
+? Số điện thoại gọi cứu hoả là: | 114 | 113 | 115 => 114 là số gọi cứu hoả; 113 công an; 115 cấp cứu.
+? Số gọi xe cấp cứu là: | 115 | 114 | 113 => 115 là số gọi cấp cứu y tế.
+? Chơi ở đâu dễ bị ngã? | Trèo lên ban công | Sân chơi bằng phẳng | Phòng khách => Leo trèo ban công rất dễ ngã, nguy hiểm.
+? Thấy bạn bị ngã xuống ao, em nên: | Kêu to gọi người lớn | Nhảy xuống cứu ngay | Bỏ chạy về nhà => Em còn nhỏ, cần kêu to để người lớn đến cứu.
+? Việc nào giúp phòng tránh bỏng? | Tránh xa bếp đang nấu | Nghịch bật lửa | Chạm vào nồi nóng => Tránh xa bếp, nước sôi, bật lửa để không bị bỏng.
+? Đi cầu thang, em nên: | Đi từ từ, vịn tay vịn | Chạy nhảy, đùa nhau | Trượt trên tay vịn => Đi từ từ, vịn tay vịn giúp em không bị ngã.
 
 === toan-2-cong-co-nho-pham-vi-100 | 2 | toan | Phép cộng có nhớ trong phạm vi 100 | Phép cộng, phép trừ (có nhớ) trong phạm vi 100 | ➕ | bong-bay
 > Đặt tính và tính phép cộng có nhớ trong phạm vi 100.
