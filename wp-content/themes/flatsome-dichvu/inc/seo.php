@@ -105,8 +105,11 @@ function sgd_robots( $robots ) {
 	// Chuyên mục chưa có bài (thẻ "Đang cập nhật" trên trang Kiến thức) – không cho Google lập chỉ mục trang trống.
 	if ( isset( $_GET['sgd_status'] ) || ( is_category() && ! have_posts() ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$robots['noindex'] = true;
-		$robots['follow']  = true;
 		unset( $robots['index'] );
+		// Không thêm "follow" khi WordPress đã đặt "nofollow" (chế độ chặn công cụ tìm kiếm) – tránh thẻ mâu thuẫn.
+		if ( empty( $robots['nofollow'] ) ) {
+			$robots['follow'] = true;
+		}
 	}
 	return $robots;
 }
@@ -356,11 +359,114 @@ function sgd_title_parts( $parts ) {
 	}
 	$price = sgd_meta( 'price', get_queried_object_id() );
 	if ( $price && sgd_price_number( $price ) && ! preg_match( '/\d{3}/', $parts['title'] ) ) {
-		$parts['title'] .= ' – ' . ( preg_match( '/^(từ|chỉ)\b/iu', $price ) ? $price : 'Giá ' . $price );
+		$GLOBALS['sgd_title_plain'] = $parts['title'];
+		$parts['title']            .= ' – ' . ( preg_match( '/^(từ|chỉ)\b/iu', $price ) ? $price : 'Giá ' . $price );
 	}
 	return $parts;
 }
 add_filter( 'document_title_parts', 'sgd_title_parts' );
+
+/**
+ * Tiêu đề SEO riêng (không đổi H1): trường tuỳ chỉnh _sgd_seo_title → danh sách inc/posts/seo-titles.php
+ * → tiêu đề gợi ý cho các trang chính.
+ *
+ * @return string
+ */
+function sgd_custom_seo_title() {
+	if ( is_singular() ) {
+		$id  = get_queried_object_id();
+		$own = trim( (string) get_post_meta( $id, '_sgd_seo_title', true ) );
+		if ( $own ) {
+			return $own;
+		}
+		if ( sgd_is_en() ) {
+			return '';
+		}
+		$slug = get_post_field( 'post_name', $id );
+		if ( is_singular( 'post' ) ) {
+			static $map = null;
+			if ( null === $map ) {
+				$map = (array) require SGD_DIR . '/inc/posts/seo-titles.php';
+			}
+			return isset( $map[ $slug ] ) ? $map[ $slug ] : '';
+		}
+		$pages = array(
+			'bang-gia'   => 'Bảng giá dịch vụ kế toán, thuế, pháp lý',
+			'gioi-thieu' => 'Giới thiệu công ty dịch vụ kế toán, thuế',
+			'lien-he'    => 'Liên hệ tư vấn kế toán, thuế, pháp lý',
+			'tra-cuu'    => 'Tra cứu mã số thuế, thông tin doanh nghiệp',
+		);
+		return is_page() && isset( $pages[ $slug ] ) ? $pages[ $slug ] : '';
+	}
+	if ( sgd_is_en() ) {
+		return '';
+	}
+	if ( is_home() && ! is_front_page() ) {
+		return 'Kiến thức kế toán, thuế, pháp lý doanh nghiệp';
+	}
+	if ( is_post_type_archive( 'dich_vu' ) ) {
+		return 'Dịch vụ kế toán, thuế, pháp lý doanh nghiệp';
+	}
+	return '';
+}
+
+/**
+ * Giữ thẻ <title> trong 30–60 ký tự (khuyến nghị SEO), bỏ dấu ngoặc kép:
+ * bớt dần phần phụ (giá, chuyên mục cha, tên thương hiệu) trước khi phải cắt chữ.
+ *
+ * @param array $parts Các phần tiêu đề.
+ * @return array
+ */
+function sgd_title_fit( $parts ) {
+	if ( sgd_has_seo_plugin() || is_front_page() || is_404() || is_search() ) {
+		return $parts;
+	}
+	$custom = sgd_custom_seo_title();
+	if ( $custom ) {
+		$parts['title']             = $custom;
+		$GLOBALS['sgd_title_plain'] = '';
+	}
+	foreach ( $parts as $k => $v ) {
+		$parts[ $k ] = trim( str_replace( array( '"', '“', '”', '«', '»' ), '', wp_strip_all_tags( (string) $v ) ) );
+	}
+	unset( $parts['tagline'] );
+	$sep   = ' ' . apply_filters( 'document_title_separator', '–' ) . ' ';
+	$max   = 60;
+	$len   = static function ( $p ) use ( $sep ) {
+		return mb_strlen( implode( $sep, array_filter( $p, 'strlen' ) ) );
+	};
+	$tries = array( $parts );
+	// Bỏ phần phụ sau tiêu đề chính: giá dịch vụ, " – Chuyên mục cha".
+	$plain = ! empty( $GLOBALS['sgd_title_plain'] ) ? $GLOBALS['sgd_title_plain'] : '';
+	if ( ! $plain && is_category() ) {
+		$term  = get_queried_object();
+		$plain = $term ? $term->name : '';
+	}
+	if ( $plain && $plain !== $parts['title'] ) {
+		$tries[] = array_merge( $parts, array( 'title' => $plain ) );
+	}
+	foreach ( $tries as $t ) {
+		if ( $len( $t ) <= $max ) {
+			return $t;
+		}
+	}
+	// Bỏ tên thương hiệu.
+	foreach ( $tries as $t ) {
+		unset( $t['site'] );
+		if ( $len( $t ) <= $max ) {
+			return $t;
+		}
+	}
+	// Vẫn dài: cắt tiêu đề theo từ.
+	$t     = end( $tries );
+	unset( $t['site'] );
+	$room  = $max - ( $len( $t ) - mb_strlen( $t['title'] ) );
+	$title = mb_substr( $t['title'], 0, max( 20, $room ) + 1 );
+	$title = preg_replace( '/\s+\S*$/u', '', $title );
+	$t['title'] = rtrim( $title, " \t,.:;–-" );
+	return $t;
+}
+add_filter( 'document_title_parts', 'sgd_title_fit', 99 );
 
 /**
  * Gom câu hỏi từ [sgd_faq] trên trang để in FAQPage ở cuối trang.

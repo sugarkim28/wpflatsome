@@ -233,3 +233,14 @@ Nút hoặc liên kết trỏ tới `#dang-ky` sẽ cuộn xuống form. Trang n
 - Schema: `ProfessionalService` (thông tin công ty), `Service` + `Offer` (giá từng gói, VND), `FAQPage`, `CollectionPage/ItemList`, `BreadcrumbList`.
 - Dùng cùng Rank Math: Rank Math lo tiêu đề/mô tả/sitemap; theme tự nhận Rank Math để không xuất trùng Organization/Breadcrumb. Trong Rank Math đặt Schema của *Dịch vụ* = *None*; sitemap bật Dịch vụ, Nhóm dịch vụ, Trang, Bài viết. UX Blocks tự loại khỏi sitemap.
 - Không có plugin SEO: theme tự in thẻ meta description.
+
+## Chuẩn SEO kỹ thuật (bản 0.13)
+
+- Thẻ `<title>` giữ trong 30–60 ký tự: 74 bài Kiến thức có tiêu đề SEO rút gọn (`inc/posts/seo-titles.php`, H1 giữ nguyên);
+  muốn đổi riêng một bài/trang, thêm trường tuỳ chỉnh `_sgd_seo_title`. Dịch vụ, chuyên mục, trang phân trang tự bớt phần phụ
+  (giá, chuyên mục cha, tên thương hiệu) khi quá dài; bỏ dấu ngoặc kép.
+- Ảnh chia sẻ (Facebook, Zalo): og:image luôn là JPG kèm kích thước (ảnh WebP tự tạo bản `-og.jpg`), có ảnh mặc định.
+- Sửa thẻ robots trùng, chặn trang UX Block `/blocks/…` (301 về trang chủ, bỏ khỏi sitemap), làm mới bộ nhớ đệm Polylang
+  (lỗi /en/ chuyển về http), gửi HSTS, tắt đổi email của Cloudflare (`/cdn-cgi/l/email-protection` 404).
+- Phần cần làm trên hosting/Cloudflare: Địa chỉ WordPress và Địa chỉ trang = https; bản ghi www chuyển 301 về tên miền chính;
+  bật Always Use HTTPS; khi lên tên miền thật bỏ chọn "Ngăn cản công cụ tìm kiếm" (lỗi hreflang noindex tự hết).

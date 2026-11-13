@@ -918,7 +918,7 @@ function sgd_demo_import_posts() {
 	// Bài viết bổ sung theo từng mục nhỏ (inc/posts/*.php) – bài mới nhất xếp trước.
 	$extra = array();
 	foreach ( (array) glob( SGD_DIR . '/inc/posts/*.php' ) as $file ) {
-		if ( 'sources.php' !== basename( $file ) ) {
+		if ( ! in_array( basename( $file ), array( 'sources.php', 'seo-titles.php' ), true ) ) {
 			$extra = array_merge( $extra, (array) require $file );
 		}
 	}
